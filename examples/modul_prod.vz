@@ -1,0 +1,5 @@
+# examples/modul_prod.vz
+# Modul ini berisi konfigurasi produksi.
+
+atur tipe = "Produksi"
+atur versi = "1.0.0"

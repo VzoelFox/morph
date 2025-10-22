@@ -16,6 +16,8 @@ class Lexer:
             "tidak": TokenType.TIDAK,
             "berhasil": TokenType.BERHASIL,
             "proses": TokenType.PROSES,
+            "ambil": TokenType.AMBIL,
+            "dari": TokenType.DARI,
             "kembali": TokenType.KEMBALI,
             "jalankan": TokenType.JALANKAN,
             "tunggu": TokenType.TUNGGU,
@@ -43,6 +45,7 @@ class Lexer:
             self.line += 1
         elif char == "(": self._add_token(TokenType.KURUNG_BUKA)
         elif char == ")": self._add_token(TokenType.KURUNG_TUTUP)
+        elif char == ".": self._add_token(TokenType.TITIK)
         elif char == "{": self._add_token(TokenType.KURAWAL_BUKA)
         elif char == "}": self._add_token(TokenType.KURAWAL_TUTUP)
         elif char == "=": self._add_token(TokenType.SAMA_DENGAN)

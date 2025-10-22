@@ -8,6 +8,8 @@ class TokenType(Enum):
     TIDAK = "TIDAK"
     BERHASIL = "BERHASIL"
     PROSES = "PROSES"
+    AMBIL = "AMBIL"
+    DARI = "DARI"
     KEMBALI = "KEMBALI"
     JALANKAN = "JALANKAN"
     TUNGGU = "TUNGGU"
@@ -20,6 +22,7 @@ class TokenType(Enum):
     # Simbol & Operator
     SAMA_DENGAN = "="
     PLUS = "+"
+    TITIK = "."
     KURUNG_BUKA = "("
     KURUNG_TUTUP = ")"
     KURAWAL_BUKA = "{"
