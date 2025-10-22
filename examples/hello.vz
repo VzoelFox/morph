@@ -1,0 +1,3 @@
+# examples/hello.vz
+atur pesan = "Halo Dunia dari Vzoel Word v0.2!"
+lihat(pesan)

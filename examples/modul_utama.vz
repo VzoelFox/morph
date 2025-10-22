@@ -1,0 +1,4 @@
+# examples/modul_utama.vz
+jika App = ambil dari "modul_yang_hilang.vz" tidak berhasil maka
+   atur App = ambil dari "examples/modul_prod.vz"
+lihat(App.tipe)
