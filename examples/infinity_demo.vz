@@ -1,0 +1,55 @@
+# Contoh Konseptual: `vzoelinfinity`
+# File ini mendemonstrasikan ide di balik fitur auto-fallback di Vzoel Word.
+
+# Skenario: Kita perlu mendapatkan data konfigurasi. Urutan prioritasnya adalah:
+# 1. Coba hubungi server konfigurasi utama.
+# 2. Jika gagal, coba hubungi server cadangan.
+# 3. Jika itu juga gagal, baca dari file konfigurasi lokal di disk.
+# 4. Jika file tidak ada, gunakan konfigurasi default yang sudah di-hardcode.
+
+# --- Definisi Proses ---
+
+proses dapatkanDariServerUtama() {
+    lihat("Mencoba mengambil konfigurasi dari server utama...")
+    # Bayangkan kode ini melakukan panggilan jaringan
+    # Kita akan simulasikan kegagalan di sini agar fallback terpicu.
+    harus salah # Ini akan membuat proses ini sengaja gagal
+    kembali "{ 'host': 'utama.server.com', 'port': 8080 }"
+}
+
+proses dapatkanDariServerCadangan() {
+    lihat("Server utama gagal. Mencoba server cadangan...")
+    # Bayangkan ini juga panggilan jaringan.
+    # Kita juga akan membuatnya gagal untuk mendemonstrasikan fallback berantai.
+    harus salah
+    kembali "{ 'host': 'cadangan.server.com', 'port': 8080 }"
+}
+
+proses bacaDariFileLokal() {
+    lihat("Semua server gagal. Mencoba membaca dari file lokal...")
+    # Bayangkan ini membaca file dari disk.
+    # Misalkan file 'config.txt' tidak ada.
+    atur file = file.baca("config.txt")
+    harus file.ditemukan # Ini akan gagal jika file tidak ada
+    kembali file.konten
+}
+
+proses gunakanDefault() {
+    lihat("Tidak ada sumber konfigurasi yang berhasil. Menggunakan default.")
+    # Ini adalah fallback terakhir, harusnya selalu berhasil.
+    kembali "{ 'host': 'localhost', 'port': 9000 }"
+}
+
+
+# --- Eksekusi dengan `vzoelinfinity` ---
+
+lihat("--- Memulai proses pengambilan konfigurasi ---")
+
+jika konfigurasi = jalankan dapatkanDariServerUtama tidak berhasil maka
+jika konfigurasi = jalankan dapatkanDariServerCadangan tidak berhasil maka
+jika konfigurasi = jalankan bacaDariFileLokal tidak berhasil maka
+atur konfigurasi = jalankan gunakanDefault
+
+lihat("--- Proses Selesai ---")
+lihat("Konfigurasi yang berhasil didapatkan:")
+lihat(konfigurasi)

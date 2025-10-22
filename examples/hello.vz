@@ -1,0 +1,7 @@
+# Contoh Kode Vzoel Word v0.2: Halo Dunia!
+
+# Gunakan kata kunci `atur` untuk mendeklarasikan variabel.
+atur pesan = "Halo Dunia dari Vzoel Word v0.2!"
+
+# Gunakan fungsi `lihat` untuk menampilkan output.
+lihat(pesan)
