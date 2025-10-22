@@ -1,11 +1,5 @@
-from dataclasses import dataclass
 from .token_types import TokenType
-
-@dataclass
-class Token:
-    type: TokenType
-    literal: str
-    line: int = 1
+from .token import Token
 
 class Lexer:
     def __init__(self, source_code: str):
@@ -17,7 +11,6 @@ class Lexer:
 
         self.KEYWORDS = {
             "atur": TokenType.ATUR,
-            "lihat": TokenType.LIHAT,
             "jika": TokenType.JIKA,
             "maka": TokenType.MAKA,
             "tidak": TokenType.TIDAK,
