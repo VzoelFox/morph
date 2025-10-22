@@ -19,6 +19,7 @@ class Parser:
             # Ini adalah blok vzoelinfinity
             return self._jika_statement()
         elif self._match(TokenType.ATUR):
+        if self._match(TokenType.ATUR):
             return self._atur_statement()
         else:
             return self._expression_statement()
@@ -42,6 +43,7 @@ class Parser:
         return atur_stmt
 
     def _atur_statement(self) -> ast.AturStatement:
+    def _atur_statement(self) -> ast.Statement:
         name = self._consume(TokenType.IDENTIFIER, "Diharapkan nama variabel.")
         self._consume(TokenType.SAMA_DENGAN, "Diharapkan '=' setelah nama variabel.")
         initializer = self._expression()
@@ -65,6 +67,9 @@ class Parser:
                 expr = ast.GetExpression(objek=expr, name=name)
             else:
                 break
+        if self._match(TokenType.KURUNG_BUKA):
+            # Jika kita menemukan '(', kita selesaikan pemanggilan fungsi
+            return self._finish_call(expr)
 
         return expr
 

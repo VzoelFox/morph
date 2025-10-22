@@ -9,6 +9,7 @@ class ASTNode(ABC):
     @abstractmethod
     def accept(self, visitor):
         pass
+    pass
 
 class Statement(ASTNode):
     """Kelas dasar untuk pernyataan (statements)."""
