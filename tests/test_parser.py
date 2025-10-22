@@ -4,6 +4,15 @@ from interpreter.lexer import Lexer
 from interpreter.parser import Parser
 import interpreter.ast_nodes as ast
 
+def test_parser_basic():
+    source = 'atur pesan = "halo"'
+    tokens = Lexer(source).scan_tokens()
+    program = Parser(tokens).parse()
+    assert len(program.statements) == 1
+    stmt = program.statements[0]
+    assert isinstance(stmt, ast.AturStatement)
+    assert stmt.name.literal == "pesan"
+    assert isinstance(stmt.initializer, ast.Literal)
 def test_hello_world_parser():
     # 1. Setup: Dapatkan token dari Lexer
     source_path = Path(__file__).parent.parent / "examples" / "hello.vz"

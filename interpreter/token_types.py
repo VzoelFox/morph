@@ -11,6 +11,12 @@ class TokenType(Enum):
     AMBIL = "AMBIL"
     DARI = "DARI"
     KEMBALI = "KEMBALI"
+    BENAR = "BENAR"
+    SALAH = "SALAH"
+    SAMA_DENGAN = "="
+    PLUS = "+"
+    TITIK = "."
+    KOMA = ","
     JALANKAN = "JALANKAN"
     TUNGGU = "TUNGGU"
     PEMICU = "PEMICU"
@@ -27,6 +33,11 @@ class TokenType(Enum):
     KURUNG_TUTUP = ")"
     KURAWAL_BUKA = "{"
     KURAWAL_TUTUP = "}"
+    IDENTIFIER = "IDENTIFIER"
+    STRING = "STRING"
+    NUMBER = "NUMBER"
+    TIDAK_DIKENALI = "TIDAK_DIKENALI"
+    EOF = "EOF"
 
     # Literals & Identifier
     IDENTIFIER = "IDENTIFIER" # Nama variabel atau proses

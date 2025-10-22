@@ -18,6 +18,12 @@ Dokumen ini menguraikan rencana pengembangan untuk Bahasa Pemrograman "Vzoel Wor
 *   [x] Membangun **Parser** untuk mengubah token menjadi *Abstract Syntax Tree* (AST).
 
 ## Fase 3: Interpreter (Sedang Berlangsung)
+*   [x] Membuat *interpreter* dasar yang dapat mengeksekusi AST.
+*   [x] Mengimplementasikan logika untuk variabel dan fungsi dasar (`lihat`).
+*   [x] Mengimplementasikan Sistem Modul Lanjutan (`ambil...dari...`) dengan fallback.
+*   [ ] **(Aktif)** Mengimplementasikan Fungsi Buatan Pengguna (`proses`) dan Lingkup (Scoping).
+
+## Proyek Lainnya (Ditunda)
 
 *   [x] Membuat *interpreter* dasar yang dapat mengeksekusi AST.
 *   [x] Mengimplementasikan logika untuk variabel dan fungsi dasar (`lihat`).

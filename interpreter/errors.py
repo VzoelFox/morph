@@ -6,5 +6,10 @@ class VzoelRuntimeException(RuntimeError):
         super().__init__(message)
 
 class VzoelModuleNotFound(VzoelRuntimeException):
+    pass
+
+class Return(VzoelRuntimeException):
+    def __init__(self, value):
+        self.value = value
     """Error khusus untuk file modul yang tidak ditemukan."""
     pass
