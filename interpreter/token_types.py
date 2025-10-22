@@ -3,7 +3,6 @@ from enum import Enum
 class TokenType(Enum):
     # Kata Kunci (Keywords)
     ATUR = "ATUR"
-    LIHAT = "LIHAT"
     JIKA = "JIKA"
     MAKA = "MAKA"
     TIDAK = "TIDAK"

@@ -24,7 +24,7 @@ def test_hello_world_lexer():
         (TokenType.IDENTIFIER, "pesan"),
         (TokenType.SAMA_DENGAN, "="),
         (TokenType.STRING, "Halo Dunia dari Vzoel Word v0.2!"),
-        (TokenType.LIHAT, "lihat"),
+        (TokenType.IDENTIFIER, "lihat"),
         (TokenType.KURUNG_BUKA, "("),
         (TokenType.IDENTIFIER, "pesan"),
         (TokenType.KURUNG_TUTUP, ")"),
