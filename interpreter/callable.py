@@ -14,6 +14,7 @@ class VzoelFunction(VzoelCallable):
     def __init__(self, declaration: ast.ProsesStatement, closure: Environment):
         self.declaration = declaration
         self.closure = closure
+    def arity(self) -> int: return len(self.declaration.params)
     def arity(self) -> int:
         return len(self.declaration.params)
     def call(self, interpreter, arguments: List[Any]) -> Any:
@@ -22,6 +23,9 @@ class VzoelFunction(VzoelCallable):
             environment.define(param.literal, arguments[i])
         try:
             interpreter.execute_block(self.declaration.body.statements, environment)
+        except Return as r:
+            return r.value
+        return None
         except Return as returnValue:
             return returnValue.value
         return None
