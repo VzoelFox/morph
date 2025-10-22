@@ -2,3 +2,13 @@
 jika App = ambil dari "modul_yang_hilang.vz" tidak berhasil maka
    atur App = ambil dari "examples/modul_prod.vz"
 lihat(App.tipe)
+# Program ini mendemonstrasikan sistem modul tangguh Vzoel Word.
+
+lihat("Mencoba memuat modul yang tidak ada...")
+
+# Gunakan vzoelinfinity untuk fallback dari modul yang gagal ke modul produksi.
+jika App = ambil dari "modul_yang_hilang.vz" tidak berhasil maka
+   atur App = ambil dari "examples/modul_prod.vz"
+
+lihat("Modul berhasil dimuat.")
+lihat(App.tipe) # Harus mencetak "Produksi"
