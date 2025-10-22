@@ -15,6 +15,8 @@ class VzoelFunction(VzoelCallable):
         self.declaration = declaration
         self.closure = closure
     def arity(self) -> int: return len(self.declaration.params)
+    def arity(self) -> int:
+        return len(self.declaration.params)
     def call(self, interpreter, arguments: List[Any]) -> Any:
         environment = Environment(enclosing=self.closure)
         for i, param in enumerate(self.declaration.params):
@@ -24,3 +26,17 @@ class VzoelFunction(VzoelCallable):
         except Return as r:
             return r.value
         return None
+        except Return as returnValue:
+            return returnValue.value
+        return None
+
+class VzoelCallable(ABC):
+    @abstractmethod
+    def arity(self) -> int:
+        """Mengembalikan jumlah argumen yang diharapkan."""
+        pass
+
+    @abstractmethod
+    def call(self, interpreter, arguments: List[Any]) -> Any:
+        """Mengeksekusi fungsi."""
+        pass
