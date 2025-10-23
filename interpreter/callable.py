@@ -6,17 +6,28 @@ from .errors import Return
 
 class VzoelCallable(ABC):
     @abstractmethod
-    def arity(self) -> int: pass
+    def arity(self) -> int:
+        pass
+
     @abstractmethod
-    def call(self, interpreter, arguments: List[Any]) -> Any: pass
+    def call(self, interpreter, arguments: List[Any]) -> Any:
+        pass
+
+class Lihat(VzoelCallable):
+    def arity(self) -> int:
+        return 1
+
+    def call(self, interpreter, arguments: List[Any]) -> Any:
+        print(arguments[0])
 
 class VzoelFunction(VzoelCallable):
     def __init__(self, declaration: ast.ProsesStatement, closure: Environment):
         self.declaration = declaration
         self.closure = closure
-    def arity(self) -> int: return len(self.declaration.params)
+
     def arity(self) -> int:
         return len(self.declaration.params)
+
     def call(self, interpreter, arguments: List[Any]) -> Any:
         environment = Environment(enclosing=self.closure)
         for i, param in enumerate(self.declaration.params):
@@ -26,17 +37,3 @@ class VzoelFunction(VzoelCallable):
         except Return as r:
             return r.value
         return None
-        except Return as returnValue:
-            return returnValue.value
-        return None
-
-class VzoelCallable(ABC):
-    @abstractmethod
-    def arity(self) -> int:
-        """Mengembalikan jumlah argumen yang diharapkan."""
-        pass
-
-    @abstractmethod
-    def call(self, interpreter, arguments: List[Any]) -> Any:
-        """Mengeksekusi fungsi."""
-        pass
