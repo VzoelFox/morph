@@ -1,0 +1,6 @@
+# examples/fungsi.vz
+proses tambah(a, b) {
+  kembali a + b
+}
+atur hasil = tambah(10, 5.5)
+lihat(hasil)

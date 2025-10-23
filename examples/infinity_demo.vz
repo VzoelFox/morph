@@ -1,0 +1,24 @@
+# Contoh Konseptual: `vzoelinfinity`
+
+proses dapatkanDariServerUtama() {
+    lihat("Mencoba mengambil konfigurasi dari server utama...")
+    harus salah # Sengaja gagal
+    kembali "{ 'host': 'utama.server.com' }"
+}
+
+proses dapatkanDariServerCadangan() {
+    lihat("Server utama gagal. Mencoba server cadangan...")
+    harus salah # Sengaja gagal
+    kembali "{ 'host': 'cadangan.server.com' }"
+}
+
+proses gunakanDefault() {
+    lihat("Tidak ada sumber konfigurasi yang berhasil. Menggunakan default.")
+    kembali "{ 'host': 'localhost' }"
+}
+
+jika konfigurasi = jalankan dapatkanDariServerUtama tidak berhasil maka
+jika konfigurasi = jalankan dapatkanDariServerCadangan tidak berhasil maka
+atur konfigurasi = jalankan gunakanDefault
+
+lihat(konfigurasi)
