@@ -10,7 +10,7 @@
 *   [x] Operator Lanjutan (Aritmatika & Perbandingan)
 
 ## Fase Berikutnya
-*   [ ] Sistem Konkurensi Kooperatif (`management`)
+*   [x] Sistem Konkurensi Kooperatif (`management`)
 Dokumen ini menguraikan rencana pengembangan untuk Bahasa Pemrograman "Vzoel Word".
 
 ## Fase 1: Desain & Spesifikasi (Selesai)
