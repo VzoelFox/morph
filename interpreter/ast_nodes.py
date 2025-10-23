@@ -52,6 +52,12 @@ class GetExpression(Expression):
     def accept(self, visitor): return visitor.visit_GetExpression(self)
 
 @dataclass
+class SubscriptExpression(Expression):
+    objek: Expression
+    indeks: Expression
+    def accept(self, visitor): return visitor.visit_SubscriptExpression(self)
+
+@dataclass
 class BinaryExpression(Expression):
     left: Expression
     operator: Token
@@ -73,6 +79,12 @@ class Grouping(Expression):
 class ListLiteral(Expression):
     elements: List[Expression]
     def accept(self, visitor): return visitor.visit_ListLiteral(self)
+
+@dataclass
+class MapLiteral(Expression):
+    keys: List[Expression]
+    values: List[Expression]
+    def accept(self, visitor): return visitor.visit_MapLiteral(self)
 
 # --- Simpul Pernyataan (Statements) ---
 @dataclass

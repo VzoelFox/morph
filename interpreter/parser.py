@@ -107,6 +107,10 @@ class Parser:
             elif self._match(TokenType.TITIK):
                 name = self._consume(TokenType.IDENTIFIER, "Diharapkan nama properti setelah '.'")
                 expr = ast.GetExpression(objek=expr, name=name)
+            elif self._match(TokenType.KURUNG_SIKU_BUKA):
+                indeks = self._expression()
+                self._consume(TokenType.KURUNG_SIKU_TUTUP, "Diharapkan ']' setelah indeks.")
+                expr = ast.SubscriptExpression(objek=expr, indeks=indeks)
             else:
                 break
         return expr
@@ -144,6 +148,24 @@ class Parser:
                     elements.append(self._expression())
             self._consume(TokenType.KURUNG_SIKU_TUTUP, "Diharapkan ']' setelah elemen daftar.")
             return ast.ListLiteral(elements=elements)
+        if self._match(TokenType.PETA):
+            keys = []
+            values = []
+            self._consume(TokenType.KURAWAL_BUKA, "Diharapkan '{' setelah 'peta'.")
+            if not self._check(TokenType.KURAWAL_TUTUP):
+                key = self._expression()
+                self._consume(TokenType.TITIK_DUA, "Diharapkan ':' setelah kunci peta.")
+                value = self._expression()
+                keys.append(key)
+                values.append(value)
+                while self._match(TokenType.KOMA):
+                    key = self._expression()
+                    self._consume(TokenType.TITIK_DUA, "Diharapkan ':' setelah kunci peta.")
+                    value = self._expression()
+                    keys.append(key)
+                    values.append(value)
+            self._consume(TokenType.KURAWAL_TUTUP, "Diharapkan '}' setelah elemen peta.")
+            return ast.MapLiteral(keys=keys, values=values)
         raise self._error(self._peek(), "Diharapkan sebuah ekspresi.")
 
     def _match(self, *types: TokenType) -> bool:

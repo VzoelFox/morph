@@ -19,6 +19,7 @@ class TokenType(Enum):
     PEMICU = "PEMICU"
     TERJADI = "TERJADI"
     HARUS = "HARUS"
+    PETA = "PETA"
 
     # Simbol & Operator
     SAMA_DENGAN = "="
@@ -38,6 +39,7 @@ class TokenType(Enum):
     KURAWAL_TUTUP = "}"
     KURUNG_SIKU_BUKA = "["
     KURUNG_SIKU_TUTUP = "]"
+    TITIK_DUA = ":"
 
     # Literals & Identifier
     IDENTIFIER = "IDENTIFIER"

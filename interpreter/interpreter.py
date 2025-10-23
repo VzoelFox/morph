@@ -136,3 +136,25 @@ class Interpreter:
         if isinstance(objek, Environment):
             return objek.get(expr.name)
         raise VzoelRuntimeException(expr.name, "Hanya environment modul yang memiliki properti.")
+
+    def visit_MapLiteral(self, expr: ast.MapLiteral):
+        peta = {}
+        for i in range(len(expr.keys)):
+            key = self._evaluate(expr.keys[i])
+            value = self._evaluate(expr.values[i])
+            peta[key] = value
+        return peta
+
+    def visit_SubscriptExpression(self, expr: ast.SubscriptExpression):
+        objek = self._evaluate(expr.objek)
+        indeks = self._evaluate(expr.indeks)
+
+        if isinstance(objek, list):
+            if not isinstance(indeks, (int, float)):
+                raise VzoelRuntimeException(None, "Indeks daftar harus berupa angka.")
+            return objek[int(indeks)]
+
+        if isinstance(objek, dict):
+            return objek.get(indeks)
+
+        raise VzoelRuntimeException(None, "Hanya bisa mengakses elemen dari daftar atau peta.")

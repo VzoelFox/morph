@@ -10,6 +10,22 @@ def test_list_literal_and_panjang():
     output = run_vzoel_code_capture_output(source)
     assert output == ["3"]
 
+def test_list_subscript_access():
+    source = """
+    atur a = ["satu", "dua", "tiga"]
+    lihat(a[1])
+    """
+    output = run_vzoel_code_capture_output(source)
+    assert output == ["dua"]
+
+def test_nested_list_access():
+    source = """
+    atur a = [1, [2, 3], 4]
+    lihat(a[1][0])
+    """
+    output = run_vzoel_code_capture_output(source)
+    assert output == ["2.0"]
+
 def test_list_tambah_element():
     source = """
     atur data = [1]
