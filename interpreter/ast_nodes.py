@@ -6,6 +6,7 @@ from .token import Token
 
 # --- Kelas Dasar ---
 class ASTNode(ABC):
+    """Kelas dasar untuk semua simpul AST."""
     @abstractmethod
     def accept(self, visitor):
         pass
@@ -14,6 +15,11 @@ class Statement(ASTNode):
     pass
 
 class Expression(ASTNode):
+    """Kelas dasar untuk pernyataan (statements)."""
+    pass
+
+class Expression(ASTNode):
+    """Kelas dasar untuk ekspresi (expressions)."""
     pass
 
 # --- Simpul Ekspresi (Expressions) ---
