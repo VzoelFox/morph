@@ -12,6 +12,9 @@ class ASTNode(ABC):
         pass
 
 class Statement(ASTNode):
+    pass
+
+class Expression(ASTNode):
     """Kelas dasar untuk pernyataan (statements)."""
     pass
 

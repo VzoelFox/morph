@@ -76,6 +76,9 @@ class Interpreter:
         if not isinstance(callee, VzoelCallable):
             raise VzoelRuntimeException(None, "Hanya bisa memanggil proses.")
 
+        if len(args) != callee.arity():
+            raise VzoelRuntimeException(None, f"Diharapkan {callee.arity()} argumen tapi dapat {len(args)}.")
+
         return callee.call(self, args)
 
     def visit_BinaryExpression(self, expr: ast.BinaryExpression):
