@@ -14,7 +14,6 @@ class TokenType(Enum):
     KEMBALI = "KEMBALI"
     BENAR = "BENAR"
     SALAH = "SALAH"
-    MANAGEMENT = "MANAGEMENT"
     JALANKAN = "JALANKAN"
     TUNGGU = "TUNGGU"
     PEMICU = "PEMICU"
@@ -39,7 +38,6 @@ class TokenType(Enum):
     KURAWAL_TUTUP = "}"
     KURUNG_SIKU_BUKA = "["
     KURUNG_SIKU_TUTUP = "]"
-    TIDAK_LOGIS = "TIDAK_LOGIS"
 
     # Literals & Identifier
     IDENTIFIER = "IDENTIFIER"

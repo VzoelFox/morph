@@ -1,13 +1,6 @@
 # examples/fungsi.vz
-
-proses sapa() {
-    lihat("Halo dari proses!")
-}
-
 proses tambah(a, b) {
-    kembali a + b
+  kembali a + b
 }
-
-sapa()
-atur hasil = tambah(5, 3)
-lihat("Hasilnya adalah " + ubahKeString(hasil))
+atur hasil = tambah(10, 5.5)
+lihat(hasil)
