@@ -76,6 +76,11 @@ class Grouping(Expression):
     expression: Expression
     def accept(self, visitor): return visitor.visit_Grouping(self)
 
+@dataclass
+class ListLiteral(Expression):
+    elements: List[Expression]
+    def accept(self, visitor): return visitor.visit_ListLiteral(self)
+
 # --- Simpul Pernyataan (Statements) ---
 @dataclass
 class Program(ASTNode):

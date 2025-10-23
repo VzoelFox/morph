@@ -1,51 +1,26 @@
 # Project Roadmap
 
-## Fase 1: Desain & Spesifikasi (Selesai)
-## Fase 2: Lexer & Parser (Selesai)
-## Fase 3: Interpreter (Selesai)
-*   [x] Interpreter Dasar
-*   [x] Fungsi Bawaan (`lihat`)
-*   [x] Sistem Modul (`ambil...dari...`)
-*   [x] Fungsi Buatan Pengguna (`proses`)
-*   [x] Operator Lanjutan (Aritmatika & Perbandingan)
-
-## Fase Berikutnya
-*   [x] Sistem Konkurensi Kooperatif (`management`)
 Dokumen ini menguraikan rencana pengembangan untuk Bahasa Pemrograman "Vzoel Word".
 
 ## Fase 1: Desain & Spesifikasi (Selesai)
-
 *   [x] Mendefinisikan filosofi bahasa berbasis Bahasa Indonesia.
-*   [x] Membuat dokumen spesifikasi formal (`VZOEL_SPEC.md`) untuk v0.2.
+*   [x] Membuat dokumen spesifikasi formal (`VZOEL_SPEC.md`).
 *   [x] Mendesain konsep inti `vzoelinfinity`.
-*   [x] Membuat contoh kode (`hello.vz`, `infinity_demo.vz`).
 
 ## Fase 2: Lexer & Parser (Selesai)
-## Fase 2: Lexer & Parser (Sedang Berlangsung)
+*   [x] Membangun Lexer dan Parser untuk menghasilkan *Abstract Syntax Tree* (AST).
+*   [x] Menulis tes untuk memvalidasi Lexer dan Parser.
 
-*   [x] Menginisialisasi proyek interpreter Python.
-*   [x] Membangun **Lexer** untuk mengubah kode `.vz` menjadi token.
-*   [x] Menulis tes untuk memvalidasi Lexer.
-*   [x] Membangun **Parser** untuk mengubah token menjadi *Abstract Syntax Tree* (AST).
+## Fase 3: Interpreter & Fitur Inti (Selesai)
+*   [x] Membuat interpreter dasar yang dapat mengeksekusi AST.
+*   [x] Mengimplementasikan variabel, lingkup (scoping), dan fungsi (`proses`).
+*   [x] Mengimplementasikan Sistem Modul (`ambil...dari...`) dengan fallback.
+*   [x] Mengimplementasikan Sistem Konkurensi Kooperatif (`management`).
 
-## Fase 3: Interpreter (Sedang Berlangsung)
-*   [x] Membuat *interpreter* dasar yang dapat mengeksekusi AST.
-*   [x] Mengimplementasikan logika untuk variabel dan fungsi dasar (`lihat`).
-*   [x] Mengimplementasikan Sistem Modul Lanjutan (`ambil...dari...`) dengan fallback.
-*   [ ] **(Aktif)** Mengimplementasikan Fungsi Buatan Pengguna (`proses`) dan Lingkup (Scoping).
-
-## Proyek Lainnya (Ditunda)
-
-*   [x] Membuat *interpreter* dasar yang dapat mengeksekusi AST.
-*   [x] Mengimplementasikan logika untuk variabel dan fungsi dasar (`lihat`).
-*   [ ] **(Aktif)** Mengimplementasikan Sistem Modul Lanjutan (`ambil...dari...`) dengan fallback.
-*   [ ] **(Aktif)** Membangun **Parser** untuk mengubah token menjadi *Abstract Syntax Tree* (AST).
-
-## Fase 3: Interpreter (Belum Dimulai)
-
-*   [ ] Membuat *interpreter* dasar yang dapat mengeksekusi AST.
-*   [ ] Mengimplementasikan logika untuk variabel dan fungsi dasar.
+## Fase 4: Struktur Data & Kontrol Alur (Sedang Berlangsung)
+*   [ ] **(Aktif)** Implementasi Tipe Data `Daftar` (List).
+*   [ ] Implementasi struktur perulangan (`untuk` atau `selama`).
+*   [ ] Implementasi Tipe Data `Kamus` (Map/Dict).
 
 ## Proyek Lainnya (Ditunda)
-
 *   **Library Telegram VBase**: Proyek ini ditunda untuk memprioritaskan pengembangan "Vzoel Word".
