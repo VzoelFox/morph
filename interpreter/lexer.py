@@ -46,6 +46,8 @@ class Lexer:
         elif char == ')': self._add_token(TokenType.KURUNG_TUTUP)
         elif char == '{': self._add_token(TokenType.KURAWAL_BUKA)
         elif char == '}': self._add_token(TokenType.KURAWAL_TUTUP)
+        elif char == '[': self._add_token(TokenType.KURUNG_SIKU_BUKA)
+        elif char == ']': self._add_token(TokenType.KURUNG_SIKU_TUTUP)
         elif char == ',': self._add_token(TokenType.KOMA)
         elif char == '.': self._add_token(TokenType.TITIK)
         elif char == '+': self._add_token(TokenType.PLUS)

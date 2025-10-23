@@ -2,7 +2,7 @@
 from typing import List, Any
 from .environment import Environment
 from .callable import VzoelCallable, VzoelFunction, Lihat
-from .builtins import UbahKeString
+from .builtins import UbahKeString, Panjang, Tambah
 from .errors import VzoelRuntimeException, VzoelModuleNotFound, Return
 from .token_types import TokenType
 from .scheduler import Scheduler, Task
@@ -15,6 +15,8 @@ class Interpreter:
         self.environment = self.globals
         self.globals.define("lihat", Lihat())
         self.globals.define("ubahKeString", UbahKeString())
+        self.globals.define("panjang", Panjang())
+        self.globals.define("tambah", Tambah())
         self.scheduler = Scheduler()
 
     def interpret(self, program: ast.Program):
@@ -133,6 +135,12 @@ class Interpreter:
 
     def visit_Grouping(self, expr: ast.Grouping):
         return (yield from self._evaluate(expr.expression))
+
+    def visit_ListLiteral(self, expr: ast.ListLiteral):
+        elements = []
+        for element_expr in expr.elements:
+            elements.append((yield from self._evaluate(element_expr)))
+        return elements
 
     def visit_AmbilExpression(self, expr: ast.AmbilExpression):
         path_str = yield from self._evaluate(expr.path)

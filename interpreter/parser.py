@@ -133,6 +133,14 @@ class Parser:
             expr = self._expression()
             self._consume(TokenType.KURUNG_TUTUP, "Diharapkan ')' setelah ekspresi.")
             return ast.Grouping(expression=expr)
+        if self._match(TokenType.KURUNG_SIKU_BUKA):
+            elements = []
+            if not self._check(TokenType.KURUNG_SIKU_TUTUP):
+                elements.append(self._expression())
+                while self._match(TokenType.KOMA):
+                    elements.append(self._expression())
+            self._consume(TokenType.KURUNG_SIKU_TUTUP, "Diharapkan ']' setelah elemen daftar.")
+            return ast.ListLiteral(elements=elements)
         if self._match(TokenType.AMBIL):
             keyword = self._previous()
             self._consume(TokenType.DARI, "Diharapkan 'dari'.")

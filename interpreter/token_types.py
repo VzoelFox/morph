@@ -37,6 +37,8 @@ class TokenType(Enum):
     KURUNG_TUTUP = ")"
     KURAWAL_BUKA = "{"
     KURAWAL_TUTUP = "}"
+    KURUNG_SIKU_BUKA = "["
+    KURUNG_SIKU_TUTUP = "]"
     TIDAK_LOGIS = "TIDAK_LOGIS"
 
     # Literals & Identifier
