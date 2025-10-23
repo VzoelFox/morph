@@ -18,7 +18,6 @@ class Lexer:
             "ambil": TokenType.AMBIL,
             "dari": TokenType.DARI,
             "kembali": TokenType.KEMBALI,
-            "management": TokenType.MANAGEMENT,
             "jalankan": TokenType.JALANKAN,
             "tunggu": TokenType.TUNGGU,
             "pemicu": TokenType.PEMICU,
@@ -58,7 +57,6 @@ class Lexer:
         elif self._is_digit(char): self._number()
         elif self._is_alpha(char): self._identifier()
         else:
-            print(f"Baris {self.line}: Karakter tidak dikenali: {char}")
             self._add_token(TokenType.TIDAK_DIKENALI)
 
     def _identifier(self):
@@ -79,9 +77,8 @@ class Lexer:
             if self._peek() == '\n': self.line += 1
             self._advance()
         if self._is_at_end():
-            print(f"Baris {self.line}: String tidak ditutup.")
             return
-        self._advance() # Menutup "
+        self._advance()
         value = self.source[self.start + 1:self.current - 1]
         self._add_token(TokenType.STRING, value)
 

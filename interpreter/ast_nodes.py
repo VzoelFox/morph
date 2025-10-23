@@ -62,16 +62,6 @@ class UnaryExpression(Expression):
     def accept(self, visitor): return visitor.visit_UnaryExpression(self)
 
 @dataclass
-class JalankanExpression(Expression):
-    call: FunctionCall
-    def accept(self, visitor): return visitor.visit_JalankanExpression(self)
-
-@dataclass
-class TungguExpression(Expression):
-    duration: Expression
-    def accept(self, visitor): return visitor.visit_TungguExpression(self)
-
-@dataclass
 class Grouping(Expression):
     expression: Expression
     def accept(self, visitor): return visitor.visit_Grouping(self)
@@ -116,8 +106,3 @@ class AturStatement(Statement):
 class ExpressionStatement(Statement):
     expression: Expression
     def accept(self, visitor): return visitor.visit_ExpressionStatement(self)
-
-@dataclass
-class ManagementStatement(Statement):
-    body: BlokStatement
-    def accept(self, visitor): return visitor.visit_ManagementStatement(self)

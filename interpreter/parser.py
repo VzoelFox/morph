@@ -16,18 +16,12 @@ class Parser:
         return ast.Program(statements=statements)
 
     def _statement(self) -> ast.Statement:
-        if self._match(TokenType.MANAGEMENT): return self._management_statement()
         if self._match(TokenType.PROSES): return self._proses_statement()
         if self._match(TokenType.KEMBALI): return self._kembali_statement()
         if self._match(TokenType.KURAWAL_BUKA): return ast.BlokStatement(self._blok())
         if self._match(TokenType.JIKA): return self._jika_statement()
         if self._match(TokenType.ATUR): return self._atur_statement()
         return self._expression_statement()
-
-    def _management_statement(self) -> ast.Statement:
-        self._consume(TokenType.KURAWAL_BUKA, "Diharapkan '{' setelah 'management'.")
-        body = ast.BlokStatement(self._blok())
-        return ast.ManagementStatement(body)
 
     def _proses_statement(self) -> ast.ProsesStatement:
         name = self._consume(TokenType.IDENTIFIER, "Diharapkan nama proses.")
@@ -99,7 +93,7 @@ class Parser:
         return expr
 
     def _unary(self) -> ast.Expression:
-        if self._match(TokenType.TIDAK_LOGIS, TokenType.MINUS):
+        if self._match(TokenType.MINUS):
             operator = self._previous()
             right = self._unary()
             return ast.UnaryExpression(operator=operator, right=right)
@@ -129,10 +123,19 @@ class Parser:
     def _primary(self) -> ast.Expression:
         if self._match(TokenType.NUMBER, TokenType.STRING, TokenType.BENAR, TokenType.SALAH):
             return ast.Literal(value=self._previous().literal)
+        if self._match(TokenType.IDENTIFIER):
+            return ast.Variable(name=self._previous())
         if self._match(TokenType.KURUNG_BUKA):
             expr = self._expression()
             self._consume(TokenType.KURUNG_TUTUP, "Diharapkan ')' setelah ekspresi.")
             return ast.Grouping(expression=expr)
+        if self._match(TokenType.AMBIL):
+            keyword = self._previous()
+            self._consume(TokenType.DARI, "Diharapkan 'dari'.")
+            path = self._primary()
+            if not isinstance(path, ast.Literal) or not isinstance(path.value, str):
+                raise self._error(keyword, "Path modul harus string.")
+            return ast.AmbilExpression(keyword=keyword, path=path)
         if self._match(TokenType.KURUNG_SIKU_BUKA):
             elements = []
             if not self._check(TokenType.KURUNG_SIKU_TUTUP):
@@ -141,23 +144,6 @@ class Parser:
                     elements.append(self._expression())
             self._consume(TokenType.KURUNG_SIKU_TUTUP, "Diharapkan ']' setelah elemen daftar.")
             return ast.ListLiteral(elements=elements)
-        if self._match(TokenType.AMBIL):
-            keyword = self._previous()
-            self._consume(TokenType.DARI, "Diharapkan 'dari'.")
-            path = self._primary()
-            if not isinstance(path, ast.Literal) or not isinstance(path.value, str):
-                raise self._error(keyword, "Path modul harus string.")
-            return ast.AmbilExpression(keyword=keyword, path=path)
-        if self._match(TokenType.JALANKAN):
-            call_expr = self._call()
-            if not isinstance(call_expr, ast.FunctionCall):
-                raise self._error(self._peek(), "Hanya pemanggilan proses yang bisa dijalankan.")
-            return ast.JalankanExpression(call_expr)
-        if self._match(TokenType.TUNGGU):
-            duration = self._expression()
-            return ast.TungguExpression(duration)
-        if self._match(TokenType.IDENTIFIER):
-            return ast.Variable(name=self._previous())
         raise self._error(self._peek(), "Diharapkan sebuah ekspresi.")
 
     def _match(self, *types: TokenType) -> bool:
