@@ -2,7 +2,7 @@
 from typing import List, Any
 from .environment import Environment
 from .callable import VzoelCallable, VzoelFunction, Lihat
-from .builtins import Panjang, Tambah
+from .builtins import Panjang, Tambah, Potong
 from .errors import VzoelRuntimeException, VzoelModuleNotFound, Return
 from .token_types import TokenType
 import interpreter.ast_nodes as ast
@@ -15,6 +15,7 @@ class Interpreter:
         self.globals.define("lihat", Lihat())
         self.globals.define("panjang", Panjang())
         self.globals.define("tambah", Tambah())
+        self.globals.define("potong", Potong())
 
     def interpret(self, program: ast.Program):
         try:
@@ -60,6 +61,14 @@ class Interpreter:
     def visit_KembaliStatement(self, stmt: ast.KembaliStatement):
         value = self._evaluate(stmt.value) if stmt.value else None
         raise Return(value)
+
+    def visit_UlangiStatement(self, stmt: ast.UlangiStatement):
+        count = self._evaluate(stmt.count)
+        if not isinstance(count, (int, float)):
+            raise VzoelRuntimeException(None, "Jumlah perulangan harus berupa angka.")
+
+        for _ in range(int(count)):
+            self._execute(stmt.body)
 
     def visit_Literal(self, expr: ast.Literal):
         return expr.value

@@ -12,9 +12,6 @@ class ASTNode(ABC):
         pass
 
 class Statement(ASTNode):
-    pass
-
-class Expression(ASTNode):
     """Kelas dasar untuk pernyataan (statements)."""
     pass
 
@@ -121,3 +118,9 @@ class AturStatement(Statement):
 class ExpressionStatement(Statement):
     expression: Expression
     def accept(self, visitor): return visitor.visit_ExpressionStatement(self)
+
+@dataclass
+class UlangiStatement(Statement):
+    count: Expression
+    body: Statement
+    def accept(self, visitor): return visitor.visit_UlangiStatement(self)
