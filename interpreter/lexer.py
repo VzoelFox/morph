@@ -25,6 +25,7 @@ class Lexer:
             "harus": TokenType.HARUS,
             "benar": TokenType.BENAR,
             "salah": TokenType.SALAH,
+            "peta": TokenType.PETA,
         }
 
     def scan_tokens(self) -> list[Token]:
@@ -51,6 +52,7 @@ class Lexer:
         elif char == '.': self._add_token(TokenType.TITIK)
         elif char == '+': self._add_token(TokenType.PLUS)
         elif char == '=': self._add_token(TokenType.SAMA_DENGAN)
+        elif char == ':': self._add_token(TokenType.TITIK_DUA)
         elif char == '#':
             while self._peek() != '\n' and not self._is_at_end(): self._advance()
         elif char == '"': self._string()
