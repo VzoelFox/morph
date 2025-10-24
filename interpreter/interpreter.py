@@ -2,7 +2,7 @@
 from typing import List, Any
 from .environment import Environment
 from .callable import VzoelCallable, VzoelFunction, Lihat
-from .builtins import Panjang, Tambah
+from .builtins import Panjang, Tambah, Potong
 from .errors import VzoelRuntimeException, VzoelModuleNotFound, Return
 from .token_types import TokenType
 import interpreter.ast_nodes as ast
@@ -15,6 +15,7 @@ class Interpreter:
         self.globals.define("lihat", Lihat())
         self.globals.define("panjang", Panjang())
         self.globals.define("tambah", Tambah())
+        self.globals.define("potong", Potong())
 
     def interpret(self, program: ast.Program):
         try:

@@ -35,9 +35,7 @@ Inti dari Vzoel Word telah stabil. Semua tes yang ada telah berhasil, memvalidas
 
 ### v0.3: Peningkatan Struktur Data & Kontrol Alur
 - **[x] Tipe Data Lanjutan:** Menambahkan dukungan untuk `String` dan `Map` (kamus).
-- **[ ] Operasi String:** Membangun fungsi bawaan untuk manipulasi string (misalnya, penggabungan, pemotongan).
-- **[ ] Tipe Data Lanjutan:** Menambahkan dukungan untuk `String` dan `Map` (kamus).
-- **[ ] Operasi String:** Membangun fungsi bawaan untuk manipulasi string.
+- **[x] Operasi String:** Membangun fungsi bawaan untuk manipulasi string (misalnya, penggabungan, pemotongan).
 - **[ ] Kontrol Alur:** Mengimplementasikan sintaks perulangan (misalnya, `ulangi`).
 - **[ ] Penanganan Kesalahan:** Mengembangkan sistem penanganan error yang lebih informatif.
 
