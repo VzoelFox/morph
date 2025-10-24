@@ -16,6 +16,7 @@ class Parser:
         return ast.Program(statements=statements)
 
     def _statement(self) -> ast.Statement:
+        if self._match(TokenType.ULANGI): return self._ulangi_statement()
         if self._match(TokenType.PROSES): return self._proses_statement()
         if self._match(TokenType.KEMBALI): return self._kembali_statement()
         if self._match(TokenType.KURAWAL_BUKA): return ast.BlokStatement(self._blok())
@@ -62,6 +63,13 @@ class Parser:
              raise self._error(self._peek(), "Fallback harus berupa 'atur' saat ini.")
         atur_stmt.fallback = fallback_stmt
         return atur_stmt
+
+    def _ulangi_statement(self) -> ast.Statement:
+        body = self._statement()
+        self._consume(TokenType.SEBANYAK, "Diharapkan 'sebanyak' setelah badan perulangan.")
+        count = self._expression()
+        self._consume(TokenType.KALI, "Diharapkan 'kali' setelah jumlah perulangan.")
+        return ast.UlangiStatement(count=count, body=body)
 
     def _atur_statement(self) -> ast.AturStatement:
         name = self._consume(TokenType.IDENTIFIER, "Diharapkan nama variabel.")

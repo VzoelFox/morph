@@ -62,6 +62,14 @@ class Interpreter:
         value = self._evaluate(stmt.value) if stmt.value else None
         raise Return(value)
 
+    def visit_UlangiStatement(self, stmt: ast.UlangiStatement):
+        count = self._evaluate(stmt.count)
+        if not isinstance(count, (int, float)):
+            raise VzoelRuntimeException(None, "Jumlah perulangan harus berupa angka.")
+
+        for _ in range(int(count)):
+            self._execute(stmt.body)
+
     def visit_Literal(self, expr: ast.Literal):
         return expr.value
 

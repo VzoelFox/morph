@@ -8,3 +8,10 @@ def test_function_and_operators():
     """
     output = run_vzoel_code_capture_output(source)
     assert output == ["8.0"]
+
+def test_ulangi_loop():
+    source = """
+    ulangi lihat("halo") sebanyak 3 kali
+    """
+    output = run_vzoel_code_capture_output(source)
+    assert output == ["halo", "halo", "halo"]
