@@ -20,6 +20,9 @@ class TokenType(Enum):
     TERJADI = "TERJADI"
     HARUS = "HARUS"
     PETA = "PETA"
+    ULANGI = "ULANGI"
+    SEBANYAK = "SEBANYAK"
+    KALI = "KALI"
 
     # Simbol & Operator
     SAMA_DENGAN = "="
