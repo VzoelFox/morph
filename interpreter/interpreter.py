@@ -22,7 +22,10 @@ class Interpreter:
             for stmt in program.statements:
                 self._execute(stmt)
         except VzoelRuntimeException as e:
-            print(f"Error runtime: {e.message}")
+            if e.token:
+                print(f"[Baris {e.token.line}] Error runtime: {e.message}")
+            else:
+                print(f"Error runtime: {e.message}")
 
     def execute_block(self, statements: List[ast.Statement], environment: Environment):
         previous = self.environment
