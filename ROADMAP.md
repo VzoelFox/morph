@@ -2,52 +2,48 @@
 
 Dokumen ini menguraikan status saat ini dan rencana pengembangan untuk bahasa pemrograman Vzoel Word.
 
-## Status Saat Ini: v0.3 (Stabil)
+## Status Saat Ini: v0.2 (Stabil)
 
-Fitur-fitur inti bahasa, termasuk struktur data dan kontrol alur dasar, telah stabil. Semua tes yang ada berhasil, memvalidasi fungsionalitas yang ada.
+Inti dari Vzoel Word telah stabil. Semua tes yang ada telah berhasil, memvalidasi fitur-fitur dasar bahasa.
 
 ---
 
-## Fitur yang Sudah Selesai
+## Fitur yang Sudah Selesai (Core System)
 
-### Arsitektur Inti
-- **[x] Filosofi & Desain Bahasa:** Mendesain bahasa yang intuitif dan berbasis Bahasa Indonesia, termasuk konsep `vzoelinfinity`.
-- **[x] Lexer:** Mengubah kode sumber menjadi token.
-- **[x] Parser:** Mengubah token menjadi *Abstract Syntax Tree* (AST).
-- **[x] Interpreter:** Mengeksekusi AST menggunakan *Visitor Pattern*.
-- **[x] Variabel & Lingkup:** Mendukung *lexical scoping* melalui sistem `Environment`.
-- **[x] Sistem Modul:** Membangun sistem impor (`ambil...dari...`) yang terisolasi dan tangguh.
-- **[x] Pengujian:** Menulis tes unit untuk memvalidasi semua komponen inti.
+### Fase 1: Desain & Spesifikasi
+- **[x] Filosofi Bahasa:** Mendesain bahasa yang intuitif dan berbasis Bahasa Indonesia.
+- **[x] Spesifikasi Formal:** Membuat dokumen `VZOEL_SPEC.md` yang mendefinisikan sintaks dan semantik.
+- **[x] Konsep `vzoelinfinity`:** Merancang mekanisme fallback untuk menangani operasi yang mungkin gagal.
 
-### Fitur Bahasa & Sintaks
+### Fase 2: Lexer & Parser
+- **[x] Lexer:** Mengimplementasikan lexer untuk mengubah kode sumber menjadi token.
+- **[x] Parser:** Membangun parser untuk mengubah token menjadi *Abstract Syntax Tree* (AST).
+- **[x] Pengujian:** Menulis tes unit untuk memvalidasi Lexer dan Parser.
+
+### Fase 3: Interpreter & Fitur Inti
+- **[x] Interpreter Dasar:** Mengimplementasikan interpreter dengan *Visitor Pattern* untuk mengeksekusi AST.
+- **[x] Variabel & Lingkup:** Menciptakan sistem lingkungan (`Environment`) yang mendukung *lexical scoping*.
+- **[x] Fungsi Bawaan:** Menyediakan fungsi inti seperti `lihat`, `panjang`, dan `tambah`.
+- **[x] Struktur Data:** Mengimplementasikan tipe data `Daftar` (List).
+- **[x] Fungsi Buatan Pengguna:** Mengizinkan definisi fungsi (`proses`) dengan dukungan *closure*.
+- **[x] Sistem Modul:** Membangun sistem impor (`ambil...dari...`) yang terisolasi.
 - **[x] Operator:** Mendukung operator aritmatika dan perbandingan dasar.
-- **[x] Fungsi Buatan Pengguna (`proses`):** Mendukung definisi fungsi dengan argumen dan *closure*.
-- **[x] Kontrol Alur (`ulangi`):** Mengimplementasikan sintaks perulangan `ulangi ... sebanyak ... kali`.
-
-### Tipe Data & Fungsi Bawaan
-- **[x] Tipe Data Dasar:**
-  - **[x] `Daftar` (List):** Mendukung literal `[...]` dan akses indeks.
-  - **[x] `Peta` (Map):** Mendukung literal `peta{}` dengan kunci string/angka.
-  - **[x] `String`:** Mendukung literal `"..."` dan operasi dasar.
-- **[x] Fungsi Bawaan:**
-  - `lihat()`: Untuk output.
-  - `panjang()`: Untuk mengukur panjang `Daftar`.
-  - `tambah()`: Untuk menambahkan elemen ke `Daftar`.
-  - `potong()`: Untuk memotong `String`.
 
 ---
 
 ## Rencana Pengembangan (Fase Berikutnya)
 
-### v0.4: Peningkatan Lanjutan
-- **[ ] Penanganan Kesalahan:** Mengembangkan sistem penanganan error yang lebih informatif di seluruh interpreter.
-- **[ ] Perluasan Pustaka Standar:** Menambahkan lebih banyak fungsi bawaan untuk `Daftar`, `Peta`, dan `String`.
+### v0.3: Peningkatan Struktur Data & Kontrol Alur
+- **[x] Tipe Data Lanjutan:** Menambahkan dukungan untuk `String` dan `Map` (kamus).
+- **[x] Operasi String:** Membangun fungsi bawaan untuk manipulasi string (misalnya, penggabungan, pemotongan).
+- **[ ] Kontrol Alur:** Mengimplementasikan sintaks perulangan (misalnya, `ulangi`).
+- **[ ] Penanganan Kesalahan:** Mengembangkan sistem penanganan error yang lebih informatif.
 
-### v0.5: Konkurensi
+### v0.4: Konkurensi
 - **[ ] Desain Konkurensi:** Merancang dan mengimplementasikan model konkurensi kooperatif (konsep `management`).
 
 ### Jangka Panjang
-- **[ ] Standard Library:** Memperluas pustaka standar secara signifikan.
+- **[ ] Standard Library:** Memperluas pustaka standar dengan lebih banyak fungsi.
 - **[ ] Framework Backend:** Memulai pengembangan framework backend seperti yang dicita-citakan.
 
 ---
