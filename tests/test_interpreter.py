@@ -20,7 +20,7 @@ def run_vzoel_code(source_code: str) -> str:
     return captured_output.getvalue()
 
 def test_hello_world_interpreter():
-    source_path = Path(__file__).parent.parent / "examples" / "hello.vz"
+    source_path = Path(__file__).parent.parent / "examples" / "hello.fox"
     with open(source_path, 'r', encoding='utf-8') as f:
         source_code = f.read()
     output = run_vzoel_code(source_code)
@@ -56,7 +56,7 @@ def run_vzoel_code(source_code: str) -> str:
 
 def test_hello_world_interpreter():
     # 1. Setup: Baca kode sumber
-    source_path = Path(__file__).parent.parent / "examples" / "hello.vz"
+    source_path = Path(__file__).parent.parent / "examples" / "hello.fox"
     with open(source_path, 'r', encoding='utf-8') as f:
         source_code = f.read()
 

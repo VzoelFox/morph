@@ -19,7 +19,7 @@ from interpreter.token_types import TokenType
 
 def test_hello_world_lexer():
     # Path ke file contoh
-    source_path = Path(__file__).parent.parent / "examples" / "hello.vz"
+    source_path = Path(__file__).parent.parent / "examples" / "hello.fox"
 
     # Baca source code
     with open(source_path, 'r', encoding='utf-8') as f:

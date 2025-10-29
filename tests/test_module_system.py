@@ -4,7 +4,7 @@ from tests.helpers import run_vzoel_code_capture_output
 
 def test_module_fallback_and_property_access():
     # 1. Setup: Baca kode sumber dari program utama
-    source_path = Path(__file__).parent.parent / "examples" / "modul_utama.vz"
+    source_path = Path(__file__).parent.parent / "examples" / "modul_utama.fox"
     with open(source_path, 'r', encoding='utf-8') as f:
         source_code = f.read()
 

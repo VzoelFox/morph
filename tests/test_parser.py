@@ -15,7 +15,7 @@ def test_parser_basic():
     assert isinstance(stmt.initializer, ast.Literal)
 def test_hello_world_parser():
     # 1. Setup: Dapatkan token dari Lexer
-    source_path = Path(__file__).parent.parent / "examples" / "hello.vz"
+    source_path = Path(__file__).parent.parent / "examples" / "hello.fox"
     with open(source_path, 'r', encoding='utf-8') as f:
         source_code = f.read()
 
