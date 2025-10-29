@@ -4,15 +4,23 @@ from .token import Token
 import interpreter.ast_nodes as ast
 from typing import List
 
+class ParseError(Exception):
+    pass
+
 class Parser:
     def __init__(self, tokens: List[Token]):
         self.tokens = [t for t in tokens if t.type != TokenType.TIDAK_DIKENALI]
         self.current = 0
+        self.errors: List[str] = []
 
     def parse(self) -> ast.Program:
         statements = []
         while not self._is_at_end():
-            statements.append(self._statement())
+            try:
+                stmt = self._statement()
+                if stmt: statements.append(stmt)
+            except ParseError:
+                self._synchronize()
         return ast.Program(statements=statements)
 
     def _statement(self) -> ast.Statement:
@@ -24,6 +32,7 @@ class Parser:
         if self._match(TokenType.ATUR): return self._atur_statement()
         return self._expression_statement()
 
+    # ... (metode statement lainnya tetap sama) ...
     def _proses_statement(self) -> ast.ProsesStatement:
         name = self._consume(TokenType.IDENTIFIER, "Diharapkan nama proses.")
         self._consume(TokenType.KURUNG_BUKA, "Diharapkan '(' setelah nama proses.")
@@ -81,18 +90,36 @@ class Parser:
         expr = self._expression()
         return ast.ExpressionStatement(expression=expr)
 
-    def _expression(self) -> ast.Expression:
-        return self._addition()
 
-    def _addition(self) -> ast.Expression:
-        expr = self._multiplication()
-        while self._match(TokenType.PLUS, TokenType.MINUS):
+    # --- HIERARKI PRESEDEN EKSPRESI (YANG DIPERBAIKI) ---
+    def _expression(self) -> ast.Expression:
+        return self._equality()
+
+    def _equality(self) -> ast.Expression:
+        expr = self._comparison()
+        while self._match(TokenType.TIDAK_SAMA_DENGAN, TokenType.SAMA_DENGAN_SAMA_DENGAN):
             operator = self._previous()
-            right = self._multiplication()
+            right = self._comparison()
             expr = ast.BinaryExpression(left=expr, operator=operator, right=right)
         return expr
 
-    def _multiplication(self) -> ast.Expression:
+    def _comparison(self) -> ast.Expression:
+        expr = self._term() # Diubah dari _addition
+        while self._match(TokenType.LEBIH_DARI, TokenType.KURANG_DARI):
+            operator = self._previous()
+            right = self._term() # Diubah dari _addition
+            expr = ast.BinaryExpression(left=expr, operator=operator, right=right)
+        return expr
+
+    def _term(self) -> ast.Expression: # Dulu bernama _addition
+        expr = self._factor() # Diubah dari _multiplication
+        while self._match(TokenType.PLUS, TokenType.MINUS):
+            operator = self._previous()
+            right = self._factor() # Diubah dari _multiplication
+            expr = ast.BinaryExpression(left=expr, operator=operator, right=right)
+        return expr
+
+    def _factor(self) -> ast.Expression: # Dulu bernama _multiplication
         expr = self._unary()
         while self._match(TokenType.BINTANG, TokenType.GARIS_MIRING):
             operator = self._previous()
@@ -107,6 +134,7 @@ class Parser:
             return ast.UnaryExpression(operator=operator, right=right)
         return self._call()
 
+    # ... (sisa metode _call, _primary, dll. tetap sama) ...
     def _call(self) -> ast.Expression:
         expr = self._primary()
         while True:
@@ -204,5 +232,15 @@ class Parser:
         if self._check(type): return self._advance()
         raise self._error(self._peek(), message)
 
-    def _error(self, token: Token, message: str):
-        return Exception(f"Error di baris {token.line}: {message}")
+    def _error(self, token: Token, message: str) -> ParseError:
+        error_message = f"Error di baris {token.line}: {message}"
+        self.errors.append(error_message)
+        return ParseError(error_message)
+
+    def _synchronize(self):
+        self._advance()
+        while not self._is_at_end():
+            # Bisa ditambahkan logika sinkronisasi yang lebih baik di sini
+            if self._previous().type in [TokenType.ATUR, TokenType.PROSES, TokenType.JIKA, TokenType.ULANGI, TokenType.KEMBALI]:
+                return
+            self._advance()
