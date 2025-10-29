@@ -62,3 +62,22 @@ def test_potong_with_invalid_arguments():
     source_2 = 'potong("hello", "a", "b")'
     output_2 = run_code(source_2)
     assert "Error runtime: Argumen kedua dan ketiga untuk 'potong' harus berupa angka." in output_2
+
+def test_ke_kecil_function():
+    source = 'lihat(ke_kecil("HALO DUNIA"))'
+    output = run_code(source)
+    assert output == "halo dunia"
+
+def test_ke_besar_function():
+    source = 'lihat(ke_besar("halo dunia"))'
+    output = run_code(source)
+    assert output == "HALO DUNIA"
+
+def test_case_conversion_error_handling():
+    source_1 = 'ke_kecil(123)'
+    output_1 = run_code(source_1)
+    assert "Error runtime: Argumen untuk 'ke_kecil' harus berupa string." in output_1
+
+    source_2 = 'ke_besar([1, 2])'
+    output_2 = run_code(source_2)
+    assert "Error runtime: Argumen untuk 'ke_besar' harus berupa string." in output_2
