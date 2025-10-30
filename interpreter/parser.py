@@ -161,8 +161,12 @@ class Parser:
         return ast.FunctionCall(callee=callee, arguments=arguments)
 
     def _primary(self) -> ast.Expression:
-        if self._match(TokenType.NUMBER, TokenType.STRING, TokenType.BENAR, TokenType.SALAH):
+        if self._match(TokenType.SALAH): return ast.Literal(value=False)
+        if self._match(TokenType.BENAR): return ast.Literal(value=True)
+
+        if self._match(TokenType.NUMBER, TokenType.STRING):
             return ast.Literal(value=self._previous().literal)
+
         if self._match(TokenType.IDENTIFIER):
             return ast.Variable(name=self._previous())
         if self._match(TokenType.KURUNG_BUKA):
