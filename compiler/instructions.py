@@ -34,6 +34,14 @@ class StoreVar(Instruction):
 # --- Operasi Aritmatika & Perbandingan ---
 
 @dataclass
+class UnaryOp(Instruction):
+    """Kelas dasar untuk operasi unary (seperti NEG)."""
+    operand: str
+    dest: str
+
+class Negate(UnaryOp): pass
+
+@dataclass
 class BinaryOp(Instruction):
     """Kelas dasar untuk operasi biner (seperti ADD, SUB)."""
     left: str
