@@ -24,10 +24,6 @@ Dokumen ini menguraikan visi jangka panjang untuk evolusi Bahasa Morph dari baha
 **Langkah-langkah:**
 - **[x] Desain IR:** Merancang *Intermediate Representation* (representasi perantara) khusus untuk Bahasa Morph.
 - **[o] Kompiler ke IR:** Membangun komponen compiler (frontend) yang dapat mengubah kode Morph menjadi IR yang telah dirancang.
-  - **[x] Ekspresi:** Literal, operator unary & biner.
-  - **[x] Variabel:** Deklarasi (`atur`) dan akses.
-  - **[ ] Struktur Kontrol:** Perulangan (`ulangi`) dan kondisional (`jika`).
-  - **[ ] Fungsi:** Deklarasi (`proses`) dan pemanggilan.
 
 ---
 
