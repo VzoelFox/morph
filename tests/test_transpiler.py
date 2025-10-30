@@ -83,3 +83,19 @@ def test_transpile_tambah():
     listku.append(3.0)
     """
     assert_transpilation(source, expected)
+
+def test_transpile_map_literal():
+    source = 'atur data = peta{"nama": "Morph", "versi": 0.3}'
+    expected = "data = {'nama': 'Morph', 'versi': 0.3}"
+    assert_transpilation(source, expected)
+
+def test_transpile_subscript_expression():
+    source = """
+    atur data = peta{"kunci": "nilai"}
+    atur nilai = data["kunci"]
+    """
+    expected = """
+    data = {'kunci': 'nilai'}
+    nilai = data['kunci']
+    """
+    assert_transpilation(source, expected)

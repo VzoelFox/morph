@@ -56,6 +56,19 @@ class Transpiler:
         elements = [self._visit(elem) for elem in expr.elements]
         return f"[{', '.join(elements)}]"
 
+    def visit_MapLiteral(self, expr: ast.MapLiteral):
+        pairs = []
+        for i in range(len(expr.keys)):
+            key = self._visit(expr.keys[i])
+            value = self._visit(expr.values[i])
+            pairs.append(f"{key}: {value}")
+        return f"{{{', '.join(pairs)}}}"
+
+    def visit_SubscriptExpression(self, expr: ast.SubscriptExpression):
+        objek = self._visit(expr.objek)
+        indeks = self._visit(expr.indeks)
+        return f"{objek}[{indeks}]"
+
     def visit_BinaryExpression(self, expr: ast.BinaryExpression):
         left = self._visit(expr.left)
         op_map = {

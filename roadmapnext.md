@@ -10,7 +10,10 @@ Dokumen ini menguraikan visi jangka panjang untuk evolusi Bahasa Morph dari baha
 
 **Langkah-langkah:**
 - **[x] Desain Analisis Statis:** Merancang dan mengimplementasikan sistem untuk analisis tipe statis (inferensi tipe) dan pemeriksaan error sebelum program dijalankan.
-- **[ ] Implementasi *Transpiler*:** Membangun *transpiler* yang dapat mengubah kode Morph (.fox) menjadi kode Python yang dioptimalkan dan setara.
+- **[x] Implementasi *Transpiler* (Dasar):** Membangun fondasi *transpiler* yang dapat mengubah sintaks dasar Morph (.fox) menjadi kode Python yang setara.
+  - **[x] Fitur Dasar:** Variabel, literal, operator.
+  - **[x] Fungsi Bawaan:** `lihat`, `panjang`, `tambah`.
+  - **[x] Struktur Data:** `Daftar` (List) dan `Peta` (Map).
 
 ---
 
