@@ -22,7 +22,7 @@ Dokumen ini menguraikan visi jangka panjang untuk evolusi Bahasa Morph dari baha
 **Tujuan:** Menciptakan jembatan antara bahasa tingkat tinggi Morph dan bahasa mesin tingkat rendah.
 
 **Langkah-langkah:**
-- **[ ] Desain IR:** Merancang *Intermediate Representation* (representasi perantara) khusus untuk Bahasa Morph.
+- **[o] Desain IR:** Merancang *Intermediate Representation* (representasi perantara) khusus untuk Bahasa Morph.
 - **[ ] Kompiler ke IR:** Membangun komponen compiler (frontend) yang dapat mengubah kode Morph menjadi IR yang telah dirancang.
 
 ---
