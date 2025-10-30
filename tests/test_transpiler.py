@@ -99,25 +99,3 @@ def test_transpile_subscript_expression():
     nilai = data['kunci']
     """
     assert_transpilation(source, expected)
-
-def test_transpile_ulangi_statement():
-    source = 'ulangi lihat("tes") sebanyak 3 kali'
-    expected = """
-    for _ in range(int(3.0)):
-        print('tes')
-    """
-    assert_transpilation(source, expected)
-
-def test_transpile_ulangi_with_block():
-    source = """
-    atur x = 0
-    ulangi {
-        atur x = x + 1
-    } sebanyak 2 kali
-    """
-    expected = """
-    x = 0.0
-    for _ in range(int(2.0)):
-        x = (x + 1.0)
-    """
-    assert_transpilation(source, expected)

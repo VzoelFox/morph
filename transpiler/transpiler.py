@@ -3,9 +3,6 @@ import interpreter.ast_nodes as ast
 from interpreter.token_types import TokenType
 
 class Transpiler:
-    def __init__(self):
-        self._indentation_level = 0
-
     def transpile(self, program: ast.Program) -> str:
         """
         Titik masuk utama untuk proses transpilasi.
@@ -13,7 +10,7 @@ class Transpiler:
         """
         return self._visit(program)
 
-    def _visit(self, node: ast.ASTNode):
+    def _visit(self, node: ast.ASTNode, parent_precedence=0):
         """Helper untuk memanggil metode visit yang sesuai."""
         method_name = f'visit_{type(node).__name__}'
         visitor = getattr(self, method_name, self._generic_visit)
@@ -21,10 +18,7 @@ class Transpiler:
 
     def _generic_visit(self, node: ast.ASTNode):
         # Fallback untuk node yang belum diimplementasikan secara eksplisit
-        return self._indent() + f"# Node '{type(node).__name__}' belum didukung oleh transpiler."
-
-    def _indent(self):
-        return "    " * self._indentation_level
+        return f"# Node '{type(node).__name__}' belum didukung oleh transpiler."
 
     # --- Metode Visitor untuk Pernyataan (Statements) ---
 
@@ -33,28 +27,12 @@ class Transpiler:
         return "\n".join(lines)
 
     def visit_ExpressionStatement(self, stmt: ast.ExpressionStatement):
-        return self._indent() + self._visit(stmt.expression)
+        return self._visit(stmt.expression)
 
     def visit_AturStatement(self, stmt: ast.AturStatement):
         var_name = stmt.name.literal
         value = self._visit(stmt.initializer)
-        return self._indent() + f"{var_name} = {value}"
-
-    def visit_BlokStatement(self, stmt: ast.BlokStatement):
-        # Blok tidak menghasilkan indentasi sendiri, hanya kontennya
-        lines = [self._visit(s) for s in stmt.statements]
-        return "\n".join(lines)
-
-    def visit_UlangiStatement(self, stmt: ast.UlangiStatement):
-        count = self._visit(stmt.count)
-        header = self._indent() + f"for _ in range(int({count})):"
-
-        self._indentation_level += 1
-        body = self._visit(stmt.body)
-        self._indentation_level -= 1
-
-        return f"{header}\n{body}"
-
+        return f"{var_name} = {value}"
 
     # --- Metode Visitor untuk Ekspresi (Expressions) ---
 
@@ -62,11 +40,16 @@ class Transpiler:
         return expr.name.literal
 
     def visit_Literal(self, expr: ast.Literal):
+        # Handle boolean literals explicitly from the lexer's string representation
         if expr.value == 'benar': return "True"
         if expr.value == 'salah': return "False"
-        if isinstance(expr.value, str): return repr(expr.value)
-        if isinstance(expr.value, bool): return str(expr.value)
-        if expr.value is None: return "None"
+
+        if isinstance(expr.value, str):
+            return repr(expr.value)
+        if isinstance(expr.value, bool):
+            return str(expr.value)
+        if expr.value is None:
+            return "None"
         return str(expr.value)
 
     def visit_ListLiteral(self, expr: ast.ListLiteral):
@@ -74,7 +57,11 @@ class Transpiler:
         return f"[{', '.join(elements)}]"
 
     def visit_MapLiteral(self, expr: ast.MapLiteral):
-        pairs = [f"{self._visit(k)}: {self._visit(v)}" for k, v in zip(expr.keys, expr.values)]
+        pairs = []
+        for i in range(len(expr.keys)):
+            key = self._visit(expr.keys[i])
+            value = self._visit(expr.values[i])
+            pairs.append(f"{key}: {value}")
         return f"{{{', '.join(pairs)}}}"
 
     def visit_SubscriptExpression(self, expr: ast.SubscriptExpression):
@@ -84,9 +71,13 @@ class Transpiler:
 
     def visit_BinaryExpression(self, expr: ast.BinaryExpression):
         left = self._visit(expr.left)
-        op_map = {TokenType.SAMA_DENGAN_SAMA_DENGAN: "==", TokenType.TIDAK_SAMA_DENGAN: "!="}
+        op_map = {
+            TokenType.SAMA_DENGAN_SAMA_DENGAN: "==",
+            TokenType.TIDAK_SAMA_DENGAN: "!=",
+        }
         op = op_map.get(expr.operator.type, expr.operator.literal)
         right = self._visit(expr.right)
+        # Tanda kurung di sekitar ekspresi biner adalah cara paling aman untuk menjaga preseden
         return f"({left} {op} {right})"
 
     def visit_Grouping(self, expr: ast.Grouping):

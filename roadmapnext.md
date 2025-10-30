@@ -14,7 +14,6 @@ Dokumen ini menguraikan visi jangka panjang untuk evolusi Bahasa Morph dari baha
   - **[x] Fitur Dasar:** Variabel, literal, operator.
   - **[x] Fungsi Bawaan:** `lihat`, `panjang`, `tambah`.
   - **[x] Struktur Data:** `Daftar` (List) dan `Peta` (Map).
-  - **[x] Kontrol Alur:** `ulangi` (loop).
 
 ---
 
