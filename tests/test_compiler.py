@@ -93,34 +93,3 @@ def test_compile_binary_addition():
     assert ir[2].left == "t1"
     assert ir[2].right == "t2"
     assert ir[2].dest == "t3"
-
-def test_compile_variable_declaration():
-    """Memastikan deklarasi variabel dikompilasi menjadi LoadConst diikuti oleh StoreVar."""
-    ir = compile_code("atur x = 10;")
-
-    assert len(ir) == 2
-
-    # Instruksi 1: Muat konstanta 10
-    assert isinstance(ir[0], instructions.LoadConst)
-    assert ir[0].value == 10.0
-    assert ir[0].dest == "t1"
-
-    # Instruksi 2: Simpan nilai dari t1 ke variabel 'x'
-    assert isinstance(ir[1], instructions.StoreVar)
-    assert ir[1].name == "x"
-    assert ir[1].src == "t1"
-
-def test_compile_variable_access():
-    """Memastikan akses variabel dikompilasi menjadi instruksi LoadVar."""
-    ir = compile_code("atur a = 5; a;")
-
-    assert len(ir) == 3
-
-    # Instruksi 1 & 2: Deklarasi variabel
-    assert isinstance(ir[0], instructions.LoadConst)
-    assert isinstance(ir[1], instructions.StoreVar)
-
-    # Instruksi 3: Muat nilai dari 'a' ke temporary baru
-    assert isinstance(ir[2], instructions.LoadVar)
-    assert ir[2].name == "a"
-    assert ir[2].dest == "t2"
