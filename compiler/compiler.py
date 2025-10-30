@@ -12,11 +12,17 @@ class Compiler: # Menghapus pewarisan dari ast.Visitor
     def __init__(self):
         self.instructions = []
         self._temp_counter = 0
+        self._label_counter = 0
 
     def _new_temp(self):
         """Menghasilkan nama temporary baru, misalnya 't1', 't2', dst."""
         self._temp_counter += 1
         return f"t{self._temp_counter}"
+
+    def _new_label(self, name):
+        """Menghasilkan nama label unik."""
+        self._label_counter += 1
+        return f"{name}_{self._label_counter}"
 
     def compile(self, program: ast.Program):
         """
