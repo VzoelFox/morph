@@ -54,7 +54,16 @@ class Lexer:
         elif char == ',': self._add_token(TokenType.KOMA)
         elif char == '.': self._add_token(TokenType.TITIK)
         elif char == '+': self._add_token(TokenType.PLUS)
-        elif char == '=': self._add_token(TokenType.SAMA_DENGAN)
+        elif char == '-': self._add_token(TokenType.MINUS)
+        elif char == '*': self._add_token(TokenType.BINTANG)
+        elif char == '/': self._add_token(TokenType.GARIS_MIRING)
+        elif char == '=':
+            if self._match('='): self._add_token(TokenType.SAMA_DENGAN_SAMA_DENGAN)
+            else: self._add_token(TokenType.SAMA_DENGAN)
+        elif char == '!':
+            if self._match('='): self._add_token(TokenType.TIDAK_SAMA_DENGAN)
+        elif char == '>': self._add_token(TokenType.LEBIH_DARI)
+        elif char == '<': self._add_token(TokenType.KURANG_DARI)
         elif char == ':': self._add_token(TokenType.TITIK_DUA)
         elif char == '#':
             while self._peek() != '\n' and not self._is_at_end(): self._advance()
@@ -100,6 +109,12 @@ class Lexer:
         if literal is None:
             literal = text
         self.tokens.append(Token(type, literal, self.line))
+
+    def _match(self, expected: str) -> bool:
+        if self._is_at_end(): return False
+        if self.source[self.current] != expected: return False
+        self.current += 1
+        return True
 
     def _peek(self):
         if self._is_at_end(): return '\0'
