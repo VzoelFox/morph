@@ -6,6 +6,7 @@ class TokenType(Enum):
     ATUR = "ATUR"
     JIKA = "JIKA"
     MAKA = "MAKA"
+    LAINNYA = "LAINNYA"
     TIDAK = "TIDAK"
     BERHASIL = "BERHASIL"
     PROSES = "PROSES"
