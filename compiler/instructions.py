@@ -54,6 +54,10 @@ class Mul(BinaryOp): pass
 class Div(BinaryOp): pass
 class GreaterThan(BinaryOp): pass
 class LessThan(BinaryOp): pass
+class Equals(BinaryOp): pass
+class NotEquals(BinaryOp): pass
+class LessThanOrEqual(BinaryOp): pass
+class GreaterThanOrEqual(BinaryOp): pass
 
 # --- Operasi Kontrol Alur ---
 

@@ -63,8 +63,12 @@ class Lexer:
             else: self._add_token(TokenType.SAMA_DENGAN)
         elif char == '!':
             if self._match('='): self._add_token(TokenType.TIDAK_SAMA_DENGAN)
-        elif char == '>': self._add_token(TokenType.LEBIH_DARI)
-        elif char == '<': self._add_token(TokenType.KURANG_DARI)
+        elif char == '>':
+            if self._match('='): self._add_token(TokenType.LEBIH_DARI_SAMA_DENGAN)
+            else: self._add_token(TokenType.LEBIH_DARI)
+        elif char == '<':
+            if self._match('='): self._add_token(TokenType.KURANG_DARI_SAMA_DENGAN)
+            else: self._add_token(TokenType.KURANG_DARI)
         elif char == ':': self._add_token(TokenType.TITIK_DUA)
         elif char == '#':
             while self._peek() != '\n' and not self._is_at_end(): self._advance()

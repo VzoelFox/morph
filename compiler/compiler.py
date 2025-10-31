@@ -62,6 +62,24 @@ class Compiler: # Menghapus pewarisan dari ast.Visitor
 
         return dest_temp
 
+    def visit_AturStatement(self, node: ast.AturStatement):
+        """Mengunjungi node AturStatement."""
+        # 1. Kompilasi ekspresi di sisi kanan untuk mendapatkan nilainya
+        src_temp = node.initializer.accept(self)
+
+        # 2. Buat instruksi untuk menyimpan nilai dari temporary ke nama variabel
+        instruction = instructions.StoreVar(name=node.name.literal, src=src_temp)
+        self.instructions.append(instruction)
+
+        # AturStatement tidak mengembalikan nilai, jadi tidak ada return
+
+    def visit_Variable(self, node: ast.Variable):
+        """Mengunjungi node Variable."""
+        dest_temp = self._new_temp()
+        instruction = instructions.LoadVar(name=node.name.literal, dest=dest_temp)
+        self.instructions.append(instruction)
+        return dest_temp
+
     def visit_BinaryExpression(self, node: ast.BinaryExpression):
         """Mengunjungi node BinaryExpression."""
         left_temp = node.left.accept(self)
@@ -76,6 +94,10 @@ class Compiler: # Menghapus pewarisan dari ast.Visitor
             TokenType.GARIS_MIRING: instructions.Div,
             TokenType.LEBIH_DARI: instructions.GreaterThan,
             TokenType.KURANG_DARI: instructions.LessThan,
+            TokenType.SAMA_DENGAN_SAMA_DENGAN: instructions.Equals,
+            TokenType.TIDAK_SAMA_DENGAN: instructions.NotEquals,
+            TokenType.KURANG_DARI_SAMA_DENGAN: instructions.LessThanOrEqual,
+            TokenType.LEBIH_DARI_SAMA_DENGAN: instructions.GreaterThanOrEqual,
         }
 
         instruction_class = op_map.get(node.operator.type)
