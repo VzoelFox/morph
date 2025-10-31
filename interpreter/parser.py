@@ -104,10 +104,15 @@ class Parser:
         return expr
 
     def _comparison(self) -> ast.Expression:
-        expr = self._term() # Diubah dari _addition
-        while self._match(TokenType.LEBIH_DARI, TokenType.KURANG_DARI):
+        expr = self._term()
+        while self._match(
+            TokenType.LEBIH_DARI,
+            TokenType.KURANG_DARI,
+            TokenType.LEBIH_DARI_SAMA_DENGAN,
+            TokenType.KURANG_DARI_SAMA_DENGAN
+        ):
             operator = self._previous()
-            right = self._term() # Diubah dari _addition
+            right = self._term()
             expr = ast.BinaryExpression(left=expr, operator=operator, right=right)
         return expr
 

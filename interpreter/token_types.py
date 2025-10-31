@@ -34,6 +34,8 @@ class TokenType(Enum):
     TIDAK_SAMA_DENGAN = "!="
     LEBIH_DARI = ">"
     KURANG_DARI = "<"
+    LEBIH_DARI_SAMA_DENGAN = ">="
+    KURANG_DARI_SAMA_DENGAN = "<="
     TITIK = "."
     KOMA = ","
     KURUNG_BUKA = "("
