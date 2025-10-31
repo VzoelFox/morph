@@ -5,16 +5,24 @@ menjadi Intermediate Representation (IR) linear.
 
 from interpreter import ast_nodes as ast
 from compiler import instructions
+from interpreter.token_types import TokenType
+
 
 class Compiler: # Menghapus pewarisan dari ast.Visitor
     def __init__(self):
         self.instructions = []
         self._temp_counter = 0
+        self._label_counter = 0
 
     def _new_temp(self):
         """Menghasilkan nama temporary baru, misalnya 't1', 't2', dst."""
         self._temp_counter += 1
         return f"t{self._temp_counter}"
+
+    def _new_label(self, name):
+        """Menghasilkan nama label unik."""
+        self._label_counter += 1
+        return f"{name}_{self._label_counter}"
 
     def compile(self, program: ast.Program):
         """
@@ -38,3 +46,44 @@ class Compiler: # Menghapus pewarisan dari ast.Visitor
         """Mengunjungi node ExpressionStatement."""
         node.expression.accept(self)
         # Di masa depan, mungkin perlu menangani hasil ekspresi yang tidak digunakan.
+
+    def visit_UnaryExpression(self, node: ast.UnaryExpression):
+        """Mengunjungi node UnaryExpression."""
+        operand_temp = node.right.accept(self)
+
+        dest_temp = self._new_temp()
+
+        if node.operator.type == TokenType.MINUS:
+            instruction = instructions.Negate(operand=operand_temp, dest=dest_temp)
+            self.instructions.append(instruction)
+        else:
+            # Di masa depan, bisa menangani operator unary lain seperti '!'
+            raise NotImplementedError(f"Operator unary {node.operator.type} belum didukung.")
+
+        return dest_temp
+
+    def visit_BinaryExpression(self, node: ast.BinaryExpression):
+        """Mengunjungi node BinaryExpression."""
+        left_temp = node.left.accept(self)
+        right_temp = node.right.accept(self)
+
+        dest_temp = self._new_temp()
+
+        op_map = {
+            TokenType.PLUS: instructions.Add,
+            TokenType.MINUS: instructions.Sub,
+            TokenType.BINTANG: instructions.Mul,
+            TokenType.GARIS_MIRING: instructions.Div,
+            TokenType.LEBIH_DARI: instructions.GreaterThan,
+            TokenType.KURANG_DARI: instructions.LessThan,
+        }
+
+        instruction_class = op_map.get(node.operator.type)
+
+        if instruction_class:
+            instruction = instruction_class(left=left_temp, right=right_temp, dest=dest_temp)
+            self.instructions.append(instruction)
+        else:
+            raise NotImplementedError(f"Operator biner {node.operator.type} belum didukung.")
+
+        return dest_temp
