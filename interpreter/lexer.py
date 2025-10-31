@@ -12,6 +12,7 @@ class Lexer:
             "atur": TokenType.ATUR,
             "jika": TokenType.JIKA,
             "maka": TokenType.MAKA,
+        "lainnya": TokenType.LAINNYA,
             "tidak": TokenType.TIDAK,
             "berhasil": TokenType.BERHASIL,
             "proses": TokenType.PROSES,

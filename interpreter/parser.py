@@ -61,17 +61,15 @@ class Parser:
         return statements
 
     def _jika_statement(self) -> ast.Statement:
-        atur_stmt = self._atur_statement()
-        if not isinstance(atur_stmt, ast.AturStatement):
-            raise self._error(self._peek(), "Hanya 'atur' yang didukung dalam 'jika' saat ini.")
-        self._consume(TokenType.TIDAK, "Diharapkan 'tidak'.")
-        self._consume(TokenType.BERHASIL, "Diharapkan 'berhasil'.")
-        self._consume(TokenType.MAKA, "Diharapkan 'maka'.")
-        fallback_stmt = self._statement()
-        if not isinstance(fallback_stmt, ast.AturStatement):
-             raise self._error(self._peek(), "Fallback harus berupa 'atur' saat ini.")
-        atur_stmt.fallback = fallback_stmt
-        return atur_stmt
+        condition = self._expression()
+        self._consume(TokenType.MAKA, "Diharapkan 'maka' setelah kondisi jika.")
+
+        then_branch = self._statement()
+        else_branch = None
+        if self._match(TokenType.LAINNYA):
+            else_branch = self._statement()
+
+        return ast.JikaStatement(condition=condition, then_branch=then_branch, else_branch=else_branch)
 
     def _ulangi_statement(self) -> ast.Statement:
         body = self._statement()
@@ -161,8 +159,12 @@ class Parser:
         return ast.FunctionCall(callee=callee, arguments=arguments)
 
     def _primary(self) -> ast.Expression:
-        if self._match(TokenType.NUMBER, TokenType.STRING, TokenType.BENAR, TokenType.SALAH):
+        if self._match(TokenType.SALAH): return ast.Literal(value=False)
+        if self._match(TokenType.BENAR): return ast.Literal(value=True)
+
+        if self._match(TokenType.NUMBER, TokenType.STRING):
             return ast.Literal(value=self._previous().literal)
+
         if self._match(TokenType.IDENTIFIER):
             return ast.Variable(name=self._previous())
         if self._match(TokenType.KURUNG_BUKA):

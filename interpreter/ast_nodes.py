@@ -124,3 +124,10 @@ class UlangiStatement(Statement):
     count: Expression
     body: Statement
     def accept(self, visitor): return visitor.visit_UlangiStatement(self)
+
+@dataclass
+class JikaStatement(Statement):
+    condition: Expression
+    then_branch: Statement
+    else_branch: Optional[Statement] = None
+    def accept(self, visitor): return visitor.visit_JikaStatement(self)
