@@ -56,3 +56,29 @@ def test_hello_world_parser():
     arg1 = expr.arguments[0]
     assert isinstance(arg1, ast.Variable)
     assert arg1.name.literal == "pesan"
+
+def parse_helper(source_code):
+    """Helper untuk mem-parse kode dan mengembalikan pernyataan pertama."""
+    tokens = Lexer(source_code).scan_tokens()
+    program = Parser(tokens).parse()
+    assert not Parser(tokens).errors
+    assert len(program.statements) == 1
+    return program.statements[0]
+
+def test_parser_jika_statement():
+    """Memastikan parser dapat meng-handle 'jika-maka'."""
+    stmt = parse_helper("jika benar maka atur x = 1;")
+    assert isinstance(stmt, ast.JikaStatement)
+    assert isinstance(stmt.condition, ast.Literal)
+    assert stmt.condition.value is True
+    assert isinstance(stmt.then_branch, ast.AturStatement)
+    assert stmt.else_branch is None
+
+def test_parser_jika_lainnya_statement():
+    """Memastikan parser dapat meng-handle 'jika-maka-lainnya'."""
+    stmt = parse_helper("jika salah maka atur x = 1; lainnya atur y = 2;")
+    assert isinstance(stmt, ast.JikaStatement)
+    assert isinstance(stmt.condition, ast.Literal)
+    assert stmt.condition.value is False
+    assert isinstance(stmt.then_branch, ast.AturStatement)
+    assert isinstance(stmt.else_branch, ast.AturStatement)

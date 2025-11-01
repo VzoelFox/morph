@@ -18,8 +18,7 @@ class Lexer:
             # Kontrol Alur
             "jika": TokenType.JIKA,
             "maka": TokenType.MAKA,
-            "lainnya": TokenType.LAINNYA,
-            "seharusnya": TokenType.SEHARUSNYA,
+        "lainnya": TokenType.LAINNYA,
             "tidak": TokenType.TIDAK,
             "jangan": TokenType.JANGAN,
             "berhasil": TokenType.BERHASIL,

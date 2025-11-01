@@ -12,7 +12,6 @@ class TokenType(Enum):
     JIKA = "JIKA"
     MAKA = "MAKA"
     LAINNYA = "LAINNYA"
-    SEHARUSNYA = "SEHARUSNYA"
     TIDAK = "TIDAK"
     TIDAK_AKAN = "TIDAK_AKAN"
     JANGAN = "JANGAN"
