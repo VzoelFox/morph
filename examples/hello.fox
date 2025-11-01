@@ -1,4 +1,0 @@
-# examples/hello.fox
-
-atur pesan = "Halo Dunia dari Vzoel Word v0.2!"
-lihat(pesan)
