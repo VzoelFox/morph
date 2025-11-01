@@ -2,7 +2,7 @@
 from .token_types import TokenType
 from .token import Token
 import interpreter.ast_nodes as ast
-from typing import List
+from typing import List, Any
 
 class Parser:
     def __init__(self, tokens: List[Token]):
@@ -37,11 +37,10 @@ class Parser:
     def _proses_statement(self) -> ast.ProsesStatement:
         name = self._consume(TokenType.IDENTIFIER, "Diharapkan nama proses.")
         self._consume(TokenType.KURUNG_BUKA, "Diharapkan '(' setelah nama proses.")
-        params = []
-        if not self._check(TokenType.KURUNG_TUTUP):
-            params.append(self._consume(TokenType.IDENTIFIER, "Diharapkan nama parameter."))
-            while self._match(TokenType.KOMA):
-                params.append(self._consume(TokenType.IDENTIFIER, "Diharapkan nama parameter."))
+        params = self._parse_comma_separated_items(
+            TokenType.KURUNG_TUTUP,
+            lambda: self._consume(TokenType.IDENTIFIER, "Diharapkan nama parameter.")
+        )
         self._consume(TokenType.KURUNG_TUTUP, "Diharapkan ')' setelah parameter.")
         self._consume(TokenType.KURAWAL_BUKA, "Diharapkan '{' sebelum badan proses.")
         body = ast.BlokStatement(self._blok())
@@ -162,11 +161,10 @@ class Parser:
         return expr
 
     def _finish_call(self, callee: ast.Expression) -> ast.Expression:
-        arguments = []
-        if not self._check(TokenType.KURUNG_TUTUP):
-            arguments.append(self._expression())
-            while self._match(TokenType.KOMA):
-                arguments.append(self._expression())
+        arguments = self._parse_comma_separated_items(
+            TokenType.KURUNG_TUTUP,
+            self._expression
+        )
         self._consume(TokenType.KURUNG_TUTUP, "Diharapkan ')' setelah argumen.")
         return ast.FunctionCall(callee=callee, arguments=arguments)
 
@@ -187,11 +185,10 @@ class Parser:
                 raise self._error(keyword, "Path modul harus string.")
             return ast.AmbilExpression(keyword=keyword, path=path)
         if self._match(TokenType.KURUNG_SIKU_BUKA):
-            elements = []
-            if not self._check(TokenType.KURUNG_SIKU_TUTUP):
-                elements.append(self._expression())
-                while self._match(TokenType.KOMA):
-                    elements.append(self._expression())
+            elements = self._parse_comma_separated_items(
+                TokenType.KURUNG_SIKU_TUTUP,
+                self._expression
+            )
             self._consume(TokenType.KURUNG_SIKU_TUTUP, "Diharapkan ']' setelah elemen daftar.")
             return ast.ListLiteral(elements=elements)
         if self._match(TokenType.PETA):
@@ -213,6 +210,14 @@ class Parser:
             self._consume(TokenType.KURAWAL_TUTUP, "Diharapkan '}' setelah elemen peta.")
             return ast.MapLiteral(keys=keys, values=values)
         raise self._error(self._peek(), "Diharapkan sebuah ekspresi.")
+
+    def _parse_comma_separated_items(self, end_token_type: TokenType, item_parser) -> List[Any]:
+        items = []
+        if not self._check(end_token_type):
+            items.append(item_parser())
+            while self._match(TokenType.KOMA):
+                items.append(item_parser())
+        return items
 
     def _match(self, *types: TokenType) -> bool:
         for type in types:

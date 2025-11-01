@@ -12,6 +12,16 @@ def test_kekecil_invalid_argument():
     output = run_vzoel_code_capture_output(source)
     assert "Error runtime: Argumen untuk 'kekecil' harus berupa string." in output[0]
 
+def test_akar_success():
+    source = "lihat(akar(16))"
+    output = run_vzoel_code_capture_output(source)
+    assert output == ["4.0"]
+
+def test_akar_invalid_argument():
+    source = 'akar("abc")'
+    output = run_vzoel_code_capture_output(source)
+    assert "Error runtime: Argumen untuk 'akar' harus berupa angka." in output[0]
+
 def test_pangkat_success():
     source = "lihat(pangkat(2, 3))"
     output = run_vzoel_code_capture_output(source)
