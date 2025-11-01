@@ -47,6 +47,15 @@ class KeKecil(VzoelCallable):
             raise VzoelRuntimeException(None, "Argumen untuk 'kekecil' harus berupa string.")
         return arguments[0].lower()
 
+class Akar(VzoelCallable):
+    def arity(self) -> int:
+        return 1
+
+    def call(self, interpreter, arguments: List[Any]) -> Any:
+        if not isinstance(arguments[0], (int, float)):
+            raise VzoelRuntimeException(None, "Argumen untuk 'akar' harus berupa angka.")
+        return math.sqrt(arguments[0])
+
 class Pangkat(VzoelCallable):
     def arity(self) -> int:
         return 2
