@@ -36,6 +36,7 @@ class TokenType(Enum):
     KURANG_DARI = "<"
     TITIK = "."
     KOMA = ","
+    TITIK_KOMA = ";"
     KURUNG_BUKA = "("
     KURUNG_TUTUP = ")"
     KURAWAL_BUKA = "{"

@@ -6,10 +6,6 @@ from interpreter.parser import Parser
 from transpiler.transpiler import Transpiler
 
 def run_transpiler(source_code: str) -> str:
-    """
-    Helper untuk menjalankan kode melalui Lexer, Parser, dan Transpiler,
-    lalu mengembalikan kode Python yang dihasilkan.
-    """
     source_code = dedent(source_code).strip()
     lexer = Lexer(source_code)
     tokens = lexer.scan_tokens()
@@ -23,7 +19,6 @@ def run_transpiler(source_code: str) -> str:
     return python_code
 
 def assert_transpilation(source, expected):
-    """Asserts that the transpiled source code matches the expected output."""
     generated = run_transpiler(source)
     expected = dedent(expected).strip()
     assert generated == expected
@@ -43,7 +38,6 @@ def test_transpile_variable_declaration():
 
 def test_transpile_binary_expression():
     source = "atur x = (10 + 20) * 3"
-    # Memperbaiki ekspektasi agar cocok dengan output aktual (tiga kurung)
     expected = "x = (((10.0 + 20.0)) * 3.0)"
     assert_transpilation(source, expected)
 

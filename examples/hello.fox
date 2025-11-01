@@ -1,5 +1,4 @@
-# examples/hello.vz
-# Contoh Kode Vzoel Word v0.2: Halo Dunia!
+# examples/hello.fox
 
 atur pesan = "Halo Dunia dari Vzoel Word v0.2!"
 lihat(pesan)

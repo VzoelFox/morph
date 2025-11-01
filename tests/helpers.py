@@ -9,13 +9,26 @@ def run_vzoel_code_capture_output(source: str) -> list[str]:
     captured_output = StringIO()
     sys.stdout = captured_output
 
-    lexer = Lexer(source)
-    tokens = lexer.scan_tokens()
-    parser = Parser(tokens)
-    program = parser.parse()
-    interpreter = Interpreter()
-    interpreter.interpret(program)
+    try:
+        lexer = Lexer(source)
+        tokens = lexer.scan_tokens()
+        parser = Parser(tokens)
+        program = parser.parse()
+        # Penting: periksa error parser di sini
+        if parser.errors:
+            raise Exception(f"Parser errors: {[str(e) for e in parser.errors]}")
 
-    sys.stdout = original_stdout
+        interpreter = Interpreter()
+        interpreter.interpret(program)
+
+    except Exception as e:
+        sys.stdout = original_stdout
+        print("--- CAPTURED STDOUT ---")
+        print(captured_output.getvalue())
+        print("--- EXCEPTION ---")
+        raise e
+    finally:
+        sys.stdout = original_stdout
+
     output_lines = captured_output.getvalue().strip().split('\n')
     return [line for line in output_lines if line]

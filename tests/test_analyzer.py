@@ -6,10 +6,6 @@ from analyzer.static_analyzer import StaticAnalyzer
 from interpreter.errors import VzoelRuntimeException
 
 def run_analyzer(source_code: str) -> bool:
-    """
-    Helper untuk menjalankan kode melalui Lexer, Parser, dan StaticAnalyzer.
-    Mengembalikan True jika analisis berhasil, False jika gagal.
-    """
     lexer = Lexer(source_code)
     tokens = lexer.scan_tokens()
     parser = Parser(tokens)
@@ -22,8 +18,6 @@ def run_analyzer(source_code: str) -> bool:
 
     analyzer = StaticAnalyzer()
     return analyzer.analyze(program)
-
-# --- Tes untuk analisis yang seharusnya BERHASIL ---
 
 def test_valid_variable_declaration():
     code = """
@@ -50,8 +44,6 @@ def test_valid_comparisons():
     atur c = 10 != 20
     """
     assert run_analyzer(code) is True
-
-# --- Tes untuk analisis yang seharusnya GAGAL ---
 
 def test_invalid_addition_number_and_string():
     code = "atur x = 10 + 'ini string'"
