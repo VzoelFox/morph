@@ -24,19 +24,6 @@ class TokenType(Enum):
     SEBANYAK = "SEBANYAK"
     KALI = "KALI"
 
-    # Management System
-    MANAGEMENT = "MANAGEMENT"
-    BAGIAN = "BAGIAN"
-    PECAHAN = "PECAHAN"
-    # JALANKAN is already defined
-    MATIKAN = "MATIKAN"
-    HENTIKAN = "HENTIKAN"
-
-    # Thunderfox Async
-    THUNDERFOX = "THUNDERFOX"
-    LALU = "LALU"
-    SAMBIL = "SAMBIL"
-
     # Simbol & Operator
     SAMA_DENGAN = "="
     PLUS = "+"
@@ -49,6 +36,7 @@ class TokenType(Enum):
     KURANG_DARI = "<"
     TITIK = "."
     KOMA = ","
+    TITIK_KOMA = ";"
     KURUNG_BUKA = "("
     KURUNG_TUTUP = ")"
     KURAWAL_BUKA = "{"

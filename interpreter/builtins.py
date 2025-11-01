@@ -36,3 +36,21 @@ class Potong(VzoelCallable):
         start = int(arguments[1])
         end = int(arguments[2])
         return text[start:end]
+
+class KeKecil(VzoelCallable):
+    def arity(self) -> int:
+        return 1
+
+    def call(self, interpreter, arguments: List[Any]) -> Any:
+        if not isinstance(arguments[0], str):
+            raise VzoelRuntimeException(None, "Argumen untuk 'ke_kecil' harus berupa string.")
+        return arguments[0].lower()
+
+class KeBesar(VzoelCallable):
+    def arity(self) -> int:
+        return 1
+
+    def call(self, interpreter, arguments: List[Any]) -> Any:
+        if not isinstance(arguments[0], str):
+            raise VzoelRuntimeException(None, "Argumen untuk 'ke_besar' harus berupa string.")
+        return arguments[0].upper()
