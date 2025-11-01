@@ -11,10 +11,49 @@ class ASTNode(ABC):
     def accept(self, visitor):
         pass
 
-class Statement(ASTNode):
-    pass
+class Visitor(ABC):
+    # Expressions
+    @abstractmethod
+    def visit_Literal(self, expr: 'Literal'): pass
+    @abstractmethod
+    def visit_Variable(self, expr: 'Variable'): pass
+    @abstractmethod
+    def visit_FunctionCall(self, expr: 'FunctionCall'): pass
+    @abstractmethod
+    def visit_AmbilExpression(self, expr: 'AmbilExpression'): pass
+    @abstractmethod
+    def visit_GetExpression(self, expr: 'GetExpression'): pass
+    @abstractmethod
+    def visit_SubscriptExpression(self, expr: 'SubscriptExpression'): pass
+    @abstractmethod
+    def visit_BinaryExpression(self, expr: 'BinaryExpression'): pass
+    @abstractmethod
+    def visit_UnaryExpression(self, expr: 'UnaryExpression'): pass
+    @abstractmethod
+    def visit_Grouping(self, expr: 'Grouping'): pass
+    @abstractmethod
+    def visit_ListLiteral(self, expr: 'ListLiteral'): pass
+    @abstractmethod
+    def visit_MapLiteral(self, expr: 'MapLiteral'): pass
+    # Statements
+    @abstractmethod
+    def visit_BlokStatement(self, stmt: 'BlokStatement'): pass
+    @abstractmethod
+    def visit_ProsesStatement(self, stmt: 'ProsesStatement'): pass
+    @abstractmethod
+    def visit_KembaliStatement(self, stmt: 'KembaliStatement'): pass
+    @abstractmethod
+    def visit_AturStatement(self, stmt: 'AturStatement'): pass
+    @abstractmethod
+    def visit_ExpressionStatement(self, stmt: 'ExpressionStatement'): pass
+    @abstractmethod
+    def visit_UlangiStatement(self, stmt: 'UlangiStatement'): pass
+    @abstractmethod
+    def visit_ManagementDeclaration(self, stmt: 'ManagementDeclaration'): pass
+    @abstractmethod
+    def visit_JalankanStatement(self, stmt: 'JalankanStatement'): pass
 
-class Expression(ASTNode):
+class Statement(ASTNode):
     """Kelas dasar untuk pernyataan (statements)."""
     pass
 
@@ -121,3 +160,36 @@ class AturStatement(Statement):
 class ExpressionStatement(Statement):
     expression: Expression
     def accept(self, visitor): return visitor.visit_ExpressionStatement(self)
+
+@dataclass
+class UlangiStatement(Statement):
+    count: Expression
+    body: Statement
+    def accept(self, visitor): return visitor.visit_UlangiStatement(self)
+
+@dataclass
+class ManagementDeclaration(Statement):
+    name: Token
+    bagian_list: List['BagianDeclaration']
+    def accept(self, visitor):
+        return visitor.visit_ManagementDeclaration(self)
+
+@dataclass
+class BagianDeclaration(ASTNode):
+    name: Token
+    pecahan_list: List['PecahanDeclaration']
+    def accept(self, visitor):
+        return visitor.visit_BagianDeclaration(self)
+
+@dataclass
+class PecahanDeclaration(ASTNode):
+    name: Token
+    body: BlokStatement
+    def accept(self, visitor):
+        return visitor.visit_PecahanDeclaration(self)
+
+@dataclass
+class JalankanStatement(Statement):
+    management_name: Token
+    def accept(self, visitor):
+        return visitor.visit_JalankanStatement(self)

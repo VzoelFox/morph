@@ -26,13 +26,24 @@ class Lexer:
             "benar": TokenType.BENAR,
             "salah": TokenType.SALAH,
             "peta": TokenType.PETA,
+            "ulangi": TokenType.ULANGI,
+            "sebanyak": TokenType.SEBANYAK,
+            "kali": TokenType.KALI,
+            "management": TokenType.MANAGEMENT,
+            "bagian": TokenType.BAGIAN,
+            "pecahan": TokenType.PECAHAN,
+            "matikan": TokenType.MATIKAN,
+            "hentikan": TokenType.HENTIKAN,
+            "thunderfox": TokenType.THUNDERFOX,
+            "lalu": TokenType.LALU,
+            "sambil": TokenType.SAMBIL,
         }
 
     def scan_tokens(self) -> list[Token]:
         while not self._is_at_end():
             self.start = self.current
             self._scan_token()
-        self.tokens.append(Token(TokenType.EOF, "", self.line))
+        self.tokens.append(Token(TokenType.ADS, "", self.line))
         return self.tokens
 
     def _scan_token(self):
@@ -51,6 +62,9 @@ class Lexer:
         elif char == ',': self._add_token(TokenType.KOMA)
         elif char == '.': self._add_token(TokenType.TITIK)
         elif char == '+': self._add_token(TokenType.PLUS)
+        elif char == '-': self._add_token(TokenType.MINUS)
+        elif char == '*': self._add_token(TokenType.BINTANG)
+        elif char == '/': self._add_token(TokenType.GARIS_MIRING)
         elif char == '=': self._add_token(TokenType.SAMA_DENGAN)
         elif char == ':': self._add_token(TokenType.TITIK_DUA)
         elif char == '#':
