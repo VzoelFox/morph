@@ -2,26 +2,33 @@
 from typing import List, Any
 from .environment import Environment
 from .callable import VzoelCallable, VzoelFunction, Lihat
-from .builtins import Panjang, Tambah
+from .builtins import Panjang, Tambah, Potong, Akar, Pangkat
 from .errors import VzoelRuntimeException, VzoelModuleNotFound, Return
 from .token_types import TokenType
+from .token import Token
 import interpreter.ast_nodes as ast
 from pathlib import Path
 
-class Interpreter:
+class Interpreter(ast.Visitor):
     def __init__(self):
         self.globals = Environment()
         self.environment = self.globals
         self.globals.define("lihat", Lihat())
         self.globals.define("panjang", Panjang())
         self.globals.define("tambah", Tambah())
+        self.globals.define("potong", Potong())
+        self.globals.define("akar", Akar())
+        self.globals.define("pangkat", Pangkat())
 
     def interpret(self, program: ast.Program):
         try:
             for stmt in program.statements:
                 self._execute(stmt)
         except VzoelRuntimeException as e:
-            print(f"Error runtime: {e.message}")
+            if e.token:
+                print(f"[Baris {e.token.line}] Error runtime: {e.message}")
+            else:
+                print(f"Error runtime: {e.message}")
 
     def execute_block(self, statements: List[ast.Statement], environment: Environment):
         previous = self.environment
@@ -61,6 +68,42 @@ class Interpreter:
         value = self._evaluate(stmt.value) if stmt.value else None
         raise Return(value)
 
+    def visit_UlangiStatement(self, stmt: ast.UlangiStatement):
+        count = self._evaluate(stmt.count)
+        if not isinstance(count, (int, float)):
+            # Heuristik untuk menemukan token yang relevan
+            token = None
+            if isinstance(stmt.body, ast.ExpressionStatement) and isinstance(stmt.body.expression, ast.FunctionCall):
+                if hasattr(stmt.body.expression.callee, 'name'):
+                    token = stmt.body.expression.callee.name
+            raise VzoelRuntimeException(token, "Jumlah perulangan harus berupa angka.")
+
+        for _ in range(int(count)):
+            self._execute(stmt.body)
+
+    def visit_ManagementDeclaration(self, stmt: ast.ManagementDeclaration):
+        self.environment.define(stmt.name.literal, stmt)
+
+    def visit_JalankanStatement(self, stmt: ast.JalankanStatement):
+        management = self.environment.get(stmt.management_name)
+
+        if not isinstance(management, ast.ManagementDeclaration):
+            raise VzoelRuntimeException(stmt.management_name, "Hanya bisa menjalankan management.")
+
+        for bagian in management.bagian_list:
+            self._execute_bagian(bagian, stmt.management_name)
+
+    def _execute_bagian(self, bagian: ast.BagianDeclaration, call_token: Token):
+        for pecahan in bagian.pecahan_list:
+            try:
+                self.execute_block(pecahan.body.statements, Environment(enclosing=self.environment))
+                return
+            except VzoelRuntimeException as e:
+                print(f"⚠️ Pecahan {pecahan.name.literal} gagal: {e.message}")
+                continue
+
+        raise VzoelRuntimeException(call_token, f"Semua pecahan di bagian '{bagian.name.literal}' gagal.")
+
     def visit_Literal(self, expr: ast.Literal):
         return expr.value
 
@@ -73,11 +116,15 @@ class Interpreter:
         for arg in expr.arguments:
             args.append(self._evaluate(arg))
 
+        token = None
+        if hasattr(expr.callee, 'name'):
+            token = expr.callee.name
+
         if not isinstance(callee, VzoelCallable):
-            raise VzoelRuntimeException(None, "Hanya bisa memanggil proses.")
+            raise VzoelRuntimeException(token, "Hanya bisa memanggil proses.")
 
         if len(args) != callee.arity():
-            raise VzoelRuntimeException(None, f"Diharapkan {callee.arity()} argumen tapi dapat {len(args)}.")
+            raise VzoelRuntimeException(token, f"Diharapkan {callee.arity()} argumen tapi dapat {len(args)}.")
 
         return callee.call(self, args)
 
@@ -149,12 +196,16 @@ class Interpreter:
         objek = self._evaluate(expr.objek)
         indeks = self._evaluate(expr.indeks)
 
+        token = None
+        if hasattr(expr.objek, 'name'):
+            token = expr.objek.name
+
         if isinstance(objek, list):
             if not isinstance(indeks, (int, float)):
-                raise VzoelRuntimeException(None, "Indeks daftar harus berupa angka.")
+                raise VzoelRuntimeException(token, "Indeks daftar harus berupa angka.")
             return objek[int(indeks)]
 
         if isinstance(objek, dict):
             return objek.get(indeks)
 
-        raise VzoelRuntimeException(None, "Hanya bisa mengakses elemen dari daftar atau peta.")
+        raise VzoelRuntimeException(token, "Hanya bisa mengakses elemen dari daftar atau peta.")
