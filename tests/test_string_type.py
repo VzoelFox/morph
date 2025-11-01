@@ -42,3 +42,23 @@ def test_string_with_numbers_and_symbols():
     source = 'lihat("Vzoel Word v0.3!@#")'
     output = run_code(source)
     assert output == "Vzoel Word v0.3!@#"
+
+def test_string_slicing_with_potong():
+    # Test bahwa fungsi potong() bekerja dengan benar
+    source = """
+    atur teks = "halo dunia"
+    atur hasil = potong(teks, 0, 4)
+    lihat(hasil)
+    """
+    output = run_code(source)
+    assert output == "halo"
+
+def test_potong_with_invalid_arguments():
+    # Test bahwa potong() akan error jika argumen salah
+    source_1 = 'potong(123, 0, 1)'
+    output_1 = run_code(source_1)
+    assert "Error runtime: Argumen pertama untuk 'potong' harus berupa string." in output_1
+
+    source_2 = 'potong("hello", "a", "b")'
+    output_2 = run_code(source_2)
+    assert "Error runtime: Argumen kedua dan ketiga untuk 'potong' harus berupa angka." in output_2
