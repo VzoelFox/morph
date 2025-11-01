@@ -1,0 +1,8 @@
+# Test conditional statement
+atur x = 10
+
+jika x > 5 maka {
+  lihat("x lebih besar dari 5")
+}
+
+lihat("Selesai")

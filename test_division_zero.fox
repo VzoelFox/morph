@@ -1,0 +1,3 @@
+# Test division by zero
+atur x = 10 / 0
+lihat(x)

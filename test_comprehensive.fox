@@ -1,0 +1,44 @@
+# Test comprehensive features
+lihat("=== Test 1: Variabel dan Operasi Aritmatika ===")
+atur a = 10
+atur b = 5
+atur tambah_hasil = a + b
+atur kurang_hasil = a - b
+atur kali_hasil = a * b
+atur bagi_hasil = a / b
+lihat(tambah_hasil)
+lihat(kurang_hasil)
+lihat(kali_hasil)
+lihat(bagi_hasil)
+
+lihat("=== Test 2: String ===")
+atur nama = "Vzoel Word"
+lihat(nama)
+
+lihat("=== Test 3: List Operations ===")
+atur angka = [1, 2, 3, 4, 5]
+lihat(angka)
+lihat(panjang(angka))
+lihat(angka[0])
+lihat(angka[4])
+
+lihat("=== Test 4: Map/Dictionary ===")
+atur orang = {"nama": "Budi", "umur": 25}
+lihat(orang)
+lihat(orang["nama"])
+lihat(orang["umur"])
+
+lihat("=== Test 5: Functions ===")
+proses kali_dua(x) {
+  kembali x * 2
+}
+atur hasil_fungsi = kali_dua(21)
+lihat(hasil_fungsi)
+
+lihat("=== Test 6: Perbandingan ===")
+atur lebih_besar = 10 > 5
+atur lebih_kecil = 10 < 5
+atur sama = 10 == 10
+lihat(lebih_besar)
+lihat(lebih_kecil)
+lihat(sama)

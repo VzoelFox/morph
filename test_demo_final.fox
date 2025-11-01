@@ -1,0 +1,44 @@
+# Demo Fitur Vzoel Word v0.2
+
+lihat("=== DEMO VZOEL WORD v0.2 ===")
+
+lihat("1. Variabel")
+atur nama = "Vzoel Word"
+atur versi = 0.2
+lihat(nama)
+lihat(versi)
+
+lihat("2. Aritmatika")
+atur a = 100
+atur b = 25
+lihat(a + b)
+lihat(a - b)
+lihat(a * b)
+lihat(a / b)
+
+lihat("3. Perbandingan")
+lihat(100 > 50)
+lihat(42 == 42)
+
+lihat("4. List")
+atur angka = [10, 20, 30, 40, 50]
+lihat(angka)
+lihat(panjang(angka))
+
+lihat("5. Fungsi")
+proses tambah(x, y) {
+  kembali x + y
+}
+lihat(tambah(15, 27))
+
+lihat("6. Perulangan")
+ulangi {
+  lihat("Loop")
+} sebanyak 3 kali
+
+lihat("7. Modul Fallback")
+jika Modul = ambil dari "tidak_ada.fox" tidak berhasil maka
+   atur Modul = ambil dari "examples/modul_prod.fox"
+lihat(Modul.tipe)
+
+lihat("=== DEMO SELESAI ===")

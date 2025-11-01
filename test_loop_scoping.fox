@@ -1,0 +1,6 @@
+# Test loop variable scoping
+atur counter = 0
+ulangi {
+  atur counter = counter + 1
+  lihat(counter)
+} sebanyak 3 kali

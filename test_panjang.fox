@@ -1,0 +1,6 @@
+# Test panjang() function with string
+atur teks = "Hello World"
+lihat(panjang(teks))
+
+atur daftar = [1, 2, 3, 4, 5]
+lihat(panjang(daftar))

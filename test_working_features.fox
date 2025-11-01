@@ -1,0 +1,74 @@
+# Test semua fitur yang BEKERJA di Vzoel Word v0.2
+
+lihat("========================================")
+lihat("DEMO FITUR VZOEL WORD v0.2 YANG BEKERJA")
+lihat("========================================")
+
+lihat("")
+lihat("1. VARIABEL DAN ASSIGNMENT")
+atur nama = "Vzoel Word"
+atur versi = 0.2
+atur aktif = benar
+lihat(nama)
+lihat(versi)
+lihat(aktif)
+
+lihat("")
+lihat("2. OPERASI ARITMATIKA")
+atur a = 100
+atur b = 25
+lihat(a + b)
+lihat(a - b)
+lihat(a * b)
+lihat(a / b)
+
+lihat("")
+lihat("3. OPERASI PERBANDINGAN")
+lihat(100 > 50)
+lihat(25 < 10)
+lihat(42 == 42)
+lihat(10 != 20)
+
+lihat("")
+lihat("4. LIST/ARRAY")
+atur angka = [10, 20, 30, 40, 50]
+lihat(angka)
+lihat(angka[0])
+lihat(angka[2])
+lihat(angka[4])
+lihat(panjang(angka))
+
+lihat("")
+lihat("5. FUNGSI/PROSES")
+proses tambah(x, y) {
+  kembali x + y
+}
+
+proses kali(x, y) {
+  kembali x * y
+}
+
+proses luasPersegiPanjang(panjangNya, lebarNya) {
+  kembali panjangNya * lebarNya
+}
+
+lihat(tambah(15, 27))
+lihat(kali(8, 7))
+lihat(luasPersegiPanjang(12, 5))
+
+lihat("")
+lihat("6. PERULANGAN")
+ulangi {
+  lihat("Iterasi")
+} sebanyak 3 kali
+
+lihat("")
+lihat("7. SISTEM MODUL DENGAN FALLBACK")
+jika Modul = ambil dari "file_tidak_ada.fox" tidak berhasil maka
+   atur Modul = ambil dari "examples/modul_prod.fox"
+lihat(Modul.tipe)
+
+lihat("")
+lihat("========================================")
+lihat("DEMO SELESAI - SEMUA FITUR BEKERJA!")
+lihat("========================================")
