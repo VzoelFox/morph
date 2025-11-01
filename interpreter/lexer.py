@@ -9,27 +9,42 @@ class Lexer:
         self.current = 0
         self.line = 1
         self.KEYWORDS = {
+            # Struktur / Deklarasi / Import
+            "ambil": TokenType.AMBIL,
+            "dari": TokenType.DARI,
             "atur": TokenType.ATUR,
+            "proses": TokenType.PROSES,
+            "peta": TokenType.PETA,
+            # Kontrol Alur
             "jika": TokenType.JIKA,
             "maka": TokenType.MAKA,
         "lainnya": TokenType.LAINNYA,
             "tidak": TokenType.TIDAK,
+            "jangan": TokenType.JANGAN,
             "berhasil": TokenType.BERHASIL,
-            "proses": TokenType.PROSES,
-            "ambil": TokenType.AMBIL,
-            "dari": TokenType.DARI,
-            "kembali": TokenType.KEMBALI,
-            "jalankan": TokenType.JALANKAN,
-            "tunggu": TokenType.TUNGGU,
-            "pemicu": TokenType.PEMICU,
-            "terjadi": TokenType.TERJADI,
-            "harus": TokenType.HARUS,
-            "benar": TokenType.BENAR,
-            "salah": TokenType.SALAH,
-            "peta": TokenType.PETA,
+            # Loop
             "ulangi": TokenType.ULANGI,
             "sebanyak": TokenType.SEBANYAK,
             "kali": TokenType.KALI,
+            "teruskan": TokenType.TERUSKAN,
+            # Async
+            "tunggu": TokenType.TUNGGU,
+            "lalu": TokenType.LALU,
+            "sambil": TokenType.SAMBIL,
+            # Lifecycle
+            "matikan": TokenType.MATIKAN,
+            "hentikan": TokenType.HENTIKAN,
+            # Hasil Fungsi
+            "kembali": TokenType.KEMBALI,
+            # Boolean
+            "benar": TokenType.BENAR,
+            "salah": TokenType.SALAH,
+            # Akhir File
+            "AKHIR_DARI_SEGALANYA": TokenType.ADS,
+            # Token lama yang dipertahankan
+            "pemicu": TokenType.PEMICU,
+            "terjadi": TokenType.TERJADI,
+            "harus": TokenType.HARUS,
         }
 
     def scan_tokens(self) -> list[Token]:
@@ -81,6 +96,12 @@ class Lexer:
     def _identifier(self):
         while self._is_alpha_numeric(self._peek()): self._advance()
         text = self.source[self.start:self.current]
+        # Cek untuk 'tidak akan'
+        if text == "tidak" and self._match(' '):
+            if self.source[self.current:].startswith("akan"):
+                self.current += 4
+                self._add_token(TokenType.TIDAK_AKAN)
+                return
         token_type = self.KEYWORDS.get(text, TokenType.IDENTIFIER)
         self._add_token(token_type)
 

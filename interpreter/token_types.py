@@ -1,31 +1,54 @@
-# interpreter/token_types.py
 from enum import Enum
 
 class TokenType(Enum):
-    # Kata Kunci (Keywords)
+    # === struktur / deklarasi / import ===
+    AMBIL = "AMBIL"
+    DARI = "DARI"
     ATUR = "ATUR"
+    PROSES = "PROSES"
+    PETA = "PETA"
+
+    # === kontrol alur ===
     JIKA = "JIKA"
     MAKA = "MAKA"
     LAINNYA = "LAINNYA"
     TIDAK = "TIDAK"
+    TIDAK_AKAN = "TIDAK_AKAN"
+    JANGAN = "JANGAN"
     BERHASIL = "BERHASIL"
-    PROSES = "PROSES"
-    AMBIL = "AMBIL"
-    DARI = "DARI"
-    KEMBALI = "KEMBALI"
-    BENAR = "BENAR"
-    SALAH = "SALAH"
-    JALANKAN = "JALANKAN"
-    TUNGGU = "TUNGGU"
-    PEMICU = "PEMICU"
-    TERJADI = "TERJADI"
-    HARUS = "HARUS"
-    PETA = "PETA"
+
+    # === loop ===
     ULANGI = "ULANGI"
     SEBANYAK = "SEBANYAK"
     KALI = "KALI"
+    TERUSKAN = "TERUSKAN"
 
-    # Simbol & Operator
+    # === eksekusi / async style ===
+    TUNGGU = "TUNGGU"
+    LALU = "LALU"
+    SAMBIL = "SAMBIL"
+
+    # === lifecycle manajemen task ===
+    MATIKAN = "MATIKAN"
+    HENTIKAN = "HENTIKAN"
+
+    # === hasil fungsi ===
+    KEMBALI = "KEMBALI"
+
+    # === literal / boolean ===
+    BENAR = "BENAR"
+    SALAH = "SALAH"
+
+    # === akhir file ===
+    ADS = "AKHIR_DARI_SEGALANYA"
+    EOF = "EOF"
+
+    # Token yang sudah ada dan dipertahankan
+    PEMICU = "PEMICU"
+    TERJADI = "TERJADI"
+    HARUS = "HARUS"
+
+    # simbol, operator, literal juga tetap:
     SAMA_DENGAN = "="
     PLUS = "+"
     MINUS = "-"
@@ -47,11 +70,8 @@ class TokenType(Enum):
     KURUNG_SIKU_TUTUP = "]"
     TITIK_DUA = ":"
 
-    # Literals & Identifier
     IDENTIFIER = "IDENTIFIER"
     STRING = "STRING"
     NUMBER = "NUMBER"
 
-    # Lain-lain
     TIDAK_DIKENALI = "TIDAK_DIKENALI"
-    EOF = "EOF"
