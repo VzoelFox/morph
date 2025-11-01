@@ -1,5 +1,4 @@
 # examples/modul_prod.vz
-atur tipe = "Produksi"
 # Modul ini berisi konfigurasi produksi.
 
 atur tipe = "Produksi"
