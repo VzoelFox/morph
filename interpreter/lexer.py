@@ -5,6 +5,7 @@ class Lexer:
     def __init__(self, source_code: str):
         self.source = source_code
         self.tokens = []
+        self.errors = []
         self.start = 0
         self.current = 0
         self.line = 1
@@ -49,7 +50,7 @@ class Lexer:
     def _scan_token(self):
         char = self._advance()
 
-        if char in [' ', '\r', '\t']:
+        if char in [' ', '\r', '\t', ';']:
             pass
         elif char == '\n':
             self.line += 1
@@ -73,7 +74,7 @@ class Lexer:
         elif self._is_digit(char): self._number()
         elif self._is_alpha(char): self._identifier()
         else:
-            self._add_token(TokenType.TIDAK_DIKENALI)
+            self.errors.append(f"[Baris {self.line}] Karakter tidak dikenali: {char}")
 
     def _identifier(self):
         while self._is_alpha_numeric(self._peek()): self._advance()
@@ -93,6 +94,7 @@ class Lexer:
             if self._peek() == '\n': self.line += 1
             self._advance()
         if self._is_at_end():
+            self.errors.append(f"[Baris {self.line}] String tidak ditutup.")
             return
         self._advance()
         value = self.source[self.start + 1:self.current - 1]

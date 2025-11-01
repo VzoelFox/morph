@@ -8,6 +8,7 @@ class Parser:
     def __init__(self, tokens: List[Token]):
         self.tokens = [t for t in tokens if t.type != TokenType.TIDAK_DIKENALI]
         self.current = 0
+        self.errors = []
 
     def parse(self) -> ast.Program:
         statements = []
@@ -247,5 +248,27 @@ class Parser:
         if self._check(type): return self._advance()
         raise self._error(self._peek(), message)
 
-    def _error(self, token: Token, message: str):
-        return Exception(f"Error di baris {token.line}: {message}")
+    def _error(self, token: Token, message: str) -> ParseError:
+        error_message = f"[Baris {token.line}] Error di '{token.literal}': {message}"
+        if token.type == TokenType.ADS:
+            error_message = f"[Baris {token.line}] Error di akhir: {message}"
+        self.errors.append(error_message)
+        return ParseError()
+
+    def _synchronize(self):
+        self._advance()
+        while not self._is_at_end():
+            if self._previous().type in [TokenType.PROSES, TokenType.ATUR]:
+                return
+
+            if self._peek().type in [
+                TokenType.PROSES,
+                TokenType.ATUR,
+                TokenType.JIKA,
+                TokenType.ULANGI,
+                TokenType.KEMBALI,
+                TokenType.JALANKAN,
+                TokenType.MANAGEMENT,
+            ]:
+                return
+            self._advance()

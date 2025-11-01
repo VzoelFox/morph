@@ -23,8 +23,7 @@ class Interpreter(ast.Visitor):
 
     def interpret(self, program: ast.Program):
         try:
-            for stmt in program.statements:
-                self._execute(stmt)
+            return self.visit_Program(program)
         except VzoelRuntimeException as e:
             if e.token:
                 print(f"[Baris {e.token.line}] Error runtime: {e.message}")
@@ -45,6 +44,11 @@ class Interpreter(ast.Visitor):
 
     def _evaluate(self, expr: ast.Expression):
         return expr.accept(self)
+
+    def _check_number_operands(self, operator: Token, *operands):
+        for operand in operands:
+            if not isinstance(operand, (int, float)):
+                raise VzoelRuntimeException(operator, "Operan harus berupa angka.")
 
     def visit_ExpressionStatement(self, stmt: ast.ExpressionStatement):
         self._evaluate(stmt.expression)
@@ -133,10 +137,22 @@ class Interpreter(ast.Visitor):
         left = self._evaluate(expr.left)
         right = self._evaluate(expr.right)
         op = expr.operator.type
-        if op == TokenType.PLUS: return left + right
+
+        if op == TokenType.PLUS:
+            if isinstance(left, (int, float)) and isinstance(right, (int, float)):
+                return left + right
+            if isinstance(left, str) and isinstance(right, str):
+                return left + right
+            raise VzoelRuntimeException(expr.operator, "Operan harus dua angka atau dua string.")
+
+        self._check_number_operands(expr.operator, left, right)
+
         if op == TokenType.MINUS: return left - right
         if op == TokenType.BINTANG: return left * right
-        if op == TokenType.GARIS_MIRING: return left / right
+        if op == TokenType.GARIS_MIRING:
+            if right == 0:
+                raise VzoelRuntimeException(expr.operator, "Tidak bisa membagi dengan nol.")
+            return left / right
         if op == TokenType.LEBIH_DARI: return left > right
         if op == TokenType.KURANG_DARI: return left < right
         if op == TokenType.SAMA_DENGAN_SAMA_DENGAN: return left == right
@@ -145,7 +161,9 @@ class Interpreter(ast.Visitor):
 
     def visit_UnaryExpression(self, expr: ast.UnaryExpression):
         right = self._evaluate(expr.right)
-        if expr.operator.type == TokenType.MINUS: return -right
+        if expr.operator.type == TokenType.MINUS:
+            self._check_number_operands(expr.operator, right)
+            return -right
         return None
 
     def visit_Grouping(self, expr: ast.Grouping):
