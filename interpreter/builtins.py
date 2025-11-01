@@ -1,4 +1,5 @@
 # interpreter/builtins.py
+import math
 from .callable import VzoelCallable
 from typing import List, Any
 from .errors import VzoelRuntimeException
