@@ -111,7 +111,7 @@ class KembaliStatement(Statement):
 class AturStatement(Statement):
     name: Token
     initializer: Expression
-    fallback: Optional['AturStatement'] = None
+    fallback: Optional['Statement'] = None
     def accept(self, visitor): return visitor.visit_AturStatement(self)
 
 @dataclass
@@ -124,30 +124,3 @@ class UlangiStatement(Statement):
     count: Expression
     body: Statement
     def accept(self, visitor): return visitor.visit_UlangiStatement(self)
-
-@dataclass
-class ManagementDeclaration(Statement):
-    name: Token
-    bagian_list: List['BagianDeclaration']
-    def accept(self, visitor):
-        return visitor.visit_ManagementDeclaration(self)
-
-@dataclass
-class BagianDeclaration(ASTNode):
-    name: Token
-    pecahan_list: List['PecahanDeclaration']
-    def accept(self, visitor):
-        return visitor.visit_BagianDeclaration(self)
-
-@dataclass
-class PecahanDeclaration(ASTNode):
-    name: Token
-    body: BlokStatement
-    def accept(self, visitor):
-        return visitor.visit_PecahanDeclaration(self)
-
-@dataclass
-class JalankanStatement(Statement):
-    management_name: Token
-    def accept(self, visitor):
-        return visitor.visit_JalankanStatement(self)
