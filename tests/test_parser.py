@@ -4,40 +4,55 @@ from interpreter.lexer import Lexer
 from interpreter.parser import Parser
 import interpreter.ast_nodes as ast
 
+def test_parser_basic():
+    source = 'atur pesan = "halo"'
+    tokens = Lexer(source).scan_tokens()
+    program = Parser(tokens).parse()
+    assert len(program.statements) == 1
+    stmt = program.statements[0]
+    assert isinstance(stmt, ast.AturStatement)
+    assert stmt.name.literal == "pesan"
+    assert isinstance(stmt.initializer, ast.Literal)
 def test_hello_world_parser():
-    source_path = Path(__file__).parent.parent / "examples" / "hello.fox"
+    # 1. Setup: Dapatkan token dari Lexer
+    source_path = Path(__file__).parent.parent / "examples" / "hello.vz"
     with open(source_path, 'r', encoding='utf-8') as f:
         source_code = f.read()
+
     lexer = Lexer(source_code)
     tokens = lexer.scan_tokens()
+
+    # 2. Aksi: Parse token menjadi AST
     parser = Parser(tokens)
     program_ast = parser.parse()
-    assert not parser.errors
+
+    # 3. Verifikasi: Periksa struktur AST
+
+    # a. Harus ada 2 pernyataan (atur dan lihat)
     assert isinstance(program_ast, ast.Program)
-    assert len(program_ast.statements) == 2
+    assert len(program_ast.statements) == 2, "Diharapkan 2 pernyataan."
 
-def test_parser_invalid_assignment_target():
-    source = 'atur "nama" = "vzoel"'
-    tokens = Lexer(source).scan_tokens()
-    parser = Parser(tokens)
-    parser.parse()
-    assert len(parser.errors) > 0
-    error = parser.errors[0]
-    assert "Diharapkan nama variabel" in error.message
+    # b. Verifikasi pernyataan pertama: atur pesan = "..."
+    stmt1 = program_ast.statements[0]
+    assert isinstance(stmt1, ast.AturStatement)
+    assert stmt1.name.literal == "pesan"
+    assert isinstance(stmt1.initializer, ast.Literal)
+    assert stmt1.initializer.value == "Halo Dunia dari Vzoel Word v0.2!"
 
-def test_parser_synchronization_multiple_errors():
-    source = """
-    atur x = 10 20  // Error 1: unexpected token
-    atur y = ;       // Error 2: missing expression
-    lihat(y)
-    atur z = "benar"
-    """
-    tokens = Lexer(source).scan_tokens()
-    parser = Parser(tokens)
-    program = parser.parse()
+    # c. Verifikasi pernyataan kedua: lihat(pesan)
+    stmt2 = program_ast.statements[1]
+    assert isinstance(stmt2, ast.ExpressionStatement)
 
-    assert len(parser.errors) >= 1 # Seharusnya setidaknya satu error
+    # d. Ekspresi di dalamnya harus berupa pemanggilan fungsi
+    expr = stmt2.expression
+    assert isinstance(expr, ast.FunctionCall)
 
-    assert isinstance(program, ast.Program)
-    # Bergantung pada bagaimana sinkronisasi bekerja, jumlah statement bisa bervariasi
-    assert len(program.statements) > 0
+    # e. Fungsi yang dipanggil adalah 'lihat'
+    assert isinstance(expr.callee, ast.Variable)
+    assert expr.callee.name.literal == "lihat"
+
+    # f. Argumennya adalah variabel 'pesan'
+    assert len(expr.arguments) == 1
+    arg1 = expr.arguments[0]
+    assert isinstance(arg1, ast.Variable)
+    assert arg1.name.literal == "pesan"

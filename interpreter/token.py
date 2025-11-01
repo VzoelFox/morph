@@ -6,4 +6,3 @@ class Token:
     type: TokenType
     literal: str
     line: int = 1
-    column: int = 1

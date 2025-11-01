@@ -1,4 +1,3 @@
-# interpreter/environment.py
 from typing import Dict, Any, Optional
 from .token import Token
 from .errors import VzoelRuntimeException
