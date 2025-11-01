@@ -9,13 +9,12 @@ def test_lexer_basic():
     expected = [
         TokenType.ATUR, TokenType.IDENTIFIER, TokenType.SAMA_DENGAN, TokenType.STRING,
         TokenType.IDENTIFIER, TokenType.KURUNG_BUKA, TokenType.IDENTIFIER, TokenType.KURUNG_TUTUP,
-        TokenType.EOF
+            TokenType.ADS
     ]
     token_types = [t.type for t in tokens]
     assert token_types == expected
+
 from pathlib import Path
-from interpreter.lexer import Lexer
-from interpreter.token_types import TokenType
 
 def test_hello_world_lexer():
     # Path ke file contoh
@@ -42,7 +41,7 @@ def test_hello_world_lexer():
         (TokenType.KURUNG_BUKA, "("),
         (TokenType.IDENTIFIER, "pesan"),
         (TokenType.KURUNG_TUTUP, ")"),
-        (TokenType.EOF, ""),
+        (TokenType.ADS, ""),
     ]
 
     # Pastikan jumlah token sama
