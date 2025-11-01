@@ -2,20 +2,37 @@
 from .token_types import TokenType
 from .token import Token
 import interpreter.ast_nodes as ast
-from typing import List
+from typing import List, Any
+
+class ParseError(Exception):
+    pass
 
 class Parser:
     def __init__(self, tokens: List[Token]):
         self.tokens = [t for t in tokens if t.type != TokenType.TIDAK_DIKENALI]
         self.current = 0
+        self.errors = []
 
     def parse(self) -> ast.Program:
         statements = []
         while not self._is_at_end():
-            statements.append(self._statement())
+            declaration = self._declaration()
+            if declaration:
+                statements.append(declaration)
         return ast.Program(statements=statements)
 
+    def _declaration(self) -> ast.Statement | None:
+        try:
+            if self._match(TokenType.MANAGEMENT):
+                return self._management_declaration()
+            return self._statement()
+        except ParseError:
+            self._synchronize()
+            return None
+
     def _statement(self) -> ast.Statement:
+        if self._match(TokenType.JALANKAN): return self._jalankan_statement()
+        if self._match(TokenType.ULANGI): return self._ulangi_statement()
         if self._match(TokenType.PROSES): return self._proses_statement()
         if self._match(TokenType.KEMBALI): return self._kembali_statement()
         if self._match(TokenType.KURAWAL_BUKA): return ast.BlokStatement(self._blok())
@@ -26,11 +43,10 @@ class Parser:
     def _proses_statement(self) -> ast.ProsesStatement:
         name = self._consume(TokenType.IDENTIFIER, "Diharapkan nama proses.")
         self._consume(TokenType.KURUNG_BUKA, "Diharapkan '(' setelah nama proses.")
-        params = []
-        if not self._check(TokenType.KURUNG_TUTUP):
-            params.append(self._consume(TokenType.IDENTIFIER, "Diharapkan nama parameter."))
-            while self._match(TokenType.KOMA):
-                params.append(self._consume(TokenType.IDENTIFIER, "Diharapkan nama parameter."))
+        params = self._parse_comma_separated_items(
+            TokenType.KURUNG_TUTUP,
+            lambda: self._consume(TokenType.IDENTIFIER, "Diharapkan nama parameter.")
+        )
         self._consume(TokenType.KURUNG_TUTUP, "Diharapkan ')' setelah parameter.")
         self._consume(TokenType.KURAWAL_BUKA, "Diharapkan '{' sebelum badan proses.")
         body = ast.BlokStatement(self._blok())
@@ -39,7 +55,7 @@ class Parser:
     def _kembali_statement(self) -> ast.KembaliStatement:
         keyword = self._previous()
         value = None
-        if self._peek().type != TokenType.EOF and self._peek().type != TokenType.KURAWAL_TUTUP:
+        if self._peek().type != TokenType.ADS and self._peek().type != TokenType.KURAWAL_TUTUP:
             value = self._expression()
         return ast.KembaliStatement(keyword, value)
 
@@ -62,6 +78,41 @@ class Parser:
              raise self._error(self._peek(), "Fallback harus berupa 'atur' saat ini.")
         atur_stmt.fallback = fallback_stmt
         return atur_stmt
+
+    def _management_declaration(self):
+        name = self._consume(TokenType.IDENTIFIER, "Diharapkan nama management.")
+        self._consume(TokenType.KURAWAL_BUKA, "Diharapkan '{' setelah nama management.")
+
+        bagian_list = []
+        while self._check(TokenType.BAGIAN) and not self._is_at_end():
+            self._advance() # consume BAGIAN
+            bagian_name = self._consume(TokenType.IDENTIFIER, "Diharapkan nama bagian.")
+            self._consume(TokenType.KURAWAL_BUKA, "Diharapkan '{' setelah nama bagian.")
+
+            pecahan_list = []
+            while self._check(TokenType.PECAHAN) and not self._check(TokenType.KURAWAL_TUTUP):
+                self._advance() # consume PECAHAN
+                pecahan_name = self._consume(TokenType.IDENTIFIER, "Diharapkan nama pecahan.")
+                self._consume(TokenType.KURAWAL_BUKA, "Diharapkan '{' sebelum body pecahan.")
+                body = ast.BlokStatement(self._blok())
+                pecahan_list.append(ast.PecahanDeclaration(pecahan_name, body))
+
+            self._consume(TokenType.KURAWAL_TUTUP, "Diharapkan '}' setelah bagian.")
+            bagian_list.append(ast.BagianDeclaration(bagian_name, pecahan_list))
+
+        self._consume(TokenType.KURAWAL_TUTUP, "Diharapkan '}' setelah management.")
+        return ast.ManagementDeclaration(name, bagian_list)
+
+    def _jalankan_statement(self):
+        name = self._consume(TokenType.IDENTIFIER, "Diharapkan nama management.")
+        return ast.JalankanStatement(management_name=name)
+
+    def _ulangi_statement(self) -> ast.Statement:
+        body = self._statement()
+        self._consume(TokenType.SEBANYAK, "Diharapkan 'sebanyak' setelah badan perulangan.")
+        count = self._expression()
+        self._consume(TokenType.KALI, "Diharapkan 'kali' setelah jumlah perulangan.")
+        return ast.UlangiStatement(count=count, body=body)
 
     def _atur_statement(self) -> ast.AturStatement:
         name = self._consume(TokenType.IDENTIFIER, "Diharapkan nama variabel.")
@@ -116,11 +167,10 @@ class Parser:
         return expr
 
     def _finish_call(self, callee: ast.Expression) -> ast.Expression:
-        arguments = []
-        if not self._check(TokenType.KURUNG_TUTUP):
-            arguments.append(self._expression())
-            while self._match(TokenType.KOMA):
-                arguments.append(self._expression())
+        arguments = self._parse_comma_separated_items(
+            TokenType.KURUNG_TUTUP,
+            self._expression
+        )
         self._consume(TokenType.KURUNG_TUTUP, "Diharapkan ')' setelah argumen.")
         return ast.FunctionCall(callee=callee, arguments=arguments)
 
@@ -141,11 +191,10 @@ class Parser:
                 raise self._error(keyword, "Path modul harus string.")
             return ast.AmbilExpression(keyword=keyword, path=path)
         if self._match(TokenType.KURUNG_SIKU_BUKA):
-            elements = []
-            if not self._check(TokenType.KURUNG_SIKU_TUTUP):
-                elements.append(self._expression())
-                while self._match(TokenType.KOMA):
-                    elements.append(self._expression())
+            elements = self._parse_comma_separated_items(
+                TokenType.KURUNG_SIKU_TUTUP,
+                self._expression
+            )
             self._consume(TokenType.KURUNG_SIKU_TUTUP, "Diharapkan ']' setelah elemen daftar.")
             return ast.ListLiteral(elements=elements)
         if self._match(TokenType.PETA):
@@ -168,6 +217,14 @@ class Parser:
             return ast.MapLiteral(keys=keys, values=values)
         raise self._error(self._peek(), "Diharapkan sebuah ekspresi.")
 
+    def _parse_comma_separated_items(self, end_token_type: TokenType, item_parser) -> List[Any]:
+        items = []
+        if not self._check(end_token_type):
+            items.append(item_parser())
+            while self._match(TokenType.KOMA):
+                items.append(item_parser())
+        return items
+
     def _match(self, *types: TokenType) -> bool:
         for type in types:
             if self._check(type):
@@ -184,7 +241,7 @@ class Parser:
         return self._previous()
 
     def _is_at_end(self) -> bool:
-        return self._peek().type == TokenType.EOF
+        return self._peek().type == TokenType.ADS
 
     def _peek(self) -> Token:
         return self.tokens[self.current]
@@ -196,5 +253,27 @@ class Parser:
         if self._check(type): return self._advance()
         raise self._error(self._peek(), message)
 
-    def _error(self, token: Token, message: str):
-        return Exception(f"Error di baris {token.line}: {message}")
+    def _error(self, token: Token, message: str) -> ParseError:
+        error_message = f"[Baris {token.line}] Error di '{token.literal}': {message}"
+        if token.type == TokenType.ADS:
+            error_message = f"[Baris {token.line}] Error di akhir: {message}"
+        self.errors.append(error_message)
+        return ParseError()
+
+    def _synchronize(self):
+        self._advance()
+        while not self._is_at_end():
+            if self._previous().type in [TokenType.PROSES, TokenType.ATUR]:
+                return
+
+            if self._peek().type in [
+                TokenType.PROSES,
+                TokenType.ATUR,
+                TokenType.JIKA,
+                TokenType.ULANGI,
+                TokenType.KEMBALI,
+                TokenType.JALANKAN,
+                TokenType.MANAGEMENT,
+            ]:
+                return
+            self._advance()
