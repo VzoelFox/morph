@@ -52,4 +52,4 @@ class TokenType(Enum):
 
     # Lain-lain
     TIDAK_DIKENALI = "TIDAK_DIKENALI"
-    EOF = "EOF"
+    ADS = "ADS" # Akhir Dari Segalanya
