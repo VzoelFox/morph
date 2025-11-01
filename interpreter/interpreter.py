@@ -9,7 +9,7 @@ from .token import Token
 import interpreter.ast_nodes as ast
 from pathlib import Path
 
-class Interpreter:
+class Interpreter(ast.Visitor):
     def __init__(self):
         self.globals = Environment()
         self.environment = self.globals
@@ -18,6 +18,18 @@ class Interpreter:
         self.globals.define("panjang", Panjang())
         self.globals.define("tambah", Tambah())
         self.globals.define("potong", Potong())
+        self.globals.define("akar", Akar())
+        self.globals.define("pangkat", Pangkat())
+
+    def interpret(self, program: ast.Program):
+        try:
+            for stmt in program.statements:
+                self._execute(stmt)
+        except VzoelRuntimeException as e:
+            if e.token:
+                print(f"[Baris {e.token.line}] Error runtime: {e.message}")
+            else:
+                print(f"Error runtime: {e.message}")
         self.globals.define("ke_kecil", KeKecil())
         self.globals.define("ke_besar", KeBesar())
 
