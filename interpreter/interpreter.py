@@ -99,6 +99,10 @@ class Interpreter(ast.Visitor):
         callee = self._evaluate(expr.callee)
         args = [self._evaluate(arg) for arg in expr.arguments]
 
+        token = None
+        if hasattr(expr.callee, 'name'):
+            token = expr.callee.name
+
         if not isinstance(callee, VzoelCallable):
             raise VzoelRuntimeException(expr.callee.name if isinstance(expr.callee, ast.Variable) else Token(TokenType.IDENTIFIER, "ekspresi", 0), "Hanya bisa memanggil proses atau fungsi bawaan.")
 
