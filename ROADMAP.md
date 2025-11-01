@@ -1,57 +1,57 @@
-# Roadmap Proyek: Vzoel Word
+# Roadmap Proyek: Bahasa Morph
 
-Dokumen ini menguraikan status saat ini dan rencana pengembangan untuk bahasa pemrograman Vzoel Word.
+Dokumen ini menguraikan status saat ini dan rencana pengembangan untuk bahasa pemrograman Morph.
 
-## Status Saat Ini: v0.3 (Stabil & Dipoles)
+## Status Saat Ini: v0.3 (Stabil)
 
-Inti dari Vzoel Word telah stabil dan mengalami pemolesan. Semua tes yang ada telah berhasil, memvalidasi fitur-fitur dasar bahasa, dan dependensi eksternal pada pengujian telah dihilangkan.
+Inti dari Morph telah stabil. Semua tes yang ada telah berhasil, memvalidasi fitur-fitur dasar bahasa.
 
 ---
 
 ## Fitur yang Sudah Selesai (Core System)
 
-### Fase 1: Desain & Spesifikasi (Selesai)
+### v0.1: Fondasi & Interpreter Dasar
 - **[x] Filosofi Bahasa:** Mendesain bahasa yang intuitif dan berbasis Bahasa Indonesia.
-- **[x] Spesifikasi Formal:** Membuat dokumen `VZOEL_SPEC.md` yang mendefinisikan sintaks dan semantik.
-- **[x] Konsep `vzoelinfinity`:** Merancang mekanisme fallback untuk menangani operasi yang mungkin gagal.
-
-### Fase 2: Lexer & Parser (Selesai & Dipoles)
-- **[x] Lexer:** Mengimplementasikan lexer untuk mengubah kode sumber menjadi token.
-- **[x] Parser:** Membangun parser untuk mengubah token menjadi *Abstract Syntax Tree* (AST).
-- **[x] Pengujian:** Menulis tes unit untuk memvalidasi Lexer dan Parser.
-- **[x] Pemolesan:** Melakukan refactoring pada parser untuk mengurangi duplikasi kode.
-
-### Fase 3: Interpreter & Fitur Inti (Selesai & Dipoles)
-- **[x] Interpreter Dasar:** Mengimplementasikan interpreter dengan *Visitor Pattern* untuk mengeksekusi AST.
+- **[x] Lexer & Parser:** Mengimplementasikan lexer dan parser untuk memproses kode sumber menjadi *Abstract Syntax Tree* (AST).
+- **[x] Interpreter Dasar:** Mengimplementasikan interpreter dengan *Visitor Pattern* untuk mengekusi AST.
 - **[x] Variabel & Lingkup:** Menciptakan sistem lingkungan (`Environment`) yang mendukung *lexical scoping*.
-- **[x] Fungsi Bawaan:** Menyediakan fungsi inti (`lihat`, `panjang`, `tambah`, `potong`, `kekecil`, `pangkat`).
-- **[x] Struktur Data:** Mengimplementasikan tipe data `Daftar` (List), `String`, dan `Peta` (Map).
-- **[x] Fungsi Buatan Pengguna:** Mengizinkan definisi fungsi (`proses`) dengan dukungan *closure*.
-- **[x] Sistem Modul:** Membangun sistem impor (`ambil...dari...`) yang terisolasi.
 - **[x] Operator:** Mendukung operator aritmatika dan perbandingan dasar.
-- **[x] Kontrol Alur:** Mengimplementasikan sintaks perulangan (`ulangi`).
-- **[x] Penanganan Kesalahan:** Mengembangkan sistem penanganan error yang informatif.
-- **[x] Pemolesan:** Memperbaiki isolasi tes dengan menghilangkan dependensi eksternal.
+- **[x] Fungsi Bawaan Dasar:** Menyediakan fungsi inti seperti `lihat`.
 
-### Fase 4: Konkurensi (Dasar)
-- **[x] Management System:** Mengimplementasikan `management` sebagai fondasi untuk proses konkurensi dan fallback.
+### v0.2: Struktur Data & Fungsi
+- **[x] Struktur Data:** Mengimplementasikan tipe data `Daftar` (List), `Peta` (Map), dan `String`.
+- **[x] Fungsi Buatan Pengguna:** Mengizinkan definisi fungsi (`proses`) dengan dukungan *closure*.
+- **[x] Fungsi Bawaan Lanjutan:** Menambahkan `panjang`, `tambah`, `potong`, `ke_kecil`, `ke_besar`.
+- **[x] Konsep `vzoelinfinity`:** Merancang mekanisme fallback (`jika...tidak berhasil maka...`) untuk menangani operasi yang mungkin gagal.
+
+### v0.3: Kontrol Alur & Modul
+- **[x] Kontrol Alur:** Mengimplementasikan sintaks perulangan (`ulangi...sebanyak...kali`).
+- **[x] Sistem Modul:** Membangun sistem impor (`ambil...dari...`) yang terisolasi.
+- **[x] Peluncur Baris Perintah:** Membuat `morph.py` untuk eksekusi file `.fox`.
 
 ---
 
 ## Rencana Pengembangan (Fase Berikutnya)
 
-### v0.4: Konkurensi Lanjutan & Pustaka Standar
-- **[ ] Desain Konkurensi Lanjutan:** Merancang dan mengimplementasikan model konkurensi kooperatif di atas Management System.
-- **[ ] Standard Library:** Memperluas pustaka standar dengan lebih banyak fungsi untuk I/O, file, dan jaringan.
+### v0.4: Peningkatan Inti Bahasa
+- **[ ] Penanganan Kesalahan:** Mengembangkan sistem penanganan error runtime yang lebih informatif (saat ini hanya `print`).
+- **[ ] Pustaka Standar:** Memulai desain pustaka standar untuk operasi file, jaringan, dll.
 
-### Jangka Panjang
-- **[ ] Framework Backend:** Memulai pengembangan framework backend seperti yang dicita-citakan.
-- **[ ] Kompiler & Transpiler:** Melanjutkan pengembangan kompiler dan transpiler untuk meningkatkan performa dan portabilitas.
+### v0.5: Konkurensi
+- **[ ] Desain Konkurensi:** Merancang dan mengimplementasikan model konkurensi (konsep `management`).
 
 ---
 
-## Status Komponen Lainnya
+## Visi Jangka Panjang: Menuju Compiler (Lihat `roadmapnext.py`)
 
-- **Transpiler (ke Python):** Sebagian diimplementasikan. Mampu mentranspilasi ekspresi dasar tetapi belum mendukung semua jenis pernyataan atau fitur bahasa. (Status: **Alpha**)
-- **Compiler (ke IR):** Sebagian diimplementasikan. Dapat mengkompilasi beberapa ekspresi menjadi *Intermediate Representation* (IR) tetapi belum memiliki implementasi *Virtual Machine* (VM) untuk eksekusi. (Status: **Eksperimental**)
-- **Library Telegram VBase:** Pengembangan proyek ini ditunda untuk fokus pada Vzoel Word.
+Ini adalah inisiatif besar untuk mengubah Morph dari bahasa interpretasi menjadi bahasa kompilasi.
+
+### Fase 1: Transpiler & Analisis Lanjutan
+- **[x] Desain Analisis Statis:** Merancang dan mengimplementasikan sistem inferensi tipe statis sebagai langkah pertama menuju kompilasi.
+- **[ ] Implementasi *Transpiler*:** Membangun *transpiler* yang dapat mengubah kode Morph (.fox) menjadi kode Python yang dioptimalkan.
+
+---
+
+## Proyek Lainnya
+
+- **Library Telegram VBase:** Pengembangan proyek ini ditunda untuk fokus pada Morph.
