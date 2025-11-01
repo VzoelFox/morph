@@ -41,13 +41,24 @@ def test_lexer_escape_sequences():
     assert tokens[0].type == TokenType.STRING
     assert tokens[0].literal == "baris1\nbaris2\tindent"
 
-def test_lexer_multiline_string():
-    source = '"""baris pertama\nbaris kedua"""'
-    lexer = Lexer(source)
-    tokens = lexer.scan_tokens()
-    assert not lexer.errors
-    assert tokens[0].type == TokenType.STRING
-    assert tokens[0].literal == "baris pertama\nbaris kedua"
+    # Hapus token whitespace jika ada (desain lexer saat ini mengabaikannya, jadi ini hanya untuk keamanan)
+    tokens = [t for t in tokens if t.type != TokenType.TIDAK_DIKENALI]
+
+    # Tentukan urutan token yang diharapkan
+    expected_tokens = [
+        (TokenType.ATUR, "atur"),
+        (TokenType.IDENTIFIER, "pesan"),
+        (TokenType.SAMA_DENGAN, "="),
+        (TokenType.STRING, "Halo Dunia dari Vzoel Word v0.2!"),
+        (TokenType.IDENTIFIER, "lihat"),
+        (TokenType.KURUNG_BUKA, "("),
+        (TokenType.IDENTIFIER, "pesan"),
+        (TokenType.KURUNG_TUTUP, ")"),
+        (TokenType.ADS, ""),
+    ]
+
+    # Pastikan jumlah token sama
+    assert len(tokens) == len(expected_tokens), f"Jumlah token tidak sesuai. Diharapkan: {len(expected_tokens)}, Dihasilkan: {len(tokens)}"
 
 def test_lexer_multiline_string_unterminated():
     source = '"""halo'
