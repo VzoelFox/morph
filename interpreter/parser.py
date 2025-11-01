@@ -12,10 +12,21 @@ class Parser:
     def parse(self) -> ast.Program:
         statements = []
         while not self._is_at_end():
-            statements.append(self._statement())
+            statements.append(self._declaration())
         return ast.Program(statements=statements)
 
+    def _declaration(self) -> ast.Statement:
+        try:
+            if self._match(TokenType.MANAGEMENT):
+                return self._management_declaration()
+            return self._statement()
+        except Exception:
+            # Synchronize here if needed
+            raise
+
     def _statement(self) -> ast.Statement:
+        if self._match(TokenType.JALANKAN): return self._jalankan_statement()
+        if self._match(TokenType.ULANGI): return self._ulangi_statement()
         if self._match(TokenType.PROSES): return self._proses_statement()
         if self._match(TokenType.KEMBALI): return self._kembali_statement()
         if self._match(TokenType.KURAWAL_BUKA): return ast.BlokStatement(self._blok())
@@ -62,6 +73,41 @@ class Parser:
              raise self._error(self._peek(), "Fallback harus berupa 'atur' saat ini.")
         atur_stmt.fallback = fallback_stmt
         return atur_stmt
+
+    def _management_declaration(self):
+        name = self._consume(TokenType.IDENTIFIER, "Diharapkan nama management.")
+        self._consume(TokenType.KURAWAL_BUKA, "Diharapkan '{' setelah nama management.")
+
+        bagian_list = []
+        while self._check(TokenType.BAGIAN) and not self._is_at_end():
+            self._advance() # consume BAGIAN
+            bagian_name = self._consume(TokenType.IDENTIFIER, "Diharapkan nama bagian.")
+            self._consume(TokenType.KURAWAL_BUKA, "Diharapkan '{' setelah nama bagian.")
+
+            pecahan_list = []
+            while self._check(TokenType.PECAHAN) and not self._check(TokenType.KURAWAL_TUTUP):
+                self._advance() # consume PECAHAN
+                pecahan_name = self._consume(TokenType.IDENTIFIER, "Diharapkan nama pecahan.")
+                self._consume(TokenType.KURAWAL_BUKA, "Diharapkan '{' sebelum body pecahan.")
+                body = ast.BlokStatement(self._blok())
+                pecahan_list.append(ast.PecahanDeclaration(pecahan_name, body))
+
+            self._consume(TokenType.KURAWAL_TUTUP, "Diharapkan '}' setelah bagian.")
+            bagian_list.append(ast.BagianDeclaration(bagian_name, pecahan_list))
+
+        self._consume(TokenType.KURAWAL_TUTUP, "Diharapkan '}' setelah management.")
+        return ast.ManagementDeclaration(name, bagian_list)
+
+    def _jalankan_statement(self):
+        name = self._consume(TokenType.IDENTIFIER, "Diharapkan nama management.")
+        return ast.JalankanStatement(management_name=name)
+
+    def _ulangi_statement(self) -> ast.Statement:
+        body = self._statement()
+        self._consume(TokenType.SEBANYAK, "Diharapkan 'sebanyak' setelah badan perulangan.")
+        count = self._expression()
+        self._consume(TokenType.KALI, "Diharapkan 'kali' setelah jumlah perulangan.")
+        return ast.UlangiStatement(count=count, body=body)
 
     def _atur_statement(self) -> ast.AturStatement:
         name = self._consume(TokenType.IDENTIFIER, "Diharapkan nama variabel.")

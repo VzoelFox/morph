@@ -20,6 +20,22 @@ class TokenType(Enum):
     TERJADI = "TERJADI"
     HARUS = "HARUS"
     PETA = "PETA"
+    ULANGI = "ULANGI"
+    SEBANYAK = "SEBANYAK"
+    KALI = "KALI"
+
+    # Management System
+    MANAGEMENT = "MANAGEMENT"
+    BAGIAN = "BAGIAN"
+    PECAHAN = "PECAHAN"
+    # JALANKAN is already defined
+    MATIKAN = "MATIKAN"
+    HENTIKAN = "HENTIKAN"
+
+    # Thunderfox Async
+    THUNDERFOX = "THUNDERFOX"
+    LALU = "LALU"
+    SAMBIL = "SAMBIL"
 
     # Simbol & Operator
     SAMA_DENGAN = "="

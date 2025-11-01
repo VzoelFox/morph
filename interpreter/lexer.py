@@ -26,6 +26,17 @@ class Lexer:
             "benar": TokenType.BENAR,
             "salah": TokenType.SALAH,
             "peta": TokenType.PETA,
+            "ulangi": TokenType.ULANGI,
+            "sebanyak": TokenType.SEBANYAK,
+            "kali": TokenType.KALI,
+            "management": TokenType.MANAGEMENT,
+            "bagian": TokenType.BAGIAN,
+            "pecahan": TokenType.PECAHAN,
+            "matikan": TokenType.MATIKAN,
+            "hentikan": TokenType.HENTIKAN,
+            "thunderfox": TokenType.THUNDERFOX,
+            "lalu": TokenType.LALU,
+            "sambil": TokenType.SAMBIL,
         }
 
     def scan_tokens(self) -> list[Token]:
