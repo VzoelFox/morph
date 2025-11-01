@@ -1,54 +1,30 @@
+# interpreter/token_types.py
 from enum import Enum
 
 class TokenType(Enum):
-    # === struktur / deklarasi / import ===
-    AMBIL = "AMBIL"
-    DARI = "DARI"
+    # Kata Kunci (Keywords)
     ATUR = "ATUR"
-    PROSES = "PROSES"
-    PETA = "PETA"
-
-    # === kontrol alur ===
     JIKA = "JIKA"
     MAKA = "MAKA"
-    LAINNYA = "LAINNYA"
     TIDAK = "TIDAK"
-    TIDAK_AKAN = "TIDAK_AKAN"
-    JANGAN = "JANGAN"
     BERHASIL = "BERHASIL"
-
-    # === loop ===
-    ULANGI = "ULANGI"
-    SEBANYAK = "SEBANYAK"
-    KALI = "KALI"
-    TERUSKAN = "TERUSKAN"
-
-    # === eksekusi / async style ===
-    TUNGGU = "TUNGGU"
-    LALU = "LALU"
-    SAMBIL = "SAMBIL"
-
-    # === lifecycle manajemen task ===
-    MATIKAN = "MATIKAN"
-    HENTIKAN = "HENTIKAN"
-
-    # === hasil fungsi ===
+    PROSES = "PROSES"
+    AMBIL = "AMBIL"
+    DARI = "DARI"
     KEMBALI = "KEMBALI"
-
-    # === literal / boolean ===
     BENAR = "BENAR"
     SALAH = "SALAH"
-
-    # === akhir file ===
-    ADS = "AKHIR_DARI_SEGALANYA"
-    EOF = "EOF"
-
-    # Token yang sudah ada dan dipertahankan
+    JALANKAN = "JALANKAN"
+    TUNGGU = "TUNGGU"
     PEMICU = "PEMICU"
     TERJADI = "TERJADI"
     HARUS = "HARUS"
+    PETA = "PETA"
+    ULANGI = "ULANGI"
+    SEBANYAK = "SEBANYAK"
+    KALI = "KALI"
 
-    # simbol, operator, literal juga tetap:
+    # Simbol & Operator
     SAMA_DENGAN = "="
     PLUS = "+"
     MINUS = "-"
@@ -58,8 +34,6 @@ class TokenType(Enum):
     TIDAK_SAMA_DENGAN = "!="
     LEBIH_DARI = ">"
     KURANG_DARI = "<"
-    LEBIH_DARI_SAMA_DENGAN = ">="
-    KURANG_DARI_SAMA_DENGAN = "<="
     TITIK = "."
     KOMA = ","
     KURUNG_BUKA = "("
@@ -70,8 +44,11 @@ class TokenType(Enum):
     KURUNG_SIKU_TUTUP = "]"
     TITIK_DUA = ":"
 
+    # Literals & Identifier
     IDENTIFIER = "IDENTIFIER"
     STRING = "STRING"
     NUMBER = "NUMBER"
 
+    # Lain-lain
     TIDAK_DIKENALI = "TIDAK_DIKENALI"
+    EOF = "EOF"

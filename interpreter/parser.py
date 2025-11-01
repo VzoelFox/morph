@@ -61,15 +61,15 @@ class Parser:
         return statements
 
     def _jika_statement(self) -> ast.Statement:
-        condition = self._expression()
-        self._consume(TokenType.MAKA, "Diharapkan 'maka' setelah kondisi jika.")
-
-        then_branch = self._statement()
-        else_branch = None
-        if self._match(TokenType.LAINNYA):
-            else_branch = self._statement()
-
-        return ast.JikaStatement(condition=condition, then_branch=then_branch, else_branch=else_branch)
+        atur_stmt = self._atur_statement()
+        if not isinstance(atur_stmt, ast.AturStatement):
+            raise self._error(self._peek(), "Hanya 'atur' yang didukung dalam 'jika' saat ini.")
+        self._consume(TokenType.TIDAK, "Diharapkan 'tidak'.")
+        self._consume(TokenType.BERHASIL, "Diharapkan 'berhasil'.")
+        self._consume(TokenType.MAKA, "Diharapkan 'maka'.")
+        fallback_stmt = self._statement()
+        atur_stmt.fallback = fallback_stmt
+        return atur_stmt
 
     def _ulangi_statement(self) -> ast.Statement:
         body = self._statement()
@@ -102,15 +102,10 @@ class Parser:
         return expr
 
     def _comparison(self) -> ast.Expression:
-        expr = self._term()
-        while self._match(
-            TokenType.LEBIH_DARI,
-            TokenType.KURANG_DARI,
-            TokenType.LEBIH_DARI_SAMA_DENGAN,
-            TokenType.KURANG_DARI_SAMA_DENGAN
-        ):
+        expr = self._term() # Diubah dari _addition
+        while self._match(TokenType.LEBIH_DARI, TokenType.KURANG_DARI):
             operator = self._previous()
-            right = self._term()
+            right = self._term() # Diubah dari _addition
             expr = ast.BinaryExpression(left=expr, operator=operator, right=right)
         return expr
 
