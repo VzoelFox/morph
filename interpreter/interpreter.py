@@ -30,10 +30,6 @@ class Interpreter(ast.Visitor):
             else:
                 print(f"Error runtime: {e.message}")
 
-    def visit_Program(self, program: ast.Program):
-        for stmt in program.statements:
-            self._execute(stmt)
-
     def execute_block(self, statements: List[ast.Statement], environment: Environment):
         previous = self.environment
         try:
@@ -112,12 +108,6 @@ class Interpreter(ast.Visitor):
                 continue
 
         raise VzoelRuntimeException(call_token, f"Semua pecahan di bagian '{bagian.name.literal}' gagal.")
-
-    def visit_BagianDeclaration(self, stmt: ast.BagianDeclaration):
-        pass
-
-    def visit_PecahanDeclaration(self, stmt: ast.PecahanDeclaration):
-        pass
 
     def visit_Literal(self, expr: ast.Literal):
         return expr.value

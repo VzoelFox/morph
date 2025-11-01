@@ -4,9 +4,6 @@ from .token import Token
 import interpreter.ast_nodes as ast
 from typing import List, Any
 
-class ParseError(Exception):
-    pass
-
 class Parser:
     def __init__(self, tokens: List[Token]):
         self.tokens = [t for t in tokens if t.type != TokenType.TIDAK_DIKENALI]
@@ -16,19 +13,17 @@ class Parser:
     def parse(self) -> ast.Program:
         statements = []
         while not self._is_at_end():
-            declaration = self._declaration()
-            if declaration:
-                statements.append(declaration)
+            statements.append(self._declaration())
         return ast.Program(statements=statements)
 
-    def _declaration(self) -> ast.Statement | None:
+    def _declaration(self) -> ast.Statement:
         try:
             if self._match(TokenType.MANAGEMENT):
                 return self._management_declaration()
             return self._statement()
-        except ParseError:
-            self._synchronize()
-            return None
+        except Exception:
+            # Synchronize here if needed
+            raise
 
     def _statement(self) -> ast.Statement:
         if self._match(TokenType.JALANKAN): return self._jalankan_statement()

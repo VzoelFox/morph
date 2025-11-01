@@ -12,9 +12,6 @@ class ASTNode(ABC):
         pass
 
 class Visitor(ABC):
-    # Program
-    @abstractmethod
-    def visit_Program(self, program: 'Program'): pass
     # Expressions
     @abstractmethod
     def visit_Literal(self, expr: 'Literal'): pass
@@ -51,13 +48,8 @@ class Visitor(ABC):
     def visit_ExpressionStatement(self, stmt: 'ExpressionStatement'): pass
     @abstractmethod
     def visit_UlangiStatement(self, stmt: 'UlangiStatement'): pass
-    # Management System
     @abstractmethod
     def visit_ManagementDeclaration(self, stmt: 'ManagementDeclaration'): pass
-    @abstractmethod
-    def visit_BagianDeclaration(self, stmt: 'BagianDeclaration'): pass
-    @abstractmethod
-    def visit_PecahanDeclaration(self, stmt: 'PecahanDeclaration'): pass
     @abstractmethod
     def visit_JalankanStatement(self, stmt: 'JalankanStatement'): pass
 
