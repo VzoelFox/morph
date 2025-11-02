@@ -1,5 +1,6 @@
 # tests/test_core_features.py
-from tests.helpers import run_vzoel_code_capture_output
+from tests.helpers import run_vzoel_code_capture_output, run_vzoel_code
+from interpreter.errors import VzoelRuntimeException
 import pytest
 
 # Parameterisasi untuk tes aritmatika
@@ -35,3 +36,17 @@ def test_simple_function_call():
     """
     output = run_vzoel_code_capture_output(source)
     assert output == ["Halo, Dunia"]
+
+def test_undefined_variable_raises_runtime_error():
+    source = "lihat(x)"
+    with pytest.raises(VzoelRuntimeException, match="Variabel 'x' tidak terdefinisi."):
+        run_vzoel_code(source)
+
+def test_ulangi_loop():
+    source = """
+    ulangi sebanyak 2 kali {
+        lihat("halo")
+    }
+    """
+    output = run_vzoel_code_capture_output(source)
+    assert output == ["halo", "halo"]

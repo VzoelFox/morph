@@ -19,3 +19,12 @@ def run_vzoel_code_capture_output(source: str) -> list[str]:
     sys.stdout = original_stdout
     output_lines = captured_output.getvalue().strip().split('\n')
     return [line for line in output_lines if line]
+
+def run_vzoel_code(source: str):
+    """Menjalankan kode Vzoel, berguna untuk tes yang diharapkan gagal."""
+    lexer = Lexer(source)
+    tokens = lexer.scan_tokens()
+    parser = Parser(tokens)
+    program = parser.parse()
+    interpreter = Interpreter()
+    interpreter.interpret(program)

@@ -29,11 +29,15 @@ class Compiler: # Menghapus pewarisan dari ast.Visitor
         Menerjemahkan seluruh program AST menjadi daftar instruksi IR.
         """
         self.instructions = []
-        for statement in program.statements:
-            statement.accept(self)
+        program.accept(self)
         return self.instructions
 
     # --- Metode Visitor (akan diimplementasikan secara bertahap) ---
+
+    def visit_Program(self, node: ast.Program):
+        """Mengunjungi node Program."""
+        for statement in node.statements:
+            statement.accept(self)
 
     def visit_Literal(self, node: ast.Literal):
         """Mengunjungi node Literal."""
@@ -61,6 +65,24 @@ class Compiler: # Menghapus pewarisan dari ast.Visitor
             raise NotImplementedError(f"Operator unary {node.operator.type} belum didukung.")
 
         return dest_temp
+
+    def visit_Variable(self, node: ast.Variable):
+        """Mengunjungi node Variable."""
+        temp_dest = self._new_temp()
+        instruction = instructions.LoadVar(name=node.name.literal, dest=temp_dest)
+        self.instructions.append(instruction)
+        return temp_dest
+
+    def visit_AturStatement(self, node: ast.AturStatement):
+        """Mengunjungi node AturStatement."""
+        val_temp = node.initializer.accept(self)
+        instruction = instructions.StoreVar(name=node.name.literal, src=val_temp)
+        self.instructions.append(instruction)
+
+    def visit_Grouping(self, node: ast.Grouping):
+        """Mengunjungi node Grouping."""
+        # Cukup kunjungi ekspresi di dalamnya dan kembalikan hasilnya.
+        return node.expression.accept(self)
 
     def visit_BinaryExpression(self, node: ast.BinaryExpression):
         """Mengunjungi node BinaryExpression."""

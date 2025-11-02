@@ -102,12 +102,16 @@ class Interpreter(ast.Visitor):
         count_expr = stmt.count
         count = self._evaluate(count_expr)
         if not isinstance(count, (int, float)):
-            # Kita butuh token untuk error, kita bisa ambil dari ekspresi count
-            # Ini asumsi, cara lebih baik adalah menyimpan token di node UlangiStatement
-            raise VzoelRuntimeException(count_expr.operator if hasattr(count_expr, 'operator') else Token(TokenType.NUMBER, str(count), 0, 0), "Jumlah perulangan harus berupa angka.")
+            # Perbaikan sementara untuk mendapatkan token yang valid
+            error_token = count_expr.operator if hasattr(count_expr, 'operator') else Token(TokenType.NUMBER, str(count), 0, 0)
+            raise VzoelRuntimeException(error_token, "Jumlah perulangan harus berupa angka.")
 
         for _ in range(int(count)):
-            self._execute(stmt.body)
+            # Pastikan setiap iterasi loop memiliki lingkungannya sendiri jika body adalah blok
+            if isinstance(stmt.body, ast.BlokStatement):
+                self.execute_block(stmt.body.statements, Environment(enclosing=self.environment))
+            else:
+                self._execute(stmt.body)
 
     def visit_ManagementStatement(self, stmt: ast.ManagementStatement):
         # Untuk saat ini, kita hanya mendaftarkan management system sebagai callable.
