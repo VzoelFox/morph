@@ -57,8 +57,16 @@ class Visitor(ABC):
     def visit_ExpressionStatement(self, stmt: 'ExpressionStatement'): pass
     @abstractmethod
     def visit_UlangiStatement(self, stmt: 'UlangiStatement'): pass
+    @abstractmethod
+    def visit_ManagementStatement(self, stmt: 'ManagementStatement'): pass
+    @abstractmethod
+    def visit_BagianStatement(self, stmt: 'BagianStatement'): pass
+    @abstractmethod
+    def visit_PecahanStatement(self, stmt: 'PecahanStatement'): pass
+    @abstractmethod
+    def visit_JalankanStatement(self, stmt: 'JalankanStatement'): pass
 
-# --- Simpul Ekspresi (Expressions) ---
+# --- Simpul Ekspesi (Expressions) ---
 @dataclass
 class Literal(Expression):
     value: Any
@@ -163,3 +171,26 @@ class UlangiStatement(Statement):
     count: Expression
     body: Statement
     def accept(self, visitor): return visitor.visit_UlangiStatement(self)
+
+@dataclass
+class PecahanStatement(Statement):
+    name: Token
+    body: BlokStatement
+    def accept(self, visitor): return visitor.visit_PecahanStatement(self)
+
+@dataclass
+class BagianStatement(Statement):
+    name: Token
+    pecahan: List[PecahanStatement]
+    def accept(self, visitor): return visitor.visit_BagianStatement(self)
+
+@dataclass
+class ManagementStatement(Statement):
+    name: Token
+    bagian: List[BagianStatement]
+    def accept(self, visitor): return visitor.visit_ManagementStatement(self)
+
+@dataclass
+class JalankanStatement(Statement):
+    name: Token
+    def accept(self, visitor): return visitor.visit_JalankanStatement(self)

@@ -9,6 +9,29 @@ from .token import Token
 import interpreter.ast_nodes as ast
 from pathlib import Path
 
+class ManagementCallable(VzoelCallable):
+    def __init__(self, declaration: ast.ManagementStatement):
+        self._declaration = declaration
+
+    def arity(self):
+        return 0
+
+    def call(self, interpreter, arguments):
+        for bagian in self._declaration.bagian:
+            success = False
+            for pecahan in bagian.pecahan:
+                try:
+                    interpreter.execute_block(pecahan.body.statements, Environment(interpreter.environment))
+                    success = True
+                    break # Lanjut ke bagian berikutnya jika satu pecahan berhasil
+                except VzoelRuntimeException as e:
+                    # Gagal, coba pecahan berikutnya
+                    pass
+            if not success:
+                # Jika tidak ada pecahan yang berhasil di satu bagian, seluruh sistem gagal
+                raise VzoelRuntimeException(bagian.name, f"Semua pecahan di bagian '{bagian.name.literal}' gagal.")
+        return None
+
 class Interpreter(ast.Visitor):
     def __init__(self):
         self.globals = Environment()
@@ -85,6 +108,27 @@ class Interpreter(ast.Visitor):
 
         for _ in range(int(count)):
             self._execute(stmt.body)
+
+    def visit_ManagementStatement(self, stmt: ast.ManagementStatement):
+        # Untuk saat ini, kita hanya mendaftarkan management system sebagai callable.
+        # Eksekusi sebenarnya terjadi saat 'jalankan' dipanggil.
+        management_obj = ManagementCallable(stmt)
+        self.environment.define(stmt.name.literal, management_obj)
+
+    def visit_BagianStatement(self, stmt: ast.BagianStatement):
+        # Bagian dieksekusi oleh ManagementCallable, bukan secara langsung.
+        pass
+
+    def visit_PecahanStatement(self, stmt: ast.PecahanStatement):
+        # Pecahan juga dieksekusi oleh ManagementCallable.
+        pass
+
+    def visit_JalankanStatement(self, stmt: ast.JalankanStatement):
+        management_obj = self.environment.get(stmt.name)
+        if not isinstance(management_obj, ManagementCallable):
+            raise VzoelRuntimeException(stmt.name, f"Variabel '{stmt.name.literal}' bukan sistem management yang bisa dijalankan.")
+        # Panggil ManagementCallable untuk mengeksekusi logika fallback
+        management_obj.call(self, [])
 
     # --- Implementasi Visitor untuk Expressions ---
     def visit_Literal(self, expr: ast.Literal):

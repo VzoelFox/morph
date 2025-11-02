@@ -17,4 +17,4 @@ def test_parser_invalid_statement():
     parser = Parser(tokens)
     parser.parse()
     assert len(parser.errors) > 0
-    assert "Diharapkan sebuah ekspresi" in parser.errors[0]
+    assert "Diharapkan sebuah ekspresi" in parser.errors[0].message
