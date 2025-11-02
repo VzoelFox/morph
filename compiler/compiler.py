@@ -125,3 +125,43 @@ class Compiler: # Menghapus pewarisan dari ast.Visitor
         self.instructions.append(instruction)
 
         return dest_temp
+
+    def visit_BlokStatement(self, node: ast.BlokStatement):
+        """Mengunjungi node BlokStatement."""
+        for statement in node.statements:
+            statement.accept(self)
+
+    def visit_ProsesStatement(self, node: ast.ProsesStatement):
+        """Mengunjungi node ProsesStatement."""
+        func_label = self._new_label(node.name.literal)
+        self.instructions.append(instructions.Label(name=func_label))
+        node.body.accept(self)
+        # Pastikan fungsi selalu kembali
+        none_temp = self._new_temp()
+        self.instructions.append(instructions.LoadConst(value=None, dest=none_temp))
+        self.instructions.append(instructions.Return(value=none_temp))
+
+    def visit_KembaliStatement(self, node: ast.KembaliStatement):
+        """Mengunjungi node KembaliStatement."""
+        if node.value:
+            return_val_temp = node.value.accept(self)
+        else:
+            return_val_temp = self._new_temp()
+            self.instructions.append(instructions.LoadConst(value=None, dest=return_val_temp))
+        self.instructions.append(instructions.Return(value=return_val_temp))
+
+    def visit_ManagementStatement(self, node: ast.ManagementStatement):
+        """Mengunjungi node ManagementStatement."""
+        raise NotImplementedError("ManagementStatement belum didukung oleh compiler.")
+
+    def visit_BagianStatement(self, node: ast.BagianStatement):
+        """Mengunjungi node BagianStatement."""
+        raise NotImplementedError("BagianStatement belum didukung oleh compiler.")
+
+    def visit_PecahanStatement(self, node: ast.PecahanStatement):
+        """Mengunjungi node PecahanStatement."""
+        raise NotImplementedError("PecahanStatement belum didukung oleh compiler.")
+
+    def visit_JalankanStatement(self, node: ast.JalankanStatement):
+        """Mengunjungi node JalankanStatement."""
+        raise NotImplementedError("JalankanStatement belum didukung oleh compiler.")

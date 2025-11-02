@@ -199,7 +199,11 @@ class Interpreter(ast.Visitor):
         return [self._evaluate(e) for e in expr.elements]
 
     def visit_AmbilExpression(self, expr: ast.AmbilExpression):
-        path_str = expr.path.value # path is a Literal, no need to evaluate
+        path_value = self._evaluate(expr.path)
+        if not isinstance(path_value, str):
+            raise VzoelRuntimeException(expr.keyword, "Kesalahan Runtime: Path untuk modul yang diambil harus berupa string.")
+
+        path_str = path_value
         path = Path(path_str).resolve()
 
         if not path.exists() or not path.is_file():
