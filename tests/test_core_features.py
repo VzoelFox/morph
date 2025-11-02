@@ -44,9 +44,9 @@ def test_undefined_variable_raises_runtime_error():
 
 def test_ulangi_loop():
     source = """
-    ulangi sebanyak 2 kali {
+    ulangi {
         lihat("halo")
-    }
+    } sebanyak 2 kali
     """
     output = run_vzoel_code_capture_output(source)
     assert output == ["halo", "halo"]
