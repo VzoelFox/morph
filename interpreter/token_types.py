@@ -23,6 +23,9 @@ class TokenType(Enum):
     ULANGI = "ULANGI"
     SEBANYAK = "SEBANYAK"
     KALI = "KALI"
+    MANAGEMENT = "MANAGEMENT"
+    BAGIAN = "BAGIAN"
+    PECAHAN = "PECAHAN"
 
     # Simbol & Operator
     SAMA_DENGAN = "="

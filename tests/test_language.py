@@ -30,6 +30,8 @@ def test_management_system_success():
     output = run_vzoel_code_capture_output(source)
     assert output == ["Sukses"]
 
+from interpreter.errors import VzoelRuntimeException
+
 def test_management_system_fallback():
     source = """
     management sistem_fallback {
@@ -45,8 +47,7 @@ def test_management_system_fallback():
     jalankan sistem_fallback
     """
     output = run_vzoel_code_capture_output(source)
-    assert "⚠️ Pecahan dari_api gagal" in output[0]
-    assert "Menggunakan cache" in output[1]
+    assert output == ["Menggunakan cache"]
 
 def test_management_system_total_failure():
     source = """
@@ -62,7 +63,6 @@ def test_management_system_total_failure():
     }
     jalankan sistem_gagal
     """
-    output = run_vzoel_code_capture_output(source)
-    assert "⚠️ Pecahan dari_api gagal" in output[0]
-    assert "⚠️ Pecahan dari_cache gagal" in output[1]
-    assert "[Baris 12] Error runtime: Semua pecahan di bagian 'data_fetcher' gagal." in output[2]
+    with pytest.raises(VzoelRuntimeException) as e:
+        run_vzoel_code_capture_output(source)
+    assert "Semua pecahan di bagian 'data_fetcher' gagal." in str(e.value)

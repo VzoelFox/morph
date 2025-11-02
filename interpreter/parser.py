@@ -21,6 +21,7 @@ class Parser:
 
     def _declaration(self):
         try:
+            if self._match(TokenType.MANAGEMENT): return self._management_statement()
             if self._match(TokenType.PROSES): return self._proses_statement("proses")
             if self._match(TokenType.JIKA): return self._jika_statement()
             if self._match(TokenType.ATUR): return self._atur_statement()
@@ -30,6 +31,7 @@ class Parser:
             return None
 
     def _statement(self) -> ast.Statement:
+        if self._match(TokenType.JALANKAN): return self._jalankan_statement()
         if self._match(TokenType.ULANGI): return self._ulangi_statement()
         if self._match(TokenType.KEMBALI): return self._kembali_statement()
         if self._match(TokenType.KURAWAL_BUKA): return ast.BlokStatement(self._blok())
@@ -97,6 +99,35 @@ class Parser:
         expr = self._expression()
         self._match(TokenType.TITIK_KOMA) # Opsional
         return ast.ExpressionStatement(expression=expr)
+
+    def _jalankan_statement(self) -> ast.Statement:
+        name = self._consume(TokenType.IDENTIFIER, "Diharapkan nama sistem management untuk dijalankan.")
+        self._match(TokenType.TITIK_KOMA) # Opsional
+        return ast.JalankanStatement(name=name)
+
+    def _management_statement(self) -> ast.Statement:
+        name = self._consume(TokenType.IDENTIFIER, "Diharapkan nama sistem management.")
+        self._consume(TokenType.KURAWAL_BUKA, "Diharapkan '{' setelah nama sistem management.")
+        bagian_list = []
+        while self._match(TokenType.BAGIAN):
+            bagian_list.append(self._bagian_statement())
+        self._consume(TokenType.KURAWAL_TUTUP, "Diharapkan '}' setelah blok management.")
+        return ast.ManagementStatement(name=name, bagian=bagian_list)
+
+    def _bagian_statement(self) -> ast.BagianStatement:
+        name = self._consume(TokenType.IDENTIFIER, "Diharapkan nama bagian.")
+        self._consume(TokenType.KURAWAL_BUKA, "Diharapkan '{' setelah nama bagian.")
+        pecahan_list = []
+        while self._match(TokenType.PECAHAN):
+            pecahan_list.append(self._pecahan_statement())
+        self._consume(TokenType.KURAWAL_TUTUP, "Diharapkan '}' setelah blok bagian.")
+        return ast.BagianStatement(name=name, pecahan=pecahan_list)
+
+    def _pecahan_statement(self) -> ast.PecahanStatement:
+        name = self._consume(TokenType.IDENTIFIER, "Diharapkan nama pecahan.")
+        self._consume(TokenType.KURAWAL_BUKA, "Diharapkan '{' setelah nama pecahan.")
+        body = ast.BlokStatement(self._blok())
+        return ast.PecahanStatement(name=name, body=body)
 
     def _expression(self) -> ast.Expression:
         return self._equality()

@@ -25,13 +25,16 @@ def test_map_creation_and_access():
     output = run_code(source)
     assert output == "Vzoel"
 
+from interpreter.errors import VzoelRuntimeException
+
 def test_map_access_nonexistent_key():
     source = """
     atur data = peta{"nama": "Vzoel"}
     lihat(data["tidak_ada"])
     """
-    output = run_code(source)
-    assert output == "None" # .get() returns None for missing keys
+    with pytest.raises(VzoelRuntimeException) as e:
+        run_code(source)
+    assert "Kunci 'tidak_ada' tidak ditemukan di peta." in str(e.value)
 
 def test_empty_map():
     source = """

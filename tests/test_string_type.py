@@ -53,12 +53,14 @@ def test_string_slicing_with_potong():
     output = run_code(source)
     assert output == "halo"
 
+from interpreter.errors import VzoelRuntimeException
+
 def test_potong_with_invalid_arguments():
     # Test bahwa potong() akan error jika argumen salah
-    source_1 = 'potong(123, 0, 1)'
-    output_1 = run_code(source_1)
-    assert "Error runtime: Argumen pertama untuk 'potong' harus berupa string." in output_1
+    with pytest.raises(VzoelRuntimeException) as e1:
+        run_code('potong(123, 0, 1)')
+    assert "Argumen pertama untuk 'potong' harus berupa string." in str(e1.value)
 
-    source_2 = 'potong("hello", "a", "b")'
-    output_2 = run_code(source_2)
-    assert "Error runtime: Argumen kedua dan ketiga untuk 'potong' harus berupa angka." in output_2
+    with pytest.raises(VzoelRuntimeException) as e2:
+        run_code('potong("hello", "a", "b")')
+    assert "Argumen kedua dan ketiga untuk 'potong' harus berupa angka." in str(e2.value)
