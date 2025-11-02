@@ -81,6 +81,7 @@ class Parser:
         return atur_stmt
 
     def _ulangi_statement(self) -> ast.Statement:
+        ulangi_token = self._previous()
         body = self._statement()
         self._consume(TokenType.SEBANYAK, "Diharapkan 'sebanyak' setelah 'ulangi'.")
         count = self._expression()

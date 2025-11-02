@@ -118,10 +118,38 @@ class StaticAnalyzer:
         return self._evaluate(expr.expression)
 
     # Placeholder untuk metode visit lain yang belum diimplementasikan
-    def visit_BlokStatement(self, stmt: ast.BlokStatement): pass
-    def visit_ProsesStatement(self, stmt: ast.ProsesStatement): pass
-    def visit_KembaliStatement(self, stmt: ast.KembaliStatement): pass
-    def visit_UlangiStatement(self, stmt: ast.UlangiStatement): pass
+    def visit_BlokStatement(self, stmt: ast.BlokStatement):
+        # Menganalisis blok dalam lingkup baru
+        previous_env = self.environment
+        self.environment = TypeEnvironment(enclosing=previous_env)
+        for statement in stmt.statements:
+            self._execute(statement)
+        self.environment = previous_env
+
+    def visit_ProsesStatement(self, stmt: ast.ProsesStatement):
+        # Mendefinisikan proses di lingkungan saat ini
+        self.environment.define(stmt.name.literal, StaticType.PROSES)
+        # Analisis isi proses di lingkup baru
+        previous_env = self.environment
+        self.environment = TypeEnvironment(enclosing=previous_env)
+        for param in stmt.params:
+            self.environment.define(param.literal, StaticType.APAPUN) # Tipe parameter belum didukung
+        self._execute(stmt.body)
+        self.environment = previous_env
+
+    def visit_KembaliStatement(self, stmt: ast.KembaliStatement):
+        if stmt.value:
+            self._evaluate(stmt.value)
+
+    def visit_UlangiStatement(self, stmt: ast.UlangiStatement):
+        count_type = self._evaluate(stmt.count)
+        if count_type != StaticType.ANGKA:
+            raise VzoelRuntimeException(
+                # Upaya untuk mendapatkan token yang relevan dari ekspresi
+                stmt.count.name if hasattr(stmt.count, 'name') else Token(TokenType.NUMBER, str(stmt.count), 0),
+                "Jumlah perulangan harus berupa angka."
+            )
+        self._execute(stmt.body)
     def visit_FunctionCall(self, expr: ast.FunctionCall): return StaticType.APAPUN
     def visit_AmbilExpression(self, expr: ast.AmbilExpression): return StaticType.MODUL
     def visit_GetExpression(self, expr: ast.GetExpression): return StaticType.APAPUN
