@@ -34,6 +34,29 @@ def test_compile_grouping_expression():
         if isinstance(expected, instructions.LoadConst):
             assert actual.value == expected.value
 
+def test_compile_variable():
+    """Test compiling variable reference"""
+    source = """
+    atur x = 5
+    lihat(x)
+    """
+    instructions = compile_source(source)
+
+    # Should have LoadVar instruction for x
+    var_instructions = [i for i in instructions if i.__class__.__name__ == 'LoadVar']
+    assert len(var_instructions) > 0
+    assert var_instructions[0].name == 'x'
+
+def test_compile_grouping():
+    """Test compiling grouped expression"""
+    source = """
+    atur result = (5 + 3) * 2
+    """
+    instructions = compile_source(source)
+
+    # Should compile without errors
+    assert len(instructions) > 0
+
 def test_compile_variable_assignment_and_load():
     source = """
     atur a = 10

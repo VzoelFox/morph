@@ -44,9 +44,65 @@ def test_undefined_variable_raises_runtime_error():
 
 def test_ulangi_loop():
     source = """
-    ulangi sebanyak 2 kali {
+    ulangi {
         lihat("halo")
-    }
+    } sebanyak 2 kali
     """
     output = run_vzoel_code_capture_output(source)
     assert output == ["halo", "halo"]
+
+def test_ulangi_loop_zero_times():
+    """Test that loop with 0 iterations doesn't execute body"""
+    source = """
+    atur counter = 0
+    ulangi {
+        atur counter = counter + 1
+    } sebanyak 0 kali
+    lihat(counter)
+    """
+    output = run_vzoel_code_capture_output(source)
+    assert output == ["0.0"]
+
+def test_ulangi_loop_one_time():
+    """Test loop with single iteration"""
+    source = """
+    ulangi {
+        lihat("once")
+    } sebanyak 1 kali
+    """
+    output = run_vzoel_code_capture_output(source)
+    assert output == ["once"]
+
+def test_ulangi_loop_nested():
+    """Test nested loops"""
+    source = """
+    ulangi {
+        ulangi {
+            lihat("nested")
+        } sebanyak 2 kali
+    } sebanyak 2 kali
+    """
+    output = run_vzoel_code_capture_output(source)
+    assert output == ["nested", "nested", "nested", "nested"]
+
+def test_ulangi_loop_with_variable_count():
+    """Test loop with variable as count"""
+    source = """
+    atur jumlah = 3
+    ulangi {
+        lihat("var")
+    } sebanyak jumlah kali
+    """
+    output = run_vzoel_code_capture_output(source)
+    assert output == ["var", "var", "var"]
+
+def test_ulangi_loop_invalid_count_raises_error():
+    """Test that non-numeric count raises error"""
+    source = """
+    ulangi {
+        lihat("test")
+    } sebanyak "bukan angka" kali
+    """
+    with pytest.raises(Exception) as exc_info:
+        run_vzoel_code(source)
+    assert "angka" in str(exc_info.value).lower()

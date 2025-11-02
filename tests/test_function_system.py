@@ -1,5 +1,5 @@
 import pytest
-from tests.test_interpreter import run_vzoel_code
+from tests.helpers import run_vzoel_code_capture_output
 
 def test_user_defined_function():
     source_code = """
@@ -9,6 +9,6 @@ def test_user_defined_function():
     atur hasil = tambah(10, 5.5)
     lihat(hasil)
     """
-    output = run_vzoel_code(source_code)
-    expected_output = "15.5\n"
+    output = run_vzoel_code_capture_output(source_code)
+    expected_output = ["15.5"]
     assert output == expected_output

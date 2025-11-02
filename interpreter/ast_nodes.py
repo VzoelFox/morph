@@ -168,6 +168,7 @@ class ExpressionStatement(Statement):
 
 @dataclass
 class UlangiStatement(Statement):
+    token: Token
     count: Expression
     body: Statement
     def accept(self, visitor): return visitor.visit_UlangiStatement(self)

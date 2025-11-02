@@ -99,12 +99,9 @@ class Interpreter(ast.Visitor):
         raise Return(value, stmt.keyword)
 
     def visit_UlangiStatement(self, stmt: ast.UlangiStatement):
-        count_expr = stmt.count
-        count = self._evaluate(count_expr)
+        count = self._evaluate(stmt.count)
         if not isinstance(count, (int, float)):
-            # Perbaikan sementara untuk mendapatkan token yang valid
-            error_token = count_expr.operator if hasattr(count_expr, 'operator') else Token(TokenType.NUMBER, str(count), 0, 0)
-            raise VzoelRuntimeException(error_token, "Jumlah perulangan harus berupa angka.")
+            raise VzoelRuntimeException(stmt.token, "Jumlah perulangan harus berupa angka.")
 
         for _ in range(int(count)):
             # Pastikan setiap iterasi loop memiliki lingkungannya sendiri jika body adalah blok

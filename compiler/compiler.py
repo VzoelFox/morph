@@ -109,3 +109,19 @@ class Compiler: # Menghapus pewarisan dari ast.Visitor
             raise NotImplementedError(f"Operator biner {node.operator.type} belum didukung.")
 
         return dest_temp
+
+    def visit_FunctionCall(self, node: ast.FunctionCall):
+        """Mengunjungi node FunctionCall."""
+        arg_temps = [arg.accept(self) for arg in node.arguments]
+
+        # Asumsi callee adalah variabel (untuk saat ini)
+        if not isinstance(node.callee, ast.Variable):
+            raise NotImplementedError("Pemanggilan fungsi dinamis belum didukung oleh compiler.")
+
+        callee_name = node.callee.name.literal
+        dest_temp = self._new_temp()
+
+        instruction = instructions.Call(func=callee_name, args=arg_temps, dest=dest_temp)
+        self.instructions.append(instruction)
+
+        return dest_temp
