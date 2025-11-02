@@ -2,7 +2,7 @@
 from typing import List, Any
 from .environment import Environment
 from .callable import VzoelCallable, VzoelFunction, Lihat
-from .builtins import Panjang, Tambah, Potong, KeKecil, KeBesar
+from .builtins import Panjang, Tambah, Potong, KeKecil, KeBesar, Akar, Pangkat
 from .errors import VzoelRuntimeException, VzoelModuleNotFound, Return
 from .token_types import TokenType
 from .token import Token
@@ -18,25 +18,19 @@ class Interpreter(ast.Visitor):
         self.globals.define("panjang", Panjang())
         self.globals.define("tambah", Tambah())
         self.globals.define("potong", Potong())
+        self.globals.define("ke_kecil", KeKecil())
+        self.globals.define("ke_besar", KeBesar())
         self.globals.define("akar", Akar())
         self.globals.define("pangkat", Pangkat())
 
     def interpret(self, program: ast.Program):
+        # Error dilempar ke atas (propagated) untuk ditangani oleh pemanggil.
+        # Metode ini sekarang hanya pemicu untuk memulai proses Visitor.
         try:
-            for stmt in program.statements:
-                self._execute(stmt)
+            program.accept(self)
         except VzoelRuntimeException as e:
-            if e.token:
-                print(f"[Baris {e.token.line}] Error runtime: {e.message}")
-            else:
-                print(f"Error runtime: {e.message}")
-        self.globals.define("ke_kecil", KeKecil())
-        self.globals.define("ke_besar", KeBesar())
-
-    def interpret(self, program: ast.Program):
-        # try...except block removed to allow exceptions to propagate up
-        for stmt in program.statements:
-            self._execute(stmt)
+            # Biarkan pemanggil (misalnya, test helper atau REPL) yang menangani error.
+            raise e
 
     def execute_block(self, statements: List[ast.Statement], environment: Environment):
         previous = self.environment
@@ -54,6 +48,10 @@ class Interpreter(ast.Visitor):
         return expr.accept(self)
 
     # --- Implementasi Visitor untuk Statements ---
+    def visit_Program(self, program: ast.Program):
+        for stmt in program.statements:
+            self._execute(stmt)
+
     def visit_ExpressionStatement(self, stmt: ast.ExpressionStatement):
         self._evaluate(stmt.expression)
 

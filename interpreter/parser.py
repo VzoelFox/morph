@@ -51,7 +51,7 @@ class Parser:
     def _kembali_statement(self) -> ast.KembaliStatement:
         keyword = self._previous()
         value = None
-        if not self._check(TokenType.EOF) and self._peek().type != TokenType.KURAWAL_TUTUP:
+        if not self._check(TokenType.ADS) and self._peek().type != TokenType.KURAWAL_TUTUP:
             value = self._expression()
         self._match(TokenType.TITIK_KOMA) # Opsional
         return ast.KembaliStatement(keyword, value)
@@ -215,7 +215,7 @@ class Parser:
         if not self._is_at_end(): self.current += 1
         return self._previous()
     def _is_at_end(self) -> bool:
-        return self._peek().type == TokenType.EOF
+        return self._peek().type == TokenType.ADS
     def _peek(self) -> Token:
         return self.tokens[self.current]
     def _previous(self) -> Token:
@@ -225,7 +225,7 @@ class Parser:
         self._error(self._peek(), message)
         raise ParserError(message, self._peek().line, self._peek().column)
     def _error(self, token: Token, message: str):
-        if token.type == TokenType.EOF:
+        if token.type == TokenType.ADS:
             self.errors.append(ParserError(f"di akhir file: {message}", token.line, token.column))
         else:
             self.errors.append(ParserError(f"pada '{token.literal}': {message}", token.line, token.column))

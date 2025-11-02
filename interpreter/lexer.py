@@ -24,7 +24,7 @@ class Lexer:
         while not self._is_at_end():
             self.start = self.current
             self._scan_token()
-        self.tokens.append(Token(TokenType.EOF, "", self.line, self.column))
+        self.tokens.append(Token(TokenType.ADS, "", self.line, self.column))
         return self.tokens
 
     def _scan_token(self):

@@ -55,3 +55,25 @@ class KeBesar(VzoelCallable):
         if not isinstance(arguments[0], str):
             raise VzoelRuntimeException(None, "Argumen untuk 'ke_besar' harus berupa string.")
         return arguments[0].upper()
+
+class Akar(VzoelCallable):
+    def arity(self) -> int:
+        return 1
+
+    def call(self, interpreter, arguments: List[Any]) -> Any:
+        if not isinstance(arguments[0], (int, float)):
+            raise VzoelRuntimeException(None, "Argumen untuk 'akar' harus berupa angka.")
+        if arguments[0] < 0:
+            raise VzoelRuntimeException(None, "Tidak bisa menghitung akar dari angka negatif.")
+        return math.sqrt(arguments[0])
+
+class Pangkat(VzoelCallable):
+    def arity(self) -> int:
+        return 2
+
+    def call(self, interpreter, arguments: List[Any]) -> Any:
+        base = arguments[0]
+        exponent = arguments[1]
+        if not isinstance(base, (int, float)) or not isinstance(exponent, (int, float)):
+            raise VzoelRuntimeException(None, "Argumen untuk 'pangkat' harus berupa angka.")
+        return math.pow(base, exponent)
