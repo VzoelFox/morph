@@ -19,6 +19,45 @@ class Expression(ASTNode):
     """Kelas dasar untuk ekspresi (expressions)."""
     pass
 
+class Visitor(ABC):
+    """Kelas dasar untuk pola desain Visitor."""
+    @abstractmethod
+    def visit_Program(self, program: 'Program'): pass
+    @abstractmethod
+    def visit_Literal(self, expr: 'Literal'): pass
+    @abstractmethod
+    def visit_Variable(self, expr: 'Variable'): pass
+    @abstractmethod
+    def visit_FunctionCall(self, expr: 'FunctionCall'): pass
+    @abstractmethod
+    def visit_AmbilExpression(self, expr: 'AmbilExpression'): pass
+    @abstractmethod
+    def visit_GetExpression(self, expr: 'GetExpression'): pass
+    @abstractmethod
+    def visit_SubscriptExpression(self, expr: 'SubscriptExpression'): pass
+    @abstractmethod
+    def visit_BinaryExpression(self, expr: 'BinaryExpression'): pass
+    @abstractmethod
+    def visit_UnaryExpression(self, expr: 'UnaryExpression'): pass
+    @abstractmethod
+    def visit_Grouping(self, expr: 'Grouping'): pass
+    @abstractmethod
+    def visit_ListLiteral(self, expr: 'ListLiteral'): pass
+    @abstractmethod
+    def visit_MapLiteral(self, expr: 'MapLiteral'): pass
+    @abstractmethod
+    def visit_BlokStatement(self, stmt: 'BlokStatement'): pass
+    @abstractmethod
+    def visit_ProsesStatement(self, stmt: 'ProsesStatement'): pass
+    @abstractmethod
+    def visit_KembaliStatement(self, stmt: 'KembaliStatement'): pass
+    @abstractmethod
+    def visit_AturStatement(self, stmt: 'AturStatement'): pass
+    @abstractmethod
+    def visit_ExpressionStatement(self, stmt: 'ExpressionStatement'): pass
+    @abstractmethod
+    def visit_UlangiStatement(self, stmt: 'UlangiStatement'): pass
+
 # --- Simpul Ekspresi (Expressions) ---
 @dataclass
 class Literal(Expression):
