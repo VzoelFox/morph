@@ -16,7 +16,7 @@ Membangun bahasa pemrograman prosedural yang aman (Error as Value), mudah dipaha
 
 ## Fase 3: Code Generation (Target: LLVM)
 - [ ] **LLVM IR Generator**: Mengubah AST menjadi LLVM IR (`.ll`).
-- [ ] **Compiler Driver**: CLI untuk build file `.morph` menjadi executable.
+- [ ] **Compiler Driver**: CLI untuk build file `.fox` menjadi executable.
 - [ ] **Basic Runtime**: Print, String operations, Memory alloc (malloc wrapper).
 
 ## Fase 4: Self-Hosting

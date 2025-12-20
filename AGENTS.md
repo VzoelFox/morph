@@ -55,6 +55,25 @@ project-root/
 
 ## Riwayat Perubahan
 
+### Version 1.2.2 - 2025-12-20
+**Checksum**: SHA256:VARIOUS
+**Perubahan**:
+- Update `DESIGN.md`: Ubah referensi ekstensi dari `.morph` ke `.fox`.
+- Update `ROADMAP.md`: Ubah referensi ekstensi dari `.morph` ke `.fox`.
+- Added `pkg/parser/comment_test.go`: Verifikasi handling token COMMENT.
+- Update `technical-debt.morph.vz`: Mark Parser & Naming debt as resolved.
+
+**Konteks Sesi**:
+- Alignment fase pengembangan: Meresmikan nama Morph dan ekstensi .fox.
+- Membersihkan hutang teknis sebelum lanjut ke Fase 2.
+- Verifikasi parser sudah robust terhadap token COMMENT.
+
+**File Terkait**:
+- `DESIGN.md` (SHA256:bd1aad3b7f49fe45f98afefb3f69908865c9668d9efb511e0c1f022faa05115a)
+- `ROADMAP.md` (SHA256:d93c5fb3e6c05e09bdadf08648aa20532331686a07099c9e868dcbada0bcd5ee)
+- `pkg/parser/comment_test.go` (SHA256:eaf8d83cf65292e7d4b6480bd3227df6f043dae2b178862b3be6449b22311fab)
+- `.vzoel.jules/technical-debt.morph.vz` (SHA256:6a783170d7b7a2ce7001a2e13abb2ccdb213ac76895c19b6c26cdd00292db511)
+
 ### Version 1.2.1 - 2025-12-20
 **Perubahan**:
 - Menambahkan `ROADMAP.md` (Fase 1-5).

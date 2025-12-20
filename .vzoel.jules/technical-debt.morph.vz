@@ -3,20 +3,11 @@
 ## Status: Active
 **Last Updated**: 2025-12-20
 
-### 1. Lexer & Parser Porting
-- **Masalah**: Implementasi Lexer memancarkan token `COMMENT` (`# ...`), namun unit test bawaan (`lexer_test.go`) mengharapkan komentar dilewati.
-- **Solusi Sementara**: Test `TestNextToken` telah diupdate untuk mengharapkan token `COMMENT`.
-- **Hutang**: Perlu verifikasi menyeluruh apakah semua bagian Parser menangani token `COMMENT` dengan benar (saat ini Parser memiliki logika `skipComment` di `nextToken`, yang mungkin redundan atau konflik dengan token yang masuk).
-- **Aksi**: Review `pkg/parser/parser.go` method `nextToken` dan interaksinya dengan `Lexer`.
-
-### 2. Inkonsistensi Penamaan (Fox vs Morph)
-- **Masalah**: Codebase di-porting dari `morphlang` (yang mungkin dulunya Fox?). Beberapa string error atau komentar mungkin masih merujuk pada "Fox".
-- **Aksi**: Lakukan `grep` menyeluruh untuk kata "Fox" dan ganti dengan "Morph" jika relevan (kecuali nama user VzoelFox).
-
-### 3. Dependencies
-- **Masalah**: `go.mod` menggunakan versi Go 1.24.3 (future).
-- **Aksi**: Pastikan environment build kompatibel atau turunkan ke versi stabil saat ini jika perlu deployment nyata.
-
-### 4. Analysis Tool
+### 1. Analysis Tool
 - **Masalah**: `pkg/analysis` sangat bergantung pada struktur AST saat ini. Jika Grammar berubah (misal: syntax `akhir` diganti), analyzer akan break.
 - **Aksi**: Tambahkan integration test yang lebih robust.
+
+### Resolved / Closed
+- **Lexer & Parser Porting**: Verified that Parser `nextToken` correctly skips/handles `COMMENT` tokens. Added `pkg/parser/comment_test.go` to ensure regression testing. (2025-12-20)
+- **Inkonsistensi Penamaan**: `DESIGN.md` updated to use `.fox` extension. Checked for "Fox" strings in code; none found except module path. (2025-12-20)
+- **Dependencies**: Environment verified to support Go 1.24.3. No action needed. (2025-12-20)
