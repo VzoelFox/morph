@@ -3,7 +3,12 @@
 ## Status: Active
 **Last Updated**: 2025-12-20
 
+### Pending / Open
+- **Type Checker**: Support for `NullLiteral` assignment (e.g. `var x User = kosong`).
+- **Type Checker**: Field access validation (`x.name`) and Struct Instantiation.
+
 ### Resolved / Closed
+- **Type System Foundation**: Implemented `pkg/checker` with support for Primitives, Structs, Functions, Arrays, and Maps. Updated Parser to handle explicit type syntax. (2025-12-20)
 - **Analysis Tool Robustness**: Expanded Analyzer to support `StructStatement` and `ImportStatement`. Fixed Parser to correctly parse Struct fields with types. Added tests in `pkg/analysis/analyzer_test.go` and `pkg/parser/struct_test.go`. (2025-12-20)
 - **Lexer & Parser Porting**: Verified that Parser `nextToken` correctly skips/handles `COMMENT` tokens. Added `pkg/parser/comment_test.go` to ensure regression testing. (2025-12-20)
 - **Inkonsistensi Penamaan**: `DESIGN.md` updated to use `.fox` extension. Checked for "Fox" strings in code; none found except module path. (2025-12-20)

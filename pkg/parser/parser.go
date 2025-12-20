@@ -233,6 +233,8 @@ func (p *Parser) ParseProgram() *Program {
 
 func (p *Parser) parseStatement() Statement {
 	switch p.curToken.Type {
+	case lexer.VAR:
+		return p.parseVarStatement()
 	case lexer.KEMBALIKAN:
 		return p.parseReturnStatement()
 	case lexer.AMBIL:
@@ -248,6 +250,35 @@ func (p *Parser) parseStatement() Statement {
 	default:
 		return p.parseExpressionOrAssignmentStatement()
 	}
+}
+
+func (p *Parser) parseVarStatement() *VarStatement {
+	stmt := &VarStatement{Token: p.curToken}
+
+	if !p.expectPeek(lexer.IDENT) {
+		return nil
+	}
+	stmt.Name = &Identifier{Token: p.curToken, Value: p.curToken.Literal}
+
+	// Expect explicit type
+	p.nextToken()
+	stmt.Type = p.parseType()
+	if stmt.Type == nil {
+		return nil
+	}
+
+	if !p.expectPeek(lexer.ASSIGN) {
+		return nil
+	}
+	p.nextToken() // move to RHS
+
+	stmt.Value = p.parseExpression(LOWEST)
+
+	if p.peekTokenIs(lexer.SEMICOLON) {
+		p.nextToken()
+	}
+
+	return stmt
 }
 
 func (p *Parser) parseImportStatement() *ImportStatement {
@@ -316,6 +347,49 @@ func (p *Parser) parseFromImportStatement() *ImportStatement {
 	return stmt
 }
 
+func (p *Parser) parseType() TypeNode {
+	if p.curTokenIs(lexer.LBRACKET) {
+		tok := p.curToken
+		if !p.expectPeek(lexer.RBRACKET) {
+			return nil
+		}
+		p.nextToken() // eat ]
+		elem := p.parseType()
+		if elem == nil {
+			return nil
+		}
+		return &ArrayType{Token: tok, Element: elem}
+	}
+
+	if p.curTokenIs(lexer.MAP) {
+		tok := p.curToken
+		if !p.expectPeek(lexer.LBRACKET) {
+			return nil
+		}
+		p.nextToken() // move to key type
+		key := p.parseType()
+		if key == nil {
+			return nil
+		}
+		if !p.expectPeek(lexer.RBRACKET) {
+			return nil
+		}
+		p.nextToken() // move to value type
+		val := p.parseType()
+		if val == nil {
+			return nil
+		}
+		return &MapType{Token: tok, Key: key, Value: val}
+	}
+
+	if p.curTokenIs(lexer.IDENT) {
+		return &SimpleType{Token: p.curToken, Name: p.curToken.Literal}
+	}
+
+	p.addDetailedError(p.curToken, "expected type, got %s", p.curToken.Type)
+	return nil
+}
+
 func (p *Parser) parseStructStatement() *StructStatement {
 	stmt := &StructStatement{Token: p.curToken}
 	stmt.Doc = p.curComment
@@ -336,10 +410,11 @@ func (p *Parser) parseStructStatement() *StructStatement {
 		if p.curTokenIs(lexer.IDENT) {
 			field := &StructField{Token: p.curToken, Name: p.curToken.Literal}
 
-			if !p.expectPeek(lexer.IDENT) {
+			p.nextToken() // move to Type start
+			field.Type = p.parseType()
+			if field.Type == nil {
 				return nil
 			}
-			field.Type = p.curToken.Literal
 
 			stmt.Fields = append(stmt.Fields, field)
 			p.nextToken()
@@ -707,6 +782,11 @@ func (p *Parser) parseIfExpression() Expression {
 	return expression
 }
 
+func (p *Parser) peekIsType() bool {
+	t := p.peekToken.Type
+	return t == lexer.IDENT || t == lexer.LBRACKET || t == lexer.MAP
+}
+
 func (p *Parser) parseFunctionLiteral() Expression {
 	lit := &FunctionLiteral{Token: p.curToken}
 	lit.Doc = p.curComment
@@ -722,7 +802,16 @@ func (p *Parser) parseFunctionLiteral() Expression {
 
 	lit.Parameters = p.parseFunctionParameters()
 
-	p.nextToken() // eat ) to move to block
+	// Parse optional return type
+	if p.peekIsType() {
+		p.nextToken() // move to type start
+		lit.ReturnType = p.parseType()
+		if lit.ReturnType == nil {
+			return nil
+		}
+	}
+
+	p.nextToken() // Advance to body start
 
 	lit.Body = p.parseBlockStatement()
 
@@ -735,8 +824,8 @@ func (p *Parser) parseFunctionLiteral() Expression {
 	return lit
 }
 
-func (p *Parser) parseFunctionParameters() []*Identifier {
-	identifiers := []*Identifier{}
+func (p *Parser) parseFunctionParameters() []*Parameter {
+	identifiers := []*Parameter{}
 
 	if p.peekTokenIs(lexer.RPAREN) {
 		p.nextToken()
@@ -745,14 +834,28 @@ func (p *Parser) parseFunctionParameters() []*Identifier {
 
 	p.nextToken()
 
+	// 1st param
 	ident := &Identifier{Token: p.curToken, Value: p.curToken.Literal}
-	identifiers = append(identifiers, ident)
+	// type
+	p.nextToken()
+	typ := p.parseType()
+	if typ == nil {
+		return nil
+	}
+
+	identifiers = append(identifiers, &Parameter{Token: ident.Token, Name: ident, Type: typ})
 
 	for p.peekTokenIs(lexer.COMMA) {
 		p.nextToken()
 		p.nextToken()
+
 		ident := &Identifier{Token: p.curToken, Value: p.curToken.Literal}
-		identifiers = append(identifiers, ident)
+		p.nextToken()
+		typ := p.parseType()
+		if typ == nil {
+			return nil
+		}
+		identifiers = append(identifiers, &Parameter{Token: ident.Token, Name: ident, Type: typ})
 	}
 
 	if !p.expectPeek(lexer.RPAREN) {
