@@ -55,6 +55,28 @@ project-root/
 
 ## Riwayat Perubahan
 
+### Version 1.4.0 - 2025-12-20
+**Checksum**: SHA256:VARIOUS
+**Perubahan**:
+- **Core**: Implementasi `MemberExpression` untuk akses struct field (`obj.field`).
+- **Checker**: Implementasi Control Flow Analysis (Validasi missing return paths).
+- **Checker**: Implementasi validasi tipe Array Literal & Map Literal (homogenous types).
+- **Checker**: Implementasi Warning untuk Variable Shadowing.
+- **AST**: Penambahan node `MemberExpression`.
+- **Tests**: Penambahan test suite (`control_flow`, `literal`, `member`, `shadow`).
+
+**Konteks Sesi**:
+- Menyelesaikan **Sprint 1: Foundation Fixes**.
+- Memperbaiki bug kritis pada akses struct member (sebelumnya pakai hack IndexExpression).
+- Menambahkan validasi return path yang lebih ketat.
+- Menambahkan warning sistem untuk shadowing.
+
+**File Terkait**:
+- `pkg/parser/ast.go` (SHA256:b86de603216438e0ac31af404a832cd8140a87e63372a3abe99c6caecbaf5aeb)
+- `pkg/parser/parser.go` (SHA256:b41dc3aa9db1fe4bdea900af9367ff7db972c731c2490daf0da71abbaad84f2c)
+- `pkg/checker/checker.go` (SHA256:bf499d379114ea138f4a0f22872c5013acafdfe4d583d57aa8713c01ef65391d)
+- `pkg/checker/scope.go` (SHA256:ca6a09bba41d64540f1f164568ae4d6fa01894e6baff311ef77a51c53e03ef7e)
+
 ### Version 1.3.2 - 2025-12-20
 **Checksum**: SHA256:VARIOUS
 **Perubahan**:

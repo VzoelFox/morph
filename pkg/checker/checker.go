@@ -165,6 +165,37 @@ func (c *Checker) checkNodes(stmts []parser.Statement) {
 	}
 }
 
+func (c *Checker) allPathsReturn(node interface{}) bool {
+	switch n := node.(type) {
+	case *parser.ReturnStatement:
+		return true
+
+	case *parser.BlockStatement:
+		for _, stmt := range n.Statements {
+			if c.allPathsReturn(stmt) {
+				return true
+			}
+		}
+		return false
+
+	case *parser.ExpressionStatement:
+		return c.allPathsReturn(n.Expression)
+
+	case *parser.IfExpression:
+		if n.Alternative == nil {
+			return false
+		}
+		return c.allPathsReturn(n.Consequence) &&
+			c.allPathsReturn(n.Alternative)
+
+	case *parser.WhileExpression:
+		return false
+
+	default:
+		return false
+	}
+}
+
 func (c *Checker) checkStatement(s parser.Statement) {
 	switch stmt := s.(type) {
 	case *parser.VarStatement:
@@ -297,7 +328,11 @@ func (c *Checker) checkVarStatement(s *parser.VarStatement) {
 		}
 
 		// Update scope with refined type
-		c.scope.DefineVariable(name.Value, finalType)
+		if warning := c.scope.DefineVariable(name.Value, finalType); warning != nil {
+			warning.Line = name.Token.Line
+			warning.Column = name.Token.Column
+			c.Warnings = append(c.Warnings, *warning)
+		}
 	}
 }
 
@@ -347,20 +382,72 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 		}
 		return st
 
-	case *parser.IndexExpression:
-		leftType := c.checkExpression(exp.Left)
+	case *parser.MemberExpression:
+		objType := c.checkExpression(exp.Object)
 
-		if leftType.Kind() == KindStruct {
-			if strLit, ok := exp.Index.(*parser.StringLiteral); ok {
-				fieldName := strLit.Value
-				if fieldType, ok := leftType.(*StructType).Fields[fieldName]; ok {
-					return fieldType
-				}
-				c.addError(exp.Token.Line, exp.Token.Column, "Field '%s' not found in struct '%s'", fieldName, leftType.String())
-				return ErrorType
+		if objType.Kind() != KindStruct {
+			c.addError(exp.Token.Line, exp.Token.Column, "Cannot access member on non-struct type %s", objType.String())
+			return ErrorType
+		}
+
+		st := objType.(*StructType)
+		fieldType, exists := st.Fields[exp.Member.Value]
+		if !exists {
+			c.addError(exp.Token.Line, exp.Token.Column, "Field '%s' not found in struct '%s'", exp.Member.Value, st.Name)
+			return ErrorType
+		}
+
+		return fieldType
+
+	case *parser.ArrayLiteral:
+		if len(exp.Elements) == 0 {
+			// Empty array - need context or explicit type
+			return &ArrayType{Element: UnknownType}
+		}
+
+		// Check first element
+		firstType := c.checkExpression(exp.Elements[0])
+
+		// Verify all elements match
+		for i, elem := range exp.Elements[1:] {
+			elemType := c.checkExpression(elem)
+			if !firstType.Equals(elemType) {
+				c.addError(exp.Token.Line, exp.Token.Column, "Array element %d type mismatch: expected %s, got %s", i+1, firstType.String(), elemType.String())
 			}
 		}
 
+		return &ArrayType{Element: firstType}
+
+	case *parser.HashLiteral:
+		if len(exp.Pairs) == 0 {
+			return &MapType{Key: UnknownType, Value: UnknownType}
+		}
+
+		// Infer from first pair
+		var keyType, valType Type
+		for k, v := range exp.Pairs {
+			kt := c.checkExpression(k)
+			vt := c.checkExpression(v)
+
+			if keyType == nil {
+				keyType = kt
+				valType = vt
+				continue
+			}
+
+			if !keyType.Equals(kt) {
+				c.addError(exp.Token.Line, exp.Token.Column, "Map key type mismatch: expected %s, got %s", keyType.String(), kt.String())
+			}
+
+			if !valType.Equals(vt) {
+				c.addError(exp.Token.Line, exp.Token.Column, "Map value type mismatch: expected %s, got %s", valType.String(), vt.String())
+			}
+		}
+
+		return &MapType{Key: keyType, Value: valType}
+
+	case *parser.IndexExpression:
+		leftType := c.checkExpression(exp.Left)
 		idxType := c.checkExpression(exp.Index)
 
 		if leftType.Kind() == KindArray {
@@ -378,7 +465,7 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 			return mt.Value
 		}
 
-		if leftType.Kind() != KindStruct && leftType.Kind() != KindUnknown {
+		if leftType.Kind() != KindUnknown {
 			c.addError(exp.Token.Line, exp.Token.Column, "Index operation not supported on type %s", leftType.String())
 		}
 		return UnknownType
@@ -414,7 +501,11 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 
 		for _, p := range exp.Parameters {
 			t := c.resolveType(p.Type)
-			c.scope.DefineVariable(p.Name.Value, t)
+			if warning := c.scope.DefineVariable(p.Name.Value, t); warning != nil {
+				warning.Line = p.Name.Token.Line
+				warning.Column = p.Name.Token.Column
+				c.Warnings = append(c.Warnings, *warning)
+			}
 		}
 
 		returnTypes := []Type{}
@@ -434,6 +525,14 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 
 		c.pushReturn(retStack)
 		c.checkNodes(exp.Body.Statements)
+
+		// Check if all paths return (if function expects return)
+		if len(returnTypes) > 0 && returnTypes[0].Kind() != KindVoid {
+			if !c.allPathsReturn(exp.Body) {
+				c.addError(exp.Token.Line, exp.Token.Column, "Not all code paths return a value")
+			}
+		}
+
 		c.popReturn()
 
 		c.leaveScope()

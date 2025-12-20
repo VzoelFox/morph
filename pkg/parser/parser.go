@@ -1031,13 +1031,19 @@ func (p *Parser) noPrefixParseFnError(t lexer.TokenType) {
 }
 
 func (p *Parser) parseDotExpression(left Expression) Expression {
-	token := p.curToken
+	exp := &MemberExpression{
+		Token:  p.curToken, // DOT token
+		Object: left,
+	}
 
 	if !p.expectPeek(lexer.IDENT) {
 		return nil
 	}
 
-	index := &StringLiteral{Token: p.curToken, Value: p.curToken.Literal}
+	exp.Member = &Identifier{
+		Token: p.curToken,
+		Value: p.curToken.Literal,
+	}
 
-	return &IndexExpression{Token: token, Left: left, Index: index}
+	return exp
 }
