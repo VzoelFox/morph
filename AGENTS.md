@@ -1,4 +1,4 @@
-# agents.md - Source of Truth untuk AI Agent
+# Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
 - **Versi**: 1.0.0
@@ -10,6 +10,12 @@
 
 ## Tujuan Dokumen
 Dokumen ini adalah **single source of truth** untuk AI Agent dalam pengembangan bahasa pemrograman Fox. Setiap perubahan pada codebase akan tercatat di sini dengan checksum, timestamp, dan konteks untuk meminimalisir halusinasi dan menjaga konsistensi.
+
+---
+
+
+
+# ERROR as Value & Explisit Over implisit
 
 ---
 
