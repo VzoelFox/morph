@@ -55,6 +55,24 @@ project-root/
 
 ## Riwayat Perubahan
 
+### Version 1.2.3 - 2025-12-20
+**Checksum**: SHA256:VARIOUS
+**Perubahan**:
+- Parser: Fixed `StructStatement` parsing to include field types.
+- Analysis: Added support for `StructStatement` and `ImportStatement`.
+- Analysis: Updated `Context` struct to store `Structs`.
+- Testing: Added `struct_test.go` and updated `analyzer_test.go`.
+- Technical Debt: Mark Analysis Robustness as Resolved.
+
+**Konteks Sesi**:
+- Meningkatkan robustness Analysis tool.
+- Memperbaiki struktur data aktual (Parser AST) untuk Struct.
+
+**File Terkait**:
+- `pkg/parser/parser.go` (SHA256:e8d586f047391ec75a4138ba3dd7c76e34afa01dd64b3229eb6175647bc07562)
+- `pkg/analysis/analyzer.go` (SHA256:f70d8d0ca5ea60ebb86ced21268ee2c12e6c1f501ee69c3fc4a6f6f48e9ea080)
+- `pkg/analysis/context.go` (SHA256:ac8b6422aedd2122b7546a841a30e99f212714fbbc8b2e419a176e5e501788a4)
+
 ### Version 1.2.2 - 2025-12-20
 **Checksum**: SHA256:VARIOUS
 **Perubahan**:

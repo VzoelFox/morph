@@ -24,6 +24,7 @@ func GenerateContext(program *parser.Program, filename string, input string, par
 		File:          filename,
 		Timestamp:     time.Now(),
 		Symbols:       make(map[string]*Symbol),
+		Structs:       make(map[string]*StructInfo),
 		GlobalVars:    make(map[string]*Variable),
 		LocalScopes:   make(map[string]LocalScope),
 		Errors:        []ParserError{},
@@ -138,6 +139,41 @@ func (a *Analyzer) analyzeTopLevel(stmt parser.Statement) {
 			a.defineInCurrentScope(name) // Mark global var
 		}
 		a.walkExpression(s.Value, func(node parser.Node) {})
+	case *parser.StructStatement:
+		a.analyzeStruct(s)
+	case *parser.ImportStatement:
+		a.analyzeImport(s)
+	}
+}
+
+func (a *Analyzer) analyzeStruct(s *parser.StructStatement) {
+	info := &StructInfo{
+		Name:   s.Name.Value,
+		Line:   s.Token.Line,
+		Doc:    s.Doc,
+		Fields: []StructFieldInfo{},
+	}
+	for _, f := range s.Fields {
+		info.Fields = append(info.Fields, StructFieldInfo{
+			Name: f.Name,
+			Type: f.Type,
+			Line: f.Token.Line,
+		})
+	}
+	a.context.Structs[info.Name] = info
+}
+
+func (a *Analyzer) analyzeImport(s *parser.ImportStatement) {
+	// Add path to Imports if not exists
+	found := false
+	for _, imp := range a.context.Imports {
+		if imp == s.Path {
+			found = true
+			break
+		}
+	}
+	if !found {
+		a.context.Imports = append(a.context.Imports, s.Path)
 	}
 }
 

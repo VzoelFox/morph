@@ -3,11 +3,8 @@
 ## Status: Active
 **Last Updated**: 2025-12-20
 
-### 1. Analysis Tool
-- **Masalah**: `pkg/analysis` sangat bergantung pada struktur AST saat ini. Jika Grammar berubah (misal: syntax `akhir` diganti), analyzer akan break.
-- **Aksi**: Tambahkan integration test yang lebih robust.
-
 ### Resolved / Closed
+- **Analysis Tool Robustness**: Expanded Analyzer to support `StructStatement` and `ImportStatement`. Fixed Parser to correctly parse Struct fields with types. Added tests in `pkg/analysis/analyzer_test.go` and `pkg/parser/struct_test.go`. (2025-12-20)
 - **Lexer & Parser Porting**: Verified that Parser `nextToken` correctly skips/handles `COMMENT` tokens. Added `pkg/parser/comment_test.go` to ensure regression testing. (2025-12-20)
 - **Inkonsistensi Penamaan**: `DESIGN.md` updated to use `.fox` extension. Checked for "Fox" strings in code; none found except module path. (2025-12-20)
 - **Dependencies**: Environment verified to support Go 1.24.3. No action needed. (2025-12-20)

@@ -349,10 +349,18 @@ func (rs *ReturnStatement) String() string {
 	return out.String()
 }
 
+type StructField struct {
+	Token lexer.Token
+	Name  string
+	Type  string
+}
+
+func (sf *StructField) String() string { return sf.Name + " " + sf.Type }
+
 type StructStatement struct {
 	Token  lexer.Token // The 'struktur' token
 	Name   *Identifier
-	Fields []*Identifier
+	Fields []*StructField
 	Doc    string
 }
 
