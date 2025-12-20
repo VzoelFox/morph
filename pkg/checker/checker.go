@@ -169,12 +169,78 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 		return StringType
 	case *parser.BooleanLiteral:
 		return BoolType
+	case *parser.NullLiteral:
+		return NullType
 	case *parser.Identifier:
 		if t, ok := c.scope.LookupVariable(exp.Value); ok {
 			return t
 		}
-		c.addError(exp.Token.Line, exp.Token.Column, "Undefined variable: %s", exp.Value)
+		// Also lookup types (e.g. Struct Name for literal)
+		if t, ok := c.scope.LookupType(exp.Value); ok {
+			return t
+		}
+		c.addError(exp.Token.Line, exp.Token.Column, "Undefined variable or type: %s", exp.Value)
 		return UnknownType
+	case *parser.StructLiteral:
+		nameType := c.checkExpression(exp.Name)
+		if nameType.Kind() != KindStruct {
+			c.addError(exp.Token.Line, exp.Token.Column, "Expected struct type, got %s", nameType.String())
+			return ErrorType
+		}
+		st := nameType.(*StructType)
+
+		for key, valExpr := range exp.Fields {
+			expectedType, ok := st.Fields[key]
+			if !ok {
+				c.addError(exp.Token.Line, exp.Token.Column, "Field '%s' not defined in struct '%s'", key, st.Name)
+				continue
+			}
+			valType := c.checkExpression(valExpr)
+			if !expectedType.Equals(valType) {
+				c.addError(exp.Token.Line, exp.Token.Column, "Field '%s' type mismatch: expected %s, got %s", key, expectedType.String(), valType.String())
+			}
+		}
+		if len(exp.Fields) < len(st.Fields) {
+			c.addError(exp.Token.Line, exp.Token.Column, "Missing fields in struct literal")
+		}
+		return st
+
+	case *parser.IndexExpression:
+		leftType := c.checkExpression(exp.Left)
+
+		if leftType.Kind() == KindStruct {
+			if strLit, ok := exp.Index.(*parser.StringLiteral); ok {
+				fieldName := strLit.Value
+				if fieldType, ok := leftType.(*StructType).Fields[fieldName]; ok {
+					return fieldType
+				}
+				c.addError(exp.Token.Line, exp.Token.Column, "Field '%s' not found in struct '%s'", fieldName, leftType.String())
+				return ErrorType
+			}
+		}
+
+		idxType := c.checkExpression(exp.Index)
+
+		if leftType.Kind() == KindArray {
+			if idxType.Kind() != KindInt {
+				c.addError(exp.Token.Line, exp.Token.Column, "Array index must be Int")
+			}
+			return leftType.(*ArrayType).Element
+		}
+
+		if leftType.Kind() == KindMap {
+			mt := leftType.(*MapType)
+			if !mt.Key.Equals(idxType) {
+				c.addError(exp.Token.Line, exp.Token.Column, "Map key type mismatch: expected %s, got %s", mt.Key.String(), idxType.String())
+			}
+			return mt.Value
+		}
+
+		if leftType.Kind() != KindStruct && leftType.Kind() != KindUnknown {
+			c.addError(exp.Token.Line, exp.Token.Column, "Index operation not supported on type %s", leftType.String())
+		}
+		return UnknownType
+
 	case *parser.InfixExpression:
 		left := c.checkExpression(exp.Left)
 		right := c.checkExpression(exp.Right)

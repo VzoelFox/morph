@@ -234,6 +234,27 @@ func (hl *HashLiteral) String() string {
 	return out.String()
 }
 
+type StructLiteral struct {
+	Token  lexer.Token // '{'
+	Name   Expression  // Identifier
+	Fields map[string]Expression
+}
+
+func (sl *StructLiteral) expressionNode()      {}
+func (sl *StructLiteral) TokenLiteral() string { return sl.Token.Literal }
+func (sl *StructLiteral) String() string {
+	var out bytes.Buffer
+	out.WriteString(sl.Name.String())
+	out.WriteString("{")
+	fields := []string{}
+	for key, value := range sl.Fields {
+		fields = append(fields, key+": "+value.String())
+	}
+	out.WriteString(strings.Join(fields, ", "))
+	out.WriteString("}")
+	return out.String()
+}
+
 type IndexExpression struct {
 	Token lexer.Token // The [ token
 	Left  Expression

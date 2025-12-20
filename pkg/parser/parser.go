@@ -47,6 +47,7 @@ var precedences = map[lexer.TokenType]int{
 	lexer.LPAREN:   CALL,
 	lexer.LBRACKET: INDEX,
 	lexer.DOT:      INDEX, // Dot has high precedence
+	lexer.LBRACE:   CALL,  // Struct Literal User{...} has Call precedence
 }
 
 type (
@@ -142,6 +143,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerInfix(lexer.LPAREN, p.parseCallExpression)
 	p.registerInfix(lexer.LBRACKET, p.parseIndexExpression)
 	p.registerInfix(lexer.DOT, p.parseDotExpression)
+	p.registerInfix(lexer.LBRACE, p.parseStructLiteral)
 
 	// Read two tokens, so curToken and peekToken are both set
 	p.nextToken()
@@ -644,6 +646,43 @@ func (p *Parser) parseHashLiteral() Expression {
 	}
 
 	return hash
+}
+
+func (p *Parser) parseStructLiteral(left Expression) Expression {
+	if _, ok := left.(*Identifier); !ok {
+		p.addDetailedError(p.curToken, "Struct literal must start with identifier")
+		return nil
+	}
+
+	lit := &StructLiteral{Token: p.curToken, Name: left}
+	lit.Fields = make(map[string]Expression)
+
+	for !p.peekTokenIs(lexer.RBRACE) {
+		p.nextToken()
+		if !p.curTokenIs(lexer.IDENT) {
+			p.addDetailedError(p.curToken, "Expected field name in struct literal")
+			return nil
+		}
+		key := p.curToken.Literal
+
+		if !p.expectPeek(lexer.COLON) {
+			return nil
+		}
+
+		p.nextToken()
+		value := p.parseExpression(LOWEST)
+		lit.Fields[key] = value
+
+		if !p.peekTokenIs(lexer.RBRACE) && !p.expectPeek(lexer.COMMA) {
+			return nil
+		}
+	}
+
+	if !p.expectPeek(lexer.RBRACE) {
+		return nil
+	}
+
+	return lit
 }
 
 func (p *Parser) parseIndexExpression(left Expression) Expression {

@@ -131,3 +131,61 @@ func TestReturnTypeMismatch(t *testing.T) {
 		}
 	}
 }
+
+func TestStructLiteral(t *testing.T) {
+	input := `
+	struktur User
+		id Int
+		name String
+	akhir
+
+	var u User = User{id: 1, name: "Budi"};
+	`
+	errors := check(input)
+	if len(errors) != 0 {
+		t.Errorf("Expected no errors, got %v", errors)
+	}
+}
+
+func TestStructLiteralError(t *testing.T) {
+	input := `
+	struktur User
+		id Int
+	akhir
+
+	var u User = User{id: "s"};
+	`
+	errors := check(input)
+	if len(errors) == 0 {
+		t.Error("Expected error")
+	}
+}
+
+func TestFieldAccess(t *testing.T) {
+	input := `
+	struktur User
+		id Int
+	akhir
+
+	var u User = User{id: 1};
+	var i Int = u.id;
+	`
+	errors := check(input)
+	if len(errors) != 0 {
+		t.Errorf("Expected no errors, got %v", errors)
+	}
+}
+
+func TestNullAssignment(t *testing.T) {
+	input := `
+	struktur User
+		id Int
+	akhir
+
+	var u User = kosong;
+	`
+	errors := check(input)
+	if len(errors) != 0 {
+		t.Errorf("Expected no errors, got %v", errors)
+	}
+}

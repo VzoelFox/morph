@@ -410,6 +410,11 @@ func (a *Analyzer) walkExpression(expr parser.Expression, visitor func(parser.No
 		for _, part := range e.Parts {
 			a.walkExpression(part, visitor)
 		}
+	case *parser.StructLiteral:
+		a.walkExpression(e.Name, visitor)
+		for _, val := range e.Fields {
+			a.walkExpression(val, visitor)
+		}
 	case *parser.FunctionLiteral:
 		a.analyzeFunction(e)
 	}

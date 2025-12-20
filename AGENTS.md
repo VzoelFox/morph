@@ -55,6 +55,24 @@ project-root/
 
 ## Riwayat Perubahan
 
+### Version 1.3.1 - 2025-12-20
+**Checksum**: SHA256:VARIOUS
+**Perubahan**:
+- **Syntax**: Added Struct Literal syntax `User{id: 1}`.
+- **Checker**: Support for Struct Instantiation, Field Access (`x.field`), and Null (`kosong`) assignment.
+- **AST**: Added `StructLiteral` node.
+- **Analyzer**: Updated to traverse Struct Literals.
+
+**Konteks Sesi**:
+- Melengkapi Type Checker dengan fitur Struct dan Null Safety.
+- Menambahkan test coverage untuk syntax baru.
+
+**File Terkait**:
+- `pkg/parser/ast.go` (SHA256:VARIOUS)
+- `pkg/parser/parser.go` (SHA256:VARIOUS)
+- `pkg/checker/checker.go` (SHA256:VARIOUS)
+- `pkg/checker/types.go` (SHA256:VARIOUS)
+
 ### Version 1.3.0 - 2025-12-20
 **Checksum**: SHA256:VARIOUS
 **Perubahan**:
