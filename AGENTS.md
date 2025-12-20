@@ -55,6 +55,11 @@ project-root/
 
 ## Riwayat Perubahan
 
+### Version 1.2.1 - 2025-12-20
+**Perubahan**:
+- Menambahkan `ROADMAP.md` (Fase 1-5).
+- Menambahkan dokumentasi hutang teknis di `.vzoel.jules/technical-debt.morph.vz`.
+
 ### Version 1.2.0 - 2025-12-20
 **Perubahan**:
 - Porting `pkg/lexer` & `pkg/parser` dari repo referensi.
