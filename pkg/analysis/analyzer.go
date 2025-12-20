@@ -126,8 +126,18 @@ func (a *Analyzer) analyzeTopLevel(stmt parser.Statement) {
 			// Walk top level expressions (scripts)
 			a.walkExpression(s.Expression, func(node parser.Node) {})
 		}
+	case *parser.VarStatement:
+		name := s.Name.Value
+		typeName := s.Type.String()
+		a.context.GlobalVars[name] = &Variable{
+			Line: s.Token.Line,
+			Type: typeName,
+		}
+		a.defineInCurrentScope(name)
+		a.walkExpression(s.Value, func(node parser.Node) {})
+
 	case *parser.AssignmentStatement:
-		// Global variable
+		// Global variable (Implicit)
 		if ident, ok := s.Name.(*parser.Identifier); ok {
 			name := ident.Value
 			inferredType := a.inferType(s.Value)
@@ -156,7 +166,7 @@ func (a *Analyzer) analyzeStruct(s *parser.StructStatement) {
 	for _, f := range s.Fields {
 		info.Fields = append(info.Fields, StructFieldInfo{
 			Name: f.Name,
-			Type: f.Type,
+			Type: f.Type.String(),
 			Line: f.Token.Line,
 		})
 	}
@@ -195,9 +205,13 @@ func (a *Analyzer) analyzeFunction(fn *parser.FunctionLiteral) {
 	}
 
 	for _, p := range fn.Parameters {
+		typeName := "any"
+		if p.Type != nil {
+			typeName = p.Type.String()
+		}
 		sym.Parameters = append(sym.Parameters, Parameter{
-			Name:         p.Value,
-			InferredType: "any",
+			Name:         p.Name.Value,
+			InferredType: typeName,
 			Line:         p.Token.Line,
 			Column:       p.Token.Column,
 		})
@@ -215,7 +229,7 @@ func (a *Analyzer) analyzeFunction(fn *parser.FunctionLiteral) {
 
 	// Define parameters in this scope
 	for _, p := range fn.Parameters {
-		a.defineInCurrentScope(p.Value)
+		a.defineInCurrentScope(p.Name.Value)
 	}
 
 	canError := false
@@ -254,7 +268,30 @@ func (a *Analyzer) analyzeFunction(fn *parser.FunctionLiteral) {
 				}
 			}
 		}
-		// Local vars logic (Closure Aware)
+		// VarStatement (Explicit Local Declaration)
+		if vstmt, ok := node.(*parser.VarStatement); ok {
+			varName := vstmt.Name.Value
+			typeName := vstmt.Type.String()
+
+			a.defineInCurrentScope(varName)
+
+			found := false
+			for _, v := range sym.LocalVars {
+				if v == varName {
+					found = true
+					break
+				}
+			}
+			if !found {
+				sym.LocalVars = append(sym.LocalVars, varName)
+				a.context.LocalScopes[name][varName] = &Variable{
+					Line: vstmt.Token.Line,
+					Type: typeName,
+				}
+			}
+		}
+
+		// Local vars logic (Closure Aware) for Assignments
 		if assign, ok := node.(*parser.AssignmentStatement); ok {
 			if ident, ok := assign.Name.(*parser.Identifier); ok {
 				varName := ident.Value
@@ -271,7 +308,7 @@ func (a *Analyzer) analyzeFunction(fn *parser.FunctionLiteral) {
 						}
 					}
 				} else {
-					// It's a NEW declaration in this scope
+					// It's a NEW declaration in this scope (Implicit)
 					a.defineInCurrentScope(varName)
 
 					// Register in symbol table as Local Var
@@ -329,6 +366,10 @@ func (a *Analyzer) walkBlock(block *parser.BlockStatement, visitor func(parser.N
 
 func (a *Analyzer) walkStatement(stmt parser.Statement, visitor func(parser.Node)) {
 	switch s := stmt.(type) {
+	case *parser.VarStatement:
+		if s.Value != nil {
+			a.walkExpression(s.Value, visitor)
+		}
 	case *parser.ExpressionStatement:
 		a.walkExpression(s.Expression, visitor)
 	case *parser.ReturnStatement:
@@ -368,6 +409,11 @@ func (a *Analyzer) walkExpression(expr parser.Expression, visitor func(parser.No
 	case *parser.InterpolatedString:
 		for _, part := range e.Parts {
 			a.walkExpression(part, visitor)
+		}
+	case *parser.StructLiteral:
+		a.walkExpression(e.Name, visitor)
+		for _, val := range e.Fields {
+			a.walkExpression(val, visitor)
 		}
 	case *parser.FunctionLiteral:
 		a.analyzeFunction(e)
