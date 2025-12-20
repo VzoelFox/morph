@@ -55,6 +55,22 @@ project-root/
 
 ## Riwayat Perubahan
 
+### Version 1.5.1 - 2025-12-20
+**Checksum**: SHA256:VARIOUS
+**Perubahan**:
+- **Checker**: Updated `ArrayType.Equals` and `MapType.Equals` to allow `UnknownType` (wildcard) compatibility for empty literals.
+- **Checker**: Implemented `isUnresolved` helper to strictly forbid type inference from empty literals (`var x = []`).
+- **Tests**: Added `pkg/checker/robustness_test.go` covering empty literal scenarios.
+
+**Konteks Sesi**:
+- **Emergency Fix**: Memperbaiki bug di mana empty literal ditolak saat assign ke typed variable.
+- Memastikan kebijakan "Explicit over Implicit": Variable tanpa tipe tidak boleh di-infer dari empty literal.
+
+**File Terkait**:
+- `pkg/checker/types.go` (SHA256:80541bf5d78617608ec12b3c0ed2b6dbf6c4c93c36c6fd45267c00128e246c56)
+- `pkg/checker/checker.go` (SHA256:25f8a8a0bf65272546a2d6552f83d3d0fd5d297c792a3359fee9e3101cf7ef27)
+- `pkg/checker/robustness_test.go` (SHA256:30126f1369a04cfec5b82a0540354368813e542699bf8d3bbfcf145b7ae73015)
+
 ### Version 1.5.0 - 2025-12-20
 **Checksum**: SHA256:VARIOUS
 **Perubahan**:

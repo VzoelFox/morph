@@ -65,6 +65,10 @@ func (t *ArrayType) Equals(other Type) bool {
 		return true
 	}
 	if o, ok := other.(*ArrayType); ok {
+		// Allow empty array literal (Unknown element) to match any array
+		if t.Element.Kind() == KindUnknown || o.Element.Kind() == KindUnknown {
+			return true
+		}
 		return t.Element.Equals(o.Element)
 	}
 	return false
@@ -82,6 +86,14 @@ func (t *MapType) Equals(other Type) bool {
 		return true
 	}
 	if o, ok := other.(*MapType); ok {
+		// Allow empty map literal (Unknown key/value) to match any map
+		keyUnknown := t.Key.Kind() == KindUnknown || o.Key.Kind() == KindUnknown
+		valUnknown := t.Value.Kind() == KindUnknown || o.Value.Kind() == KindUnknown
+
+		if keyUnknown && valUnknown {
+			return true
+		}
+
 		return t.Key.Equals(o.Key) && t.Value.Equals(o.Value)
 	}
 	return false

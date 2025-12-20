@@ -337,6 +337,9 @@ func (c *Checker) checkVarStatement(s *parser.VarStatement) {
 		} else {
 			// Inference
 			if actual.Kind() != KindUnknown {
+				if c.isUnresolved(actual) {
+					c.addError(s.Token.Line, s.Token.Column, "Cannot infer type from empty literal for '%s'", name.Value)
+				}
 				finalType = actual
 			} else {
 				if len(s.Values) == 0 {
@@ -673,4 +676,14 @@ func (c *Checker) addError(line, col int, format string, args ...interface{}) {
 
 func (c *Checker) addWarning(line, col int, format string, args ...interface{}) {
 	c.Warnings = append(c.Warnings, NewTypeWarning(line, col, format, args...))
+}
+
+func (c *Checker) isUnresolved(t Type) bool {
+	switch T := t.(type) {
+	case *ArrayType:
+		return T.Element.Kind() == KindUnknown || c.isUnresolved(T.Element)
+	case *MapType:
+		return T.Key.Kind() == KindUnknown || T.Value.Kind() == KindUnknown || c.isUnresolved(T.Key) || c.isUnresolved(T.Value)
+	}
+	return false
 }
