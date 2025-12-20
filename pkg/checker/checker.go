@@ -109,6 +109,10 @@ func (c *Checker) defineVar(s *parser.VarStatement) {
 		t = c.resolveType(s.Type)
 	}
 	for _, name := range s.Names {
+		if existing, ok := c.scope.variables[name.Value]; ok {
+			c.addError(name.Token.Line, name.Token.Column, "Global variable '%s' already declared (type: %s)", name.Value, existing.String())
+			continue
+		}
 		c.scope.DefineVariable(name.Value, t)
 	}
 }
@@ -345,6 +349,14 @@ func (c *Checker) checkVarStatement(s *parser.VarStatement) {
 				if len(s.Values) == 0 {
 					c.addError(s.Token.Line, s.Token.Column, "Variable '%s' requires type or value", name.Value)
 				}
+			}
+		}
+
+		// Check for same-scope redeclaration (Local only)
+		if c.scope.outer != nil {
+			if existingType, exists := c.scope.variables[name.Value]; exists {
+				c.addError(name.Token.Line, name.Token.Column, "Variable '%s' already declared in this scope (type: %s)", name.Value, existingType.String())
+				continue
 			}
 		}
 

@@ -19,9 +19,9 @@ func NewScope(outer *Scope) *Scope {
 func (s *Scope) DefineVariable(name string, t Type) *TypeWarning {
 	// Check outer scope for shadowing
 	if s.outer != nil {
-		if _, exists := s.outer.LookupVariable(name); exists {
+		if outerType, exists := s.outer.LookupVariable(name); exists {
 			warning := &TypeWarning{
-				Message: fmt.Sprintf("Variable '%s' shadows outer scope", name),
+				Message: fmt.Sprintf("Variable '%s' shadows outer declaration (type: %s)", name, outerType.String()),
 				Line:    0, // To be filled by caller
 				Column:  0,
 			}

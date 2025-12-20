@@ -55,6 +55,26 @@ project-root/
 
 ## Riwayat Perubahan
 
+### Version 1.5.2 - 2025-12-20
+**Checksum**: SHA256:VARIOUS
+**Perubahan**:
+- **Checker**: Implemented strict homogeneity check for Array and Map literals.
+- **Checker**: Implemented Shadowing Warning for local variables shadowing outer declarations.
+- **Checker**: Implemented Error for same-scope redeclaration (Global and Local).
+- **Scope**: Updated `DefineVariable` to return detailed Shadow Warning.
+- **Tests**: Added `pkg/checker/literal_strict_test.go` and updated `pkg/checker/shadow_test.go`.
+
+**Konteks Sesi**:
+- **Sprint 1 Final Push**: Menyelesaikan validasi ketat dan sistem warning.
+- Memastikan array/map literal konsisten (misal `[1, "a"]` adalah error).
+- Memastikan variable shadowing terdeteksi dan redeklarasi dalam scope yang sama ditolak.
+
+**File Terkait**:
+- `pkg/checker/checker.go` (SHA256:969b6f849c0bbe60d0b66c5e1d341320d53424ad456cfdbbfe8c37cb2c6d6460)
+- `pkg/checker/scope.go` (SHA256:2010ce96891e08816ed221275ad5dfdc9c91c5be31c9d277fee76f9d0a2f38cc)
+- `pkg/checker/literal_strict_test.go` (SHA256:56cbd508515ca0f37c9fccd33049abe75793bc6dff2244899fb6ca48ab451669)
+- `pkg/checker/shadow_test.go` (SHA256:e8fc9cd0d6a17f246fbba561e675dc832ddca3d4b2db31103756170e9ca317de)
+
 ### Version 1.5.1 - 2025-12-20
 **Checksum**: SHA256:VARIOUS
 **Perubahan**:
