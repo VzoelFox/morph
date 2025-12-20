@@ -23,7 +23,7 @@ Menggunakan gaya blok dengan keyword `akhir` (mirip Ruby/Lua) untuk mengurangi n
 - `tunda`*: Defer execution (Planned).
 
 ### Contoh Hello World
-```morph
+```fox
 fungsi utama()
     cetak("Halo, Dunia!")
 akhir
@@ -37,7 +37,7 @@ Statis dan Kuat (Strongly Typed).
 - `int`, `float`, `bool`, `string`, `byte`
 
 ### Tipe Komposit
-```morph
+```fox
 struktur Pengguna
     nama string
     umur int
@@ -52,7 +52,7 @@ akhir
 
 Menggunakan pola "Error as Value". Fungsi yang bisa gagal harus mengembalikan `error` sebagai nilai terakhir.
 
-```morph
+```fox
 fungsi bagi(a int, b int) -> (int, error)
     jika b == 0
         kembalikan 0, error.Baru("pembagian dengan nol")
