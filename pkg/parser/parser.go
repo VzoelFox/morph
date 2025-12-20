@@ -87,11 +87,13 @@ type Parser struct {
 	l      *lexer.Lexer
 	errors []ParserError
 
-	curToken  lexer.Token
-	peekToken lexer.Token
+	curToken   lexer.Token
+	peekToken  lexer.Token
+	peekToken2 lexer.Token // 2-token lookahead
 
-	curComment  string
-	peekComment string
+	curComment   string
+	peekComment  string
+	peekComment2 string
 
 	prefixParseFns map[lexer.TokenType]prefixParseFn
 	infixParseFns  map[lexer.TokenType]infixParseFn
@@ -145,7 +147,8 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerInfix(lexer.DOT, p.parseDotExpression)
 	p.registerInfix(lexer.LBRACE, p.parseStructLiteral)
 
-	// Read two tokens, so curToken and peekToken are both set
+	// Read tokens to initialize cur, peek, and peek2
+	p.nextToken()
 	p.nextToken()
 	p.nextToken()
 
@@ -154,17 +157,25 @@ func New(l *lexer.Lexer) *Parser {
 
 func (p *Parser) nextToken() {
 	p.curToken = p.peekToken
-	p.curComment = p.peekComment
-	p.peekComment = ""
-	p.peekToken = p.l.NextToken()
+	p.peekToken = p.peekToken2
 
-	for p.peekToken.Type == lexer.COMMENT {
-		if p.peekComment != "" {
-			p.peekComment += "\n"
+	p.curComment = p.peekComment
+	p.peekComment = p.peekComment2
+	p.peekComment2 = ""
+
+	p.peekToken2 = p.l.NextToken()
+
+	for p.peekToken2.Type == lexer.COMMENT {
+		if p.peekComment2 != "" {
+			p.peekComment2 += "\n"
 		}
-		p.peekComment += p.peekToken.Literal
-		p.peekToken = p.l.NextToken()
+		p.peekComment2 += p.peekToken2.Literal
+		p.peekToken2 = p.l.NextToken()
 	}
+}
+
+func (p *Parser) peekToken2Is(t lexer.TokenType) bool {
+	return p.peekToken2.Type == t
 }
 
 func (p *Parser) Errors() []ParserError {
@@ -875,16 +886,50 @@ func (p *Parser) parseFunctionLiteral() Expression {
 	lit := &FunctionLiteral{Token: p.curToken}
 	lit.Doc = p.curComment
 
-	if p.peekTokenIs(lexer.IDENT) {
+	// Check for Method Receiver: fungsi (u User) Name(...)
+	// or Anonymous Function: fungsi (a Int) ...
+	if p.peekTokenIs(lexer.LPAREN) {
+		p.nextToken() // move to LPAREN
+		params := p.parseFunctionParameters()
+
+		// Distinguish Method vs Anon Function
+		// Method: (params) Name (
+		if p.peekTokenIs(lexer.IDENT) && p.peekToken2Is(lexer.LPAREN) {
+			// It is a Method
+			if len(params) != 1 {
+				p.addDetailedError(p.curToken, "Method receiver must have exactly one parameter")
+				return nil
+			}
+			lit.Receiver = params[0]
+
+			p.nextToken() // move to Name
+			lit.Name = p.curToken.Literal
+
+			// Parse actual parameters
+			if !p.expectPeek(lexer.LPAREN) {
+				return nil
+			}
+			lit.Parameters = p.parseFunctionParameters()
+		} else {
+			// Anonymous Function
+			lit.Parameters = params
+		}
+	} else if p.peekTokenIs(lexer.IDENT) {
+		// Named Function: fungsi Name(...)
 		p.nextToken()
 		lit.Name = p.curToken.Literal
-	}
 
-	if !p.expectPeek(lexer.LPAREN) {
-		return nil
+		if !p.expectPeek(lexer.LPAREN) {
+			return nil
+		}
+		lit.Parameters = p.parseFunctionParameters()
+	} else {
+		// Expect LPAREN (Anonymous function without params? or malformed)
+		if !p.expectPeek(lexer.LPAREN) {
+			return nil
+		}
+		lit.Parameters = p.parseFunctionParameters()
 	}
-
-	lit.Parameters = p.parseFunctionParameters()
 
 	// Parse optional return type
 	if p.peekTokenIs(lexer.LPAREN) {
@@ -1031,13 +1076,19 @@ func (p *Parser) noPrefixParseFnError(t lexer.TokenType) {
 }
 
 func (p *Parser) parseDotExpression(left Expression) Expression {
-	token := p.curToken
+	exp := &MemberExpression{
+		Token:  p.curToken, // DOT token
+		Object: left,
+	}
 
 	if !p.expectPeek(lexer.IDENT) {
 		return nil
 	}
 
-	index := &StringLiteral{Token: p.curToken, Value: p.curToken.Literal}
+	exp.Member = &Identifier{
+		Token: p.curToken,
+		Value: p.curToken.Literal,
+	}
 
-	return &IndexExpression{Token: token, Left: left, Index: index}
+	return exp
 }

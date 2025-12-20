@@ -285,6 +285,22 @@ func (ie *IndexExpression) String() string {
 	return out.String()
 }
 
+type MemberExpression struct {
+	Token  lexer.Token // The . token
+	Object Expression
+	Member *Identifier
+}
+
+func (me *MemberExpression) expressionNode()      {}
+func (me *MemberExpression) TokenLiteral() string { return me.Token.Literal }
+func (me *MemberExpression) String() string {
+	var out bytes.Buffer
+	out.WriteString(me.Object.String())
+	out.WriteString(".")
+	out.WriteString(me.Member.String())
+	return out.String()
+}
+
 type PrefixExpression struct {
 	Token    lexer.Token
 	Operator string
@@ -393,6 +409,7 @@ func (p *Parameter) String() string {
 type FunctionLiteral struct {
 	Token       lexer.Token
 	Name        string
+	Receiver    *Parameter // Optional receiver for methods
 	Parameters  []*Parameter
 	ReturnTypes []TypeNode
 	Body        *BlockStatement
@@ -404,6 +421,13 @@ func (fl *FunctionLiteral) TokenLiteral() string { return fl.Token.Literal }
 func (fl *FunctionLiteral) String() string {
 	var out bytes.Buffer
 	out.WriteString(fl.TokenLiteral())
+
+	if fl.Receiver != nil {
+		out.WriteString(" (")
+		out.WriteString(fl.Receiver.String())
+		out.WriteString(")")
+	}
+
 	if fl.Name != "" {
 		out.WriteString(" ")
 		out.WriteString(fl.Name)

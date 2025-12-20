@@ -88,8 +88,9 @@ func (t *MapType) Equals(other Type) bool {
 }
 
 type StructType struct {
-	Name   string
-	Fields map[string]Type
+	Name    string
+	Fields  map[string]Type
+	Methods map[string]*FunctionType
 }
 
 func (t *StructType) Kind() TypeKind { return KindStruct }
