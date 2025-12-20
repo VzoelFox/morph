@@ -409,6 +409,7 @@ func (p *Parameter) String() string {
 type FunctionLiteral struct {
 	Token       lexer.Token
 	Name        string
+	Receiver    *Parameter // Optional receiver for methods
 	Parameters  []*Parameter
 	ReturnTypes []TypeNode
 	Body        *BlockStatement
@@ -420,6 +421,13 @@ func (fl *FunctionLiteral) TokenLiteral() string { return fl.Token.Literal }
 func (fl *FunctionLiteral) String() string {
 	var out bytes.Buffer
 	out.WriteString(fl.TokenLiteral())
+
+	if fl.Receiver != nil {
+		out.WriteString(" (")
+		out.WriteString(fl.Receiver.String())
+		out.WriteString(")")
+	}
+
 	if fl.Name != "" {
 		out.WriteString(" ")
 		out.WriteString(fl.Name)

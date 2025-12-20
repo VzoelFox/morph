@@ -82,7 +82,11 @@ func (c *Checker) collectDefinitions(program *parser.Program) {
 }
 
 func (c *Checker) defineStruct(s *parser.StructStatement) {
-	st := &StructType{Name: s.Name.Value, Fields: make(map[string]Type)}
+	st := &StructType{
+		Name:    s.Name.Value,
+		Fields:  make(map[string]Type),
+		Methods: make(map[string]*FunctionType),
+	}
 	c.scope.DefineType(s.Name.Value, st)
 }
 
@@ -124,7 +128,21 @@ func (c *Checker) defineFunction(fn *parser.FunctionLiteral) {
 	}
 
 	ft := &FunctionType{Parameters: paramTypes, ReturnTypes: returnTypes}
-	c.scope.DefineVariable(fn.Name, ft)
+
+	// If method, attach to struct
+	if fn.Receiver != nil {
+		recvType := c.resolveType(fn.Receiver.Type)
+		if recvType.Kind() != KindStruct {
+			c.addError(fn.Receiver.Token.Line, fn.Receiver.Token.Column, "Method receiver must be a struct, got %s", recvType.String())
+			return
+		}
+
+		st := recvType.(*StructType)
+		st.Methods[fn.Name] = ft
+	} else {
+		// Normal function
+		c.scope.DefineVariable(fn.Name, ft)
+	}
 }
 
 func (c *Checker) resolveType(n parser.TypeNode) Type {
@@ -391,13 +409,16 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 		}
 
 		st := objType.(*StructType)
-		fieldType, exists := st.Fields[exp.Member.Value]
-		if !exists {
-			c.addError(exp.Token.Line, exp.Token.Column, "Field '%s' not found in struct '%s'", exp.Member.Value, st.Name)
-			return ErrorType
+		if fieldType, exists := st.Fields[exp.Member.Value]; exists {
+			return fieldType
 		}
 
-		return fieldType
+		if methodType, exists := st.Methods[exp.Member.Value]; exists {
+			return methodType
+		}
+
+		c.addError(exp.Token.Line, exp.Token.Column, "Field or method '%s' not found in struct '%s'", exp.Member.Value, st.Name)
+		return ErrorType
 
 	case *parser.ArrayLiteral:
 		if len(exp.Elements) == 0 {
@@ -498,6 +519,16 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 
 	case *parser.FunctionLiteral:
 		c.enterScope()
+
+		// Define Receiver in scope if present
+		if exp.Receiver != nil {
+			recvType := c.resolveType(exp.Receiver.Type)
+			if warning := c.scope.DefineVariable(exp.Receiver.Name.Value, recvType); warning != nil {
+				warning.Line = exp.Receiver.Name.Token.Line
+				warning.Column = exp.Receiver.Name.Token.Column
+				c.Warnings = append(c.Warnings, *warning)
+			}
+		}
 
 		for _, p := range exp.Parameters {
 			t := c.resolveType(p.Type)

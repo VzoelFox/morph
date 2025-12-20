@@ -34,7 +34,7 @@ func TestMemberExpressionError(t *testing.T) {
 	if len(errors) == 0 {
 		t.Error("Expected error for unknown field")
 	} else {
-		expected := "Field 'unknown_field' not found in struct 'User'"
+		expected := "Field or method 'unknown_field' not found in struct 'User'"
 		if errors[0].Message != expected {
 			t.Errorf("Expected error '%s', got '%s'", expected, errors[0].Message)
 		}
