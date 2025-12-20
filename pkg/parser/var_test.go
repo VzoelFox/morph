@@ -36,8 +36,13 @@ func TestVarStatement(t *testing.T) {
 			continue
 		}
 
-		if stmt.Name.Value != tt.expectedName {
-			t.Errorf("stmt.Name.Value not %s. got=%s", tt.expectedName, stmt.Name.Value)
+		if len(stmt.Names) != 1 {
+			t.Errorf("stmt.Names length %d", len(stmt.Names))
+			continue
+		}
+
+		if stmt.Names[0].Value != tt.expectedName {
+			t.Errorf("stmt.Names[0].Value not %s. got=%s", tt.expectedName, stmt.Names[0].Value)
 		}
 
 		if stmt.Type.String() != tt.expectedType {
@@ -45,7 +50,11 @@ func TestVarStatement(t *testing.T) {
 		}
 
 		if tt.expectedVal != nil {
-			if !testLiteralExpression(t, stmt.Value, tt.expectedVal) {
+			if len(stmt.Values) != 1 {
+				t.Errorf("stmt.Values length %d", len(stmt.Values))
+				continue
+			}
+			if !testLiteralExpression(t, stmt.Values[0], tt.expectedVal) {
 				return
 			}
 		}

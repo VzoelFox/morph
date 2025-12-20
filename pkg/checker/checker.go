@@ -6,6 +6,7 @@ import (
 
 type Checker struct {
 	Errors      []TypeError
+	Warnings    []TypeWarning
 	scope       *Scope
 	returnStack []Type
 }
@@ -13,10 +14,25 @@ type Checker struct {
 func New() *Checker {
 	c := &Checker{
 		Errors:      []TypeError{},
+		Warnings:    []TypeWarning{},
 		scope:       NewScope(nil),
 		returnStack: []Type{},
 	}
-	// Register built-ins if any
+
+	// Register primitive types
+	c.scope.DefineType("Int", IntType)
+	c.scope.DefineType("Float", FloatType)
+	c.scope.DefineType("String", StringType)
+	c.scope.DefineType("Bool", BoolType)
+
+	// Register built-in functions (Stdlib Prototype)
+	// parse_int(String) -> (Int, String)
+	parseIntType := &FunctionType{
+		Parameters:  []Type{StringType},
+		ReturnTypes: []Type{IntType, StringType},
+	}
+	c.scope.DefineVariable("parse_int", parseIntType)
+
 	return c
 }
 
@@ -84,8 +100,13 @@ func (c *Checker) resolveStructFields(program *parser.Program) {
 }
 
 func (c *Checker) defineVar(s *parser.VarStatement) {
-	t := c.resolveType(s.Type)
-	c.scope.DefineVariable(s.Name.Value, t)
+	var t Type = UnknownType
+	if s.Type != nil {
+		t = c.resolveType(s.Type)
+	}
+	for _, name := range s.Names {
+		c.scope.DefineVariable(name.Value, t)
+	}
 }
 
 func (c *Checker) defineFunction(fn *parser.FunctionLiteral) {
@@ -94,12 +115,15 @@ func (c *Checker) defineFunction(fn *parser.FunctionLiteral) {
 		paramTypes = append(paramTypes, c.resolveType(p.Type))
 	}
 
-	var returnType Type = VoidType
-	if fn.ReturnType != nil {
-		returnType = c.resolveType(fn.ReturnType)
+	returnTypes := []Type{}
+	for _, rt := range fn.ReturnTypes {
+		returnTypes = append(returnTypes, c.resolveType(rt))
+	}
+	if len(returnTypes) == 0 {
+		returnTypes = append(returnTypes, VoidType)
 	}
 
-	ft := &FunctionType{Parameters: paramTypes, ReturnType: returnType}
+	ft := &FunctionType{Parameters: paramTypes, ReturnTypes: returnTypes}
 	c.scope.DefineVariable(fn.Name, ft)
 }
 
@@ -109,6 +133,8 @@ func (c *Checker) resolveType(n parser.TypeNode) Type {
 		switch t.Name {
 		case "Int":
 			return IntType
+		case "Float":
+			return FloatType
 		case "String":
 			return StringType
 		case "Bool":
@@ -147,15 +173,24 @@ func (c *Checker) checkStatement(s parser.Statement) {
 		c.checkExpression(stmt.Expression)
 	case *parser.ReturnStatement:
 		var actual Type = VoidType
-		if stmt.ReturnValue != nil {
-			actual = c.checkExpression(stmt.ReturnValue)
+		if len(stmt.ReturnValues) == 1 {
+			actual = c.checkExpression(stmt.ReturnValues[0])
+		} else if len(stmt.ReturnValues) > 1 {
+			types := []Type{}
+			for _, v := range stmt.ReturnValues {
+				types = append(types, c.checkExpression(v))
+			}
+			actual = &MultiType{Types: types}
 		}
+
 		expected := c.currentReturn()
 		if expected != nil {
 			if !expected.Equals(actual) && actual.Kind() != KindUnknown {
 				c.addError(stmt.Token.Line, stmt.Token.Column, "Return type mismatch: expected %s, got %s", expected.String(), actual.String())
 			}
 		}
+	case *parser.AssignmentStatement:
+		c.checkAssignment(stmt)
 	case *parser.StructStatement:
 		// Fields resolved in pass 1.5
 	case *parser.BlockStatement:
@@ -165,13 +200,104 @@ func (c *Checker) checkStatement(s parser.Statement) {
 	}
 }
 
-func (c *Checker) checkVarStatement(s *parser.VarStatement) {
-	expected := c.resolveType(s.Type)
-	if s.Value != nil {
-		actual := c.checkExpression(s.Value)
-		if !expected.Equals(actual) && actual.Kind() != KindUnknown && expected.Kind() != KindUnknown {
-			c.addError(s.Token.Line, s.Token.Column, "Type mismatch in variable declaration '%s': expected %s, got %s", s.Name.Value, expected.String(), actual.String())
+func (c *Checker) checkAssignment(s *parser.AssignmentStatement) {
+	// 1. Analyze RHS Types
+	var valueTypes []Type
+	if len(s.Values) == 1 {
+		// Single expression could be MultiType (unpacking)
+		t := c.checkExpression(s.Values[0])
+		if mt, ok := t.(*MultiType); ok {
+			valueTypes = mt.Types
+		} else {
+			valueTypes = []Type{t}
 		}
+	} else {
+		// Multiple expressions: 1-to-1
+		for _, v := range s.Values {
+			valueTypes = append(valueTypes, c.checkExpression(v))
+		}
+	}
+
+	// 2. Count mismatch
+	if len(s.Names) != len(valueTypes) {
+		c.addError(s.Token.Line, s.Token.Column, "Assignment count mismatch: %d = %d", len(s.Names), len(valueTypes))
+	}
+
+	// 3. Validate LHS
+	for i, nameExpr := range s.Names {
+		if i >= len(valueTypes) {
+			break
+		}
+
+		lhsType := c.checkExpression(nameExpr)
+		rhsType := valueTypes[i]
+
+		if lhsType.Kind() != KindUnknown && rhsType.Kind() != KindUnknown {
+			if !lhsType.Equals(rhsType) {
+				c.addError(s.Token.Line, s.Token.Column, "Type mismatch in assignment: expected %s, got %s", lhsType.String(), rhsType.String())
+			}
+		}
+	}
+}
+
+func (c *Checker) checkVarStatement(s *parser.VarStatement) {
+	// 1. Analyze RHS Types
+	var valueTypes []Type
+	if len(s.Values) == 1 {
+		// Single expression could be MultiType (unpacking)
+		t := c.checkExpression(s.Values[0])
+		if mt, ok := t.(*MultiType); ok {
+			valueTypes = mt.Types
+		} else {
+			valueTypes = []Type{t}
+		}
+	} else {
+		// Multiple expressions: 1-to-1
+		for _, v := range s.Values {
+			valueTypes = append(valueTypes, c.checkExpression(v))
+		}
+	}
+
+	// 2. Resolve LHS Type (if explicit)
+	var expected Type = nil
+	if s.Type != nil {
+		expected = c.resolveType(s.Type)
+	}
+
+	// 3. Validation & Definition
+	if len(s.Names) != len(valueTypes) && len(s.Values) > 0 {
+		c.addError(s.Token.Line, s.Token.Column, "Assignment count mismatch: %d names but %d values", len(s.Names), len(valueTypes))
+	}
+
+	for i, name := range s.Names {
+		var finalType Type = UnknownType
+
+		var actual Type = UnknownType
+		if i < len(valueTypes) {
+			actual = valueTypes[i]
+		}
+
+		if expected != nil {
+			// Explicit Type
+			finalType = expected
+			if actual.Kind() != KindUnknown {
+				if !finalType.Equals(actual) {
+					c.addError(s.Token.Line, s.Token.Column, "Type mismatch for '%s': expected %s, got %s", name.Value, finalType.String(), actual.String())
+				}
+			}
+		} else {
+			// Inference
+			if actual.Kind() != KindUnknown {
+				finalType = actual
+			} else {
+				if len(s.Values) == 0 {
+					c.addError(s.Token.Line, s.Token.Column, "Variable '%s' requires type or value", name.Value)
+				}
+			}
+		}
+
+		// Update scope with refined type
+		c.scope.DefineVariable(name.Value, finalType)
 	}
 }
 
@@ -179,6 +305,8 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 	switch exp := e.(type) {
 	case *parser.IntegerLiteral:
 		return IntType
+	case *parser.FloatLiteral:
+		return FloatType
 	case *parser.StringLiteral:
 		return StringType
 	case *parser.BooleanLiteral:
@@ -268,6 +396,9 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 			if left.Kind() == KindInt && right.Kind() == KindInt {
 				return IntType
 			}
+			if left.Kind() == KindFloat && right.Kind() == KindFloat {
+				return FloatType
+			}
 			c.addError(exp.Token.Line, exp.Token.Column, "Operator %s not defined for types %s and %s", exp.Operator, left.String(), right.String())
 			return ErrorType
 		case "==", "!=":
@@ -286,12 +417,22 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 			c.scope.DefineVariable(p.Name.Value, t)
 		}
 
-		var retType Type = VoidType
-		if exp.ReturnType != nil {
-			retType = c.resolveType(exp.ReturnType)
+		returnTypes := []Type{}
+		for _, rt := range exp.ReturnTypes {
+			returnTypes = append(returnTypes, c.resolveType(rt))
+		}
+		if len(returnTypes) == 0 {
+			returnTypes = append(returnTypes, VoidType)
 		}
 
-		c.pushReturn(retType)
+		var retStack Type
+		if len(returnTypes) == 1 {
+			retStack = returnTypes[0]
+		} else {
+			retStack = &MultiType{Types: returnTypes}
+		}
+
+		c.pushReturn(retStack)
 		c.checkNodes(exp.Body.Statements)
 		c.popReturn()
 
@@ -301,7 +442,7 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 		for _, p := range exp.Parameters {
 			paramTypes = append(paramTypes, c.resolveType(p.Type))
 		}
-		return &FunctionType{Parameters: paramTypes, ReturnType: retType}
+		return &FunctionType{Parameters: paramTypes, ReturnTypes: returnTypes}
 
 	case *parser.IfExpression:
 		condType := c.checkExpression(exp.Condition)
@@ -338,8 +479,47 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 					c.addError(exp.Token.Line, exp.Token.Column, "Argument %d type mismatch: expected %s, got %s", i+1, f.Parameters[i].String(), argType.String())
 				}
 			}
-			return f.ReturnType
+			if len(f.ReturnTypes) == 1 {
+				return f.ReturnTypes[0]
+			}
+			return &MultiType{Types: f.ReturnTypes}
 		}
+
+		// Check for Type Casting (e.g. Int(5.5))
+		if id, ok := exp.Function.(*parser.Identifier); ok {
+			// If it resolves to a Type and NOT a Variable, it's a Cast
+			if targetType, isType := c.scope.LookupType(id.Value); isType {
+				if _, isVar := c.scope.LookupVariable(id.Value); !isVar {
+					// It is a cast
+					if len(exp.Arguments) != 1 {
+						c.addError(exp.Token.Line, exp.Token.Column, "Type conversion requires exactly 1 argument")
+						return ErrorType
+					}
+					argType := c.checkExpression(exp.Arguments[0])
+
+					// Tier 1: Int -> Float (Lossless-ish)
+					if targetType.Kind() == KindFloat && argType.Kind() == KindInt {
+						return FloatType
+					}
+
+					// Tier 2: Float -> Int (Lossy - Warning)
+					if targetType.Kind() == KindInt && argType.Kind() == KindFloat {
+						c.addWarning(exp.Token.Line, exp.Token.Column, "Lossy conversion from Float to Int")
+						return IntType
+					}
+
+					// Identity
+					if targetType.Equals(argType) {
+						return targetType
+					}
+
+					// Tier 3: Forbidden (String -> Int, etc)
+					c.addError(exp.Token.Line, exp.Token.Column, "Cannot convert type %s to %s", argType.String(), targetType.String())
+					return ErrorType
+				}
+			}
+		}
+
 		c.addError(exp.Token.Line, exp.Token.Column, "Not a function: %s", funcType.String())
 		return ErrorType
 	}
@@ -359,4 +539,8 @@ func (c *Checker) leaveScope() {
 
 func (c *Checker) addError(line, col int, format string, args ...interface{}) {
 	c.Errors = append(c.Errors, NewTypeError(line, col, format, args...))
+}
+
+func (c *Checker) addWarning(line, col int, format string, args ...interface{}) {
+	c.Warnings = append(c.Warnings, NewTypeWarning(line, col, format, args...))
 }

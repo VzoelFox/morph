@@ -10,13 +10,17 @@ func TestString(t *testing.T) {
 		Statements: []Statement{
 			&AssignmentStatement{
 				Token: lexer.Token{Type: lexer.IDENT, Literal: "myVar"},
-				Name: &Identifier{
-					Token: lexer.Token{Type: lexer.IDENT, Literal: "myVar"},
-					Value: "myVar",
+				Names: []Expression{
+					&Identifier{
+						Token: lexer.Token{Type: lexer.IDENT, Literal: "myVar"},
+						Value: "myVar",
+					},
 				},
-				Value: &Identifier{
-					Token: lexer.Token{Type: lexer.IDENT, Literal: "anotherVar"},
-					Value: "anotherVar",
+				Values: []Expression{
+					&Identifier{
+						Token: lexer.Token{Type: lexer.IDENT, Literal: "anotherVar"},
+						Value: "anotherVar",
+					},
 				},
 			},
 		},
@@ -76,7 +80,7 @@ func TestIfExpressionString(t *testing.T) {
 func TestReturnStatementString(t *testing.T) {
 	stmt := &ReturnStatement{
 		Token: lexer.Token{Type: lexer.KEMBALIKAN, Literal: "kembalikan"},
-		ReturnValue: &Identifier{Value: "x"},
+		ReturnValues: []Expression{&Identifier{Value: "x"}},
 	}
 
 	if stmt.String() != "kembalikan x;" {

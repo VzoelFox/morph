@@ -255,18 +255,32 @@ func (p *Parser) parseStatement() Statement {
 }
 
 func (p *Parser) parseVarStatement() *VarStatement {
-	stmt := &VarStatement{Token: p.curToken}
+	stmt := &VarStatement{Token: p.curToken, Names: []*Identifier{}, Values: []Expression{}}
 
+	// Parse first name
 	if !p.expectPeek(lexer.IDENT) {
 		return nil
 	}
-	stmt.Name = &Identifier{Token: p.curToken, Value: p.curToken.Literal}
+	stmt.Names = append(stmt.Names, &Identifier{Token: p.curToken, Value: p.curToken.Literal})
 
-	// Expect explicit type
-	p.nextToken()
-	stmt.Type = p.parseType()
-	if stmt.Type == nil {
-		return nil
+	// Parse subsequent names
+	for p.peekTokenIs(lexer.COMMA) {
+		p.nextToken()
+		if !p.expectPeek(lexer.IDENT) {
+			return nil
+		}
+		stmt.Names = append(stmt.Names, &Identifier{Token: p.curToken, Value: p.curToken.Literal})
+	}
+
+	// Parse optional type
+	if p.peekIsType() {
+		p.nextToken()
+		stmt.Type = p.parseType()
+		if stmt.Type == nil {
+			return nil
+		}
+	} else {
+		stmt.Type = nil
 	}
 
 	if !p.expectPeek(lexer.ASSIGN) {
@@ -274,7 +288,14 @@ func (p *Parser) parseVarStatement() *VarStatement {
 	}
 	p.nextToken() // move to RHS
 
-	stmt.Value = p.parseExpression(LOWEST)
+	// Parse values
+	stmt.Values = append(stmt.Values, p.parseExpression(LOWEST))
+
+	for p.peekTokenIs(lexer.COMMA) {
+		p.nextToken()
+		p.nextToken()
+		stmt.Values = append(stmt.Values, p.parseExpression(LOWEST))
+	}
 
 	if p.peekTokenIs(lexer.SEMICOLON) {
 		p.nextToken()
@@ -434,11 +455,17 @@ func (p *Parser) parseStructStatement() *StructStatement {
 }
 
 func (p *Parser) parseReturnStatement() *ReturnStatement {
-	stmt := &ReturnStatement{Token: p.curToken}
+	stmt := &ReturnStatement{Token: p.curToken, ReturnValues: []Expression{}}
 
 	p.nextToken()
 
-	stmt.ReturnValue = p.parseExpression(LOWEST)
+	stmt.ReturnValues = append(stmt.ReturnValues, p.parseExpression(LOWEST))
+
+	for p.peekTokenIs(lexer.COMMA) {
+		p.nextToken()
+		p.nextToken()
+		stmt.ReturnValues = append(stmt.ReturnValues, p.parseExpression(LOWEST))
+	}
 
 	if p.peekTokenIs(lexer.SEMICOLON) {
 		p.nextToken()
@@ -449,23 +476,41 @@ func (p *Parser) parseReturnStatement() *ReturnStatement {
 
 func (p *Parser) parseExpressionOrAssignmentStatement() Statement {
 	startToken := p.curToken
-	expr := p.parseExpression(LOWEST)
+	exprs := []Expression{p.parseExpression(LOWEST)}
+
+	// Check for multiple LHS (a, b = ...)
+	for p.peekTokenIs(lexer.COMMA) {
+		p.nextToken()
+		p.nextToken()
+		exprs = append(exprs, p.parseExpression(LOWEST))
+	}
 
 	if p.peekTokenIs(lexer.ASSIGN) {
 		p.nextToken() // move to =
 		assignToken := p.curToken
 		p.nextToken() // move to RHS
 
-		val := p.parseExpression(LOWEST)
+		vals := []Expression{p.parseExpression(LOWEST)}
+		for p.peekTokenIs(lexer.COMMA) {
+			p.nextToken()
+			p.nextToken()
+			vals = append(vals, p.parseExpression(LOWEST))
+		}
 
 		if p.peekTokenIs(lexer.SEMICOLON) {
 			p.nextToken()
 		}
 
-		return &AssignmentStatement{Token: assignToken, Name: expr, Value: val}
+		return &AssignmentStatement{Token: assignToken, Names: exprs, Values: vals}
 	}
 
-	stmt := &ExpressionStatement{Token: startToken, Expression: expr}
+	// If we parsed multiple expressions but no assignment, it's invalid (unless we support tuple expressions)
+	if len(exprs) > 1 {
+		p.addDetailedError(p.curToken, "Comma-separated expressions only allowed in assignment")
+		return nil
+	}
+
+	stmt := &ExpressionStatement{Token: startToken, Expression: exprs[0]}
 
 	if p.peekTokenIs(lexer.SEMICOLON) {
 		p.nextToken()
@@ -842,10 +887,25 @@ func (p *Parser) parseFunctionLiteral() Expression {
 	lit.Parameters = p.parseFunctionParameters()
 
 	// Parse optional return type
-	if p.peekIsType() {
+	if p.peekTokenIs(lexer.LPAREN) {
+		p.nextToken() // curToken is (
+		p.nextToken() // curToken is Type start
+		lit.ReturnTypes = []TypeNode{}
+
+		lit.ReturnTypes = append(lit.ReturnTypes, p.parseType())
+		for p.peekTokenIs(lexer.COMMA) {
+			p.nextToken()
+			p.nextToken()
+			lit.ReturnTypes = append(lit.ReturnTypes, p.parseType())
+		}
+
+		if !p.expectPeek(lexer.RPAREN) {
+			return nil
+		}
+	} else if p.peekIsType() {
 		p.nextToken() // move to type start
-		lit.ReturnType = p.parseType()
-		if lit.ReturnType == nil {
+		lit.ReturnTypes = []TypeNode{p.parseType()}
+		if lit.ReturnTypes[0] == nil {
 			return nil
 		}
 	}
