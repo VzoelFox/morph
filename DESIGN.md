@@ -19,8 +19,8 @@ Menggunakan gaya blok dengan keyword `akhir` (mirip Ruby/Lua) untuk mengurangi n
 - `kembalikan`: Return value.
 - `akhir`: Menutup blok kode.
 - `struktur`: Mendefinisikan tipe data komposit (struct).
-- `jalankan`: Concurrency (mirip `go`).
-- `tunda`: Defer execution (mirip `defer`).
+- `jalankan`*: Concurrency (Planned).
+- `tunda`*: Defer execution (Planned).
 
 ### Contoh Hello World
 ```morph
@@ -73,58 +73,20 @@ akhir
 ### Pemicu Error Detail
 Setiap error harus menyertakan konteks (file, baris, op code) secara otomatis di level compiler/runtime (tanpa overhead runtime besar jika di-strip).
 
-## 4. Manajemen Memori (Semi-Manual)
-
-Mengadopsi pendekatan **Region-based Memory Management (Arenas)** dan **Explicit Allocation** untuk kontrol penuh.
-
-- **Stack Allocation**: Default untuk variabel lokal.
-- **Heap Allocation**: Eksplisit dengan `alokasi`.
-- **Pembersihan**:
-    - Otomatis untuk stack.
-    - Semi-otomatis menggunakan `wilayah` (region/arena). Semua yang dialokasikan dalam wilayah akan dibersihkan saat wilayah berakhir.
-
-```morph
-fungsi prosesData()
-    // Membuat wilayah memori baru
-    wilayah w
-        data = alokasi(w, BesarData) // dialokasikan di heap dalam wilayah w
-        // ... proses data ...
-    akhir
-    // 'data' otomatis dibebaskan di sini saat 'akhir' dicapai
-akhir
-```
-
-## 5. Konkurensi (Concurrency)
-
-Menggunakan model **Green Threads** (mirip Goroutine) dengan komunikasi via **Saluran** (Channel).
-
-```morph
-fungsi pekerja(id int, ch saluran<int>)
-    cetak("Pekerja #{id} mulai")
-    ch <- id * 2 // Kirim data ke saluran
-akhir
-
-fungsi utama()
-    ch = buat_saluran<int>()
-
-    untuk i = 0; i < 5; i++
-        jalankan pekerja(i, ch)
-    akhir
-
-    untuk i = 0; i < 5; i++
-        hasil = <-ch
-        cetak("Dapat: ", hasil)
-    akhir
-akhir
-```
-
-## 6. Integrasi AI & Context (Morph Unique Feature)
+## 4. Integrasi AI & Context (Morph Unique Feature)
 
 Compiler menghasilkan file `.morph.vz` yang berisi AST dump, Symbol Table, dan Type Info setiap kali kompilasi, memudahkan AI Agent untuk memahami struktur kode tanpa parsing ulang.
 
 ---
 
-**Pertanyaan untuk Diskusi:**
-1. Apakah sintaks blok (`akhir`) sudah sesuai keinginan atau lebih suka `{}`?
-2. Apakah pendekatan `wilayah` (Arena) untuk memori semi-manual cocok dengan visi Anda?
-3. Apakah penamaan keyword bahasa Indonesia ini sudah pas?
+## Roadmap: Post-Self-Host
+
+Fitur-fitur berikut akan didiskusikan dan diimplementasikan secara detail **setelah** bahasa mencapai tahap self-hosting (bootstrap compiler selesai).
+
+### A. Manajemen Memori (Semi-Manual)
+*Status: Proposal (Ditunda)*
+Rencana awal mengadopsi pendekatan **Region-based Memory Management (Arenas)** dengan keyword `wilayah` dan `alokasi`. Detail akan difinalisasi nanti.
+
+### B. Konkurensi (Morphroutines)
+*Status: Proposal (Ditunda)*
+Rencana awal menggunakan model **Green Threads** (`jalankan`) dan **Channels**. Detail akan difinalisasi nanti.

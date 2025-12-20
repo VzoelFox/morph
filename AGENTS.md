@@ -55,7 +55,11 @@ project-root/
 
 ## Riwayat Perubahan
 
-### Version 1.1.0 - 2025-12-20 (Current)
+### Version 1.1.1 - 2025-12-20
+**Perubahan**:
+- Update DESIGN.md: Defer Memory and Concurrency specs to post-self-host phase.
+
+### Version 1.1.0 - 2025-12-20
 **Perubahan**:
 - Rename project from "Fox" to "Morph".
 - Update directory structure references to `.morph.vz`.
