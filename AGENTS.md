@@ -1,15 +1,15 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.0.0
+- **Versi**: 1.1.0
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
-- **Checksum**: SHA256:INITIAL
+- **Terakhir Diupdate**: 2025-12-20
 - **Status**: Active
 
 ---
 
 ## Tujuan Dokumen
-Dokumen ini adalah **single source of truth** untuk AI Agent dalam pengembangan bahasa pemrograman Fox. Setiap perubahan pada codebase akan tercatat di sini dengan checksum, timestamp, dan konteks untuk meminimalisir halusinasi dan menjaga konsistensi.
+Dokumen ini adalah **single source of truth** untuk AI Agent dalam pengembangan bahasa pemrograman Morph. Setiap perubahan pada codebase akan tercatat di sini dengan checksum, timestamp, dan konteks untuk meminimalisir halusinasi dan menjaga konsistensi.
 
 ---
 
@@ -24,34 +24,58 @@ Dokumen ini adalah **single source of truth** untuk AI Agent dalam pengembangan 
 ```
 project-root/
 ├── agents.md                 # File ini (source of truth)
-├── .fox.vz/                  # Direktori konteks dan snapshot
+├── .morph.vz/                # Direktori konteks dan snapshot
 │   ├── snapshots/           # Snapshot state per sesi
 │   ├── checksums/           # Checksum file per versi
 │   └── context/             # Konteks sesi development
 └── .vzoel.jules/            # Catatan hutang teknis & rekomendasi
-    ├── technical-debt.fox.vz
-    ├── next-improvements.fox.vz
+    ├── technical-debt.morph.vz
+    ├── next-improvements.morph.vz
     └── session-notes/
 ```
 
 ---
 
-## Spesifikasi Bahasa Fox
+## Spesifikasi Bahasa Morph
 
 ### Status: Dalam Perencanaan
-**Target**: Bahasa pemrograman yang bisa self-host dengan compiler bootstrap
+**Target**: Bahasa pemrograman yang bisa self-host dengan compiler bootstrap (Go -> LLVM)
 
 ### Fitur Core (Planned)
 - [ ] Lexer & Parser
 - [ ] AST Generator
-- [ ] Type Checker
-- [ ] Code Generator
+- [ ] Type Checker (Static)
+- [ ] Code Generator (LLVM)
 - [ ] Self-hosting capability
 - [ ] AI-assisted development dengan context tracking
+- [ ] Concurrency (Goroutine-like)
+- [ ] Semi-manual Memory Management
 
 ---
 
 ## Riwayat Perubahan
+
+### Version 1.2.1 - 2025-12-20
+**Perubahan**:
+- Menambahkan `ROADMAP.md` (Fase 1-5).
+- Menambahkan dokumentasi hutang teknis di `.vzoel.jules/technical-debt.morph.vz`.
+
+### Version 1.2.0 - 2025-12-20
+**Perubahan**:
+- Porting `pkg/lexer` & `pkg/parser` dari repo referensi.
+- Implementasi `pkg/analysis` (Analyzer, Context generation).
+- Fix Lexer tests (handle COMMENT token).
+- Init go.mod.
+
+### Version 1.1.1 - 2025-12-20
+**Perubahan**:
+- Update DESIGN.md: Defer Memory and Concurrency specs to post-self-host phase.
+
+### Version 1.1.0 - 2025-12-20
+**Perubahan**:
+- Rename project from "Fox" to "Morph".
+- Update directory structure references to `.morph.vz`.
+- Define bootstrap strategy: Go language.
 
 ### Version 1.0.0 - 2025-12-20 06.10 WIB
 **Checksum**: SHA256:INITIAL  
@@ -64,7 +88,7 @@ project-root/
 - User ingin membuat bahasa pemrograman dengan AI agent
 - Fokus pada minimalisir halusinasi dengan tracking ketat
 - Menggunakan checksum dan timestamp untuk setiap perubahan
-- File konteks disimpan di `.fox.vz`
+- File konteks disimpan di `.morph.vz`
 - Technical debt tracking di `.vzoel.jules`
 
 **File Terkait**:
@@ -78,7 +102,7 @@ project-root/
 
 1. **Generate Checksum**
    ```bash
-   sha256sum <filename> > .fox.vz/checksums/<filename>.sha256
+   sha256sum <filename> > .morph.vz/checksums/<filename>.sha256
    ```
 
 2. **Catat di agents.md**
@@ -90,7 +114,7 @@ project-root/
 
 3. **Simpan Snapshot Konteks**
    ```bash
-   # Simpan state conversation di .fox.vz/context/
+   # Simpan state conversation di .morph.vz/context/
    session-YYYY-MM-DD-HHMMSS.md
    ```
 
@@ -137,7 +161,7 @@ project-root/
 ## Aturan untuk AI Agent
 
 1. **SELALU** cek `agents.md` sebelum membuat atau memodifikasi file
-2. **JANGAN UBAH AGENTS.md** karena ini sumber kebenaran
+2. **JANGAN UBAH AGENTS.md** karena ini sumber kebenaran (kecuali mencatat log perubahan)
 3. **SELALU** generate checksum untuk file yang berubah
 4. **SELALU** catat konteks lengkap di setiap entry
 5. **JANGAN PERNAH** membuat file tanpa mencatatnya di sini
@@ -168,11 +192,10 @@ Saya, Claude AI, berkomitmen untuk:
 
 ## Next Steps
 
-1. Diskusi spesifikasi bahasa Fox
-2. Tentukan syntax dan semantics
-3. Pilih bahasa untuk bootstrap compiler
-4. Mulai implementasi lexer
-5. Setup tooling untuk auto-checksum
+1. Diskusi spesifikasi bahasa Morph
+2. Tentukan syntax dan semantics (Design Spec)
+3. Implementasi Lexer & Parser (in Go)
+4. Setup tooling untuk auto-checksum
 
 ---
 
