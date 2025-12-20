@@ -1,5 +1,7 @@
 package checker
 
+import "fmt"
+
 type Scope struct {
 	types     map[string]Type // Struct definitions, etc.
 	variables map[string]Type // Variable/Function signatures
@@ -14,8 +16,21 @@ func NewScope(outer *Scope) *Scope {
 	}
 }
 
-func (s *Scope) DefineVariable(name string, t Type) {
+func (s *Scope) DefineVariable(name string, t Type) *TypeWarning {
+	// Check outer scope for shadowing
+	if s.outer != nil {
+		if _, exists := s.outer.LookupVariable(name); exists {
+			warning := &TypeWarning{
+				Message: fmt.Sprintf("Variable '%s' shadows outer scope", name),
+				Line:    0, // To be filled by caller
+				Column:  0,
+			}
+			s.variables[name] = t
+			return warning
+		}
+	}
 	s.variables[name] = t
+	return nil
 }
 
 func (s *Scope) DefineType(name string, t Type) {
