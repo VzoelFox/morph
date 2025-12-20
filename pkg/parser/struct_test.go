@@ -39,14 +39,14 @@ akhir
 	if stmt.Fields[0].Name != "nama" {
 		t.Errorf("Field 0 Name wrong. got=%s", stmt.Fields[0].Name)
 	}
-	if stmt.Fields[0].Type != "string" {
-		t.Errorf("Field 0 Type wrong. got=%s", stmt.Fields[0].Type)
+	if stmt.Fields[0].Type.String() != "string" {
+		t.Errorf("Field 0 Type wrong. got=%s", stmt.Fields[0].Type.String())
 	}
 
 	if stmt.Fields[1].Name != "umur" {
 		t.Errorf("Field 1 Name wrong. got=%s", stmt.Fields[1].Name)
 	}
-	if stmt.Fields[1].Type != "int" {
-		t.Errorf("Field 1 Type wrong. got=%s", stmt.Fields[1].Type)
+	if stmt.Fields[1].Type.String() != "int" {
+		t.Errorf("Field 1 Type wrong. got=%s", stmt.Fields[1].Type.String())
 	}
 }

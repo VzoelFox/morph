@@ -1,0 +1,86 @@
+package parser
+
+import (
+	"testing"
+
+	"github.com/VzoelFox/morphlang/pkg/lexer"
+)
+
+func TestVarStatement(t *testing.T) {
+	tests := []struct {
+		input        string
+		expectedName string
+		expectedType string
+		expectedVal  interface{}
+	}{
+		{"var x Int = 5;", "x", "Int", 5},
+		{"var y String = \"hello\";", "y", "String", "hello"},
+		{"var z Bool = benar;", "z", "Bool", true},
+		{"var arr []Int = [1, 2];", "arr", "[]Int", nil}, // Value check skipped for array literal for brevity
+	}
+
+	for _, tt := range tests {
+		l := lexer.New(tt.input)
+		p := New(l)
+		program := p.ParseProgram()
+		checkParserErrors(t, p)
+
+		if len(program.Statements) != 1 {
+			t.Fatalf("program.Statements does not contain 1 statements. got=%d",
+				len(program.Statements))
+		}
+
+		stmt, ok := program.Statements[0].(*VarStatement)
+		if !ok {
+			t.Errorf("stmt not *VarStatement. got=%T", program.Statements[0])
+			continue
+		}
+
+		if stmt.Name.Value != tt.expectedName {
+			t.Errorf("stmt.Name.Value not %s. got=%s", tt.expectedName, stmt.Name.Value)
+		}
+
+		if stmt.Type.String() != tt.expectedType {
+			t.Errorf("stmt.Type.String not %s. got=%s", tt.expectedType, stmt.Type.String())
+		}
+
+		if tt.expectedVal != nil {
+			if !testLiteralExpression(t, stmt.Value, tt.expectedVal) {
+				return
+			}
+		}
+	}
+}
+
+func TestComplexTypes(t *testing.T) {
+	input := `
+var a []Int = [];
+var b map[String]Int = {};
+var c [][]String = [];
+var d map[String]map[Int]Bool = {};
+`
+	l := lexer.New(input)
+	p := New(l)
+	program := p.ParseProgram()
+	checkParserErrors(t, p)
+
+	tests := []struct {
+		expectedType string
+	}{
+		{"[]Int"},
+		{"map[String]Int"},
+		{"[][]String"},
+		{"map[String]map[Int]Bool"},
+	}
+
+	for i, tt := range tests {
+		stmt, ok := program.Statements[i].(*VarStatement)
+		if !ok {
+			t.Errorf("stmt %d not VarStatement", i)
+			continue
+		}
+		if stmt.Type.String() != tt.expectedType {
+			t.Errorf("type wrong. expected=%q, got=%q", tt.expectedType, stmt.Type.String())
+		}
+	}
+}

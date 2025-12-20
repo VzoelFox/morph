@@ -8,10 +8,11 @@ import (
 )
 
 func TestAnalysisClosures(t *testing.T) {
+	// Use 'var' to avoid ambiguity with return type parsing
 	input := `
 	fungsi luar()
-		x = 10
-		fungsi dalam()
+		var x Int = 10
+		fungsi dalam() Void
 			x = 20
 		akhir
 	akhir
@@ -33,10 +34,6 @@ func TestAnalysisClosures(t *testing.T) {
 	// 'dalam' should NOT list 'x' as a local variable because it updates the outer 'x'.
 	dalamSym := ctx.Symbols["dalam"]
 	if dalamSym == nil {
-		// Analyzer might use different naming key for nested functions in flat map?
-		// Currently analyzer uses fn.Name. If unique, it's fine.
-		// If 'dalam' is not found, we skip check.
-		// But in this simple test, it should be found.
 		return
 	}
 
@@ -50,14 +47,14 @@ func TestAnalysisClosures(t *testing.T) {
 func TestGenerateContext(t *testing.T) {
 	input := `
 # Sample program
-x = 10
+var x Int = 10
 
-fungsi tambah(a, b)
+fungsi tambah(a Int, b Int) Int
   kembalikan a + b
 akhir
 
 fungsi main()
-  y = tambah(x, 5)
+  var y Int = tambah(x, 5)
 akhir
 `
 
@@ -74,7 +71,6 @@ akhir
 		t.Fatalf("GenerateContext failed: %v", err)
 	}
 
-	// 1. Verify File and Checksum
 	if ctx.File != "test.morph" {
 		t.Errorf("Expected filename 'test.morph', got %s", ctx.File)
 	}
@@ -82,39 +78,18 @@ akhir
 		t.Error("Checksum is empty")
 	}
 
-	// 2. Verify Statistics
-	// Lines:
-	// 1: empty
-	// 2: # Sample program (comment)
-	// 3: x = 10 (code)
-	// 4: empty
-	// 5: fungsi tambah(a, b) (code)
-	// 6:   kembalikan a + b (code)
-	// 7: akhir (code)
-	// 8: empty
-	// 9: fungsi main() (code)
-	// 10:   y = tambah(x, 5) (code)
-	// 11: akhir (code)
-	// 12: empty
-
-	// Total 12 lines.
-	// Blank: 1, 4, 8, 12 -> 4 lines
-	// Comment: 2 -> 1 line
-	// Code: 3, 5, 6, 7, 9, 10, 11 -> 7 lines
-
 	if ctx.Statistics.TotalLines != 12 {
 		t.Errorf("Expected 12 total lines, got %d", ctx.Statistics.TotalLines)
 	}
+	// Code lines count should remain similar, 7.
 	if ctx.Statistics.CodeLines != 7 {
 		t.Errorf("Expected 7 code lines, got %d", ctx.Statistics.CodeLines)
 	}
 
-	// 3. Verify Global Variables
 	if _, ok := ctx.GlobalVars["x"]; !ok {
 		t.Error("Global variable 'x' not found in context")
 	}
 
-	// 4. Verify Symbols (Functions)
 	tambahFn, ok := ctx.Symbols["tambah"]
 	if !ok {
 		t.Fatal("Function 'tambah' not found in symbols")
@@ -131,8 +106,6 @@ akhir
 		t.Fatal("Function 'main' not found in symbols")
 	}
 
-	// 5. Verify Call Graph
-	// main calls tambah
 	calls := ctx.CallGraph["main"]
 	foundCall := false
 	for _, c := range calls {
@@ -145,8 +118,6 @@ akhir
 		t.Errorf("Expected 'main' to call 'tambah', got calls: %v", calls)
 	}
 
-	// 6. Verify Local Scopes
-	// main has local var 'y'
 	mainScope := ctx.LocalScopes["main"]
 	if _, ok := mainScope["y"]; !ok {
 		t.Error("Local variable 'y' not found in 'main' scope")
@@ -155,7 +126,7 @@ akhir
 
 func TestAnalyzeErrorFunction(t *testing.T) {
 	input := `
-fungsi cek(x)
+fungsi cek(x Int)
   jika x < 0
     kembalikan galat("negatif")
   akhir
@@ -165,6 +136,10 @@ akhir
 	l := lexer.New(input)
 	p := parser.New(l)
 	program := p.ParseProgram()
+
+	if len(p.Errors()) > 0 {
+		t.Fatalf("Parser errors: %v", p.Errors())
+	}
 
 	ctx, _ := GenerateContext(program, "error.morph", input, nil)
 
@@ -180,9 +155,9 @@ akhir
 func TestAnalysisVariableTypes(t *testing.T) {
 	input := `
 # Global variables type test
-x = 10
-y = "halo"
-z = benar
+var x Int = 10
+var y String = "halo"
+var z Bool = benar
 `
 	l := lexer.New(input)
 	p := parser.New(l)
@@ -197,25 +172,22 @@ z = benar
 		t.Fatalf("GenerateContext failed: %v", err)
 	}
 
-	// Verify 'x' is integer
 	if v, ok := ctx.GlobalVars["x"]; !ok {
 		t.Error("Global variable 'x' not found")
-	} else if v.Type != "integer" {
-		t.Errorf("Expected x to be integer, got %s", v.Type)
+	} else if v.Type != "Int" {
+		t.Errorf("Expected x to be Int, got %s", v.Type)
 	}
 
-	// Verify 'y' is string
 	if v, ok := ctx.GlobalVars["y"]; !ok {
 		t.Error("Global variable 'y' not found")
-	} else if v.Type != "string" {
-		t.Errorf("Expected y to be string, got %s", v.Type)
+	} else if v.Type != "String" {
+		t.Errorf("Expected y to be String, got %s", v.Type)
 	}
 
-	// Verify 'z' is boolean
 	if v, ok := ctx.GlobalVars["z"]; !ok {
 		t.Error("Global variable 'z' not found")
-	} else if v.Type != "boolean" {
-		t.Errorf("Expected z to be boolean, got %s", v.Type)
+	} else if v.Type != "Bool" {
+		t.Errorf("Expected z to be Bool, got %s", v.Type)
 	}
 }
 
@@ -242,7 +214,6 @@ akhir
 		t.Fatalf("GenerateContext failed: %v", err)
 	}
 
-	// Verify Import
 	if len(ctx.Imports) != 1 {
 		t.Fatalf("Expected 1 import, got %d", len(ctx.Imports))
 	}
@@ -250,7 +221,6 @@ akhir
 		t.Errorf("Expected import 'std/math', got '%s'", ctx.Imports[0])
 	}
 
-	// Verify Struct
 	if len(ctx.Structs) != 1 {
 		t.Fatalf("Expected 1 struct, got %d", len(ctx.Structs))
 	}
@@ -258,25 +228,10 @@ akhir
 	if !ok {
 		t.Fatalf("Struct 'Pengguna' not found")
 	}
-	// Doc comment logic in Lexer/Parser might attach comments differently depending on newlines.
-	// Parser 'curComment' logic: captures comments before the token.
-	// 'struktur' token is preceded by '# Data pengguna'.
-	// So st.Doc should be set.
-	if st.Doc != " Data pengguna" && st.Doc != "# Data pengguna" {
-		// Lexer readComment includes '#'. Parser might trim?
-		// Lexer: readComment returns content starting after #.
-		// Wait, let's check lexer.readComment.
-		// It consumes # then space.
-		// So " Data pengguna" or "Data pengguna"?
-		// Lexer: l.readChar() consumes #. if l.ch == ' ' l.readChar().
-		// So it strips 1 space.
-		// " Data pengguna" -> "Data pengguna"
-	}
 
-    // Let's print doc to be sure if test fails, or just assert not empty for now.
-    if st.Doc == "" {
-        t.Errorf("Struct doc is empty")
-    }
+	if st.Doc == "" {
+		t.Errorf("Struct doc is empty")
+	}
 
 	if len(st.Fields) != 2 {
 		t.Fatalf("Expected 2 fields, got %d", len(st.Fields))
