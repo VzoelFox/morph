@@ -109,6 +109,10 @@ func (c *Checker) defineVar(s *parser.VarStatement) {
 		t = c.resolveType(s.Type)
 	}
 	for _, name := range s.Names {
+		if existing, ok := c.scope.variables[name.Value]; ok {
+			c.addError(name.Token.Line, name.Token.Column, "Global variable '%s' already declared (type: %s)", name.Value, existing.String())
+			continue
+		}
 		c.scope.DefineVariable(name.Value, t)
 	}
 }
@@ -337,11 +341,22 @@ func (c *Checker) checkVarStatement(s *parser.VarStatement) {
 		} else {
 			// Inference
 			if actual.Kind() != KindUnknown {
+				if c.isUnresolved(actual) {
+					c.addError(s.Token.Line, s.Token.Column, "Cannot infer type from empty literal for '%s'", name.Value)
+				}
 				finalType = actual
 			} else {
 				if len(s.Values) == 0 {
 					c.addError(s.Token.Line, s.Token.Column, "Variable '%s' requires type or value", name.Value)
 				}
+			}
+		}
+
+		// Check for same-scope redeclaration (Local only)
+		if c.scope.outer != nil {
+			if existingType, exists := c.scope.variables[name.Value]; exists {
+				c.addError(name.Token.Line, name.Token.Column, "Variable '%s' already declared in this scope (type: %s)", name.Value, existingType.String())
+				continue
 			}
 		}
 
@@ -673,4 +688,14 @@ func (c *Checker) addError(line, col int, format string, args ...interface{}) {
 
 func (c *Checker) addWarning(line, col int, format string, args ...interface{}) {
 	c.Warnings = append(c.Warnings, NewTypeWarning(line, col, format, args...))
+}
+
+func (c *Checker) isUnresolved(t Type) bool {
+	switch T := t.(type) {
+	case *ArrayType:
+		return T.Element.Kind() == KindUnknown || c.isUnresolved(T.Element)
+	case *MapType:
+		return T.Key.Kind() == KindUnknown || T.Value.Kind() == KindUnknown || c.isUnresolved(T.Key) || c.isUnresolved(T.Value)
+	}
+	return false
 }

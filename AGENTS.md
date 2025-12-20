@@ -55,6 +55,42 @@ project-root/
 
 ## Riwayat Perubahan
 
+### Version 1.5.2 - 2025-12-20
+**Checksum**: SHA256:VARIOUS
+**Perubahan**:
+- **Checker**: Implemented strict homogeneity check for Array and Map literals.
+- **Checker**: Implemented Shadowing Warning for local variables shadowing outer declarations.
+- **Checker**: Implemented Error for same-scope redeclaration (Global and Local).
+- **Scope**: Updated `DefineVariable` to return detailed Shadow Warning.
+- **Tests**: Added `pkg/checker/literal_strict_test.go` and updated `pkg/checker/shadow_test.go`.
+
+**Konteks Sesi**:
+- **Sprint 1 Final Push**: Menyelesaikan validasi ketat dan sistem warning.
+- Memastikan array/map literal konsisten (misal `[1, "a"]` adalah error).
+- Memastikan variable shadowing terdeteksi dan redeklarasi dalam scope yang sama ditolak.
+
+**File Terkait**:
+- `pkg/checker/checker.go` (SHA256:969b6f849c0bbe60d0b66c5e1d341320d53424ad456cfdbbfe8c37cb2c6d6460)
+- `pkg/checker/scope.go` (SHA256:2010ce96891e08816ed221275ad5dfdc9c91c5be31c9d277fee76f9d0a2f38cc)
+- `pkg/checker/literal_strict_test.go` (SHA256:56cbd508515ca0f37c9fccd33049abe75793bc6dff2244899fb6ca48ab451669)
+- `pkg/checker/shadow_test.go` (SHA256:e8fc9cd0d6a17f246fbba561e675dc832ddca3d4b2db31103756170e9ca317de)
+
+### Version 1.5.1 - 2025-12-20
+**Checksum**: SHA256:VARIOUS
+**Perubahan**:
+- **Checker**: Updated `ArrayType.Equals` and `MapType.Equals` to allow `UnknownType` (wildcard) compatibility for empty literals.
+- **Checker**: Implemented `isUnresolved` helper to strictly forbid type inference from empty literals (`var x = []`).
+- **Tests**: Added `pkg/checker/robustness_test.go` covering empty literal scenarios.
+
+**Konteks Sesi**:
+- **Emergency Fix**: Memperbaiki bug di mana empty literal ditolak saat assign ke typed variable.
+- Memastikan kebijakan "Explicit over Implicit": Variable tanpa tipe tidak boleh di-infer dari empty literal.
+
+**File Terkait**:
+- `pkg/checker/types.go` (SHA256:80541bf5d78617608ec12b3c0ed2b6dbf6c4c93c36c6fd45267c00128e246c56)
+- `pkg/checker/checker.go` (SHA256:25f8a8a0bf65272546a2d6552f83d3d0fd5d297c792a3359fee9e3101cf7ef27)
+- `pkg/checker/robustness_test.go` (SHA256:30126f1369a04cfec5b82a0540354368813e542699bf8d3bbfcf145b7ae73015)
+
 ### Version 1.5.0 - 2025-12-20
 **Checksum**: SHA256:VARIOUS
 **Perubahan**:
