@@ -1,6 +1,9 @@
 package checker
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type TypeKind int
 
@@ -14,6 +17,7 @@ const (
 	KindStruct
 	KindArray
 	KindMap
+	KindMulti // For multiple return values
 	KindUnknown
 	KindError
 	KindNull
@@ -103,8 +107,8 @@ func (t *StructType) Equals(other Type) bool {
 }
 
 type FunctionType struct {
-	Parameters []Type
-	ReturnType Type
+	Parameters  []Type
+	ReturnTypes []Type
 }
 
 func (t *FunctionType) Kind() TypeKind { return KindFunction }
@@ -116,7 +120,24 @@ func (t *FunctionType) String() string {
 		}
 		params += p.String()
 	}
-	return fmt.Sprintf("fungsi(%s) %s", params, t.ReturnType.String())
+
+	rets := ""
+	if len(t.ReturnTypes) == 1 {
+		rets = t.ReturnTypes[0].String()
+	} else if len(t.ReturnTypes) > 1 {
+		rets = "("
+		for i, r := range t.ReturnTypes {
+			if i > 0 {
+				rets += ", "
+			}
+			rets += r.String()
+		}
+		rets += ")"
+	} else {
+		rets = "Void"
+	}
+
+	return fmt.Sprintf("fungsi(%s) %s", params, rets)
 }
 func (t *FunctionType) Equals(other Type) bool {
 	if other.Kind() == KindNull {
@@ -131,7 +152,42 @@ func (t *FunctionType) Equals(other Type) bool {
 				return false
 			}
 		}
-		return t.ReturnType.Equals(o.ReturnType)
+		if len(t.ReturnTypes) != len(o.ReturnTypes) {
+			return false
+		}
+		for i, r := range t.ReturnTypes {
+			if !r.Equals(o.ReturnTypes[i]) {
+				return false
+			}
+		}
+		return true
+	}
+	return false
+}
+
+type MultiType struct {
+	Types []Type
+}
+
+func (t *MultiType) Kind() TypeKind { return KindMulti }
+func (t *MultiType) String() string {
+	parts := []string{}
+	for _, sub := range t.Types {
+		parts = append(parts, sub.String())
+	}
+	return "(" + strings.Join(parts, ", ") + ")"
+}
+func (t *MultiType) Equals(other Type) bool {
+	if o, ok := other.(*MultiType); ok {
+		if len(t.Types) != len(o.Types) {
+			return false
+		}
+		for i, sub := range t.Types {
+			if !sub.Equals(o.Types[i]) {
+				return false
+			}
+		}
+		return true
 	}
 	return false
 }

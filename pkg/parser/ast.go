@@ -83,10 +83,10 @@ func (mt *MapType) String() string {
 // --- Statements ---
 
 type VarStatement struct {
-	Token lexer.Token // var
-	Name  *Identifier
-	Type  TypeNode
-	Value Expression
+	Token  lexer.Token // var
+	Names  []*Identifier
+	Type   TypeNode // Optional
+	Values []Expression
 }
 
 func (vs *VarStatement) statementNode()       {}
@@ -94,14 +94,26 @@ func (vs *VarStatement) TokenLiteral() string { return vs.Token.Literal }
 func (vs *VarStatement) String() string {
 	var out bytes.Buffer
 	out.WriteString(vs.TokenLiteral() + " ")
-	out.WriteString(vs.Name.String())
+
+	names := []string{}
+	for _, n := range vs.Names {
+		names = append(names, n.String())
+	}
+	out.WriteString(strings.Join(names, ", "))
+
 	if vs.Type != nil {
 		out.WriteString(" " + vs.Type.String())
 	}
-	out.WriteString(" = ")
-	if vs.Value != nil {
-		out.WriteString(vs.Value.String())
+
+	if len(vs.Values) > 0 {
+		out.WriteString(" = ")
+		vals := []string{}
+		for _, v := range vs.Values {
+			vals = append(vals, v.String())
+		}
+		out.WriteString(strings.Join(vals, ", "))
 	}
+
 	out.WriteString(";")
 	return out.String()
 }
@@ -379,12 +391,12 @@ func (p *Parameter) String() string {
 }
 
 type FunctionLiteral struct {
-	Token      lexer.Token
-	Name       string
-	Parameters []*Parameter
-	ReturnType TypeNode
-	Body       *BlockStatement
-	Doc        string
+	Token       lexer.Token
+	Name        string
+	Parameters  []*Parameter
+	ReturnTypes []TypeNode
+	Body        *BlockStatement
+	Doc         string
 }
 
 func (fl *FunctionLiteral) expressionNode()      {}
@@ -404,9 +416,23 @@ func (fl *FunctionLiteral) String() string {
 		}
 	}
 	out.WriteString(") ")
-	if fl.ReturnType != nil {
-		out.WriteString(fl.ReturnType.String() + " ")
+
+	if len(fl.ReturnTypes) > 0 {
+		if len(fl.ReturnTypes) > 1 {
+			out.WriteString("(")
+		}
+		for i, rt := range fl.ReturnTypes {
+			if i > 0 {
+				out.WriteString(", ")
+			}
+			out.WriteString(rt.String())
+		}
+		if len(fl.ReturnTypes) > 1 {
+			out.WriteString(")")
+		}
+		out.WriteString(" ")
 	}
+
 	out.WriteString(fl.Body.String())
 	out.WriteString(" akhir")
 	return out.String()
@@ -435,8 +461,8 @@ func (ce *CallExpression) String() string {
 }
 
 type ReturnStatement struct {
-	Token       lexer.Token
-	ReturnValue Expression
+	Token        lexer.Token
+	ReturnValues []Expression
 }
 
 func (rs *ReturnStatement) statementNode()       {}
@@ -444,9 +470,13 @@ func (rs *ReturnStatement) TokenLiteral() string { return rs.Token.Literal }
 func (rs *ReturnStatement) String() string {
 	var out bytes.Buffer
 	out.WriteString(rs.TokenLiteral() + " ")
-	if rs.ReturnValue != nil {
-		out.WriteString(rs.ReturnValue.String())
+
+	vals := []string{}
+	for _, v := range rs.ReturnValues {
+		vals = append(vals, v.String())
 	}
+	out.WriteString(strings.Join(vals, ", "))
+
 	out.WriteString(";")
 	return out.String()
 }
@@ -521,20 +551,30 @@ func (is *ImportStatement) String() string {
 }
 
 type AssignmentStatement struct {
-	Token lexer.Token
-	Name  Expression
-	Value Expression
+	Token  lexer.Token
+	Names  []Expression
+	Values []Expression
 }
 
 func (as *AssignmentStatement) statementNode()       {}
 func (as *AssignmentStatement) TokenLiteral() string { return as.Token.Literal }
 func (as *AssignmentStatement) String() string {
 	var out bytes.Buffer
-	out.WriteString(as.Name.String())
-	out.WriteString(" = ")
-	if as.Value != nil {
-		out.WriteString(as.Value.String())
+
+	names := []string{}
+	for _, n := range as.Names {
+		names = append(names, n.String())
 	}
+	out.WriteString(strings.Join(names, ", "))
+
+	out.WriteString(" = ")
+
+	vals := []string{}
+	for _, v := range as.Values {
+		vals = append(vals, v.String())
+	}
+	out.WriteString(strings.Join(vals, ", "))
+
 	out.WriteString(";")
 	return out.String()
 }

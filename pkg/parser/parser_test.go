@@ -291,16 +291,24 @@ func TestAssignmentStatements(t *testing.T) {
 			continue
 		}
 
-		ident, ok := assignStmt.Name.(*Identifier)
+		if len(assignStmt.Names) != 1 {
+			t.Errorf("assignStmt.Names length not 1. got=%d", len(assignStmt.Names))
+			continue
+		}
+		ident, ok := assignStmt.Names[0].(*Identifier)
 		if !ok {
-			t.Errorf("assignStmt.Name not *Identifier. got=%T", assignStmt.Name)
+			t.Errorf("assignStmt.Names[0] not *Identifier. got=%T", assignStmt.Names[0])
 			continue
 		}
 		if ident.Value != tt.expectedIdentifier {
 			t.Errorf("ident.Value not %s. got=%s", tt.expectedIdentifier, ident.Value)
 		}
 
-		if !testLiteralExpression(t, assignStmt.Value, tt.expectedValue) {
+		if len(assignStmt.Values) != 1 {
+			t.Errorf("assignStmt.Values length not 1. got=%d", len(assignStmt.Values))
+			continue
+		}
+		if !testLiteralExpression(t, assignStmt.Values[0], tt.expectedValue) {
 			return
 		}
 	}
@@ -457,11 +465,11 @@ func TestFunctionLiteralParsing(t *testing.T) {
 		t.Errorf("parameter 1 type not Int. got=%s", function.Parameters[1].Type.String())
 	}
 
-	if function.ReturnType == nil {
-		t.Fatalf("function.ReturnType is nil")
+	if len(function.ReturnTypes) == 0 {
+		t.Fatalf("function.ReturnTypes is empty")
 	}
-	if function.ReturnType.String() != "Int" {
-		t.Errorf("function.ReturnType not Int. got=%s", function.ReturnType.String())
+	if function.ReturnTypes[0].String() != "Int" {
+		t.Errorf("function.ReturnTypes[0] not Int. got=%s", function.ReturnTypes[0].String())
 	}
 
 	if len(function.Body.Statements) != 1 {

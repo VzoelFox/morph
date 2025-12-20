@@ -24,9 +24,9 @@ func TestStructLiteralParsing(t *testing.T) {
 		t.Fatalf("Expected VarStatement, got %T", program.Statements[0])
 	}
 
-	lit, ok := stmt.Value.(*StructLiteral)
+	lit, ok := stmt.Values[0].(*StructLiteral)
 	if !ok {
-		t.Fatalf("Expected StructLiteral, got %T", stmt.Value)
+		t.Fatalf("Expected StructLiteral, got %T", stmt.Values[0])
 	}
 
 	if lit.Name.String() != "User" {
