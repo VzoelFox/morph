@@ -55,6 +55,43 @@ project-root/
 
 ## Riwayat Perubahan
 
+### Version 1.2.3 - 2025-12-20
+**Checksum**: SHA256:VARIOUS
+**Perubahan**:
+- Parser: Fixed `StructStatement` parsing to include field types.
+- Analysis: Added support for `StructStatement` and `ImportStatement`.
+- Analysis: Updated `Context` struct to store `Structs`.
+- Testing: Added `struct_test.go` and updated `analyzer_test.go`.
+- Technical Debt: Mark Analysis Robustness as Resolved.
+
+**Konteks Sesi**:
+- Meningkatkan robustness Analysis tool.
+- Memperbaiki struktur data aktual (Parser AST) untuk Struct.
+
+**File Terkait**:
+- `pkg/parser/parser.go` (SHA256:e8d586f047391ec75a4138ba3dd7c76e34afa01dd64b3229eb6175647bc07562)
+- `pkg/analysis/analyzer.go` (SHA256:f70d8d0ca5ea60ebb86ced21268ee2c12e6c1f501ee69c3fc4a6f6f48e9ea080)
+- `pkg/analysis/context.go` (SHA256:ac8b6422aedd2122b7546a841a30e99f212714fbbc8b2e419a176e5e501788a4)
+
+### Version 1.2.2 - 2025-12-20
+**Checksum**: SHA256:VARIOUS
+**Perubahan**:
+- Update `DESIGN.md`: Ubah referensi ekstensi dari `.morph` ke `.fox`.
+- Update `ROADMAP.md`: Ubah referensi ekstensi dari `.morph` ke `.fox`.
+- Added `pkg/parser/comment_test.go`: Verifikasi handling token COMMENT.
+- Update `technical-debt.morph.vz`: Mark Parser & Naming debt as resolved.
+
+**Konteks Sesi**:
+- Alignment fase pengembangan: Meresmikan nama Morph dan ekstensi .fox.
+- Membersihkan hutang teknis sebelum lanjut ke Fase 2.
+- Verifikasi parser sudah robust terhadap token COMMENT.
+
+**File Terkait**:
+- `DESIGN.md` (SHA256:bd1aad3b7f49fe45f98afefb3f69908865c9668d9efb511e0c1f022faa05115a)
+- `ROADMAP.md` (SHA256:d93c5fb3e6c05e09bdadf08648aa20532331686a07099c9e868dcbada0bcd5ee)
+- `pkg/parser/comment_test.go` (SHA256:eaf8d83cf65292e7d4b6480bd3227df6f043dae2b178862b3be6449b22311fab)
+- `.vzoel.jules/technical-debt.morph.vz` (SHA256:6a783170d7b7a2ce7001a2e13abb2ccdb213ac76895c19b6c26cdd00292db511)
+
 ### Version 1.2.1 - 2025-12-20
 **Perubahan**:
 - Menambahkan `ROADMAP.md` (Fase 1-5).

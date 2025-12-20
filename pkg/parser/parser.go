@@ -334,7 +334,13 @@ func (p *Parser) parseStructStatement() *StructStatement {
 		}
 
 		if p.curTokenIs(lexer.IDENT) {
-			field := &Identifier{Token: p.curToken, Value: p.curToken.Literal}
+			field := &StructField{Token: p.curToken, Name: p.curToken.Literal}
+
+			if !p.expectPeek(lexer.IDENT) {
+				return nil
+			}
+			field.Type = p.curToken.Literal
+
 			stmt.Fields = append(stmt.Fields, field)
 			p.nextToken()
 		} else {

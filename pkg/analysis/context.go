@@ -10,6 +10,7 @@ type Context struct {
 	Timestamp     time.Time              `json:"timestamp"`
 	Checksum      string                 `json:"checksum"`
 	Symbols       map[string]*Symbol     `json:"symbols"`
+	Structs       map[string]*StructInfo `json:"structs"`
 	GlobalVars    map[string]*Variable   `json:"global_variables"`
 	LocalScopes   map[string]LocalScope  `json:"local_scopes"`
 	Errors        []ParserError          `json:"errors"`
@@ -32,6 +33,19 @@ type Symbol struct {
 	Doc             string      `json:"doc,omitempty"`
 	Calls           []string    `json:"calls,omitempty"`
 	LocalVars       []string    `json:"local_variables,omitempty"`
+}
+
+type StructInfo struct {
+	Name   string            `json:"name"`
+	Fields []StructFieldInfo `json:"fields"`
+	Line   int               `json:"line"`
+	Doc    string            `json:"doc,omitempty"`
+}
+
+type StructFieldInfo struct {
+	Name string `json:"name"`
+	Type string `json:"type"`
+	Line int    `json:"line"`
 }
 
 type Variable struct {
