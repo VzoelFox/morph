@@ -55,6 +55,27 @@ project-root/
 
 ## Riwayat Perubahan
 
+### Version 1.3.0 - 2025-12-20
+**Checksum**: SHA256:VARIOUS
+**Perubahan**:
+- **Core**: Implemented `pkg/checker` for Type Checking (Pass 1 & 2).
+- **Parser**: Updated AST (`TypeNode`, `VarStatement`) and Parser (Typed functions, explicit types).
+- **Lexer**: Added `VAR` ("var") and `MAP` ("map") tokens.
+- **Analysis**: Updated `pkg/analysis` to support `VarStatement` and typed AST.
+- **Tests**: Added `pkg/checker` tests, `pkg/parser/var_test.go`, and updated existing tests.
+
+**Konteks Sesi**:
+- Memulai **Fase 2: Semantik & Tipe**.
+- Menetapkan sintaks tipe Go-style (`name Type`, `[]T`, `map[K]V`).
+- Mewajibkan deklarasi eksplisit dengan `var`.
+- Implementasi Type Checker dasar untuk assignment, binary ops, dan function calls.
+
+**File Terkait**:
+- `pkg/lexer/token.go` (SHA256:cdfad9b7c2096d53f4ab00f77429656e63d7a9c3f7ef14ba812904a4ffce29ab)
+- `pkg/parser/ast.go` (SHA256:fcd635f877c2d689a2f7625163a8a52fa187381a12321ac8fc3ff2bcc09f9dfa)
+- `pkg/parser/parser.go` (SHA256:0ef22bee4f447226104d82222264b1f23161f2448b0e9569e3f8a1d9f2f95fc7)
+- `pkg/checker/checker.go` (SHA256:efd0bc77dee133005c5937a7b3e77e07b91858a80513cfb7d1806fb75d87b69e)
+
 ### Version 1.2.3 - 2025-12-20
 **Checksum**: SHA256:VARIOUS
 **Perubahan**:

@@ -23,6 +23,12 @@ type Expression interface {
 	expressionNode()
 }
 
+// TypeNode represents a type annotation in the AST
+type TypeNode interface {
+	Node
+	typeNode()
+}
+
 type Program struct {
 	Statements []Statement
 }
@@ -39,6 +45,64 @@ func (p *Program) String() string {
 	for _, s := range p.Statements {
 		out.WriteString(s.String())
 	}
+	return out.String()
+}
+
+// --- Type Nodes ---
+
+type SimpleType struct {
+	Token lexer.Token
+	Name  string
+}
+
+func (st *SimpleType) typeNode()            {}
+func (st *SimpleType) TokenLiteral() string { return st.Token.Literal }
+func (st *SimpleType) String() string       { return st.Name }
+
+type ArrayType struct {
+	Token   lexer.Token // '['
+	Element TypeNode
+}
+
+func (at *ArrayType) typeNode()            {}
+func (at *ArrayType) TokenLiteral() string { return at.Token.Literal }
+func (at *ArrayType) String() string       { return "[]" + at.Element.String() }
+
+type MapType struct {
+	Token lexer.Token // 'map'
+	Key   TypeNode
+	Value TypeNode
+}
+
+func (mt *MapType) typeNode()            {}
+func (mt *MapType) TokenLiteral() string { return mt.Token.Literal }
+func (mt *MapType) String() string {
+	return "map[" + mt.Key.String() + "]" + mt.Value.String()
+}
+
+// --- Statements ---
+
+type VarStatement struct {
+	Token lexer.Token // var
+	Name  *Identifier
+	Type  TypeNode
+	Value Expression
+}
+
+func (vs *VarStatement) statementNode()       {}
+func (vs *VarStatement) TokenLiteral() string { return vs.Token.Literal }
+func (vs *VarStatement) String() string {
+	var out bytes.Buffer
+	out.WriteString(vs.TokenLiteral() + " ")
+	out.WriteString(vs.Name.String())
+	if vs.Type != nil {
+		out.WriteString(" " + vs.Type.String())
+	}
+	out.WriteString(" = ")
+	if vs.Value != nil {
+		out.WriteString(vs.Value.String())
+	}
+	out.WriteString(";")
 	return out.String()
 }
 
@@ -280,10 +344,24 @@ func (we *WhileExpression) String() string {
 	return out.String()
 }
 
+type Parameter struct {
+	Token lexer.Token
+	Name  *Identifier
+	Type  TypeNode
+}
+
+func (p *Parameter) String() string {
+	if p.Type != nil {
+		return p.Name.String() + " " + p.Type.String()
+	}
+	return p.Name.String()
+}
+
 type FunctionLiteral struct {
 	Token      lexer.Token
 	Name       string
-	Parameters []*Identifier
+	Parameters []*Parameter
+	ReturnType TypeNode
 	Body       *BlockStatement
 	Doc        string
 }
@@ -305,6 +383,9 @@ func (fl *FunctionLiteral) String() string {
 		}
 	}
 	out.WriteString(") ")
+	if fl.ReturnType != nil {
+		out.WriteString(fl.ReturnType.String() + " ")
+	}
 	out.WriteString(fl.Body.String())
 	out.WriteString(" akhir")
 	return out.String()
@@ -352,10 +433,10 @@ func (rs *ReturnStatement) String() string {
 type StructField struct {
 	Token lexer.Token
 	Name  string
-	Type  string
+	Type  TypeNode // changed from string
 }
 
-func (sf *StructField) String() string { return sf.Name + " " + sf.Type }
+func (sf *StructField) String() string { return sf.Name + " " + sf.Type.String() }
 
 type StructStatement struct {
 	Token  lexer.Token // The 'struktur' token
