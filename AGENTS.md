@@ -55,6 +55,66 @@ project-root/
 
 ## Riwayat Perubahan
 
+### Version 1.5.3 - 2025-12-20
+**Checksum**: SHA256:VARIOUS
+**Perubahan**:
+- **Checker**: Implemented Cyclic Struct Dependency Detection (Error).
+- **Checker**: Implemented Dead Code Detection (Warning for code after return).
+- **Checker**: Implemented Unused Variable Detection (Warning).
+- **Checker**: Added support for Prefix Expressions (`!` and `-`).
+- **Scope**: Enhanced to track variable usage with `SymbolInfo`.
+- **Tests**: Added `cycle_test.go`, `deadcode_test.go`, `unused_test.go` and updated `shadow_test.go`.
+
+**Konteks Sesi**:
+- **The Last Mile**: Menuntaskan robustness Type Checker hingga 100%.
+- Mencegah crash akibat recursive struct definition.
+- Meningkatkan kualitas kode developer dengan warning dead code dan unused variables.
+- Memperbaiki parsing/checking prefix operator yang sempat terlewat.
+
+**File Terkait**:
+- `pkg/checker/checker.go` (SHA256:30d44903ff0863e42616c26f183d20caa27003806c227b2bc321db9c7c914a31)
+- `pkg/checker/scope.go` (SHA256:88e4cf157d74d0dc9bc7f5386bbcb001c85f41092c7329c071b2a29ee6182d48)
+- `pkg/checker/cycle_test.go` (SHA256:4ab36e3ad47d9904bff3738fe7fc24542d903dbbab3697f4d3be61efa98578b2)
+- `pkg/checker/deadcode_test.go` (SHA256:fb440573764fad90c9a865184693010c4589802738621e5695715e9e4a8ab14b)
+- `pkg/checker/unused_test.go` (SHA256:391450fd74e3c68b1339ae52eadb21f3f2955ae089afa09411af08631f549879)
+- `pkg/checker/shadow_test.go` (SHA256:0d322aff551049f20f6dc9658b2745d6c0d45c9188d56568f0c996841634aff5)
+
+### Version 1.5.2 - 2025-12-20
+**Checksum**: SHA256:VARIOUS
+**Perubahan**:
+- **Checker**: Implemented strict homogeneity check for Array and Map literals.
+- **Checker**: Implemented Shadowing Warning for local variables shadowing outer declarations.
+- **Checker**: Implemented Error for same-scope redeclaration (Global and Local).
+- **Scope**: Updated `DefineVariable` to return detailed Shadow Warning.
+- **Tests**: Added `pkg/checker/literal_strict_test.go` and updated `pkg/checker/shadow_test.go`.
+
+**Konteks Sesi**:
+- **Sprint 1 Final Push**: Menyelesaikan validasi ketat dan sistem warning.
+- Memastikan array/map literal konsisten (misal `[1, "a"]` adalah error).
+- Memastikan variable shadowing terdeteksi dan redeklarasi dalam scope yang sama ditolak.
+
+**File Terkait**:
+- `pkg/checker/checker.go` (SHA256:969b6f849c0bbe60d0b66c5e1d341320d53424ad456cfdbbfe8c37cb2c6d6460)
+- `pkg/checker/scope.go` (SHA256:2010ce96891e08816ed221275ad5dfdc9c91c5be31c9d277fee76f9d0a2f38cc)
+- `pkg/checker/literal_strict_test.go` (SHA256:56cbd508515ca0f37c9fccd33049abe75793bc6dff2244899fb6ca48ab451669)
+- `pkg/checker/shadow_test.go` (SHA256:e8fc9cd0d6a17f246fbba561e675dc832ddca3d4b2db31103756170e9ca317de)
+
+### Version 1.5.1 - 2025-12-20
+**Checksum**: SHA256:VARIOUS
+**Perubahan**:
+- **Checker**: Updated `ArrayType.Equals` and `MapType.Equals` to allow `UnknownType` (wildcard) compatibility for empty literals.
+- **Checker**: Implemented `isUnresolved` helper to strictly forbid type inference from empty literals (`var x = []`).
+- **Tests**: Added `pkg/checker/robustness_test.go` covering empty literal scenarios.
+
+**Konteks Sesi**:
+- **Emergency Fix**: Memperbaiki bug di mana empty literal ditolak saat assign ke typed variable.
+- Memastikan kebijakan "Explicit over Implicit": Variable tanpa tipe tidak boleh di-infer dari empty literal.
+
+**File Terkait**:
+- `pkg/checker/types.go` (SHA256:80541bf5d78617608ec12b3c0ed2b6dbf6c4c93c36c6fd45267c00128e246c56)
+- `pkg/checker/checker.go` (SHA256:25f8a8a0bf65272546a2d6552f83d3d0fd5d297c792a3359fee9e3101cf7ef27)
+- `pkg/checker/robustness_test.go` (SHA256:30126f1369a04cfec5b82a0540354368813e542699bf8d3bbfcf145b7ae73015)
+
 ### Version 1.5.0 - 2025-12-20
 **Checksum**: SHA256:VARIOUS
 **Perubahan**:

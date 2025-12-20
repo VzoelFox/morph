@@ -2,35 +2,67 @@ package checker
 
 import "fmt"
 
+type SymbolInfo struct {
+	Type   Type
+	Line   int
+	Column int
+	Used   bool
+}
+
 type Scope struct {
-	types     map[string]Type // Struct definitions, etc.
-	variables map[string]Type // Variable/Function signatures
+	types     map[string]Type
+	variables map[string]SymbolInfo
 	outer     *Scope
 }
 
 func NewScope(outer *Scope) *Scope {
 	return &Scope{
 		types:     make(map[string]Type),
-		variables: make(map[string]Type),
+		variables: make(map[string]SymbolInfo),
 		outer:     outer,
 	}
 }
 
-func (s *Scope) DefineVariable(name string, t Type) *TypeWarning {
+func (s *Scope) DefineVariable(name string, t Type, line, col int) *TypeWarning {
 	// Check outer scope for shadowing
 	if s.outer != nil {
-		if _, exists := s.outer.LookupVariable(name); exists {
+		if outerType, exists := s.outer.LookupVariable(name); exists {
 			warning := &TypeWarning{
-				Message: fmt.Sprintf("Variable '%s' shadows outer scope", name),
+				Message: fmt.Sprintf("Variable '%s' shadows outer declaration (type: %s)", name, outerType.String()),
 				Line:    0, // To be filled by caller
 				Column:  0,
 			}
-			s.variables[name] = t
+			s.variables[name] = SymbolInfo{Type: t, Line: line, Column: col, Used: false}
 			return warning
 		}
 	}
-	s.variables[name] = t
+	s.variables[name] = SymbolInfo{Type: t, Line: line, Column: col, Used: false}
 	return nil
+}
+
+func (s *Scope) MarkUsed(name string) {
+	if sym, ok := s.variables[name]; ok {
+		sym.Used = true
+		s.variables[name] = sym
+		return
+	}
+	if s.outer != nil {
+		s.outer.MarkUsed(name)
+	}
+}
+
+func (s *Scope) CheckUnused() []TypeWarning {
+	var warnings []TypeWarning
+	for name, sym := range s.variables {
+		if !sym.Used && name != "main" && name != "parse_int" {
+			warnings = append(warnings, TypeWarning{
+				Message: fmt.Sprintf("Unused variable '%s'", name),
+				Line:    sym.Line,
+				Column:  sym.Column,
+			})
+		}
+	}
+	return warnings
 }
 
 func (s *Scope) DefineType(name string, t Type) {
@@ -38,9 +70,9 @@ func (s *Scope) DefineType(name string, t Type) {
 }
 
 func (s *Scope) LookupVariable(name string) (Type, bool) {
-	t, ok := s.variables[name]
+	sym, ok := s.variables[name]
 	if ok {
-		return t, true
+		return sym.Type, true
 	}
 	if s.outer != nil {
 		return s.outer.LookupVariable(name)
