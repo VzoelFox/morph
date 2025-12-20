@@ -5,19 +5,32 @@ import (
 )
 
 type Checker struct {
-	Errors             []TypeError
-	scope              *Scope
-	expectedReturnType Type
+	Errors      []TypeError
+	scope       *Scope
+	returnStack []Type
 }
 
 func New() *Checker {
 	c := &Checker{
-		Errors:             []TypeError{},
-		scope:              NewScope(nil),
-		expectedReturnType: nil,
+		Errors:      []TypeError{},
+		scope:       NewScope(nil),
+		returnStack: []Type{},
 	}
 	// Register built-ins if any
 	return c
+}
+
+func (c *Checker) pushReturn(t Type) { c.returnStack = append(c.returnStack, t) }
+func (c *Checker) popReturn() {
+	if len(c.returnStack) > 0 {
+		c.returnStack = c.returnStack[:len(c.returnStack)-1]
+	}
+}
+func (c *Checker) currentReturn() Type {
+	if len(c.returnStack) == 0 {
+		return nil
+	}
+	return c.returnStack[len(c.returnStack)-1]
 }
 
 func (c *Checker) Check(program *parser.Program) {
@@ -137,9 +150,10 @@ func (c *Checker) checkStatement(s parser.Statement) {
 		if stmt.ReturnValue != nil {
 			actual = c.checkExpression(stmt.ReturnValue)
 		}
-		if c.expectedReturnType != nil {
-			if !c.expectedReturnType.Equals(actual) && actual.Kind() != KindUnknown {
-				c.addError(stmt.Token.Line, stmt.Token.Column, "Return type mismatch: expected %s, got %s", c.expectedReturnType.String(), actual.String())
+		expected := c.currentReturn()
+		if expected != nil {
+			if !expected.Equals(actual) && actual.Kind() != KindUnknown {
+				c.addError(stmt.Token.Line, stmt.Token.Column, "Return type mismatch: expected %s, got %s", expected.String(), actual.String())
 			}
 		}
 	case *parser.StructStatement:
@@ -277,12 +291,10 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 			retType = c.resolveType(exp.ReturnType)
 		}
 
-		prevRet := c.expectedReturnType
-		c.expectedReturnType = retType
-
+		c.pushReturn(retType)
 		c.checkNodes(exp.Body.Statements)
+		c.popReturn()
 
-		c.expectedReturnType = prevRet
 		c.leaveScope()
 
 		paramTypes := []Type{}
@@ -290,6 +302,25 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 			paramTypes = append(paramTypes, c.resolveType(p.Type))
 		}
 		return &FunctionType{Parameters: paramTypes, ReturnType: retType}
+
+	case *parser.IfExpression:
+		condType := c.checkExpression(exp.Condition)
+		if condType.Kind() != KindBool && condType.Kind() != KindUnknown {
+			c.addError(exp.Token.Line, exp.Token.Column, "If condition must be Bool, got %s", condType.String())
+		}
+		c.checkStatement(exp.Consequence)
+		if exp.Alternative != nil {
+			c.checkStatement(exp.Alternative)
+		}
+		return VoidType
+
+	case *parser.WhileExpression:
+		condType := c.checkExpression(exp.Condition)
+		if condType.Kind() != KindBool && condType.Kind() != KindUnknown {
+			c.addError(exp.Token.Line, exp.Token.Column, "While condition must be Bool, got %s", condType.String())
+		}
+		c.checkStatement(exp.Body)
+		return VoidType
 
 	case *parser.CallExpression:
 		funcType := c.checkExpression(exp.Function)

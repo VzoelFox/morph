@@ -4,10 +4,21 @@
 **Last Updated**: 2025-12-20
 
 ### Pending / Open
-- **Type Checker**: Control Flow validation (If/While conditions must be Bool).
-- **Type Checker**: Return type check is partial (needs context stack for nested scopes).
+(None)
+
+### Future Improvements (Deferred)
+**Note**: Do not implement these until Type Checker (`pkg/checker`) is fully robust and tested.
+
+#### Analysis Tool (`pkg/analysis`) Enhancements
+- **Closure Detection**: Track captured variables explicitly using scope depth logic (not just existence check).
+- **Nested Functions**: Use unique keys (e.g., `parent.child`) for nested functions in the symbol table to prevent overwrites.
+- **Type Inference**: Improve `inferBinaryOpType` to handle coercion (e.g., `string` + `string`, `float` + `int`).
+- **Control Flow**: Detect unreachable code (code after return) and dead code (unused variables).
+- **Complexity**: Fix cyclomatic complexity calculation to be per-function, not global accumulation.
+- **Data Flow**: Implement Liveness Analysis and Variable Definition/Usage tracking.
 
 ### Resolved / Closed
+- **Type Checker**: Control Flow validation (`If`, `While`) and Nested Return Type check. (2025-12-20)
 - **Type Checker**: Support for `NullLiteral` assignment (e.g. `var x User = kosong`). (2025-12-20)
 - **Type Checker**: Field access validation (`x.name`) and Struct Instantiation `User{...}`. (2025-12-20)
 - **Type System Foundation**: Implemented `pkg/checker` with support for Primitives, Structs, Functions, Arrays, and Maps. Updated Parser to handle explicit type syntax. (2025-12-20)

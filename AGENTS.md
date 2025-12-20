@@ -55,6 +55,22 @@ project-root/
 
 ## Riwayat Perubahan
 
+### Version 1.3.2 - 2025-12-20
+**Checksum**: SHA256:VARIOUS
+**Perubahan**:
+- **Checker**: Added Control Flow type checking (`If`, `While` condition must be Bool).
+- **Checker**: Implemented robust Return Type checking using Context Stack (supports nested functions).
+- **Documentation**: Updated `technical-debt.morph.vz` with detailed Analysis Tool improvement plan (deferred).
+- **Documentation**: Created `.vzoel.jules/next-improvements.morph.vz`.
+
+**Konteks Sesi**:
+- Meningkatkan robustness Type Checker sesuai definisi "fully robust".
+- Mencatat saran improvement dari Claude AI untuk `pkg/analysis` sebagai hutang teknis yang terstruktur.
+
+**File Terkait**:
+- `pkg/checker/checker.go` (SHA256:VARIOUS)
+- `.vzoel.jules/technical-debt.morph.vz` (SHA256:VARIOUS)
+
 ### Version 1.3.1 - 2025-12-20
 **Checksum**: SHA256:VARIOUS
 **Perubahan**:

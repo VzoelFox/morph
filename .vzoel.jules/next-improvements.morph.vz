@@ -1,0 +1,28 @@
+# Rekomendasi Pengembangan Lanjutan
+
+Dokumen ini berisi saran detail untuk pengembangan masa depan, khususnya untuk `pkg/analysis`, yang ditunda hingga Type Checker utama stabil.
+
+## Analysis Tool Enhancements
+
+### 1. Closure Detection
+Saat ini `isDefined` hanya mengecek keberadaan variabel di stack. Sebaiknya hitung `depth`. Jika `depth > 0` (bukan scope lokal saat ini), tandai sebagai `Captured Variable`.
+
+### 2. Nested Function Handling
+Gunakan key unik untuk nested function di `context.Symbols`.
+Format saran: `parentFunction.childFunction`.
+
+### 3. Type Inference
+Implementasi `inferBinaryOpType` yang menangani koersi tipe:
+- `String + String` -> `String`
+- `Int + Float` -> `Float`
+- `Bool` ops -> `Bool`
+
+### 4. Control Flow & Dead Code
+- **Unreachable Code**: Deteksi statement setelah `kembalikan` (return) atau `berhenti` (break).
+- **Unused Var**: Track definisi variabel dan penggunaannya. Laporkan jika defined but not used.
+
+### 5. Complexity Metrics
+Hitung Cyclomatic Complexity per fungsi, bukan akumulasi global. Simpan di `Symbol.Complexity`.
+
+### 6. Data Flow
+Implementasi Liveness Analysis (Live-in/Live-out sets) untuk optimasi register allocation nantinya (saat masuk fase LLVM).

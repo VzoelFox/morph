@@ -189,3 +189,59 @@ func TestNullAssignment(t *testing.T) {
 		t.Errorf("Expected no errors, got %v", errors)
 	}
 }
+
+func TestControlFlow(t *testing.T) {
+	input := `
+	var x Int = 10;
+	jika x == 10
+		x = 20;
+	akhir
+	`
+	errors := check(input)
+	if len(errors) != 0 {
+		t.Errorf("Expected no errors, got %v", errors)
+	}
+}
+
+func TestControlFlowError(t *testing.T) {
+	input := `
+	var x Int = 10;
+	jika x
+		x = 20;
+	akhir
+	`
+	errors := check(input)
+	if len(errors) == 0 {
+		t.Error("Expected error for non-bool condition")
+	}
+}
+
+func TestNestedReturn(t *testing.T) {
+	input := `
+	fungsi outer() Int
+		fungsi inner() String
+			kembalikan "hello";
+		akhir
+		kembalikan 1;
+	akhir
+	`
+	errors := check(input)
+	if len(errors) != 0 {
+		t.Errorf("Expected no errors, got %v", errors)
+	}
+}
+
+func TestNestedReturnError(t *testing.T) {
+	input := `
+	fungsi outer() Int
+		fungsi inner() String
+			kembalikan 1;
+		akhir
+		kembalikan 1;
+	akhir
+	`
+	errors := check(input)
+	if len(errors) == 0 {
+		t.Error("Expected error in inner function return")
+	}
+}
