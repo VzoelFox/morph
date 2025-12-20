@@ -31,7 +31,7 @@ func New() *Checker {
 		Parameters:  []Type{StringType},
 		ReturnTypes: []Type{IntType, StringType},
 	}
-	c.scope.DefineVariable("parse_int", parseIntType)
+	c.scope.DefineVariable("parse_int", parseIntType, 0, 0)
 
 	return c
 }
@@ -53,6 +53,7 @@ func (c *Checker) Check(program *parser.Program) {
 	// Pass 1: Collect Definitions (Structs, Functions, Vars)
 	c.collectDefinitions(program)
 	c.resolveStructFields(program)
+	c.checkStructCycles(program)
 
 	// Pass 2: Check Bodies
 	c.checkNodes(program.Statements)
@@ -110,10 +111,10 @@ func (c *Checker) defineVar(s *parser.VarStatement) {
 	}
 	for _, name := range s.Names {
 		if existing, ok := c.scope.variables[name.Value]; ok {
-			c.addError(name.Token.Line, name.Token.Column, "Global variable '%s' already declared (type: %s)", name.Value, existing.String())
+			c.addError(name.Token.Line, name.Token.Column, "Global variable '%s' already declared (type: %s)", name.Value, existing.Type.String())
 			continue
 		}
-		c.scope.DefineVariable(name.Value, t)
+		c.scope.DefineVariable(name.Value, t, name.Token.Line, name.Token.Column)
 	}
 }
 
@@ -145,7 +146,7 @@ func (c *Checker) defineFunction(fn *parser.FunctionLiteral) {
 		st.Methods[fn.Name] = ft
 	} else {
 		// Normal function
-		c.scope.DefineVariable(fn.Name, ft)
+		c.scope.DefineVariable(fn.Name, ft, fn.Token.Line, fn.Token.Column)
 	}
 }
 
@@ -182,8 +183,13 @@ func (c *Checker) resolveType(n parser.TypeNode) Type {
 }
 
 func (c *Checker) checkNodes(stmts []parser.Statement) {
-	for _, s := range stmts {
+	for i, s := range stmts {
 		c.checkStatement(s)
+		if c.isReturn(s) && i < len(stmts)-1 {
+			next := stmts[i+1]
+			line, col := c.getStatementLineCol(next)
+			c.addWarning(line, col, "Unreachable code detected")
+		}
 	}
 }
 
@@ -354,14 +360,14 @@ func (c *Checker) checkVarStatement(s *parser.VarStatement) {
 
 		// Check for same-scope redeclaration (Local only)
 		if c.scope.outer != nil {
-			if existingType, exists := c.scope.variables[name.Value]; exists {
-				c.addError(name.Token.Line, name.Token.Column, "Variable '%s' already declared in this scope (type: %s)", name.Value, existingType.String())
+			if existingSym, exists := c.scope.variables[name.Value]; exists {
+				c.addError(name.Token.Line, name.Token.Column, "Variable '%s' already declared in this scope (type: %s)", name.Value, existingSym.Type.String())
 				continue
 			}
 		}
 
 		// Update scope with refined type
-		if warning := c.scope.DefineVariable(name.Value, finalType); warning != nil {
+		if warning := c.scope.DefineVariable(name.Value, finalType, name.Token.Line, name.Token.Column); warning != nil {
 			warning.Line = name.Token.Line
 			warning.Column = name.Token.Column
 			c.Warnings = append(c.Warnings, *warning)
@@ -383,6 +389,7 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 		return NullType
 	case *parser.Identifier:
 		if t, ok := c.scope.LookupVariable(exp.Value); ok {
+			c.scope.MarkUsed(exp.Value)
 			return t
 		}
 		// Also lookup types (e.g. Struct Name for literal)
@@ -506,6 +513,22 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 		}
 		return UnknownType
 
+	case *parser.PrefixExpression:
+		right := c.checkExpression(exp.Right)
+		if exp.Operator == "!" {
+			if right.Kind() != KindBool && right.Kind() != KindUnknown {
+				c.addError(exp.Token.Line, exp.Token.Column, "Operator ! not defined for type %s", right.String())
+			}
+			return BoolType
+		}
+		if exp.Operator == "-" {
+			if right.Kind() != KindInt && right.Kind() != KindFloat && right.Kind() != KindUnknown {
+				c.addError(exp.Token.Line, exp.Token.Column, "Operator - not defined for type %s", right.String())
+			}
+			return right
+		}
+		return UnknownType
+
 	case *parser.InfixExpression:
 		left := c.checkExpression(exp.Left)
 		right := c.checkExpression(exp.Right)
@@ -538,7 +561,7 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 		// Define Receiver in scope if present
 		if exp.Receiver != nil {
 			recvType := c.resolveType(exp.Receiver.Type)
-			if warning := c.scope.DefineVariable(exp.Receiver.Name.Value, recvType); warning != nil {
+			if warning := c.scope.DefineVariable(exp.Receiver.Name.Value, recvType, exp.Receiver.Name.Token.Line, exp.Receiver.Name.Token.Column); warning != nil {
 				warning.Line = exp.Receiver.Name.Token.Line
 				warning.Column = exp.Receiver.Name.Token.Column
 				c.Warnings = append(c.Warnings, *warning)
@@ -547,7 +570,7 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 
 		for _, p := range exp.Parameters {
 			t := c.resolveType(p.Type)
-			if warning := c.scope.DefineVariable(p.Name.Value, t); warning != nil {
+			if warning := c.scope.DefineVariable(p.Name.Value, t, p.Name.Token.Line, p.Name.Token.Column); warning != nil {
 				warning.Line = p.Name.Token.Line
 				warning.Column = p.Name.Token.Column
 				c.Warnings = append(c.Warnings, *warning)
@@ -677,6 +700,9 @@ func (c *Checker) enterScope() {
 }
 
 func (c *Checker) leaveScope() {
+	if warnings := c.scope.CheckUnused(); len(warnings) > 0 {
+		c.Warnings = append(c.Warnings, warnings...)
+	}
 	if c.scope.outer != nil {
 		c.scope = c.scope.outer
 	}
@@ -688,6 +714,82 @@ func (c *Checker) addError(line, col int, format string, args ...interface{}) {
 
 func (c *Checker) addWarning(line, col int, format string, args ...interface{}) {
 	c.Warnings = append(c.Warnings, NewTypeWarning(line, col, format, args...))
+}
+
+func (c *Checker) checkStructCycles(program *parser.Program) {
+	visited := make(map[string]bool)
+	visiting := make(map[string]bool)
+
+	var check func(name string) bool
+	check = func(name string) bool {
+		if visiting[name] {
+			return true
+		}
+		if visited[name] {
+			return false
+		}
+
+		visiting[name] = true
+		defer func() { visiting[name] = false }()
+
+		t, ok := c.scope.LookupType(name)
+		if !ok {
+			return false
+		}
+		st, ok := t.(*StructType)
+		if !ok {
+			return false
+		}
+
+		for _, fieldType := range st.Fields {
+			if depName := c.getStructName(fieldType); depName != "" {
+				if check(depName) {
+					return true
+				}
+			}
+		}
+
+		visited[name] = true
+		return false
+	}
+
+	for _, stmt := range program.Statements {
+		if s, ok := stmt.(*parser.StructStatement); ok {
+			if check(s.Name.Value) {
+				c.addError(s.Name.Token.Line, s.Name.Token.Column, "Cyclic struct dependency detected involving '%s'", s.Name.Value)
+			}
+		}
+	}
+}
+
+func (c *Checker) getStructName(t Type) string {
+	if st, ok := t.(*StructType); ok {
+		return st.Name
+	}
+	return ""
+}
+
+func (c *Checker) isReturn(s parser.Statement) bool {
+	_, ok := s.(*parser.ReturnStatement)
+	return ok
+}
+
+func (c *Checker) getStatementLineCol(s parser.Statement) (int, int) {
+	switch stmt := s.(type) {
+	case *parser.VarStatement:
+		return stmt.Token.Line, stmt.Token.Column
+	case *parser.ReturnStatement:
+		return stmt.Token.Line, stmt.Token.Column
+	case *parser.ExpressionStatement:
+		return stmt.Token.Line, stmt.Token.Column
+	case *parser.AssignmentStatement:
+		return stmt.Token.Line, stmt.Token.Column
+	case *parser.BlockStatement:
+		return stmt.Token.Line, stmt.Token.Column
+	case *parser.StructStatement:
+		return stmt.Token.Line, stmt.Token.Column
+	}
+	return 0, 0
 }
 
 func (c *Checker) isUnresolved(t Type) bool {

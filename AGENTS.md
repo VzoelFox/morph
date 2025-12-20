@@ -55,6 +55,30 @@ project-root/
 
 ## Riwayat Perubahan
 
+### Version 1.5.3 - 2025-12-20
+**Checksum**: SHA256:VARIOUS
+**Perubahan**:
+- **Checker**: Implemented Cyclic Struct Dependency Detection (Error).
+- **Checker**: Implemented Dead Code Detection (Warning for code after return).
+- **Checker**: Implemented Unused Variable Detection (Warning).
+- **Checker**: Added support for Prefix Expressions (`!` and `-`).
+- **Scope**: Enhanced to track variable usage with `SymbolInfo`.
+- **Tests**: Added `cycle_test.go`, `deadcode_test.go`, `unused_test.go` and updated `shadow_test.go`.
+
+**Konteks Sesi**:
+- **The Last Mile**: Menuntaskan robustness Type Checker hingga 100%.
+- Mencegah crash akibat recursive struct definition.
+- Meningkatkan kualitas kode developer dengan warning dead code dan unused variables.
+- Memperbaiki parsing/checking prefix operator yang sempat terlewat.
+
+**File Terkait**:
+- `pkg/checker/checker.go` (SHA256:30d44903ff0863e42616c26f183d20caa27003806c227b2bc321db9c7c914a31)
+- `pkg/checker/scope.go` (SHA256:88e4cf157d74d0dc9bc7f5386bbcb001c85f41092c7329c071b2a29ee6182d48)
+- `pkg/checker/cycle_test.go` (SHA256:4ab36e3ad47d9904bff3738fe7fc24542d903dbbab3697f4d3be61efa98578b2)
+- `pkg/checker/deadcode_test.go` (SHA256:fb440573764fad90c9a865184693010c4589802738621e5695715e9e4a8ab14b)
+- `pkg/checker/unused_test.go` (SHA256:391450fd74e3c68b1339ae52eadb21f3f2955ae089afa09411af08631f549879)
+- `pkg/checker/shadow_test.go` (SHA256:0d322aff551049f20f6dc9658b2745d6c0d45c9188d56568f0c996841634aff5)
+
 ### Version 1.5.2 - 2025-12-20
 **Checksum**: SHA256:VARIOUS
 **Perubahan**:
