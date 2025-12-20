@@ -55,6 +55,13 @@ project-root/
 
 ## Riwayat Perubahan
 
+### Version 1.2.0 - 2025-12-20
+**Perubahan**:
+- Porting `pkg/lexer` & `pkg/parser` dari repo referensi.
+- Implementasi `pkg/analysis` (Analyzer, Context generation).
+- Fix Lexer tests (handle COMMENT token).
+- Init go.mod.
+
 ### Version 1.1.1 - 2025-12-20
 **Perubahan**:
 - Update DESIGN.md: Defer Memory and Concurrency specs to post-self-host phase.
