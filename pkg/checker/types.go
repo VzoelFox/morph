@@ -6,6 +6,7 @@ type TypeKind int
 
 const (
 	KindInt TypeKind = iota
+	KindFloat
 	KindString
 	KindBool
 	KindVoid
@@ -40,6 +41,7 @@ func (t *BasicType) Equals(other Type) bool {
 
 var (
 	IntType    = &BasicType{K: KindInt, Name: "Int"}
+	FloatType  = &BasicType{K: KindFloat, Name: "Float"}
 	StringType = &BasicType{K: KindString, Name: "String"}
 	BoolType   = &BasicType{K: KindBool, Name: "Bool"}
 	VoidType   = &BasicType{K: KindVoid, Name: "Void"}

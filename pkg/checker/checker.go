@@ -6,6 +6,7 @@ import (
 
 type Checker struct {
 	Errors      []TypeError
+	Warnings    []TypeWarning
 	scope       *Scope
 	returnStack []Type
 }
@@ -13,10 +14,17 @@ type Checker struct {
 func New() *Checker {
 	c := &Checker{
 		Errors:      []TypeError{},
+		Warnings:    []TypeWarning{},
 		scope:       NewScope(nil),
 		returnStack: []Type{},
 	}
-	// Register built-ins if any
+
+	// Register primitive types
+	c.scope.DefineType("Int", IntType)
+	c.scope.DefineType("Float", FloatType)
+	c.scope.DefineType("String", StringType)
+	c.scope.DefineType("Bool", BoolType)
+
 	return c
 }
 
@@ -109,6 +117,8 @@ func (c *Checker) resolveType(n parser.TypeNode) Type {
 		switch t.Name {
 		case "Int":
 			return IntType
+		case "Float":
+			return FloatType
 		case "String":
 			return StringType
 		case "Bool":
@@ -179,6 +189,8 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 	switch exp := e.(type) {
 	case *parser.IntegerLiteral:
 		return IntType
+	case *parser.FloatLiteral:
+		return FloatType
 	case *parser.StringLiteral:
 		return StringType
 	case *parser.BooleanLiteral:
@@ -268,6 +280,9 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 			if left.Kind() == KindInt && right.Kind() == KindInt {
 				return IntType
 			}
+			if left.Kind() == KindFloat && right.Kind() == KindFloat {
+				return FloatType
+			}
 			c.addError(exp.Token.Line, exp.Token.Column, "Operator %s not defined for types %s and %s", exp.Operator, left.String(), right.String())
 			return ErrorType
 		case "==", "!=":
@@ -340,6 +355,42 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 			}
 			return f.ReturnType
 		}
+
+		// Check for Type Casting (e.g. Int(5.5))
+		if id, ok := exp.Function.(*parser.Identifier); ok {
+			// If it resolves to a Type and NOT a Variable, it's a Cast
+			if targetType, isType := c.scope.LookupType(id.Value); isType {
+				if _, isVar := c.scope.LookupVariable(id.Value); !isVar {
+					// It is a cast
+					if len(exp.Arguments) != 1 {
+						c.addError(exp.Token.Line, exp.Token.Column, "Type conversion requires exactly 1 argument")
+						return ErrorType
+					}
+					argType := c.checkExpression(exp.Arguments[0])
+
+					// Tier 1: Int -> Float (Lossless-ish)
+					if targetType.Kind() == KindFloat && argType.Kind() == KindInt {
+						return FloatType
+					}
+
+					// Tier 2: Float -> Int (Lossy - Warning)
+					if targetType.Kind() == KindInt && argType.Kind() == KindFloat {
+						c.addWarning(exp.Token.Line, exp.Token.Column, "Lossy conversion from Float to Int")
+						return IntType
+					}
+
+					// Identity
+					if targetType.Equals(argType) {
+						return targetType
+					}
+
+					// Tier 3: Forbidden (String -> Int, etc)
+					c.addError(exp.Token.Line, exp.Token.Column, "Cannot convert type %s to %s", argType.String(), targetType.String())
+					return ErrorType
+				}
+			}
+		}
+
 		c.addError(exp.Token.Line, exp.Token.Column, "Not a function: %s", funcType.String())
 		return ErrorType
 	}
@@ -359,4 +410,8 @@ func (c *Checker) leaveScope() {
 
 func (c *Checker) addError(line, col int, format string, args ...interface{}) {
 	c.Errors = append(c.Errors, NewTypeError(line, col, format, args...))
+}
+
+func (c *Checker) addWarning(line, col int, format string, args ...interface{}) {
+	c.Warnings = append(c.Warnings, NewTypeWarning(line, col, format, args...))
 }
