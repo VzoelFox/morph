@@ -1,5 +1,16 @@
 # Morph Memory Layout Specification
 
+⚠️ **IMPLEMENTATION DETAIL - SUBJECT TO CHANGE**
+
+This document describes the C implementation used in bootstrap v1.
+Future versions may use different representations (LLVM, bytecode VM, etc.)
+without changing Morph language semantics.
+
+The Morph language itself is defined in DESIGN.md.
+This document is for compiler implementers only.
+
+---
+
 ## Value Representation Strategy: Unboxed
 
 Morph uses direct C types (no boxing/tagging) for performance.
