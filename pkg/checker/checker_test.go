@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/VzoelFox/morphlang/pkg/lexer"
-	"github.com/VzoelFox/morphlang/pkg/parser"
+	"github.com/VzoelFox/morph/pkg/lexer"
+	"github.com/VzoelFox/morph/pkg/parser"
 )
 
 func check(input string) []TypeError {
