@@ -9,13 +9,9 @@
 ### Future Improvements (Deferred)
 **Note**: Do not implement these until Type Checker (`pkg/checker`) is fully robust and tested.
 
-#### Analysis Tool (`pkg/analysis`) Enhancements
-- **Closure Detection**: Track captured variables explicitly using scope depth logic (not just existence check).
-- **Nested Functions**: Use unique keys (e.g., `parent.child`) for nested functions in the symbol table to prevent overwrites.
-- **Type Inference**: Improve `inferBinaryOpType` to handle coercion (e.g., `string` + `string`, `float` + `int`).
-- **Control Flow**: Detect unreachable code (code after return) and dead code (unused variables).
-- **Complexity**: Fix cyclomatic complexity calculation to be per-function, not global accumulation.
-- **Data Flow**: Implement Liveness Analysis and Variable Definition/Usage tracking.
+#### Analysis Tool (`pkg/analysis`)
+- **Status**: **REMOVED**. Package deleted in v1.9.0 to eliminate duplication with `pkg/checker`.
+- Future context generation should reuse `pkg/checker` logic.
 
 ### Resolved / Closed
 - **Import System**: Enhanced to support Qualified Types (`Module.Type`) and Private Type visibility. (2025-12-20)

@@ -55,6 +55,15 @@ project-root/
 
 ## Riwayat Perubahan
 
+### Version 1.9.0 - 2025-12-20
+**Checksum**: SHA256:REMOVE_ANALYSIS
+**Perubahan**:
+- **Cleanup**: Removed `pkg/analysis` (Legacy Analyzer) to resolve architectural duplication.
+- **Docs**: Updated technical debt to reflect removal.
+
+**Konteks Sesi**:
+- **Architectural Cleanup**: Removing the "Zombie" analyzer that conflicted with the robust Checker.
+
 ### Version 1.8.1 - 2025-12-20
 **Checksum**: SHA256:REFACTOR_TYPE_SYSTEM
 **Perubahan**:
@@ -83,9 +92,6 @@ project-root/
 
 **File Terkait (Integrity Snapshot)**:
 - `go.mod` (SHA256:c7de783d9e3378d10d7865c5c05a3d05652403e1016f735455185a905f911340)
-- `pkg/analysis/analyzer.go` (SHA256:6affdb6232dad3e4e4e3d4192b583169b98679f9adf7c97121bb1d8b7ea837a0)
-- `pkg/analysis/analyzer_test.go` (SHA256:9921017608e692e25746ad25b14114d319de5d82a4137254ae8f851f690138af)
-- `pkg/analysis/context.go` (SHA256:ac8b6422aedd2122b7546a841a30e99f212714fbbc8b2e419a176e5e501788a4)
 - `pkg/checker/casting_test.go` (SHA256:c3d45c5384f975bc9ac059a19999797dc5ef385b11770e58ed7c1fd857badfc6)
 - `pkg/checker/checker.go` (SHA256:a838dd5e2b9b6bdfdebda2bce6c3124e25ed2ed98ba7730d8f7df85ffa5429fd)
 - `pkg/checker/checker_test.go` (SHA256:78f07e699921a3c0fea532e8b34779d51e758fdfaeeabb1f999ec27724dadfa1)
