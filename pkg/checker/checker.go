@@ -64,6 +64,8 @@ func (c *Checker) collectDefinitions(program *parser.Program) {
 	for _, stmt := range program.Statements {
 		if s, ok := stmt.(*parser.StructStatement); ok {
 			c.defineStruct(s)
+		} else if i, ok := stmt.(*parser.InterfaceStatement); ok {
+			c.defineInterface(i)
 		}
 	}
 
@@ -89,6 +91,36 @@ func (c *Checker) defineStruct(s *parser.StructStatement) {
 		Methods: make(map[string]*FunctionType),
 	}
 	c.scope.DefineType(s.Name.Value, st)
+}
+
+func (c *Checker) defineInterface(i *parser.InterfaceStatement) {
+	it := &InterfaceType{
+		Name:    i.Name.Value,
+		Methods: make(map[string]*FunctionType),
+	}
+
+	for _, methodNode := range i.Methods {
+		paramTypes := make([]Type, len(methodNode.Parameters))
+		for i, p := range methodNode.Parameters {
+			paramTypes[i] = c.resolveType(p.Type)
+		}
+
+		returnTypes := make([]Type, len(methodNode.ReturnTypes))
+		for i, rt := range methodNode.ReturnTypes {
+			returnTypes[i] = c.resolveType(rt)
+		}
+
+		if len(returnTypes) == 0 {
+			returnTypes = append(returnTypes, VoidType)
+		}
+
+		it.Methods[methodNode.Name] = &FunctionType{
+			Parameters:  paramTypes,
+			ReturnTypes: returnTypes,
+		}
+	}
+
+	c.scope.DefineType(i.Name.Value, it)
 }
 
 func (c *Checker) resolveStructFields(program *parser.Program) {
