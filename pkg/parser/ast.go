@@ -59,6 +59,18 @@ func (st *SimpleType) typeNode()            {}
 func (st *SimpleType) TokenLiteral() string { return st.Token.Literal }
 func (st *SimpleType) String() string       { return st.Name }
 
+type QualifiedType struct {
+	Token   lexer.Token // The first identifier
+	Package *Identifier
+	Name    *Identifier
+}
+
+func (qt *QualifiedType) typeNode()            {}
+func (qt *QualifiedType) TokenLiteral() string { return qt.Token.Literal }
+func (qt *QualifiedType) String() string {
+	return qt.Package.String() + "." + qt.Name.String()
+}
+
 type ArrayType struct {
 	Token   lexer.Token // '['
 	Element TypeNode

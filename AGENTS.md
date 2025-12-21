@@ -55,6 +55,27 @@ project-root/
 
 ## Riwayat Perubahan
 
+### Version 1.7.1 - 2025-12-20
+**Checksum**: SHA256:VARIOUS
+**Perubahan**:
+- **Parser**: Updated `parseType` to support Qualified Types (e.g., `Module.Type`).
+- **AST**: Added `QualifiedType` node.
+- **Checker**: Updated `resolveType` to resolve Qualified Types from imported modules.
+- **Checker**: Updated `checkImport` to export Types (Structs/Interfaces) from modules.
+- **Tests**: Added `pkg/checker/import_type_test.go` verifying cross-module type usage.
+
+**Konteks Sesi**:
+- **Tightening Integration**: Menutup gap fundamental di mana tipe data antar-module tidak bisa digunakan.
+- Sekarang developer bisa melakukan `var u model.User` (Type Resolution) selain `model.NewUser()` (Value Resolution).
+
+**File Terkait**:
+- `pkg/parser/ast.go` (SHA256:db046bb39eddfe463415312ef30ae4bc687d54f0befffba084a8de06148a0d3f)
+- `pkg/parser/parser.go` (SHA256:8279f1bd69b0a8894ea65a4870a19a54af85c992e90e1e7edd801856cd1e8441)
+- `pkg/checker/types.go` (SHA256:9daab5997e83b86b48b9e5107325b14719da4afc6701a5f2ae36309091b578c1)
+- `pkg/checker/checker.go` (SHA256:679519a419be7de45c0aae08b880b9622295144d1fa6890fe1512657807ce31e)
+- `pkg/checker/import_type_test.go` (SHA256:a799b6e8c2bd3840399173959734442d9d1e1fe37d1a9e93aed4db0449643eb7)
+- `.vzoel.jules/technical-debt.morph.vz` (SHA256:c52593ebdd0bd3d57ad2970c79459bd17c84e77647867d2f1c87b8ac0d240195)
+
 ### Version 1.7.0 - 2025-12-20
 **Checksum**: SHA256:VARIOUS
 **Perubahan**:
