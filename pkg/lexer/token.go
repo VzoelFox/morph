@@ -79,6 +79,7 @@ const (
 	BERHENTI   = "BERHENTI"
 	LANJUT     = "LANJUT"
 	STRUKTUR   = "STRUKTUR"
+	INTERFACE  = "INTERFACE"
 	VAR        = "VAR"
 	MAP        = "MAP"
 	COMMENT    = "COMMENT"
@@ -88,6 +89,7 @@ var keywords = map[string]TokenType{
 	"var":        VAR,
 	"map":        MAP,
 	"struktur":   STRUKTUR,
+	"antarmuka":  INTERFACE,
 	"fungsi":     FUNGSI,
 	"jika":       JIKA,
 	"atau_jika":  ATAU_JIKA,

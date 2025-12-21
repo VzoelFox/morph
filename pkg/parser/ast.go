@@ -534,6 +534,48 @@ func (ss *StructStatement) String() string {
 	return out.String()
 }
 
+// InterfaceStatement represents the definition of an interface.
+// e.g., antarmuka Pembicara fungsi Bicara() string akhir
+type InterfaceStatement struct {
+	Token   lexer.Token // The 'antarmuka' token
+	Name    *Identifier
+	Methods []*FunctionLiteral // Method signatures (Body will be nil)
+}
+
+func (is *InterfaceStatement) statementNode()       {}
+func (is *InterfaceStatement) TokenLiteral() string { return is.Token.Literal }
+func (is *InterfaceStatement) String() string {
+	var out bytes.Buffer
+	out.WriteString("antarmuka ")
+	out.WriteString(is.Name.String())
+	out.WriteString("\n")
+	for _, m := range is.Methods {
+		// Custom string for method signature without body
+		var methodStr bytes.Buffer
+		methodStr.WriteString("  fungsi ")
+		methodStr.WriteString(m.Name)
+		methodStr.WriteString("(")
+		params := []string{}
+		for _, p := range m.Parameters {
+			params = append(params, p.String())
+		}
+		methodStr.WriteString(strings.Join(params, ", "))
+		methodStr.WriteString(")")
+		if len(m.ReturnTypes) > 0 {
+			methodStr.WriteString(" ")
+			returns := []string{}
+			for _, rt := range m.ReturnTypes {
+				returns = append(returns, rt.String())
+			}
+			methodStr.WriteString(strings.Join(returns, ", "))
+		}
+		methodStr.WriteString("\n")
+		out.WriteString(methodStr.String())
+	}
+	out.WriteString("akhir")
+	return out.String()
+}
+
 type BreakStatement struct {
 	Token lexer.Token
 }

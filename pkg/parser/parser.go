@@ -256,6 +256,8 @@ func (p *Parser) parseStatement() Statement {
 		return p.parseFromImportStatement()
 	case lexer.STRUKTUR:
 		return p.parseStructStatement()
+	case lexer.INTERFACE:
+		return p.parseInterfaceStatement()
 	case lexer.BERHENTI:
 		return p.parseBreakStatement()
 	case lexer.LANJUT:
@@ -310,6 +312,39 @@ func (p *Parser) parseVarStatement() *VarStatement {
 
 	if p.peekTokenIs(lexer.SEMICOLON) {
 		p.nextToken()
+	}
+
+	return stmt
+}
+
+func (p *Parser) parseInterfaceStatement() *InterfaceStatement {
+	stmt := &InterfaceStatement{Token: p.curToken}
+
+	if !p.expectPeek(lexer.IDENT) {
+		return nil
+	}
+	stmt.Name = &Identifier{Token: p.curToken, Value: p.curToken.Literal}
+
+	p.nextToken() // Move to the start of the interface body
+
+	stmt.Methods = []*FunctionLiteral{}
+
+	for !p.curTokenIs(lexer.AKHIR) && !p.curTokenIs(lexer.EOF) {
+		if p.curTokenIs(lexer.FUNGSI) {
+			method := p.parseInterfaceMethod()
+			if method == nil {
+				return nil // Propagate error
+			}
+			stmt.Methods = append(stmt.Methods, method)
+		} else {
+			// Skip other tokens until the next function or end
+			p.nextToken()
+		}
+	}
+
+	if !p.curTokenIs(lexer.AKHIR) {
+		p.curError(lexer.AKHIR)
+		return nil
 	}
 
 	return stmt
@@ -579,6 +614,52 @@ func (p *Parser) parseIntegerLiteral() Expression {
 	}
 
 	lit.Value = value
+	return lit
+}
+
+// parseInterfaceMethod is a simplified version of parseFunctionLiteral for interface method signatures.
+// It parses `fungsi Name(params) (returns)` but does not parse a body.
+func (p *Parser) parseInterfaceMethod() *FunctionLiteral {
+	lit := &FunctionLiteral{Token: p.curToken, Body: nil} // Body is always nil for interfaces
+
+	if !p.expectPeek(lexer.IDENT) {
+		p.addDetailedError(p.peekToken, "expected method name after 'fungsi' in interface definition")
+		return nil
+	}
+	lit.Name = p.curToken.Literal
+
+	if !p.expectPeek(lexer.LPAREN) {
+		return nil
+	}
+	lit.Parameters = p.parseFunctionParameters()
+
+	// Parse optional return type(s)
+	if p.peekTokenIs(lexer.LPAREN) { // Multiple return types, e.g., (T1, T2)
+		p.nextToken() // curToken is (
+		p.nextToken() // curToken is Type start
+		lit.ReturnTypes = []TypeNode{}
+
+		lit.ReturnTypes = append(lit.ReturnTypes, p.parseType())
+		for p.peekTokenIs(lexer.COMMA) {
+			p.nextToken()
+			p.nextToken()
+			lit.ReturnTypes = append(lit.ReturnTypes, p.parseType())
+		}
+
+		if !p.expectPeek(lexer.RPAREN) {
+			return nil
+		}
+	} else if p.peekIsType() { // Single return type
+		p.nextToken()
+		lit.ReturnTypes = []TypeNode{p.parseType()}
+		if lit.ReturnTypes[0] == nil {
+			return nil
+		}
+	}
+
+	// Unlike parseFunctionLiteral, we do not expect a block statement.
+	// We expect to be at the end of the line/signature.
+
 	return lit
 }
 
