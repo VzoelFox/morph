@@ -117,6 +117,8 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(lexer.BANG, p.parsePrefixExpression)
 	p.registerPrefix(lexer.MINUS, p.parsePrefixExpression)
 	p.registerPrefix(lexer.TILDE, p.parsePrefixExpression)
+	p.registerPrefix(lexer.AND, p.parsePrefixExpression)
+	p.registerPrefix(lexer.ASTERISK, p.parsePrefixExpression)
 	p.registerPrefix(lexer.LPAREN, p.parseGroupedExpression)
 	p.registerPrefix(lexer.JIKA, p.parseIfExpression)
 	p.registerPrefix(lexer.SELAMA, p.parseWhileExpression)
@@ -246,29 +248,53 @@ func (p *Parser) ParseProgram() *Program {
 
 func (p *Parser) parseStatement() Statement {
 	switch p.curToken.Type {
-	case lexer.VAR:
-		return p.parseVarStatement()
+	case lexer.VAR, lexer.TETAPAN:
+		if s := p.parseVarStatement(); s != nil {
+			return s
+		}
 	case lexer.KEMBALIKAN:
-		return p.parseReturnStatement()
+		if s := p.parseReturnStatement(); s != nil {
+			return s
+		}
 	case lexer.AMBIL:
-		return p.parseImportStatement()
+		if s := p.parseImportStatement(); s != nil {
+			return s
+		}
 	case lexer.DARI:
-		return p.parseFromImportStatement()
+		if s := p.parseFromImportStatement(); s != nil {
+			return s
+		}
 	case lexer.STRUKTUR:
-		return p.parseStructStatement()
+		if s := p.parseStructStatement(); s != nil {
+			return s
+		}
 	case lexer.INTERFACE:
-		return p.parseInterfaceStatement()
+		if s := p.parseInterfaceStatement(); s != nil {
+			return s
+		}
 	case lexer.BERHENTI:
-		return p.parseBreakStatement()
+		if s := p.parseBreakStatement(); s != nil {
+			return s
+		}
 	case lexer.LANJUT:
-		return p.parseContinueStatement()
+		if s := p.parseContinueStatement(); s != nil {
+			return s
+		}
 	default:
-		return p.parseExpressionOrAssignmentStatement()
+		if s := p.parseExpressionOrAssignmentStatement(); s != nil {
+			return s
+		}
 	}
+	return nil
 }
 
 func (p *Parser) parseVarStatement() *VarStatement {
-	stmt := &VarStatement{Token: p.curToken, Names: []*Identifier{}, Values: []Expression{}}
+	stmt := &VarStatement{
+		Token:   p.curToken,
+		Names:   []*Identifier{},
+		Values:  []Expression{},
+		IsConst: p.curToken.Type == lexer.TETAPAN,
+	}
 
 	// Parse first name
 	if !p.expectPeek(lexer.IDENT) {
@@ -296,18 +322,28 @@ func (p *Parser) parseVarStatement() *VarStatement {
 		stmt.Type = nil
 	}
 
-	if !p.expectPeek(lexer.ASSIGN) {
-		return nil
-	}
-	p.nextToken() // move to RHS
+	// Check if assignment follows
+	if p.peekTokenIs(lexer.ASSIGN) {
+		p.nextToken() // move to ASSIGN
+		p.nextToken() // move to Expression start
 
-	// Parse values
-	stmt.Values = append(stmt.Values, p.parseExpression(LOWEST))
-
-	for p.peekTokenIs(lexer.COMMA) {
-		p.nextToken()
-		p.nextToken()
+		// Parse values
 		stmt.Values = append(stmt.Values, p.parseExpression(LOWEST))
+
+		for p.peekTokenIs(lexer.COMMA) {
+			p.nextToken()
+			p.nextToken()
+			stmt.Values = append(stmt.Values, p.parseExpression(LOWEST))
+		}
+	} else if stmt.Type == nil || stmt.IsConst {
+		// No type and no assignment -> Error
+		// Const MUST have assignment
+		if stmt.IsConst {
+			p.addDetailedError(p.curToken, "Constant declaration requires value assignment")
+		} else {
+			p.peekError(lexer.ASSIGN)
+		}
+		return nil
 	}
 
 	if p.peekTokenIs(lexer.SEMICOLON) {
@@ -417,6 +453,16 @@ func (p *Parser) parseFromImportStatement() *ImportStatement {
 }
 
 func (p *Parser) parseType() TypeNode {
+	if p.curTokenIs(lexer.ASTERISK) {
+		tok := p.curToken
+		p.nextToken()
+		elem := p.parseType()
+		if elem == nil {
+			return nil
+		}
+		return &PointerType{Token: tok, Element: elem}
+	}
+
 	if p.curTokenIs(lexer.LBRACKET) {
 		tok := p.curToken
 		if !p.expectPeek(lexer.RBRACKET) {
@@ -974,7 +1020,7 @@ func (p *Parser) parseIfExpression() Expression {
 
 func (p *Parser) peekIsType() bool {
 	t := p.peekToken.Type
-	return t == lexer.IDENT || t == lexer.LBRACKET || t == lexer.MAP
+	return t == lexer.IDENT || t == lexer.LBRACKET || t == lexer.MAP || t == lexer.ASTERISK
 }
 
 func (p *Parser) parseFunctionLiteral() Expression {
