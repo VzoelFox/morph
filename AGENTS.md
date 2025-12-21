@@ -55,6 +55,24 @@ project-root/
 
 ## Riwayat Perubahan
 
+### Version 1.6.1 - 2025-12-20
+**Checksum**: SHA256:VARIOUS
+**Perubahan**:
+- **Type System**: Added `AssignableTo` method to `Type` interface in `pkg/checker/types.go` and implemented logic for all types.
+- **Type System**: Implemented Interface Satisfaction check (Duck Typing) in `StructType.AssignableTo`.
+- **Checker**: Updated `pkg/checker/checker.go` to use `AssignableTo` instead of `Equals` for assignment, variable initialization, call arguments, and return values.
+- **Tests**: Added `pkg/checker/interface_impl_test.go` covering valid/invalid interface implementations.
+
+**Konteks Sesi**:
+- **Closing Gap**: Memperbaiki gap di mana Type Checker sudah mendukung definisi Interface tapi Type System belum mendukung pengecekan implementasi (Interface Satisfaction).
+- Menggantikan pengecekan Strict Equality (`Equals`) dengan `AssignableTo` untuk memungkinkan polymorphism (Struct -> Interface).
+
+**File Terkait**:
+- `pkg/checker/types.go` (SHA256:ef34daa0c8fd582511ed149ce49e89775a5240375c8c66f6860f36a8e6f32c56)
+- `pkg/checker/checker.go` (SHA256:14693b66b636b24654f1bc46156c9d9b4ab3914669df44ea9ea75064d5e35394)
+- `pkg/checker/interface_impl_test.go` (SHA256:bc43296c6708234da50fa1322c41abf708ae62c38eb699a914a89d68df9e05c9)
+- `.vzoel.jules/technical-debt.morph.vz` (SHA256:7a0e8d7dcfa881108e600d2c03a37db6c26d01b5d2f4296e53b321414926839d)
+
 ### Version 1.6.0 - 2025-12-20
 **Checksum**: SHA256:VARIOUS
 **Perubahan**:
