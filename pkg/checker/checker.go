@@ -492,6 +492,14 @@ func (c *Checker) checkAssignment(s *parser.AssignmentStatement) {
 			}
 		}
 
+		// Check string assignment via index
+		if idxExpr, ok := nameExpr.(*parser.IndexExpression); ok {
+			leftObjType := c.checkExpression(idxExpr.Left)
+			if leftObjType.Kind() == KindString {
+				c.addError(s.Token.Line, s.Token.Column, "Cannot assign to string index (immutable)")
+			}
+		}
+
 		lhsType := c.checkExpression(nameExpr)
 		rhsType := valueTypes[i]
 

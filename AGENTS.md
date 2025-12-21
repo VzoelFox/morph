@@ -54,6 +54,18 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.12.0 - 2025-12-20
+**Checksum**: SHA256:STRING_INDEXING
+**Perubahan**:
+- **Type System**: Updated `BasicType.Index` to allow indexing `KindString` with `KindInt`, returning `KindInt` (representing byte/char value).
+- **Checker**: Updated `checkAssignment` to strictly forbid assigning to string indices (String Immutability), ensuring `str[0] = x` is rejected.
+
+**Konteks Sesi**:
+- **Closing Gap**: Mengimplementasikan String Indexing (`s[i]`) yang merupakan fitur dasar, sekaligus menegakkan aturan immutability string pada level Checker.
+
+**File Terkait**:
+- `pkg/checker/checker.go` (SHA256:25a9f90997fb540fc39a688cc34d3723df6d25601f2d24d555af5300422d7197)
+- `pkg/checker/types.go` (SHA256:7a5dae8380e06102519cb557bab2c63a0c63f3281edaaac15b59611784ecabf7)
 ### Version 1.11.0 - 2025-12-20
 **Checksum**: SHA256:MODULO_SUPPORT
 **Perubahan**:

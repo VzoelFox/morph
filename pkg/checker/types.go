@@ -72,6 +72,13 @@ func (t *BasicType) GetMember(name string) (Type, bool) {
 }
 
 func (t *BasicType) Index(key Type) (Type, error) {
+	if t.K == KindString {
+		if key.Kind() == KindInt {
+			// String indexing returns the byte value (Int)
+			return IntType, nil
+		}
+		return nil, fmt.Errorf("String index must be Int")
+	}
 	return nil, fmt.Errorf("Index operation not supported on type %s", t.String())
 }
 
