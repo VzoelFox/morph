@@ -1,7 +1,7 @@
 package checker
 
 import (
-	"github.com/VzoelFox/morphlang/pkg/parser"
+	"github.com/VzoelFox/morph/pkg/parser"
 )
 
 type Checker struct {
@@ -276,7 +276,7 @@ func (c *Checker) checkStatement(s parser.Statement) {
 
 		expected := c.currentReturn()
 		if expected != nil {
-			if !expected.Equals(actual) && actual.Kind() != KindUnknown {
+			if !actual.AssignableTo(expected) && actual.Kind() != KindUnknown {
 				c.addError(stmt.Token.Line, stmt.Token.Column, "Return type mismatch: expected %s, got %s", expected.String(), actual.String())
 			}
 		}
@@ -324,7 +324,7 @@ func (c *Checker) checkAssignment(s *parser.AssignmentStatement) {
 		rhsType := valueTypes[i]
 
 		if lhsType.Kind() != KindUnknown && rhsType.Kind() != KindUnknown {
-			if !lhsType.Equals(rhsType) {
+			if !rhsType.AssignableTo(lhsType) {
 				c.addError(s.Token.Line, s.Token.Column, "Type mismatch in assignment: expected %s, got %s", lhsType.String(), rhsType.String())
 			}
 		}
@@ -372,7 +372,7 @@ func (c *Checker) checkVarStatement(s *parser.VarStatement) {
 			// Explicit Type
 			finalType = expected
 			if actual.Kind() != KindUnknown {
-				if !finalType.Equals(actual) {
+				if !actual.AssignableTo(finalType) {
 					c.addError(s.Token.Line, s.Token.Column, "Type mismatch for '%s': expected %s, got %s", name.Value, finalType.String(), actual.String())
 				}
 			}
@@ -445,7 +445,7 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 				continue
 			}
 			valType := c.checkExpression(valExpr)
-			if !expectedType.Equals(valType) {
+			if !valType.AssignableTo(expectedType) {
 				c.addError(exp.Token.Line, exp.Token.Column, "Field '%s' type mismatch: expected %s, got %s", key, expectedType.String(), valType.String())
 			}
 		}
@@ -486,7 +486,7 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 		// Verify all elements match
 		for i, elem := range exp.Elements[1:] {
 			elemType := c.checkExpression(elem)
-			if !firstType.Equals(elemType) {
+			if !elemType.AssignableTo(firstType) {
 				c.addError(exp.Token.Line, exp.Token.Column, "Array element %d type mismatch: expected %s, got %s", i+1, firstType.String(), elemType.String())
 			}
 		}
@@ -510,11 +510,11 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 				continue
 			}
 
-			if !keyType.Equals(kt) {
+			if !kt.AssignableTo(keyType) {
 				c.addError(exp.Token.Line, exp.Token.Column, "Map key type mismatch: expected %s, got %s", keyType.String(), kt.String())
 			}
 
-			if !valType.Equals(vt) {
+			if !vt.AssignableTo(valType) {
 				c.addError(exp.Token.Line, exp.Token.Column, "Map value type mismatch: expected %s, got %s", valType.String(), vt.String())
 			}
 		}
@@ -675,7 +675,7 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 			}
 			for i, arg := range exp.Arguments {
 				argType := c.checkExpression(arg)
-				if !argType.Equals(f.Parameters[i]) {
+				if !argType.AssignableTo(f.Parameters[i]) {
 					c.addError(exp.Token.Line, exp.Token.Column, "Argument %d type mismatch: expected %s, got %s", i+1, f.Parameters[i].String(), argType.String())
 				}
 			}
@@ -708,8 +708,8 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 						return IntType
 					}
 
-					// Identity
-					if targetType.Equals(argType) {
+					// Identity or Assignable (e.g. Upcast)
+					if argType.AssignableTo(targetType) {
 						return targetType
 					}
 

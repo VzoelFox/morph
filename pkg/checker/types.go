@@ -28,6 +28,7 @@ type Type interface {
 	Kind() TypeKind
 	String() string
 	Equals(other Type) bool
+	AssignableTo(target Type) bool
 }
 
 type BasicType struct {
@@ -44,12 +45,32 @@ func (t *BasicType) Equals(other Type) bool {
 	return t.K == other.Kind()
 }
 
+func (t *BasicType) AssignableTo(target Type) bool {
+	if target == nil {
+		return false
+	}
+	// Unknown matches anything (error suppression)
+	if t.K == KindUnknown || target.Kind() == KindUnknown {
+		return true
+	}
+
+	// Null assignment rules
+	if t.K == KindNull {
+		k := target.Kind()
+		// Null assignable to reference types: Array, Map, Struct, Interface, Function, String
+		// And Null itself
+		return k == KindArray || k == KindMap || k == KindStruct || k == KindInterface || k == KindFunction || k == KindString || k == KindNull
+	}
+
+	return t.Equals(target)
+}
+
 var (
-	IntType    = &BasicType{K: KindInt, Name: "Int"}
-	FloatType  = &BasicType{K: KindFloat, Name: "Float"}
-	StringType = &BasicType{K: KindString, Name: "String"}
-	BoolType   = &BasicType{K: KindBool, Name: "Bool"}
-	VoidType   = &BasicType{K: KindVoid, Name: "Void"}
+	IntType     = &BasicType{K: KindInt, Name: "Int"}
+	FloatType   = &BasicType{K: KindFloat, Name: "Float"}
+	StringType  = &BasicType{K: KindString, Name: "String"}
+	BoolType    = &BasicType{K: KindBool, Name: "Bool"}
+	VoidType    = &BasicType{K: KindVoid, Name: "Void"}
 	UnknownType = &BasicType{K: KindUnknown, Name: "Unknown"}
 	ErrorType   = &BasicType{K: KindError, Name: "Error"}
 	NullType    = &BasicType{K: KindNull, Name: "Null"}
@@ -76,6 +97,17 @@ func (t *ArrayType) Equals(other Type) bool {
 		return t.Element.Equals(o.Element)
 	}
 	return false
+}
+
+func (t *ArrayType) AssignableTo(target Type) bool {
+	if target == nil {
+		return false
+	}
+	if target.Kind() == KindUnknown {
+		return true
+	}
+	// Arrays are invariant (must be Equal)
+	return t.Equals(target)
 }
 
 type MapType struct {
@@ -106,6 +138,17 @@ func (t *MapType) Equals(other Type) bool {
 	return false
 }
 
+func (t *MapType) AssignableTo(target Type) bool {
+	if target == nil {
+		return false
+	}
+	if target.Kind() == KindUnknown {
+		return true
+	}
+	// Maps are invariant
+	return t.Equals(target)
+}
+
 type StructType struct {
 	Name    string
 	Fields  map[string]Type
@@ -121,12 +164,37 @@ func (t *StructType) Equals(other Type) bool {
 	if other.Kind() == KindNull {
 		return true
 	}
-	// Nominal typing for structs? Or Structural?
-	// Usually Nominal (by name).
+	// Nominal typing
 	if o, ok := other.(*StructType); ok {
 		return t.Name == o.Name
 	}
 	return false
+}
+
+func (t *StructType) AssignableTo(target Type) bool {
+	if target == nil {
+		return false
+	}
+	if target.Kind() == KindUnknown {
+		return true
+	}
+
+	// Check if target is an Interface (Implementation Check)
+	if iface, ok := target.(*InterfaceType); ok {
+		for name, method := range iface.Methods {
+			structMethod, exists := t.Methods[name]
+			if !exists {
+				return false
+			}
+			// Method signature must match exactly
+			if !structMethod.Equals(method) {
+				return false
+			}
+		}
+		return true
+	}
+
+	return t.Equals(target)
 }
 
 type InterfaceType struct {
@@ -143,11 +211,23 @@ func (t *InterfaceType) Equals(other Type) bool {
 	if other.Kind() == KindNull {
 		return true
 	}
-	// For now, nominal typing. Structural check happens during assignment/checking.
 	if o, ok := other.(*InterfaceType); ok {
 		return t.Name == o.Name
 	}
 	return false
+}
+
+func (t *InterfaceType) AssignableTo(target Type) bool {
+	if target == nil {
+		return false
+	}
+	if target.Kind() == KindUnknown {
+		return true
+	}
+	// Interface to Interface assignment?
+	// For now, identity only.
+	// Future: check if t methods are superset of target methods
+	return t.Equals(target)
 }
 
 type FunctionType struct {
@@ -212,6 +292,17 @@ func (t *FunctionType) Equals(other Type) bool {
 	return false
 }
 
+func (t *FunctionType) AssignableTo(target Type) bool {
+	if target == nil {
+		return false
+	}
+	if target.Kind() == KindUnknown {
+		return true
+	}
+	// Functions are invariant
+	return t.Equals(target)
+}
+
 type MultiType struct {
 	Types []Type
 }
@@ -231,6 +322,28 @@ func (t *MultiType) Equals(other Type) bool {
 		}
 		for i, sub := range t.Types {
 			if !sub.Equals(o.Types[i]) {
+				return false
+			}
+		}
+		return true
+	}
+	return false
+}
+
+func (t *MultiType) AssignableTo(target Type) bool {
+	if target == nil {
+		return false
+	}
+	if target.Kind() == KindUnknown {
+		return true
+	}
+	// MultiType matching
+	if o, ok := target.(*MultiType); ok {
+		if len(t.Types) != len(o.Types) {
+			return false
+		}
+		for i, sub := range t.Types {
+			if !sub.AssignableTo(o.Types[i]) {
 				return false
 			}
 		}
