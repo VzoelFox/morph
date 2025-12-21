@@ -247,24 +247,43 @@ func (p *Parser) ParseProgram() *Program {
 func (p *Parser) parseStatement() Statement {
 	switch p.curToken.Type {
 	case lexer.VAR:
-		return p.parseVarStatement()
+		if s := p.parseVarStatement(); s != nil {
+			return s
+		}
 	case lexer.KEMBALIKAN:
-		return p.parseReturnStatement()
+		if s := p.parseReturnStatement(); s != nil {
+			return s
+		}
 	case lexer.AMBIL:
-		return p.parseImportStatement()
+		if s := p.parseImportStatement(); s != nil {
+			return s
+		}
 	case lexer.DARI:
-		return p.parseFromImportStatement()
+		if s := p.parseFromImportStatement(); s != nil {
+			return s
+		}
 	case lexer.STRUKTUR:
-		return p.parseStructStatement()
+		if s := p.parseStructStatement(); s != nil {
+			return s
+		}
 	case lexer.INTERFACE:
-		return p.parseInterfaceStatement()
+		if s := p.parseInterfaceStatement(); s != nil {
+			return s
+		}
 	case lexer.BERHENTI:
-		return p.parseBreakStatement()
+		if s := p.parseBreakStatement(); s != nil {
+			return s
+		}
 	case lexer.LANJUT:
-		return p.parseContinueStatement()
+		if s := p.parseContinueStatement(); s != nil {
+			return s
+		}
 	default:
-		return p.parseExpressionOrAssignmentStatement()
+		if s := p.parseExpressionOrAssignmentStatement(); s != nil {
+			return s
+		}
 	}
+	return nil
 }
 
 func (p *Parser) parseVarStatement() *VarStatement {
@@ -296,18 +315,23 @@ func (p *Parser) parseVarStatement() *VarStatement {
 		stmt.Type = nil
 	}
 
-	if !p.expectPeek(lexer.ASSIGN) {
-		return nil
-	}
-	p.nextToken() // move to RHS
+	// Check if assignment follows
+	if p.peekTokenIs(lexer.ASSIGN) {
+		p.nextToken() // move to ASSIGN
+		p.nextToken() // move to Expression start
 
-	// Parse values
-	stmt.Values = append(stmt.Values, p.parseExpression(LOWEST))
-
-	for p.peekTokenIs(lexer.COMMA) {
-		p.nextToken()
-		p.nextToken()
+		// Parse values
 		stmt.Values = append(stmt.Values, p.parseExpression(LOWEST))
+
+		for p.peekTokenIs(lexer.COMMA) {
+			p.nextToken()
+			p.nextToken()
+			stmt.Values = append(stmt.Values, p.parseExpression(LOWEST))
+		}
+	} else if stmt.Type == nil {
+		// No type and no assignment -> Error
+		p.peekError(lexer.ASSIGN)
+		return nil
 	}
 
 	if p.peekTokenIs(lexer.SEMICOLON) {

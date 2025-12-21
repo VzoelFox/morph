@@ -79,6 +79,9 @@ func (c *Checker) collectDefinitions(program *parser.Program) {
 	// 0. Process Imports first
 	for _, stmt := range program.Statements {
 		if imp, ok := stmt.(*parser.ImportStatement); ok {
+			if imp == nil {
+				continue
+			}
 			c.checkImport(imp)
 		}
 	}
@@ -86,8 +89,14 @@ func (c *Checker) collectDefinitions(program *parser.Program) {
 	// 1. Structs first (types)
 	for _, stmt := range program.Statements {
 		if s, ok := stmt.(*parser.StructStatement); ok {
+			if s == nil {
+				continue
+			}
 			c.defineStruct(s)
 		} else if i, ok := stmt.(*parser.InterfaceStatement); ok {
+			if i == nil {
+				continue
+			}
 			c.defineInterface(i)
 		}
 	}
@@ -96,8 +105,14 @@ func (c *Checker) collectDefinitions(program *parser.Program) {
 	for _, stmt := range program.Statements {
 		switch s := stmt.(type) {
 		case *parser.VarStatement:
+			if s == nil {
+				continue
+			}
 			c.defineVar(s)
 		case *parser.ExpressionStatement:
+			if s == nil {
+				continue
+			}
 			if fn, ok := s.Expression.(*parser.FunctionLiteral); ok {
 				if fn.Name != "" {
 					c.defineFunction(fn)
@@ -278,7 +293,11 @@ func (c *Checker) defineVar(s *parser.VarStatement) {
 	}
 	for _, name := range s.Names {
 		if existing, ok := c.scope.variables[name.Value]; ok {
-			c.addError(name.Token.Line, name.Token.Column, "Global variable '%s' already declared (type: %s)", name.Value, existing.Type.String())
+			existingTypeStr := "<nil>"
+			if existing.Type != nil {
+				existingTypeStr = existing.Type.String()
+			}
+			c.addError(name.Token.Line, name.Token.Column, "Global variable '%s' already declared (type: %s)", name.Value, existingTypeStr)
 			continue
 		}
 		c.scope.DefineVariable(name.Value, t, name.Token.Line, name.Token.Column)
@@ -617,30 +636,23 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 	case *parser.MemberExpression:
 		objType := c.checkExpression(exp.Object)
 
+		if objType.Kind() == KindUnknown {
+			return UnknownType
+		}
+
+		if memberType, ok := objType.GetMember(exp.Member.Value); ok {
+			return memberType
+		}
+
 		if objType.Kind() == KindModule {
 			mod := objType.(*ModuleType)
-			if t, ok := mod.Exports[exp.Member.Value]; ok {
-				return t
-			}
 			c.addError(exp.Token.Line, exp.Token.Column, "Module '%s' does not export '%s'", mod.Name, exp.Member.Value)
-			return ErrorType
-		}
-
-		if objType.Kind() != KindStruct {
+		} else if objType.Kind() == KindStruct {
+			st := objType.(*StructType)
+			c.addError(exp.Token.Line, exp.Token.Column, "Field or method '%s' not found in struct '%s'", exp.Member.Value, st.Name)
+		} else {
 			c.addError(exp.Token.Line, exp.Token.Column, "Cannot access member on non-struct/module type %s", objType.String())
-			return ErrorType
 		}
-
-		st := objType.(*StructType)
-		if fieldType, exists := st.Fields[exp.Member.Value]; exists {
-			return fieldType
-		}
-
-		if methodType, exists := st.Methods[exp.Member.Value]; exists {
-			return methodType
-		}
-
-		c.addError(exp.Token.Line, exp.Token.Column, "Field or method '%s' not found in struct '%s'", exp.Member.Value, st.Name)
 		return ErrorType
 
 	case *parser.ArrayLiteral:
@@ -694,25 +706,19 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 		leftType := c.checkExpression(exp.Left)
 		idxType := c.checkExpression(exp.Index)
 
-		if leftType.Kind() == KindArray {
-			if idxType.Kind() != KindInt {
-				c.addError(exp.Token.Line, exp.Token.Column, "Array index must be Int")
-			}
-			return leftType.(*ArrayType).Element
+		if leftType.Kind() == KindUnknown {
+			return UnknownType
 		}
 
-		if leftType.Kind() == KindMap {
-			mt := leftType.(*MapType)
-			if !mt.Key.Equals(idxType) {
-				c.addError(exp.Token.Line, exp.Token.Column, "Map key type mismatch: expected %s, got %s", mt.Key.String(), idxType.String())
+		resType, err := leftType.Index(idxType)
+		if err != nil {
+			c.addError(exp.Token.Line, exp.Token.Column, "%s", err.Error())
+			if resType != nil {
+				return resType
 			}
-			return mt.Value
+			return UnknownType
 		}
-
-		if leftType.Kind() != KindUnknown {
-			c.addError(exp.Token.Line, exp.Token.Column, "Index operation not supported on type %s", leftType.String())
-		}
-		return UnknownType
+		return resType
 
 	case *parser.PrefixExpression:
 		right := c.checkExpression(exp.Right)
@@ -910,7 +916,15 @@ func (c *Checker) leaveScope() {
 }
 
 func (c *Checker) addError(line, col int, format string, args ...interface{}) {
-	c.Errors = append(c.Errors, NewTypeError(line, col, format, args...))
+	err := NewTypeError(line, col, format, args...)
+	// Deduplicate
+	if len(c.Errors) > 0 {
+		last := c.Errors[len(c.Errors)-1]
+		if last.Line == err.Line && last.Column == err.Column && last.Message == err.Message {
+			return
+		}
+	}
+	c.Errors = append(c.Errors, err)
 }
 
 func (c *Checker) addWarning(line, col int, format string, args ...interface{}) {
