@@ -3,10 +3,11 @@ package checker
 import "fmt"
 
 type SymbolInfo struct {
-	Type   Type
-	Line   int
-	Column int
-	Used   bool
+	Type    Type
+	IsConst bool
+	Line    int
+	Column  int
+	Used    bool
 }
 
 type Scope struct {
@@ -23,7 +24,7 @@ func NewScope(outer *Scope) *Scope {
 	}
 }
 
-func (s *Scope) DefineVariable(name string, t Type, line, col int) *TypeWarning {
+func (s *Scope) DefineVariable(name string, t Type, isConst bool, line, col int) *TypeWarning {
 	// Check outer scope for shadowing
 	if s.outer != nil {
 		if outerType, exists := s.outer.LookupVariable(name); exists {
@@ -32,11 +33,11 @@ func (s *Scope) DefineVariable(name string, t Type, line, col int) *TypeWarning 
 				Line:    0, // To be filled by caller
 				Column:  0,
 			}
-			s.variables[name] = SymbolInfo{Type: t, Line: line, Column: col, Used: false}
+			s.variables[name] = SymbolInfo{Type: t, IsConst: isConst, Line: line, Column: col, Used: false}
 			return warning
 		}
 	}
-	s.variables[name] = SymbolInfo{Type: t, Line: line, Column: col, Used: false}
+	s.variables[name] = SymbolInfo{Type: t, IsConst: isConst, Line: line, Column: col, Used: false}
 	return nil
 }
 
@@ -76,6 +77,17 @@ func (s *Scope) LookupVariable(name string) (Type, bool) {
 	}
 	if s.outer != nil {
 		return s.outer.LookupVariable(name)
+	}
+	return nil, false
+}
+
+func (s *Scope) LookupSymbol(name string) (*SymbolInfo, bool) {
+	sym, ok := s.variables[name]
+	if ok {
+		return &sym, true
+	}
+	if s.outer != nil {
+		return s.outer.LookupSymbol(name)
 	}
 	return nil, false
 }

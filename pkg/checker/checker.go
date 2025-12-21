@@ -43,7 +43,7 @@ func New() *Checker {
 		Parameters:  []Type{StringType},
 		ReturnTypes: []Type{IntType, StringType},
 	}
-	c.scope.DefineVariable("parse_int", parseIntType, 0, 0)
+	c.scope.DefineVariable("parse_int", parseIntType, true, 0, 0)
 
 	return c
 }
@@ -210,7 +210,8 @@ func (c *Checker) registerModule(imp *parser.ImportStatement, mod *ModuleType) {
 				case KindStruct, KindInterface:
 					c.scope.DefineType(name, typ)
 				default:
-					c.scope.DefineVariable(name, typ, imp.Token.Line, imp.Token.Column)
+					// Imported items are effectively constants
+					c.scope.DefineVariable(name, typ, true, imp.Token.Line, imp.Token.Column)
 				}
 			} else {
 				c.addError(imp.Token.Line, imp.Token.Column, "Module '%s' does not export '%s'", imp.Path, name)
@@ -225,7 +226,7 @@ func (c *Checker) registerModule(imp *parser.ImportStatement, mod *ModuleType) {
 			name = name[:idx]
 		}
 
-		c.scope.DefineVariable(name, mod, imp.Token.Line, imp.Token.Column)
+		c.scope.DefineVariable(name, mod, true, imp.Token.Line, imp.Token.Column)
 	}
 }
 
@@ -300,7 +301,7 @@ func (c *Checker) defineVar(s *parser.VarStatement) {
 			c.addError(name.Token.Line, name.Token.Column, "Global variable '%s' already declared (type: %s)", name.Value, existingTypeStr)
 			continue
 		}
-		c.scope.DefineVariable(name.Value, t, name.Token.Line, name.Token.Column)
+		c.scope.DefineVariable(name.Value, t, s.IsConst, name.Token.Line, name.Token.Column)
 	}
 }
 
@@ -332,7 +333,7 @@ func (c *Checker) defineFunction(fn *parser.FunctionLiteral) {
 		st.Methods[fn.Name] = ft
 	} else {
 		// Normal function
-		c.scope.DefineVariable(fn.Name, ft, fn.Token.Line, fn.Token.Column)
+		c.scope.DefineVariable(fn.Name, ft, true, fn.Token.Line, fn.Token.Column)
 	}
 }
 
@@ -499,6 +500,15 @@ func (c *Checker) checkAssignment(s *parser.AssignmentStatement) {
 			break
 		}
 
+		// Check mutability
+		if ident, ok := nameExpr.(*parser.Identifier); ok {
+			if sym, ok := c.scope.LookupSymbol(ident.Value); ok {
+				if sym.IsConst {
+					c.addError(s.Token.Line, s.Token.Column, "Cannot reassign constant '%s'", ident.Value)
+				}
+			}
+		}
+
 		lhsType := c.checkExpression(nameExpr)
 		rhsType := valueTypes[i]
 
@@ -578,7 +588,7 @@ func (c *Checker) checkVarStatement(s *parser.VarStatement) {
 		}
 
 		// Update scope with refined type
-		if warning := c.scope.DefineVariable(name.Value, finalType, name.Token.Line, name.Token.Column); warning != nil {
+		if warning := c.scope.DefineVariable(name.Value, finalType, s.IsConst, name.Token.Line, name.Token.Column); warning != nil {
 			warning.Line = name.Token.Line
 			warning.Column = name.Token.Column
 			c.Warnings = append(c.Warnings, *warning)
@@ -753,7 +763,7 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 		// Define Receiver in scope if present
 		if exp.Receiver != nil {
 			recvType := c.resolveType(exp.Receiver.Type)
-			if warning := c.scope.DefineVariable(exp.Receiver.Name.Value, recvType, exp.Receiver.Name.Token.Line, exp.Receiver.Name.Token.Column); warning != nil {
+			if warning := c.scope.DefineVariable(exp.Receiver.Name.Value, recvType, false, exp.Receiver.Name.Token.Line, exp.Receiver.Name.Token.Column); warning != nil {
 				warning.Line = exp.Receiver.Name.Token.Line
 				warning.Column = exp.Receiver.Name.Token.Column
 				c.Warnings = append(c.Warnings, *warning)
@@ -762,7 +772,7 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 
 		for _, p := range exp.Parameters {
 			t := c.resolveType(p.Type)
-			if warning := c.scope.DefineVariable(p.Name.Value, t, p.Name.Token.Line, p.Name.Token.Column); warning != nil {
+			if warning := c.scope.DefineVariable(p.Name.Value, t, false, p.Name.Token.Line, p.Name.Token.Column); warning != nil {
 				warning.Line = p.Name.Token.Line
 				warning.Column = p.Name.Token.Column
 				c.Warnings = append(c.Warnings, *warning)

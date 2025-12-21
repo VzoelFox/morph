@@ -246,7 +246,7 @@ func (p *Parser) ParseProgram() *Program {
 
 func (p *Parser) parseStatement() Statement {
 	switch p.curToken.Type {
-	case lexer.VAR:
+	case lexer.VAR, lexer.TETAPAN:
 		if s := p.parseVarStatement(); s != nil {
 			return s
 		}
@@ -287,7 +287,12 @@ func (p *Parser) parseStatement() Statement {
 }
 
 func (p *Parser) parseVarStatement() *VarStatement {
-	stmt := &VarStatement{Token: p.curToken, Names: []*Identifier{}, Values: []Expression{}}
+	stmt := &VarStatement{
+		Token:   p.curToken,
+		Names:   []*Identifier{},
+		Values:  []Expression{},
+		IsConst: p.curToken.Type == lexer.TETAPAN,
+	}
 
 	// Parse first name
 	if !p.expectPeek(lexer.IDENT) {
@@ -328,9 +333,14 @@ func (p *Parser) parseVarStatement() *VarStatement {
 			p.nextToken()
 			stmt.Values = append(stmt.Values, p.parseExpression(LOWEST))
 		}
-	} else if stmt.Type == nil {
+	} else if stmt.Type == nil || stmt.IsConst {
 		// No type and no assignment -> Error
-		p.peekError(lexer.ASSIGN)
+		// Const MUST have assignment
+		if stmt.IsConst {
+			p.addDetailedError(p.curToken, "Constant declaration requires value assignment")
+		} else {
+			p.peekError(lexer.ASSIGN)
+		}
 		return nil
 	}
 
