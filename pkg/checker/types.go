@@ -216,6 +216,17 @@ func (t *ModuleType) Call(args []Type) (Type, string, error) {
 	return nil, "", fmt.Errorf("Cannot call module type")
 }
 
+func (t *ModuleType) GetMember(name string) (Type, bool) {
+	if typ, ok := t.Exports[name]; ok {
+		return typ, true
+	}
+	return nil, false
+}
+
+func (t *ModuleType) Index(key Type) (Type, error) {
+	return nil, fmt.Errorf("Index operation not supported on type %s", t.String())
+}
+
 type ArrayType struct {
 	Element Type
 }
@@ -271,6 +282,17 @@ func (t *ArrayType) PrefixOp(op string) (Type, error) {
 }
 func (t *ArrayType) Call(args []Type) (Type, string, error) {
 	return nil, "", fmt.Errorf("Cannot call array type")
+}
+
+func (t *ArrayType) GetMember(name string) (Type, bool) {
+	return nil, false
+}
+
+func (t *ArrayType) Index(key Type) (Type, error) {
+	if key.Kind() != KindInt {
+		return t.Element, fmt.Errorf("Array index must be Int")
+	}
+	return t.Element, nil
 }
 
 type MapType struct {
@@ -329,6 +351,17 @@ func (t *MapType) PrefixOp(op string) (Type, error) {
 }
 func (t *MapType) Call(args []Type) (Type, string, error) {
 	return nil, "", fmt.Errorf("Cannot call map type")
+}
+
+func (t *MapType) GetMember(name string) (Type, bool) {
+	return nil, false
+}
+
+func (t *MapType) Index(key Type) (Type, error) {
+	if !t.Key.Equals(key) {
+		return t.Value, fmt.Errorf("Map key type mismatch: expected %s, got %s", t.Key.String(), key.String())
+	}
+	return t.Value, nil
 }
 
 type StructType struct {
@@ -402,6 +435,20 @@ func (t *StructType) Call(args []Type) (Type, string, error) {
 	return nil, "", fmt.Errorf("Cannot call struct type")
 }
 
+func (t *StructType) GetMember(name string) (Type, bool) {
+	if fieldType, exists := t.Fields[name]; exists {
+		return fieldType, true
+	}
+	if methodType, exists := t.Methods[name]; exists {
+		return methodType, true
+	}
+	return nil, false
+}
+
+func (t *StructType) Index(key Type) (Type, error) {
+	return nil, fmt.Errorf("Index operation not supported on type %s", t.String())
+}
+
 type InterfaceType struct {
 	Name    string
 	Methods map[string]*FunctionType
@@ -450,6 +497,14 @@ func (t *InterfaceType) PrefixOp(op string) (Type, error) {
 }
 func (t *InterfaceType) Call(args []Type) (Type, string, error) {
 	return nil, "", fmt.Errorf("Cannot call interface type")
+}
+
+func (t *InterfaceType) GetMember(name string) (Type, bool) {
+	return nil, false
+}
+
+func (t *InterfaceType) Index(key Type) (Type, error) {
+	return nil, fmt.Errorf("Index operation not supported on type %s", t.String())
 }
 
 type FunctionType struct {
@@ -551,6 +606,14 @@ func (t *FunctionType) Call(args []Type) (Type, string, error) {
 		return t.ReturnTypes[0], "", nil
 	}
 	return &MultiType{Types: t.ReturnTypes}, "", nil
+}
+
+func (t *FunctionType) GetMember(name string) (Type, bool) {
+	return nil, false
+}
+
+func (t *FunctionType) Index(key Type) (Type, error) {
+	return nil, fmt.Errorf("Index operation not supported on type %s", t.String())
 }
 
 type MultiType struct {
