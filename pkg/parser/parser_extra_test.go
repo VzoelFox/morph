@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/VzoelFox/morphlang/pkg/lexer"
+	"github.com/VzoelFox/morph/pkg/lexer"
 )
 
 func TestInterpolatedString(t *testing.T) {

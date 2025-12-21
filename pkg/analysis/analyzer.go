@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/VzoelFox/morphlang/pkg/parser"
+	"github.com/VzoelFox/morph/pkg/parser"
 )
 
 type Analyzer struct {
@@ -127,28 +127,47 @@ func (a *Analyzer) analyzeTopLevel(stmt parser.Statement) {
 			a.walkExpression(s.Expression, func(node parser.Node) {})
 		}
 	case *parser.VarStatement:
-		name := s.Name.Value
-		typeName := s.Type.String()
-		a.context.GlobalVars[name] = &Variable{
-			Line: s.Token.Line,
-			Type: typeName,
+		typeName := "any"
+		if s.Type != nil {
+			typeName = s.Type.String()
 		}
-		a.defineInCurrentScope(name)
-		a.walkExpression(s.Value, func(node parser.Node) {})
+		for _, nameIdent := range s.Names {
+			name := nameIdent.Value
+			a.context.GlobalVars[name] = &Variable{
+				Line: s.Token.Line,
+				Type: typeName,
+			}
+			a.defineInCurrentScope(name)
+		}
+		for _, val := range s.Values {
+			a.walkExpression(val, func(node parser.Node) {})
+		}
 
 	case *parser.AssignmentStatement:
 		// Global variable (Implicit)
-		if ident, ok := s.Name.(*parser.Identifier); ok {
-			name := ident.Value
-			inferredType := a.inferType(s.Value)
+		for i, nameExpr := range s.Names {
+			if ident, ok := nameExpr.(*parser.Identifier); ok {
+				name := ident.Value
 
-			a.context.GlobalVars[name] = &Variable{
-				Line: s.Token.Line,
-				Type: inferredType,
+				var val parser.Expression
+				if i < len(s.Values) {
+					val = s.Values[i]
+				}
+				inferredType := "unknown"
+				if val != nil {
+					inferredType = a.inferType(val)
+				}
+
+				a.context.GlobalVars[name] = &Variable{
+					Line: s.Token.Line,
+					Type: inferredType,
+				}
+				a.defineInCurrentScope(name)
 			}
-			a.defineInCurrentScope(name) // Mark global var
 		}
-		a.walkExpression(s.Value, func(node parser.Node) {})
+		for _, val := range s.Values {
+			a.walkExpression(val, func(node parser.Node) {})
+		}
 	case *parser.StructStatement:
 		a.analyzeStruct(s)
 	case *parser.ImportStatement:
@@ -258,8 +277,8 @@ func (a *Analyzer) analyzeFunction(fn *parser.FunctionLiteral) {
 		}
 		// Check for returns galat (direct)
 		if ret, ok := node.(*parser.ReturnStatement); ok {
-			if ret.ReturnValue != nil {
-				if call, ok := ret.ReturnValue.(*parser.CallExpression); ok {
+			for _, rv := range ret.ReturnValues {
+				if call, ok := rv.(*parser.CallExpression); ok {
 					if ident, ok := call.Function.(*parser.Identifier); ok {
 						if ident.Value == "galat" {
 							canError = true
@@ -270,60 +289,72 @@ func (a *Analyzer) analyzeFunction(fn *parser.FunctionLiteral) {
 		}
 		// VarStatement (Explicit Local Declaration)
 		if vstmt, ok := node.(*parser.VarStatement); ok {
-			varName := vstmt.Name.Value
-			typeName := vstmt.Type.String()
-
-			a.defineInCurrentScope(varName)
-
-			found := false
-			for _, v := range sym.LocalVars {
-				if v == varName {
-					found = true
-					break
-				}
+			typeName := "any"
+			if vstmt.Type != nil {
+				typeName = vstmt.Type.String()
 			}
-			if !found {
-				sym.LocalVars = append(sym.LocalVars, varName)
-				a.context.LocalScopes[name][varName] = &Variable{
-					Line: vstmt.Token.Line,
-					Type: typeName,
+			for _, nameIdent := range vstmt.Names {
+				varName := nameIdent.Value
+				a.defineInCurrentScope(varName)
+
+				found := false
+				for _, v := range sym.LocalVars {
+					if v == varName {
+						found = true
+						break
+					}
+				}
+				if !found {
+					sym.LocalVars = append(sym.LocalVars, varName)
+					a.context.LocalScopes[name][varName] = &Variable{
+						Line: vstmt.Token.Line,
+						Type: typeName,
+					}
 				}
 			}
 		}
 
 		// Local vars logic (Closure Aware) for Assignments
 		if assign, ok := node.(*parser.AssignmentStatement); ok {
-			if ident, ok := assign.Name.(*parser.Identifier); ok {
-				varName := ident.Value
+			for i, nameExpr := range assign.Names {
+				if ident, ok := nameExpr.(*parser.Identifier); ok {
+					varName := ident.Value
 
-				// Infer Type
-				inferred := a.inferType(assign.Value)
-
-				// Check if variable is defined in any scope up the chain
-				if a.isDefined(varName) {
-					// It's an UPDATE. Check if it's local in CURRENT function scope to update type
-					if v, ok := a.context.LocalScopes[name][varName]; ok {
-						if v.Type == "inferred" || v.Type == "unknown" {
-							v.Type = inferred
-						}
+					var val parser.Expression
+					if i < len(assign.Values) {
+						val = assign.Values[i]
 					}
-				} else {
-					// It's a NEW declaration in this scope (Implicit)
-					a.defineInCurrentScope(varName)
-
-					// Register in symbol table as Local Var
-					found := false
-					for _, v := range sym.LocalVars {
-						if v == varName {
-							found = true
-							break
-						}
+					inferred := "unknown"
+					if val != nil {
+						inferred = a.inferType(val)
 					}
-					if !found {
-						sym.LocalVars = append(sym.LocalVars, varName)
-						a.context.LocalScopes[name][varName] = &Variable{
-							Line: assign.Token.Line,
-							Type: inferred,
+
+					// Check if variable is defined in any scope up the chain
+					if a.isDefined(varName) {
+						// It's an UPDATE. Check if it's local in CURRENT function scope to update type
+						if v, ok := a.context.LocalScopes[name][varName]; ok {
+							if v.Type == "inferred" || v.Type == "unknown" {
+								v.Type = inferred
+							}
+						}
+					} else {
+						// It's a NEW declaration in this scope (Implicit)
+						a.defineInCurrentScope(varName)
+
+						// Register in symbol table as Local Var
+						found := false
+						for _, v := range sym.LocalVars {
+							if v == varName {
+								found = true
+								break
+							}
+						}
+						if !found {
+							sym.LocalVars = append(sym.LocalVars, varName)
+							a.context.LocalScopes[name][varName] = &Variable{
+								Line: assign.Token.Line,
+								Type: inferred,
+							}
 						}
 					}
 				}
@@ -367,18 +398,22 @@ func (a *Analyzer) walkBlock(block *parser.BlockStatement, visitor func(parser.N
 func (a *Analyzer) walkStatement(stmt parser.Statement, visitor func(parser.Node)) {
 	switch s := stmt.(type) {
 	case *parser.VarStatement:
-		if s.Value != nil {
-			a.walkExpression(s.Value, visitor)
+		for _, val := range s.Values {
+			a.walkExpression(val, visitor)
 		}
 	case *parser.ExpressionStatement:
 		a.walkExpression(s.Expression, visitor)
 	case *parser.ReturnStatement:
-		if s.ReturnValue != nil {
-			a.walkExpression(s.ReturnValue, visitor)
+		for _, val := range s.ReturnValues {
+			a.walkExpression(val, visitor)
 		}
 	case *parser.AssignmentStatement:
-		a.walkExpression(s.Name, visitor)
-		a.walkExpression(s.Value, visitor)
+		for _, name := range s.Names {
+			a.walkExpression(name, visitor)
+		}
+		for _, val := range s.Values {
+			a.walkExpression(val, visitor)
+		}
 	}
 }
 
@@ -484,8 +519,8 @@ func containsReturnError(block *parser.BlockStatement) bool {
 	}
 	for _, stmt := range block.Statements {
 		if ret, ok := stmt.(*parser.ReturnStatement); ok {
-			if ret.ReturnValue != nil {
-				if call, ok := ret.ReturnValue.(*parser.CallExpression); ok {
+			for _, rv := range ret.ReturnValues {
+				if call, ok := rv.(*parser.CallExpression); ok {
 					if ident, ok := call.Function.(*parser.Identifier); ok {
 						if ident.Value == "galat" {
 							return true
@@ -504,8 +539,8 @@ func extractErrorMessage(block *parser.BlockStatement) string {
 	}
 	for _, stmt := range block.Statements {
 		if ret, ok := stmt.(*parser.ReturnStatement); ok {
-			if ret.ReturnValue != nil {
-				if call, ok := ret.ReturnValue.(*parser.CallExpression); ok {
+			for _, rv := range ret.ReturnValues {
+				if call, ok := rv.(*parser.CallExpression); ok {
 					if len(call.Arguments) > 0 {
 						if str, ok := call.Arguments[0].(*parser.StringLiteral); ok {
 							return str.Value
