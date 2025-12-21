@@ -347,7 +347,6 @@ func (t *StructType) Equals(other Type) bool {
 	if other.Kind() == KindNull {
 		return true
 	}
-	// Nominal typing
 	if o, ok := other.(*StructType); ok {
 		return t.Name == o.Name
 	}
