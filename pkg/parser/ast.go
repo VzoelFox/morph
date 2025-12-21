@@ -95,10 +95,11 @@ func (mt *MapType) String() string {
 // --- Statements ---
 
 type VarStatement struct {
-	Token  lexer.Token // var
-	Names  []*Identifier
-	Type   TypeNode // Optional
-	Values []Expression
+	Token   lexer.Token // var or tetapan
+	Names   []*Identifier
+	Type    TypeNode // Optional
+	Values  []Expression
+	IsConst bool
 }
 
 func (vs *VarStatement) statementNode()       {}

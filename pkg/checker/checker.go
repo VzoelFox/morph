@@ -43,7 +43,7 @@ func New() *Checker {
 		Parameters:  []Type{StringType},
 		ReturnTypes: []Type{IntType, StringType},
 	}
-	c.scope.DefineVariable("parse_int", parseIntType, 0, 0)
+	c.scope.DefineVariable("parse_int", parseIntType, true, 0, 0)
 
 	return c
 }
@@ -79,6 +79,9 @@ func (c *Checker) collectDefinitions(program *parser.Program) {
 	// 0. Process Imports first
 	for _, stmt := range program.Statements {
 		if imp, ok := stmt.(*parser.ImportStatement); ok {
+			if imp == nil {
+				continue
+			}
 			c.checkImport(imp)
 		}
 	}
@@ -86,8 +89,14 @@ func (c *Checker) collectDefinitions(program *parser.Program) {
 	// 1. Structs first (types)
 	for _, stmt := range program.Statements {
 		if s, ok := stmt.(*parser.StructStatement); ok {
+			if s == nil {
+				continue
+			}
 			c.defineStruct(s)
 		} else if i, ok := stmt.(*parser.InterfaceStatement); ok {
+			if i == nil {
+				continue
+			}
 			c.defineInterface(i)
 		}
 	}
@@ -96,8 +105,14 @@ func (c *Checker) collectDefinitions(program *parser.Program) {
 	for _, stmt := range program.Statements {
 		switch s := stmt.(type) {
 		case *parser.VarStatement:
+			if s == nil {
+				continue
+			}
 			c.defineVar(s)
 		case *parser.ExpressionStatement:
+			if s == nil {
+				continue
+			}
 			if fn, ok := s.Expression.(*parser.FunctionLiteral); ok {
 				if fn.Name != "" {
 					c.defineFunction(fn)
@@ -195,7 +210,8 @@ func (c *Checker) registerModule(imp *parser.ImportStatement, mod *ModuleType) {
 				case KindStruct, KindInterface:
 					c.scope.DefineType(name, typ)
 				default:
-					c.scope.DefineVariable(name, typ, imp.Token.Line, imp.Token.Column)
+					// Imported items are effectively constants
+					c.scope.DefineVariable(name, typ, true, imp.Token.Line, imp.Token.Column)
 				}
 			} else {
 				c.addError(imp.Token.Line, imp.Token.Column, "Module '%s' does not export '%s'", imp.Path, name)
@@ -210,7 +226,7 @@ func (c *Checker) registerModule(imp *parser.ImportStatement, mod *ModuleType) {
 			name = name[:idx]
 		}
 
-		c.scope.DefineVariable(name, mod, imp.Token.Line, imp.Token.Column)
+		c.scope.DefineVariable(name, mod, true, imp.Token.Line, imp.Token.Column)
 	}
 }
 
@@ -278,10 +294,14 @@ func (c *Checker) defineVar(s *parser.VarStatement) {
 	}
 	for _, name := range s.Names {
 		if existing, ok := c.scope.variables[name.Value]; ok {
-			c.addError(name.Token.Line, name.Token.Column, "Global variable '%s' already declared (type: %s)", name.Value, existing.Type.String())
+			existingTypeStr := "<nil>"
+			if existing.Type != nil {
+				existingTypeStr = existing.Type.String()
+			}
+			c.addError(name.Token.Line, name.Token.Column, "Global variable '%s' already declared (type: %s)", name.Value, existingTypeStr)
 			continue
 		}
-		c.scope.DefineVariable(name.Value, t, name.Token.Line, name.Token.Column)
+		c.scope.DefineVariable(name.Value, t, s.IsConst, name.Token.Line, name.Token.Column)
 	}
 }
 
@@ -313,7 +333,7 @@ func (c *Checker) defineFunction(fn *parser.FunctionLiteral) {
 		st.Methods[fn.Name] = ft
 	} else {
 		// Normal function
-		c.scope.DefineVariable(fn.Name, ft, fn.Token.Line, fn.Token.Column)
+		c.scope.DefineVariable(fn.Name, ft, true, fn.Token.Line, fn.Token.Column)
 	}
 }
 
@@ -480,6 +500,15 @@ func (c *Checker) checkAssignment(s *parser.AssignmentStatement) {
 			break
 		}
 
+		// Check mutability
+		if ident, ok := nameExpr.(*parser.Identifier); ok {
+			if sym, ok := c.scope.LookupSymbol(ident.Value); ok {
+				if sym.IsConst {
+					c.addError(s.Token.Line, s.Token.Column, "Cannot reassign constant '%s'", ident.Value)
+				}
+			}
+		}
+
 		lhsType := c.checkExpression(nameExpr)
 		rhsType := valueTypes[i]
 
@@ -559,7 +588,7 @@ func (c *Checker) checkVarStatement(s *parser.VarStatement) {
 		}
 
 		// Update scope with refined type
-		if warning := c.scope.DefineVariable(name.Value, finalType, name.Token.Line, name.Token.Column); warning != nil {
+		if warning := c.scope.DefineVariable(name.Value, finalType, s.IsConst, name.Token.Line, name.Token.Column); warning != nil {
 			warning.Line = name.Token.Line
 			warning.Column = name.Token.Column
 			c.Warnings = append(c.Warnings, *warning)
@@ -617,30 +646,23 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 	case *parser.MemberExpression:
 		objType := c.checkExpression(exp.Object)
 
+		if objType.Kind() == KindUnknown {
+			return UnknownType
+		}
+
+		if memberType, ok := objType.GetMember(exp.Member.Value); ok {
+			return memberType
+		}
+
 		if objType.Kind() == KindModule {
 			mod := objType.(*ModuleType)
-			if t, ok := mod.Exports[exp.Member.Value]; ok {
-				return t
-			}
 			c.addError(exp.Token.Line, exp.Token.Column, "Module '%s' does not export '%s'", mod.Name, exp.Member.Value)
-			return ErrorType
-		}
-
-		if objType.Kind() != KindStruct {
+		} else if objType.Kind() == KindStruct {
+			st := objType.(*StructType)
+			c.addError(exp.Token.Line, exp.Token.Column, "Field or method '%s' not found in struct '%s'", exp.Member.Value, st.Name)
+		} else {
 			c.addError(exp.Token.Line, exp.Token.Column, "Cannot access member on non-struct/module type %s", objType.String())
-			return ErrorType
 		}
-
-		st := objType.(*StructType)
-		if fieldType, exists := st.Fields[exp.Member.Value]; exists {
-			return fieldType
-		}
-
-		if methodType, exists := st.Methods[exp.Member.Value]; exists {
-			return methodType
-		}
-
-		c.addError(exp.Token.Line, exp.Token.Column, "Field or method '%s' not found in struct '%s'", exp.Member.Value, st.Name)
 		return ErrorType
 
 	case *parser.ArrayLiteral:
@@ -694,41 +716,31 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 		leftType := c.checkExpression(exp.Left)
 		idxType := c.checkExpression(exp.Index)
 
-		if leftType.Kind() == KindArray {
-			if idxType.Kind() != KindInt {
-				c.addError(exp.Token.Line, exp.Token.Column, "Array index must be Int")
-			}
-			return leftType.(*ArrayType).Element
+		if leftType.Kind() == KindUnknown {
+			return UnknownType
 		}
 
-		if leftType.Kind() == KindMap {
-			mt := leftType.(*MapType)
-			if !mt.Key.Equals(idxType) {
-				c.addError(exp.Token.Line, exp.Token.Column, "Map key type mismatch: expected %s, got %s", mt.Key.String(), idxType.String())
+		resType, err := leftType.Index(idxType)
+		if err != nil {
+			c.addError(exp.Token.Line, exp.Token.Column, "%s", err.Error())
+			if resType != nil {
+				return resType
 			}
-			return mt.Value
+			return UnknownType
 		}
-
-		if leftType.Kind() != KindUnknown {
-			c.addError(exp.Token.Line, exp.Token.Column, "Index operation not supported on type %s", leftType.String())
-		}
-		return UnknownType
+		return resType
 
 	case *parser.PrefixExpression:
 		right := c.checkExpression(exp.Right)
-		if exp.Operator == "!" {
-			if right.Kind() != KindBool && right.Kind() != KindUnknown {
-				c.addError(exp.Token.Line, exp.Token.Column, "Operator ! not defined for type %s", right.String())
-			}
-			return BoolType
+		if right.Kind() == KindUnknown {
+			return UnknownType
 		}
-		if exp.Operator == "-" {
-			if right.Kind() != KindInt && right.Kind() != KindFloat && right.Kind() != KindUnknown {
-				c.addError(exp.Token.Line, exp.Token.Column, "Operator - not defined for type %s", right.String())
-			}
-			return right
+		resType, err := right.PrefixOp(exp.Operator)
+		if err != nil {
+			c.addError(exp.Token.Line, exp.Token.Column, "%s", err.Error())
+			return UnknownType
 		}
-		return UnknownType
+		return resType
 
 	case *parser.InfixExpression:
 		left := c.checkExpression(exp.Left)
@@ -738,23 +750,12 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 			return UnknownType
 		}
 
-		switch exp.Operator {
-		case "+", "-", "*", "/":
-			if left.Kind() == KindInt && right.Kind() == KindInt {
-				return IntType
-			}
-			if left.Kind() == KindFloat && right.Kind() == KindFloat {
-				return FloatType
-			}
-			c.addError(exp.Token.Line, exp.Token.Column, "Operator %s not defined for types %s and %s", exp.Operator, left.String(), right.String())
-			return ErrorType
-		case "==", "!=":
-			if left.Equals(right) {
-				return BoolType
-			}
-			c.addError(exp.Token.Line, exp.Token.Column, "Cannot compare different types %s and %s", left.String(), right.String())
+		resType, err := left.BinaryOp(exp.Operator, right)
+		if err != nil {
+			c.addError(exp.Token.Line, exp.Token.Column, "%s", err.Error())
 			return ErrorType
 		}
+		return resType
 
 	case *parser.FunctionLiteral:
 		c.enterScope()
@@ -762,7 +763,7 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 		// Define Receiver in scope if present
 		if exp.Receiver != nil {
 			recvType := c.resolveType(exp.Receiver.Type)
-			if warning := c.scope.DefineVariable(exp.Receiver.Name.Value, recvType, exp.Receiver.Name.Token.Line, exp.Receiver.Name.Token.Column); warning != nil {
+			if warning := c.scope.DefineVariable(exp.Receiver.Name.Value, recvType, false, exp.Receiver.Name.Token.Line, exp.Receiver.Name.Token.Column); warning != nil {
 				warning.Line = exp.Receiver.Name.Token.Line
 				warning.Column = exp.Receiver.Name.Token.Column
 				c.Warnings = append(c.Warnings, *warning)
@@ -771,7 +772,7 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 
 		for _, p := range exp.Parameters {
 			t := c.resolveType(p.Type)
-			if warning := c.scope.DefineVariable(p.Name.Value, t, p.Name.Token.Line, p.Name.Token.Column); warning != nil {
+			if warning := c.scope.DefineVariable(p.Name.Value, t, false, p.Name.Token.Line, p.Name.Token.Column); warning != nil {
 				warning.Line = p.Name.Token.Line
 				warning.Column = p.Name.Token.Column
 				c.Warnings = append(c.Warnings, *warning)
@@ -837,60 +838,21 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 		if funcType.Kind() == KindUnknown {
 			return UnknownType
 		}
-		if f, ok := funcType.(*FunctionType); ok {
-			if len(exp.Arguments) != len(f.Parameters) {
-				c.addError(exp.Token.Line, exp.Token.Column, "Wrong number of arguments: expected %d, got %d", len(f.Parameters), len(exp.Arguments))
-				return ErrorType
-			}
-			for i, arg := range exp.Arguments {
-				argType := c.checkExpression(arg)
-				if !argType.AssignableTo(f.Parameters[i]) {
-					c.addError(exp.Token.Line, exp.Token.Column, "Argument %d type mismatch: expected %s, got %s", i+1, f.Parameters[i].String(), argType.String())
-				}
-			}
-			if len(f.ReturnTypes) == 1 {
-				return f.ReturnTypes[0]
-			}
-			return &MultiType{Types: f.ReturnTypes}
+
+		argTypes := []Type{}
+		for _, arg := range exp.Arguments {
+			argTypes = append(argTypes, c.checkExpression(arg))
 		}
 
-		// Check for Type Casting (e.g. Int(5.5))
-		if id, ok := exp.Function.(*parser.Identifier); ok {
-			// If it resolves to a Type and NOT a Variable, it's a Cast
-			if targetType, isType := c.scope.LookupType(id.Value); isType {
-				if _, isVar := c.scope.LookupVariable(id.Value); !isVar {
-					// It is a cast
-					if len(exp.Arguments) != 1 {
-						c.addError(exp.Token.Line, exp.Token.Column, "Type conversion requires exactly 1 argument")
-						return ErrorType
-					}
-					argType := c.checkExpression(exp.Arguments[0])
-
-					// Tier 1: Int -> Float (Lossless-ish)
-					if targetType.Kind() == KindFloat && argType.Kind() == KindInt {
-						return FloatType
-					}
-
-					// Tier 2: Float -> Int (Lossy - Warning)
-					if targetType.Kind() == KindInt && argType.Kind() == KindFloat {
-						c.addWarning(exp.Token.Line, exp.Token.Column, "Lossy conversion from Float to Int")
-						return IntType
-					}
-
-					// Identity or Assignable (e.g. Upcast)
-					if argType.AssignableTo(targetType) {
-						return targetType
-					}
-
-					// Tier 3: Forbidden (String -> Int, etc)
-					c.addError(exp.Token.Line, exp.Token.Column, "Cannot convert type %s to %s", argType.String(), targetType.String())
-					return ErrorType
-				}
-			}
+		resType, warning, err := funcType.Call(argTypes)
+		if warning != "" {
+			c.addWarning(exp.Token.Line, exp.Token.Column, "%s", warning)
 		}
-
-		c.addError(exp.Token.Line, exp.Token.Column, "Not a function: %s", funcType.String())
-		return ErrorType
+		if err != nil {
+			c.addError(exp.Token.Line, exp.Token.Column, "%s", err.Error())
+			return ErrorType
+		}
+		return resType
 	}
 
 	return UnknownType
@@ -910,7 +872,15 @@ func (c *Checker) leaveScope() {
 }
 
 func (c *Checker) addError(line, col int, format string, args ...interface{}) {
-	c.Errors = append(c.Errors, NewTypeError(line, col, format, args...))
+	err := NewTypeError(line, col, format, args...)
+	// Deduplicate
+	if len(c.Errors) > 0 {
+		last := c.Errors[len(c.Errors)-1]
+		if last.Line == err.Line && last.Column == err.Column && last.Message == err.Message {
+			return
+		}
+	}
+	c.Errors = append(c.Errors, err)
 }
 
 func (c *Checker) addWarning(line, col int, format string, args ...interface{}) {
