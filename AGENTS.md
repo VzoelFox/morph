@@ -55,6 +55,27 @@ project-root/
 
 ## Riwayat Perubahan
 
+### Version 1.7.0 - 2025-12-20
+**Checksum**: SHA256:VARIOUS
+**Perubahan**:
+- **Import System**: Implemented `ImportStatement` processing in `pkg/checker/checker.go`.
+- **Type System**: Added `KindModule` and `ModuleType` to support module namespaces.
+- **Checker**: Added `Importer` interface and `SetImporter` to `Checker` for loading external modules (robust integration foundation).
+- **Checker**: Implemented Cycle Detection and Module Caching.
+- **Checker**: Implemented `MemberExpression` logic for `KindModule` access (e.g. `math.PI`).
+- **Tests**: Added `pkg/checker/import_test.go` with integration tests for imports, visibility, and cycles.
+
+**Konteks Sesi**:
+- **Building Foundation**: Mengimplementasikan sistem Import yang robust sebagai pondasi integrasi.
+- Menyelesaikan gap fungsional utama di mana `ambil` sebelumnya diabaikan oleh Checker.
+- Mendukung "Exported Symbols" (Uppercase) dan "Private Symbols" (Lowercase).
+
+**File Terkait**:
+- `pkg/checker/types.go` (SHA256:9daab5997e83b86b48b9e5107325b14719da4afc6701a5f2ae36309091b578c1)
+- `pkg/checker/checker.go` (SHA256:1835cc16b7eab89d15bf36dac78c266da02079d77cd8d7dad9f7069cf45d1d0e)
+- `pkg/checker/import_test.go` (SHA256:228faec0cf5bfee2b14a8a2e94682453905966fa43922b645f5eebcccccd420f)
+- `.vzoel.jules/technical-debt.morph.vz` (SHA256:5bf1f421c6712d68e2a12db07762e1a36176c83dcff34daeffdbce840cb8d984)
+
 ### Version 1.6.2 - 2025-12-20
 **Checksum**: SHA256:VARIOUS
 **Perubahan**:

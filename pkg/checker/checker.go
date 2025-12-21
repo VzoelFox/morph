@@ -1,22 +1,33 @@
 package checker
 
 import (
+	"strings"
+
 	"github.com/VzoelFox/morph/pkg/parser"
 )
 
+type Importer interface {
+	Import(path string) (*parser.Program, error)
+}
+
 type Checker struct {
-	Errors      []TypeError
-	Warnings    []TypeWarning
-	scope       *Scope
-	returnStack []Type
+	Errors         []TypeError
+	Warnings       []TypeWarning
+	scope          *Scope
+	returnStack    []Type
+	importer       Importer
+	moduleCache    map[string]*ModuleType
+	loadingModules map[string]bool
 }
 
 func New() *Checker {
 	c := &Checker{
-		Errors:      []TypeError{},
-		Warnings:    []TypeWarning{},
-		scope:       NewScope(nil),
-		returnStack: []Type{},
+		Errors:         []TypeError{},
+		Warnings:       []TypeWarning{},
+		scope:          NewScope(nil),
+		returnStack:    []Type{},
+		moduleCache:    make(map[string]*ModuleType),
+		loadingModules: make(map[string]bool),
 	}
 
 	// Register primitive types
@@ -35,6 +46,10 @@ func New() *Checker {
 	c.scope.DefineVariable("parse_int", parseIntType, 0, 0)
 
 	return c
+}
+
+func (c *Checker) SetImporter(i Importer) {
+	c.importer = i
 }
 
 func (c *Checker) pushReturn(t Type) { c.returnStack = append(c.returnStack, t) }
@@ -61,6 +76,13 @@ func (c *Checker) Check(program *parser.Program) {
 }
 
 func (c *Checker) collectDefinitions(program *parser.Program) {
+	// 0. Process Imports first
+	for _, stmt := range program.Statements {
+		if imp, ok := stmt.(*parser.ImportStatement); ok {
+			c.checkImport(imp)
+		}
+	}
+
 	// 1. Structs first (types)
 	for _, stmt := range program.Statements {
 		if s, ok := stmt.(*parser.StructStatement); ok {
@@ -83,6 +105,98 @@ func (c *Checker) collectDefinitions(program *parser.Program) {
 			}
 		}
 	}
+}
+
+func (c *Checker) checkImport(imp *parser.ImportStatement) {
+	if c.importer == nil {
+		return
+	}
+
+	path := imp.Path
+	if c.loadingModules[path] {
+		c.addError(imp.Token.Line, imp.Token.Column, "Import cycle detected: %s", path)
+		return
+	}
+
+	if mod, cached := c.moduleCache[path]; cached {
+		c.registerModule(imp, mod)
+		return
+	}
+
+	c.loadingModules[path] = true
+	defer func() { delete(c.loadingModules, path) }()
+
+	importedProg, err := c.importer.Import(path)
+	if err != nil {
+		c.addError(imp.Token.Line, imp.Token.Column, "Failed to import module '%s': %v", path, err)
+		return
+	}
+
+	// Check imported module (recursively)
+	subChecker := New()
+	subChecker.importer = c.importer // Share importer
+	subChecker.moduleCache = c.moduleCache // Share cache
+	subChecker.loadingModules = c.loadingModules // Share loading state (for cycle detection)
+
+	// Collect definitions ONLY (Pass 1)
+	subChecker.Check(importedProg)
+
+	// Propagate errors from imported module
+	if len(subChecker.Errors) > 0 {
+		c.Errors = append(c.Errors, subChecker.Errors...)
+	}
+
+	// Harvest Exports (Uppercase)
+	exports := make(map[string]Type)
+
+	// Collect from Scope
+	for name, sym := range subChecker.scope.variables {
+		if isExported(name) {
+			exports[name] = sym.Type
+		}
+	}
+	// Also Types (Structs, Interfaces)
+	for name := range subChecker.scope.types {
+		if isExported(name) {
+			// TODO: Handle exported types
+		}
+	}
+
+	mod := &ModuleType{
+		Name:    path, // or base name?
+		Exports: exports,
+	}
+
+	c.moduleCache[path] = mod
+	c.registerModule(imp, mod)
+}
+
+func (c *Checker) registerModule(imp *parser.ImportStatement, mod *ModuleType) {
+	// 2. From Import: dari "math" ambil Sin -> var Sin = mod.Exports["Sin"]
+	if len(imp.Identifiers) > 0 {
+		for _, name := range imp.Identifiers {
+			if typ, ok := mod.Exports[name]; ok {
+				c.scope.DefineVariable(name, typ, imp.Token.Line, imp.Token.Column)
+			} else {
+				c.addError(imp.Token.Line, imp.Token.Column, "Module '%s' does not export '%s'", imp.Path, name)
+			}
+		}
+	} else {
+		// Define module as variable
+		parts := strings.Split(imp.Path, "/")
+		name := parts[len(parts)-1]
+		// Remove extension if any
+		if idx := strings.Index(name, "."); idx != -1 {
+			name = name[:idx]
+		}
+
+		c.scope.DefineVariable(name, mod, imp.Token.Line, imp.Token.Column)
+	}
+}
+
+func isExported(name string) bool {
+	if len(name) == 0 { return false }
+	return name[0] >= 'A' && name[0] <= 'Z'
 }
 
 func (c *Checker) defineStruct(s *parser.StructStatement) {
@@ -458,8 +572,17 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 	case *parser.MemberExpression:
 		objType := c.checkExpression(exp.Object)
 
+		if objType.Kind() == KindModule {
+			mod := objType.(*ModuleType)
+			if t, ok := mod.Exports[exp.Member.Value]; ok {
+				return t
+			}
+			c.addError(exp.Token.Line, exp.Token.Column, "Module '%s' does not export '%s'", mod.Name, exp.Member.Value)
+			return ErrorType
+		}
+
 		if objType.Kind() != KindStruct {
-			c.addError(exp.Token.Line, exp.Token.Column, "Cannot access member on non-struct type %s", objType.String())
+			c.addError(exp.Token.Line, exp.Token.Column, "Cannot access member on non-struct/module type %s", objType.String())
 			return ErrorType
 		}
 

@@ -23,6 +23,7 @@ const (
 	KindError     // Internal Compiler Error
 	KindNull
 	KindUserError // User-facing 'Error' type
+	KindModule    // Module namespace
 )
 
 type Type interface {
@@ -50,8 +51,8 @@ func (t *BasicType) AssignableTo(target Type) bool {
 	if target == nil {
 		return false
 	}
-	// Unknown matches anything (error suppression)
-	if t.K == KindUnknown || target.Kind() == KindUnknown {
+	// Unknown AND Error match anything (error suppression)
+	if t.K == KindUnknown || target.Kind() == KindUnknown || t.K == KindError || target.Kind() == KindError {
 		return true
 	}
 
@@ -77,6 +78,32 @@ var (
 	NullType      = &BasicType{K: KindNull, Name: "Null"}
 	UserErrorType = &BasicType{K: KindUserError, Name: "Error"} // User Type
 )
+
+type ModuleType struct {
+	Name    string
+	Exports map[string]Type
+}
+
+func (t *ModuleType) Kind() TypeKind { return KindModule }
+func (t *ModuleType) String() string { return "Module<" + t.Name + ">" }
+func (t *ModuleType) Equals(other Type) bool {
+	if other == nil {
+		return false
+	}
+	if o, ok := other.(*ModuleType); ok {
+		return t.Name == o.Name
+	}
+	return false
+}
+func (t *ModuleType) AssignableTo(target Type) bool {
+	if target == nil {
+		return false
+	}
+	if target.Kind() == KindUnknown {
+		return true
+	}
+	return t.Equals(target)
+}
 
 type ArrayType struct {
 	Element Type
