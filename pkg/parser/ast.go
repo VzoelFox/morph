@@ -80,6 +80,15 @@ func (at *ArrayType) typeNode()            {}
 func (at *ArrayType) TokenLiteral() string { return at.Token.Literal }
 func (at *ArrayType) String() string       { return "[]" + at.Element.String() }
 
+type PointerType struct {
+	Token   lexer.Token // '*'
+	Element TypeNode
+}
+
+func (pt *PointerType) typeNode()            {}
+func (pt *PointerType) TokenLiteral() string { return pt.Token.Literal }
+func (pt *PointerType) String() string       { return "*" + pt.Element.String() }
+
 type MapType struct {
 	Token lexer.Token // 'map'
 	Key   TypeNode

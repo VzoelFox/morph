@@ -117,6 +117,8 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefix(lexer.BANG, p.parsePrefixExpression)
 	p.registerPrefix(lexer.MINUS, p.parsePrefixExpression)
 	p.registerPrefix(lexer.TILDE, p.parsePrefixExpression)
+	p.registerPrefix(lexer.AND, p.parsePrefixExpression)
+	p.registerPrefix(lexer.ASTERISK, p.parsePrefixExpression)
 	p.registerPrefix(lexer.LPAREN, p.parseGroupedExpression)
 	p.registerPrefix(lexer.JIKA, p.parseIfExpression)
 	p.registerPrefix(lexer.SELAMA, p.parseWhileExpression)
@@ -451,6 +453,16 @@ func (p *Parser) parseFromImportStatement() *ImportStatement {
 }
 
 func (p *Parser) parseType() TypeNode {
+	if p.curTokenIs(lexer.ASTERISK) {
+		tok := p.curToken
+		p.nextToken()
+		elem := p.parseType()
+		if elem == nil {
+			return nil
+		}
+		return &PointerType{Token: tok, Element: elem}
+	}
+
 	if p.curTokenIs(lexer.LBRACKET) {
 		tok := p.curToken
 		if !p.expectPeek(lexer.RBRACKET) {
@@ -1008,7 +1020,7 @@ func (p *Parser) parseIfExpression() Expression {
 
 func (p *Parser) peekIsType() bool {
 	t := p.peekToken.Type
-	return t == lexer.IDENT || t == lexer.LBRACKET || t == lexer.MAP
+	return t == lexer.IDENT || t == lexer.LBRACKET || t == lexer.MAP || t == lexer.ASTERISK
 }
 
 func (p *Parser) parseFunctionLiteral() Expression {

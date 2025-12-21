@@ -185,8 +185,8 @@ func TestNullAssignment(t *testing.T) {
 	var u User = kosong;
 	`
 	errors := check(input)
-	if len(errors) != 0 {
-		t.Errorf("Expected no errors, got %v", errors)
+	if len(errors) == 0 {
+		t.Error("Expected error: Struct is value type, cannot be Null")
 	}
 }
 

@@ -731,6 +731,29 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 		return resType
 
 	case *parser.PrefixExpression:
+		// Address Of Operation (&)
+		if exp.Operator == "&" {
+			// Validate operand is addressable
+			// Addressable: Identifier, Index, Member.
+			// NOT Addressable: Literal, Call, Prefix, Infix.
+			isAddressable := false
+			switch exp.Right.(type) {
+			case *parser.Identifier, *parser.IndexExpression, *parser.MemberExpression:
+				isAddressable = true
+			}
+
+			if !isAddressable {
+				c.addError(exp.Token.Line, exp.Token.Column, "Cannot take address of non-variable expression")
+				return ErrorType
+			}
+
+			rightType := c.checkExpression(exp.Right)
+			if rightType.Kind() == KindUnknown {
+				return UnknownType
+			}
+			return &PointerType{Element: rightType}
+		}
+
 		right := c.checkExpression(exp.Right)
 		if right.Kind() == KindUnknown {
 			return UnknownType

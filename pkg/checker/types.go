@@ -18,6 +18,7 @@ const (
 	KindInterface
 	KindArray
 	KindMap
+	KindPointer
 	KindMulti // For multiple return values
 	KindUnknown
 	KindError     // Internal Compiler Error
@@ -61,7 +62,7 @@ func (t *BasicType) AssignableTo(target Type) bool {
 	}
 	if t.K == KindNull {
 		k := target.Kind()
-		return k == KindArray || k == KindMap || k == KindStruct || k == KindInterface || k == KindFunction || k == KindString || k == KindNull || k == KindUserError
+		return k == KindArray || k == KindMap || k == KindPointer || k == KindInterface || k == KindFunction || k == KindString || k == KindNull || k == KindUserError
 	}
 	return t.Equals(target)
 }
@@ -613,4 +614,57 @@ func (t *MultiType) PrefixOp(op string) (Type, error) {
 }
 func (t *MultiType) Call(args []Type) (Type, string, error) {
 	return nil, "", fmt.Errorf("Cannot call multi-type")
+}
+
+type PointerType struct {
+	Element Type
+}
+
+func (t *PointerType) Kind() TypeKind { return KindPointer }
+func (t *PointerType) String() string { return "*" + t.Element.String() }
+func (t *PointerType) Equals(other Type) bool {
+	if other == nil {
+		return false
+	}
+	if other.Kind() == KindNull {
+		return true
+	}
+	if o, ok := other.(*PointerType); ok {
+		return t.Element.Equals(o.Element)
+	}
+	return false
+}
+func (t *PointerType) AssignableTo(target Type) bool {
+	if target == nil {
+		return false
+	}
+	if target.Kind() == KindUnknown {
+		return true
+	}
+	return t.Equals(target)
+}
+func (t *PointerType) GetMember(name string) (Type, bool) {
+	// Auto-dereference support for convenience (p.Name vs (*p).Name)
+	return t.Element.GetMember(name)
+}
+func (t *PointerType) Index(key Type) (Type, error) {
+	return nil, fmt.Errorf("Cannot index pointer type")
+}
+func (t *PointerType) BinaryOp(op string, right Type) (Type, error) {
+	if op == "==" || op == "!=" {
+		if t.Equals(right) || right.Kind() == KindNull {
+			return BoolType, nil
+		}
+		return nil, fmt.Errorf("Type mismatch")
+	}
+	return nil, fmt.Errorf("Operator %s not supported on pointer", op)
+}
+func (t *PointerType) PrefixOp(op string) (Type, error) {
+	if op == "*" {
+		return t.Element, nil
+	}
+	return nil, fmt.Errorf("Prefix operator %s not supported on pointer", op)
+}
+func (t *PointerType) Call(args []Type) (Type, string, error) {
+	return nil, "", fmt.Errorf("Cannot call pointer type")
 }
