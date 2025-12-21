@@ -55,6 +55,36 @@ project-root/
 
 ## Riwayat Perubahan
 
+### Version 1.7.3 - 2025-12-20
+**Checksum**: SHA256:VARIOUS
+**Perubahan**:
+- **Analysis**: Fixed "Tree Walk Blindness" in `analyzer.go` by adding traversal for `ArrayLiteral`, `HashLiteral`, `IndexExpression`, and `MemberExpression`.
+- **Analysis**: Improved `inferType` to support `MemberExpression` and Literals.
+- **Tests**: Added tests for Call Graph completeness and Type Inference.
+
+**Konteks Sesi**:
+- **Analysis Foundation**: Memperkuat pondasi alat analisis agar tidak "buta" terhadap struktur AST yang lebih dalam, sesuai arahan user.
+
+**File Terkait**:
+- `pkg/analysis/analyzer.go` (SHA256:6affdb6232dad3e4e4e3d4192b583169b98679f9adf7c97121bb1d8b7ea837a0)
+- `pkg/analysis/analyzer_test.go` (SHA256:9921017608e692e25746ad25b14114d319de5d82a4137254ae8f851f690138af)
+
+### Version 1.7.2 - 2025-12-20
+**Checksum**: SHA256:VARIOUS
+**Perubahan**:
+- **Integrity**: Synchronized checksums for `pkg/checker/checker.go`, `pkg/analysis/analyzer.go`, `pkg/checker/import_test.go`, and `pkg/checker/import_type_test.go`.
+- **Audit**: Verified no legacy `morphlang` import paths remain. Confirmed all imports use `github.com/VzoelFox/morph`.
+
+**Konteks Sesi**:
+- **Integrity Restoration**: Mengatasi "Ghost Changes" yang terjadi akibat refactor path/URL sebelumnya yang tidak tercatat sempurna.
+- Memastikan AGENTS.md kembali menjadi Single Source of Truth yang akurat.
+
+**File Terkait**:
+- `pkg/checker/checker.go` (SHA256:91b3244ed88920549664767185e0b378b2c4c8175900414459bac7727c22c257)
+- `pkg/analysis/analyzer.go` (SHA256:5f3ac30b83dde6109daae28cb4517c0eed086ab97842e316a4b922b606f3ad49)
+- `pkg/checker/import_test.go` (SHA256:6af0dab28a04048c6ad7f84f75a4d6a4778babfd90372e2154d88326ea7c6a81)
+- `pkg/checker/import_type_test.go` (SHA256:d3e4e47f4952872b084fa8534cae971e07d2d2dd35ee777fb14cda471b6f14b5)
+
 ### Version 1.7.1 - 2025-12-20
 **Checksum**: SHA256:VARIOUS
 **Perubahan**:

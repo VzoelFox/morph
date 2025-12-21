@@ -240,3 +240,86 @@ akhir
 		t.Errorf("Field 0 mismatch: %v", st.Fields[0])
 	}
 }
+
+func TestAnalyzerBlindness_CallGraph(t *testing.T) {
+	input := `
+	fungsi main()
+		# Call in Array
+		var arr = [call1()]
+
+		# Call in Map
+		var m = {call2(): call3()}
+
+		# Call in Index
+		var x = arr[call4()]
+
+		# Call in Member (Object)
+		var y = call5().field
+	akhir
+	`
+
+	l := lexer.New(input)
+	p := parser.New(l)
+	program := p.ParseProgram()
+
+	ctx, err := GenerateContext(program, "test.fox", input, []parser.ParserError{})
+	if err != nil {
+		t.Fatalf("Analysis failed: %v", err)
+	}
+
+	sym, ok := ctx.Symbols["main"]
+	if !ok {
+		t.Fatal("Symbol 'main' not found")
+	}
+
+	expectedCalls := map[string]bool{
+		"call1": false,
+		"call2": false,
+		"call3": false,
+		"call4": false,
+		"call5": false,
+	}
+
+	for _, call := range sym.Calls {
+		if _, exists := expectedCalls[call]; exists {
+			expectedCalls[call] = true
+		}
+	}
+
+	for call, found := range expectedCalls {
+		if !found {
+			t.Errorf("Blindness detected: Analyzer missed call to '%s'", call)
+		}
+	}
+}
+
+func TestAnalyzerInference_Member(t *testing.T) {
+	input := `
+	struktur User
+		age integer
+	akhir
+
+	fungsi main()
+		var u User = User{age: 10}
+		var x = u.age
+	akhir
+	`
+	l := lexer.New(input)
+	p := parser.New(l)
+	program := p.ParseProgram()
+
+	ctx, err := GenerateContext(program, "test.fox", input, []parser.ParserError{})
+	if err != nil {
+		t.Fatalf("Analysis failed: %v", err)
+	}
+
+	// Check x type
+	scope := ctx.LocalScopes["main"]
+	if xVar, ok := scope["x"]; ok {
+		if xVar.Type != "integer" {
+			t.Errorf("Inference failed: Expected 'integer', got '%s'", xVar.Type)
+		}
+	} else {
+		t.Fatal("Variable x not found")
+	}
+}

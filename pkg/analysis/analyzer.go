@@ -292,6 +292,8 @@ func (a *Analyzer) analyzeFunction(fn *parser.FunctionLiteral) {
 			typeName := "any"
 			if vstmt.Type != nil {
 				typeName = vstmt.Type.String()
+			} else if len(vstmt.Values) > 0 {
+				typeName = a.inferType(vstmt.Values[0])
 			}
 			for _, nameIdent := range vstmt.Names {
 				varName := nameIdent.Value
@@ -450,6 +452,24 @@ func (a *Analyzer) walkExpression(expr parser.Expression, visitor func(parser.No
 		for _, val := range e.Fields {
 			a.walkExpression(val, visitor)
 		}
+	case *parser.ArrayLiteral:
+		for _, el := range e.Elements {
+			a.walkExpression(el, visitor)
+		}
+	case *parser.HashLiteral:
+		for k, v := range e.Pairs {
+			a.walkExpression(k, visitor)
+			a.walkExpression(v, visitor)
+		}
+	case *parser.IndexExpression:
+		a.walkExpression(e.Left, visitor)
+		a.walkExpression(e.Index, visitor)
+	case *parser.MemberExpression:
+		a.walkExpression(e.Object, visitor)
+		// Member is an Identifier (Expression), so we walk it too
+		if e.Member != nil {
+			a.walkExpression(e.Member, visitor)
+		}
 	case *parser.FunctionLiteral:
 		a.analyzeFunction(e)
 	}
@@ -509,6 +529,22 @@ func (a *Analyzer) inferType(expr parser.Expression) string {
 		default:
 			return a.inferType(e.Left)
 		}
+	case *parser.MemberExpression:
+		objType := a.inferType(e.Object)
+		if info, ok := a.context.Structs[objType]; ok {
+			for _, f := range info.Fields {
+				if e.Member != nil && f.Name == e.Member.Value {
+					return f.Type
+				}
+			}
+		}
+	case *parser.StructLiteral:
+		return e.Name.String()
+	case *parser.ArrayLiteral:
+		if len(e.Elements) > 0 {
+			return "[]" + a.inferType(e.Elements[0])
+		}
+		return "[]any"
 	}
 	return "unknown"
 }
