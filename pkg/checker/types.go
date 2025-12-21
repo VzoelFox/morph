@@ -91,6 +91,12 @@ func (t *BasicType) BinaryOp(op string, right Type) (Type, error) {
 			return StringType, nil
 		}
 		return nil, fmt.Errorf("Operator %s not defined for types %s and %s", op, t.String(), right.String())
+	case "%":
+		if t.K == KindInt && right.Kind() == KindInt {
+			return IntType, nil
+		}
+		// Future: Float modulo?
+		return nil, fmt.Errorf("Operator %% requires Int operands")
 	case "==", "!=":
 		if t.Equals(right) {
 			return BoolType, nil
