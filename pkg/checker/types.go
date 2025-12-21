@@ -33,6 +33,9 @@ type Type interface {
 	AssignableTo(target Type) bool
 	GetMember(name string) (Type, bool)
 	Index(key Type) (Type, error)
+	BinaryOp(op string, right Type) (Type, error)
+	PrefixOp(op string) (Type, error)
+	Call(args []Type) (Type, string, error)
 }
 
 type BasicType struct {
@@ -53,19 +56,13 @@ func (t *BasicType) AssignableTo(target Type) bool {
 	if target == nil {
 		return false
 	}
-	// Unknown AND Error match anything (error suppression)
 	if t.K == KindUnknown || target.Kind() == KindUnknown || t.K == KindError || target.Kind() == KindError {
 		return true
 	}
-
-	// Null assignment rules
 	if t.K == KindNull {
 		k := target.Kind()
-		// Null assignable to reference types: Array, Map, Struct, Interface, Function, String, UserError
-		// And Null itself
 		return k == KindArray || k == KindMap || k == KindStruct || k == KindInterface || k == KindFunction || k == KindString || k == KindNull || k == KindUserError
 	}
-
 	return t.Equals(target)
 }
 
@@ -77,6 +74,92 @@ func (t *BasicType) Index(key Type) (Type, error) {
 	return nil, fmt.Errorf("Index operation not supported on type %s", t.String())
 }
 
+func (t *BasicType) BinaryOp(op string, right Type) (Type, error) {
+	if t.K == KindUnknown || right.Kind() == KindUnknown {
+		return UnknownType, nil
+	}
+	switch op {
+	case "+", "-", "*", "/":
+		if t.K == KindInt && right.Kind() == KindInt {
+			return IntType, nil
+		}
+		if t.K == KindFloat && right.Kind() == KindFloat {
+			return FloatType, nil
+		}
+		if t.K == KindString && right.Kind() == KindString && op == "+" {
+			return StringType, nil
+		}
+		return nil, fmt.Errorf("Operator %s not defined for types %s and %s", op, t.String(), right.String())
+	case "==", "!=":
+		if t.Equals(right) {
+			return BoolType, nil
+		}
+		return nil, fmt.Errorf("Cannot compare different types %s and %s", t.String(), right.String())
+	case "&&", "||":
+		if t.K == KindBool && right.Kind() == KindBool {
+			return BoolType, nil
+		}
+		return nil, fmt.Errorf("Operator %s requires Bool operands", op)
+	case "<", ">", "<=", ">=":
+		if (t.K == KindInt || t.K == KindFloat) && t.K == right.Kind() {
+			return BoolType, nil
+		}
+		return nil, fmt.Errorf("Operator %s requires numeric operands", op)
+	case "&", "|", "^", "<<", ">>":
+		if t.K == KindInt && right.Kind() == KindInt {
+			return IntType, nil
+		}
+		return nil, fmt.Errorf("Bitwise operator %s requires Int operands", op)
+	}
+	return nil, fmt.Errorf("Unknown operator %s", op)
+}
+
+func (t *BasicType) PrefixOp(op string) (Type, error) {
+	if t.K == KindUnknown {
+		return UnknownType, nil
+	}
+	switch op {
+	case "!":
+		if t.K == KindBool {
+			return BoolType, nil
+		}
+		return nil, fmt.Errorf("Operator ! not defined for type %s", t.String())
+	case "-":
+		if t.K == KindInt || t.K == KindFloat {
+			return t, nil
+		}
+		return nil, fmt.Errorf("Operator - not defined for type %s", t.String())
+	case "~":
+		if t.K == KindInt {
+			return IntType, nil
+		}
+		return nil, fmt.Errorf("Operator ~ requires Int")
+	}
+	return nil, fmt.Errorf("Unknown prefix operator %s", op)
+}
+
+func (t *BasicType) Call(args []Type) (Type, string, error) {
+	// Implements Type Conversion/Casting (e.g. Int(5.5))
+	if len(args) != 1 {
+		return nil, "", fmt.Errorf("Type conversion requires exactly 1 argument")
+	}
+	arg := args[0]
+	if arg.Kind() == KindUnknown {
+		return t, "", nil
+	}
+
+	if t.K == KindFloat && arg.Kind() == KindInt {
+		return FloatType, "", nil
+	}
+	if t.K == KindInt && arg.Kind() == KindFloat {
+		return IntType, "Lossy conversion from Float to Int", nil
+	}
+	if arg.AssignableTo(t) {
+		return t, "", nil
+	}
+	return nil, "", fmt.Errorf("Cannot convert type %s to %s", arg.String(), t.String())
+}
+
 var (
 	IntType       = &BasicType{K: KindInt, Name: "Int"}
 	FloatType     = &BasicType{K: KindFloat, Name: "Float"}
@@ -84,9 +167,9 @@ var (
 	BoolType      = &BasicType{K: KindBool, Name: "Bool"}
 	VoidType      = &BasicType{K: KindVoid, Name: "Void"}
 	UnknownType   = &BasicType{K: KindUnknown, Name: "Unknown"}
-	ErrorType     = &BasicType{K: KindError, Name: "Error"} // Internal Sentinel
+	ErrorType     = &BasicType{K: KindError, Name: "Error"}
 	NullType      = &BasicType{K: KindNull, Name: "Null"}
-	UserErrorType = &BasicType{K: KindUserError, Name: "Error"} // User Type
+	UserErrorType = &BasicType{K: KindUserError, Name: "Error"}
 )
 
 type ModuleType struct {
@@ -114,6 +197,24 @@ func (t *ModuleType) AssignableTo(target Type) bool {
 	}
 	return t.Equals(target)
 }
+func (t *ModuleType) GetMember(name string) (Type, bool) {
+	if typ, ok := t.Exports[name]; ok {
+		return typ, true
+	}
+	return nil, false
+}
+func (t *ModuleType) Index(key Type) (Type, error) {
+	return nil, fmt.Errorf("Index operation not supported on type %s", t.String())
+}
+func (t *ModuleType) BinaryOp(op string, right Type) (Type, error) {
+	return nil, fmt.Errorf("Operator %s not supported on module", op)
+}
+func (t *ModuleType) PrefixOp(op string) (Type, error) {
+	return nil, fmt.Errorf("Prefix operator %s not supported on module", op)
+}
+func (t *ModuleType) Call(args []Type) (Type, string, error) {
+	return nil, "", fmt.Errorf("Cannot call module type")
+}
 
 func (t *ModuleType) GetMember(name string) (Type, bool) {
 	if typ, ok := t.Exports[name]; ok {
@@ -140,7 +241,6 @@ func (t *ArrayType) Equals(other Type) bool {
 		return true
 	}
 	if o, ok := other.(*ArrayType); ok {
-		// Allow empty array literal (Unknown element) to match any array
 		if t.Element.Kind() == KindUnknown || o.Element.Kind() == KindUnknown {
 			return true
 		}
@@ -148,7 +248,6 @@ func (t *ArrayType) Equals(other Type) bool {
 	}
 	return false
 }
-
 func (t *ArrayType) AssignableTo(target Type) bool {
 	if target == nil {
 		return false
@@ -156,8 +255,33 @@ func (t *ArrayType) AssignableTo(target Type) bool {
 	if target.Kind() == KindUnknown {
 		return true
 	}
-	// Arrays are invariant (must be Equal)
 	return t.Equals(target)
+}
+func (t *ArrayType) GetMember(name string) (Type, bool) {
+	return nil, false
+}
+func (t *ArrayType) Index(key Type) (Type, error) {
+	if key.Kind() != KindInt {
+		return t.Element, fmt.Errorf("Array index must be Int")
+	}
+	return t.Element, nil
+}
+func (t *ArrayType) BinaryOp(op string, right Type) (Type, error) {
+	if op == "==" || op == "!=" {
+		// Arrays not comparable by default in Go, but maybe logic equality?
+		// For now, identity/type check.
+		if t.Equals(right) {
+			return BoolType, nil
+		}
+		return nil, fmt.Errorf("Type mismatch")
+	}
+	return nil, fmt.Errorf("Operator %s not supported on array", op)
+}
+func (t *ArrayType) PrefixOp(op string) (Type, error) {
+	return nil, fmt.Errorf("Prefix operator %s not supported on array", op)
+}
+func (t *ArrayType) Call(args []Type) (Type, string, error) {
+	return nil, "", fmt.Errorf("Cannot call array type")
 }
 
 func (t *ArrayType) GetMember(name string) (Type, bool) {
@@ -186,19 +310,15 @@ func (t *MapType) Equals(other Type) bool {
 		return true
 	}
 	if o, ok := other.(*MapType); ok {
-		// Allow empty map literal (Unknown key/value) to match any map
 		keyUnknown := t.Key.Kind() == KindUnknown || o.Key.Kind() == KindUnknown
 		valUnknown := t.Value.Kind() == KindUnknown || o.Value.Kind() == KindUnknown
-
 		if keyUnknown && valUnknown {
 			return true
 		}
-
 		return t.Key.Equals(o.Key) && t.Value.Equals(o.Value)
 	}
 	return false
 }
-
 func (t *MapType) AssignableTo(target Type) bool {
 	if target == nil {
 		return false
@@ -206,8 +326,31 @@ func (t *MapType) AssignableTo(target Type) bool {
 	if target.Kind() == KindUnknown {
 		return true
 	}
-	// Maps are invariant
 	return t.Equals(target)
+}
+func (t *MapType) GetMember(name string) (Type, bool) {
+	return nil, false
+}
+func (t *MapType) Index(key Type) (Type, error) {
+	if !t.Key.Equals(key) {
+		return t.Value, fmt.Errorf("Map key type mismatch: expected %s, got %s", t.Key.String(), key.String())
+	}
+	return t.Value, nil
+}
+func (t *MapType) BinaryOp(op string, right Type) (Type, error) {
+	if op == "==" || op == "!=" {
+		if t.Equals(right) {
+			return BoolType, nil
+		}
+		return nil, fmt.Errorf("Type mismatch")
+	}
+	return nil, fmt.Errorf("Operator %s not supported on map", op)
+}
+func (t *MapType) PrefixOp(op string) (Type, error) {
+	return nil, fmt.Errorf("Prefix operator %s not supported on map", op)
+}
+func (t *MapType) Call(args []Type) (Type, string, error) {
+	return nil, "", fmt.Errorf("Cannot call map type")
 }
 
 func (t *MapType) GetMember(name string) (Type, bool) {
@@ -236,13 +379,11 @@ func (t *StructType) Equals(other Type) bool {
 	if other.Kind() == KindNull {
 		return true
 	}
-	// Nominal typing
 	if o, ok := other.(*StructType); ok {
 		return t.Name == o.Name
 	}
 	return false
 }
-
 func (t *StructType) AssignableTo(target Type) bool {
 	if target == nil {
 		return false
@@ -250,23 +391,48 @@ func (t *StructType) AssignableTo(target Type) bool {
 	if target.Kind() == KindUnknown {
 		return true
 	}
-
-	// Check if target is an Interface (Implementation Check)
 	if iface, ok := target.(*InterfaceType); ok {
 		for name, method := range iface.Methods {
 			structMethod, exists := t.Methods[name]
 			if !exists {
 				return false
 			}
-			// Method signature must match exactly
 			if !structMethod.Equals(method) {
 				return false
 			}
 		}
 		return true
 	}
-
 	return t.Equals(target)
+}
+func (t *StructType) GetMember(name string) (Type, bool) {
+	if fieldType, exists := t.Fields[name]; exists {
+		return fieldType, true
+	}
+	if methodType, exists := t.Methods[name]; exists {
+		return methodType, true
+	}
+	return nil, false
+}
+func (t *StructType) Index(key Type) (Type, error) {
+	return nil, fmt.Errorf("Index operation not supported on type %s", t.String())
+}
+func (t *StructType) BinaryOp(op string, right Type) (Type, error) {
+	if op == "==" || op == "!=" {
+		if t.Equals(right) {
+			return BoolType, nil
+		}
+		return nil, fmt.Errorf("Type mismatch")
+	}
+	return nil, fmt.Errorf("Operator %s not supported on struct", op)
+}
+func (t *StructType) PrefixOp(op string) (Type, error) {
+	return nil, fmt.Errorf("Prefix operator %s not supported on struct", op)
+}
+func (t *StructType) Call(args []Type) (Type, string, error) {
+	// Constructor logic could be here, but usually StructLiteral is used.
+	// We return error for now.
+	return nil, "", fmt.Errorf("Cannot call struct type")
 }
 
 func (t *StructType) GetMember(name string) (Type, bool) {
@@ -302,7 +468,6 @@ func (t *InterfaceType) Equals(other Type) bool {
 	}
 	return false
 }
-
 func (t *InterfaceType) AssignableTo(target Type) bool {
 	if target == nil {
 		return false
@@ -310,10 +475,28 @@ func (t *InterfaceType) AssignableTo(target Type) bool {
 	if target.Kind() == KindUnknown {
 		return true
 	}
-	// Interface to Interface assignment?
-	// For now, identity only.
-	// Future: check if t methods are superset of target methods
 	return t.Equals(target)
+}
+func (t *InterfaceType) GetMember(name string) (Type, bool) {
+	return nil, false
+}
+func (t *InterfaceType) Index(key Type) (Type, error) {
+	return nil, fmt.Errorf("Index operation not supported on type %s", t.String())
+}
+func (t *InterfaceType) BinaryOp(op string, right Type) (Type, error) {
+	if op == "==" || op == "!=" {
+		if t.Equals(right) {
+			return BoolType, nil
+		}
+		return nil, fmt.Errorf("Type mismatch")
+	}
+	return nil, fmt.Errorf("Operator %s not supported on interface", op)
+}
+func (t *InterfaceType) PrefixOp(op string) (Type, error) {
+	return nil, fmt.Errorf("Prefix operator %s not supported on interface", op)
+}
+func (t *InterfaceType) Call(args []Type) (Type, string, error) {
+	return nil, "", fmt.Errorf("Cannot call interface type")
 }
 
 func (t *InterfaceType) GetMember(name string) (Type, bool) {
@@ -338,7 +521,6 @@ func (t *FunctionType) String() string {
 		}
 		params += p.String()
 	}
-
 	rets := ""
 	if len(t.ReturnTypes) == 1 {
 		rets = t.ReturnTypes[0].String()
@@ -354,7 +536,6 @@ func (t *FunctionType) String() string {
 	} else {
 		rets = "Void"
 	}
-
 	return fmt.Sprintf("fungsi(%s) %s", params, rets)
 }
 func (t *FunctionType) Equals(other Type) bool {
@@ -385,7 +566,6 @@ func (t *FunctionType) Equals(other Type) bool {
 	}
 	return false
 }
-
 func (t *FunctionType) AssignableTo(target Type) bool {
 	if target == nil {
 		return false
@@ -393,8 +573,39 @@ func (t *FunctionType) AssignableTo(target Type) bool {
 	if target.Kind() == KindUnknown {
 		return true
 	}
-	// Functions are invariant
 	return t.Equals(target)
+}
+func (t *FunctionType) GetMember(name string) (Type, bool) {
+	return nil, false
+}
+func (t *FunctionType) Index(key Type) (Type, error) {
+	return nil, fmt.Errorf("Index operation not supported on type %s", t.String())
+}
+func (t *FunctionType) BinaryOp(op string, right Type) (Type, error) {
+	if op == "==" || op == "!=" {
+		if t.Equals(right) {
+			return BoolType, nil
+		}
+		return nil, fmt.Errorf("Type mismatch")
+	}
+	return nil, fmt.Errorf("Operator %s not supported on function", op)
+}
+func (t *FunctionType) PrefixOp(op string) (Type, error) {
+	return nil, fmt.Errorf("Prefix operator %s not supported on function", op)
+}
+func (t *FunctionType) Call(args []Type) (Type, string, error) {
+	if len(args) != len(t.Parameters) {
+		return nil, "", fmt.Errorf("Wrong number of arguments: expected %d, got %d", len(t.Parameters), len(args))
+	}
+	for i, arg := range args {
+		if !arg.AssignableTo(t.Parameters[i]) {
+			return nil, "", fmt.Errorf("Argument %d type mismatch: expected %s, got %s", i+1, t.Parameters[i].String(), arg.String())
+		}
+	}
+	if len(t.ReturnTypes) == 1 {
+		return t.ReturnTypes[0], "", nil
+	}
+	return &MultiType{Types: t.ReturnTypes}, "", nil
 }
 
 func (t *FunctionType) GetMember(name string) (Type, bool) {
@@ -431,7 +642,6 @@ func (t *MultiType) Equals(other Type) bool {
 	}
 	return false
 }
-
 func (t *MultiType) AssignableTo(target Type) bool {
 	if target == nil {
 		return false
@@ -439,7 +649,6 @@ func (t *MultiType) AssignableTo(target Type) bool {
 	if target.Kind() == KindUnknown {
 		return true
 	}
-	// MultiType matching
 	if o, ok := target.(*MultiType); ok {
 		if len(t.Types) != len(o.Types) {
 			return false
@@ -453,11 +662,18 @@ func (t *MultiType) AssignableTo(target Type) bool {
 	}
 	return false
 }
-
 func (t *MultiType) GetMember(name string) (Type, bool) {
 	return nil, false
 }
-
 func (t *MultiType) Index(key Type) (Type, error) {
 	return nil, fmt.Errorf("Index operation not supported on type %s", t.String())
+}
+func (t *MultiType) BinaryOp(op string, right Type) (Type, error) {
+	return nil, fmt.Errorf("Operator %s not supported on multi-type", op)
+}
+func (t *MultiType) PrefixOp(op string) (Type, error) {
+	return nil, fmt.Errorf("Prefix operator %s not supported on multi-type", op)
+}
+func (t *MultiType) Call(args []Type) (Type, string, error) {
+	return nil, "", fmt.Errorf("Cannot call multi-type")
 }

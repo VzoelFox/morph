@@ -722,19 +722,15 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 
 	case *parser.PrefixExpression:
 		right := c.checkExpression(exp.Right)
-		if exp.Operator == "!" {
-			if right.Kind() != KindBool && right.Kind() != KindUnknown {
-				c.addError(exp.Token.Line, exp.Token.Column, "Operator ! not defined for type %s", right.String())
-			}
-			return BoolType
+		if right.Kind() == KindUnknown {
+			return UnknownType
 		}
-		if exp.Operator == "-" {
-			if right.Kind() != KindInt && right.Kind() != KindFloat && right.Kind() != KindUnknown {
-				c.addError(exp.Token.Line, exp.Token.Column, "Operator - not defined for type %s", right.String())
-			}
-			return right
+		resType, err := right.PrefixOp(exp.Operator)
+		if err != nil {
+			c.addError(exp.Token.Line, exp.Token.Column, "%s", err.Error())
+			return UnknownType
 		}
-		return UnknownType
+		return resType
 
 	case *parser.InfixExpression:
 		left := c.checkExpression(exp.Left)
@@ -744,23 +740,12 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 			return UnknownType
 		}
 
-		switch exp.Operator {
-		case "+", "-", "*", "/":
-			if left.Kind() == KindInt && right.Kind() == KindInt {
-				return IntType
-			}
-			if left.Kind() == KindFloat && right.Kind() == KindFloat {
-				return FloatType
-			}
-			c.addError(exp.Token.Line, exp.Token.Column, "Operator %s not defined for types %s and %s", exp.Operator, left.String(), right.String())
-			return ErrorType
-		case "==", "!=":
-			if left.Equals(right) {
-				return BoolType
-			}
-			c.addError(exp.Token.Line, exp.Token.Column, "Cannot compare different types %s and %s", left.String(), right.String())
+		resType, err := left.BinaryOp(exp.Operator, right)
+		if err != nil {
+			c.addError(exp.Token.Line, exp.Token.Column, "%s", err.Error())
 			return ErrorType
 		}
+		return resType
 
 	case *parser.FunctionLiteral:
 		c.enterScope()
@@ -843,60 +828,21 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 		if funcType.Kind() == KindUnknown {
 			return UnknownType
 		}
-		if f, ok := funcType.(*FunctionType); ok {
-			if len(exp.Arguments) != len(f.Parameters) {
-				c.addError(exp.Token.Line, exp.Token.Column, "Wrong number of arguments: expected %d, got %d", len(f.Parameters), len(exp.Arguments))
-				return ErrorType
-			}
-			for i, arg := range exp.Arguments {
-				argType := c.checkExpression(arg)
-				if !argType.AssignableTo(f.Parameters[i]) {
-					c.addError(exp.Token.Line, exp.Token.Column, "Argument %d type mismatch: expected %s, got %s", i+1, f.Parameters[i].String(), argType.String())
-				}
-			}
-			if len(f.ReturnTypes) == 1 {
-				return f.ReturnTypes[0]
-			}
-			return &MultiType{Types: f.ReturnTypes}
+
+		argTypes := []Type{}
+		for _, arg := range exp.Arguments {
+			argTypes = append(argTypes, c.checkExpression(arg))
 		}
 
-		// Check for Type Casting (e.g. Int(5.5))
-		if id, ok := exp.Function.(*parser.Identifier); ok {
-			// If it resolves to a Type and NOT a Variable, it's a Cast
-			if targetType, isType := c.scope.LookupType(id.Value); isType {
-				if _, isVar := c.scope.LookupVariable(id.Value); !isVar {
-					// It is a cast
-					if len(exp.Arguments) != 1 {
-						c.addError(exp.Token.Line, exp.Token.Column, "Type conversion requires exactly 1 argument")
-						return ErrorType
-					}
-					argType := c.checkExpression(exp.Arguments[0])
-
-					// Tier 1: Int -> Float (Lossless-ish)
-					if targetType.Kind() == KindFloat && argType.Kind() == KindInt {
-						return FloatType
-					}
-
-					// Tier 2: Float -> Int (Lossy - Warning)
-					if targetType.Kind() == KindInt && argType.Kind() == KindFloat {
-						c.addWarning(exp.Token.Line, exp.Token.Column, "Lossy conversion from Float to Int")
-						return IntType
-					}
-
-					// Identity or Assignable (e.g. Upcast)
-					if argType.AssignableTo(targetType) {
-						return targetType
-					}
-
-					// Tier 3: Forbidden (String -> Int, etc)
-					c.addError(exp.Token.Line, exp.Token.Column, "Cannot convert type %s to %s", argType.String(), targetType.String())
-					return ErrorType
-				}
-			}
+		resType, warning, err := funcType.Call(argTypes)
+		if warning != "" {
+			c.addWarning(exp.Token.Line, exp.Token.Column, "%s", warning)
 		}
-
-		c.addError(exp.Token.Line, exp.Token.Column, "Not a function: %s", funcType.String())
-		return ErrorType
+		if err != nil {
+			c.addError(exp.Token.Line, exp.Token.Column, "%s", err.Error())
+			return ErrorType
+		}
+		return resType
 	}
 
 	return UnknownType
