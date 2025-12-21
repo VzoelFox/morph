@@ -54,6 +54,49 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.12.0 - 2025-12-20
+**Checksum**: SHA256:STRING_INDEXING
+**Perubahan**:
+- **Type System**: Updated `BasicType.Index` to allow indexing `KindString` with `KindInt`, returning `KindInt` (representing byte/char value).
+- **Checker**: Updated `checkAssignment` to strictly forbid assigning to string indices (String Immutability), ensuring `str[0] = x` is rejected.
+
+**Konteks Sesi**:
+- **Closing Gap**: Mengimplementasikan String Indexing (`s[i]`) yang merupakan fitur dasar, sekaligus menegakkan aturan immutability string pada level Checker.
+
+**File Terkait**:
+- `pkg/checker/checker.go` (SHA256:25a9f90997fb540fc39a688cc34d3723df6d25601f2d24d555af5300422d7197)
+- `pkg/checker/types.go` (SHA256:7a5dae8380e06102519cb557bab2c63a0c63f3281edaaac15b59611784ecabf7)
+### Version 1.11.0 - 2025-12-20
+**Checksum**: SHA256:MODULO_SUPPORT
+**Perubahan**:
+- **Lexer**: Added `PERCENT` (%) token support.
+- **Parser**: Added `MODULO` operator precedence (same as `PRODUCT`) and registered infix parser for `%`.
+- **Checker**: Implemented `BinaryOp` support for `%` (Modulo) on `Int` types.
+
+**Konteks Sesi**:
+- **Closing Gap**: Mengimplementasikan operator Modulo (`%`) yang sebelumnya hilang dari Type System, sesuai dengan standar bahasa pemrograman umum dan implikasi aritmatika.
+
+**File Terkait**:
+- `pkg/checker/types.go` (SHA256:6179aad042f344d7682ef0bd3dcc4d0d18da157afb0c1abd2c507c5a537ece5f)
+- `pkg/lexer/lexer.go` (SHA256:97d9e016d7438e81e15e1f60971309310d1992df1c1c97e69a9f453c8f289780)
+- `pkg/lexer/token.go` (SHA256:3cd2d8157be7c04e3d2ded1f3d96b8c505532d8954882b599555d98350d07df0)
+- `pkg/parser/parser.go` (SHA256:b9d9f683546fa2ead6f2eb267afb9dec176ee64de6d9c351bb4b00364f030e69)
+### Version 1.10.0 - 2025-12-20
+**Checksum**: SHA256:IMPORT_FIX
+**Perubahan**:
+- **Checker**: Fixed Import System to correctly distinguish between Exported Types (Structs/Interfaces) and Exported Values (Functions/Vars).
+- **Types**: Added `ExportInfo` struct to `ModuleType.Exports` to track `IsType` metadata.
+- **Parser**: Fixed critical panic in `ReturnStatement.String()` when expression is missing (nil pointer dereference).
+- **Parser**: Updated `parseReturnStatement` to correctly handle empty returns (e.g. `kembalikan;`).
+
+**Konteks Sesi**:
+- **Bug Fix**: Menyelesaikan isu di mana exported variable salah dikenali sebagai type definition, dan sebaliknya.
+- **Robustness**: Menangani edge case pada `ReturnStatement` yang menyebabkan crash pada compiler jika AST di-dump (debug).
+
+**File Terkait**:
+- `pkg/checker/checker.go` (SHA256:d316a9c683e2fe62892fbfc60a7047d4dc71df63e6d27279b3b93395981bd521)
+- `pkg/checker/types.go` (SHA256:770accfdab1cd5bcd76b01c59489cc639f98567079faa05bd0410dbd6325f138)
+- `pkg/parser/parser.go` (SHA256:8e23a7939ccb4bd9f112acd82675b046f07530f6fd0422aee13f318b554096ec)
 
 ### Version 1.9.0 - 2025-12-20
 **Checksum**: SHA256:REMOVE_ANALYSIS
