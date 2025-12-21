@@ -137,6 +137,8 @@ func (l *Lexer) readCodeToken() Token {
 		}
 	case '/':
 		tok = newToken(SLASH, l.ch)
+	case '%':
+		tok = newToken(PERCENT, l.ch)
 	case '*':
 		tok = newToken(ASTERISK, l.ch)
 	case '&':

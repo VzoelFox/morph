@@ -162,18 +162,18 @@ func (c *Checker) checkImport(imp *parser.ImportStatement) {
 	}
 
 	// Harvest Exports (Uppercase)
-	exports := make(map[string]Type)
+	exports := make(map[string]ExportInfo)
 
 	// Collect Variables (Functions/Vars) from Scope
 	for name, sym := range subChecker.scope.variables {
 		if isExported(name) {
-			exports[name] = sym.Type
+			exports[name] = ExportInfo{Type: sym.Type, IsType: false}
 		}
 	}
 	// Collect Types (Structs, Interfaces) from Scope
 	for name, typ := range subChecker.scope.types {
 		if isExported(name) {
-			exports[name] = typ
+			exports[name] = ExportInfo{Type: typ, IsType: true}
 		}
 	}
 
@@ -190,28 +190,11 @@ func (c *Checker) registerModule(imp *parser.ImportStatement, mod *ModuleType) {
 	// 2. From Import: dari "math" ambil Sin -> var Sin = mod.Exports["Sin"]
 	if len(imp.Identifiers) > 0 {
 		for _, name := range imp.Identifiers {
-			if typ, ok := mod.Exports[name]; ok {
-				// If it is a Type Definition (Struct/Interface), we define it as Type in current scope
-				// If it is a Value (Function/Var), we define it as Variable
-
-				// HACK: How to distinguish Type vs Value in `mod.Exports`?
-				// Both are `Type`. `StructType` is a Type. `FunctionType` is a Type.
-				// But `FunctionType` describes a VALUE. `StructType` describes a TYPE.
-				// In Morph, Structs are Types.
-				// But we also have Constructor? `User{...}`.
-				// For now, if Kind is Struct/Interface -> DefineType.
-				// Else -> DefineVariable.
-				// Wait, Struct Name is also used for Literal construction?
-				// In `checkExpression` -> `StructLiteral` uses `c.checkExpression(exp.Name)`.
-				// It expects an Identifier resolving to a Type (StructType).
-				// So if we define it as Type, `LookupType` works.
-
-				switch typ.Kind() {
-				case KindStruct, KindInterface:
-					c.scope.DefineType(name, typ)
-				default:
-					// Imported items are effectively constants
-					c.scope.DefineVariable(name, typ, true, imp.Token.Line, imp.Token.Column)
+			if info, ok := mod.Exports[name]; ok {
+				if info.IsType {
+					c.scope.DefineType(name, info.Type)
+				} else {
+					c.scope.DefineVariable(name, info.Type, true, imp.Token.Line, imp.Token.Column)
 				}
 			} else {
 				c.addError(imp.Token.Line, imp.Token.Column, "Module '%s' does not export '%s'", imp.Path, name)
@@ -371,10 +354,10 @@ func (c *Checker) resolveType(n parser.TypeNode) Type {
 		}
 
 		mod := modType.(*ModuleType)
-		if typ, ok := mod.Exports[t.Name.Value]; ok {
+		if info, ok := mod.Exports[t.Name.Value]; ok {
 			// Is it a Type?
-			if typ.Kind() == KindStruct || typ.Kind() == KindInterface {
-				return typ
+			if info.IsType {
+				return info.Type
 			}
 			c.addError(t.Token.Line, t.Token.Column, "'%s' is not a type", t.Name.Value)
 			return UnknownType

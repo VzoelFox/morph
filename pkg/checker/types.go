@@ -91,6 +91,12 @@ func (t *BasicType) BinaryOp(op string, right Type) (Type, error) {
 			return StringType, nil
 		}
 		return nil, fmt.Errorf("Operator %s not defined for types %s and %s", op, t.String(), right.String())
+	case "%":
+		if t.K == KindInt && right.Kind() == KindInt {
+			return IntType, nil
+		}
+		// Future: Float modulo?
+		return nil, fmt.Errorf("Operator %% requires Int operands")
 	case "==", "!=":
 		if t.Equals(right) {
 			return BoolType, nil
@@ -173,9 +179,14 @@ var (
 	UserErrorType = &BasicType{K: KindUserError, Name: "Error"}
 )
 
+type ExportInfo struct {
+	Type   Type
+	IsType bool // True if it is a Type Definition, False if it is a Value/Variable
+}
+
 type ModuleType struct {
 	Name    string
-	Exports map[string]Type
+	Exports map[string]ExportInfo
 }
 
 func (t *ModuleType) Kind() TypeKind { return KindModule }
@@ -199,8 +210,8 @@ func (t *ModuleType) AssignableTo(target Type) bool {
 	return t.Equals(target)
 }
 func (t *ModuleType) GetMember(name string) (Type, bool) {
-	if typ, ok := t.Exports[name]; ok {
-		return typ, true
+	if info, ok := t.Exports[name]; ok {
+		return info.Type, true
 	}
 	return nil, false
 }

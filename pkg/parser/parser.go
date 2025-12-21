@@ -20,7 +20,7 @@ const (
 	BITAND      // &
 	SHIFT       // << or >>
 	SUM         // +
-	PRODUCT     // *
+	PRODUCT     // * or / or %
 	PREFIX      // -X or !X or ~X
 	CALL        // myFunction(X)
 	INDEX       // array[index]
@@ -43,6 +43,7 @@ var precedences = map[lexer.TokenType]int{
 	lexer.PLUS:     SUM,
 	lexer.MINUS:    SUM,
 	lexer.SLASH:    PRODUCT,
+	lexer.PERCENT:  PRODUCT,
 	lexer.ASTERISK: PRODUCT,
 	lexer.LPAREN:   CALL,
 	lexer.LBRACKET: INDEX,
@@ -130,6 +131,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerInfix(lexer.PLUS, p.parseInfixExpression)
 	p.registerInfix(lexer.MINUS, p.parseInfixExpression)
 	p.registerInfix(lexer.SLASH, p.parseInfixExpression)
+	p.registerInfix(lexer.PERCENT, p.parseInfixExpression)
 	p.registerInfix(lexer.ASTERISK, p.parseInfixExpression)
 	p.registerInfix(lexer.EQ, p.parseInfixExpression)
 	p.registerInfix(lexer.NOT_EQ, p.parseInfixExpression)
@@ -563,14 +565,30 @@ func (p *Parser) parseStructStatement() *StructStatement {
 func (p *Parser) parseReturnStatement() *ReturnStatement {
 	stmt := &ReturnStatement{Token: p.curToken, ReturnValues: []Expression{}}
 
-	p.nextToken()
+	p.nextToken() // move past KEMBALIKAN
 
-	stmt.ReturnValues = append(stmt.ReturnValues, p.parseExpression(LOWEST))
+	// Handle empty return (void)
+	// If followed by semicolon, newline (if treated as such), or AKHIR/LAINNYA/EOF
+	if p.curTokenIs(lexer.SEMICOLON) {
+		return stmt
+	}
+	// For other terminators that might immediately follow
+	if p.curTokenIs(lexer.AKHIR) || p.curTokenIs(lexer.LAINNYA) || p.curTokenIs(lexer.EOF) || p.curTokenIs(lexer.RBRACE) {
+		return stmt
+	}
+
+	exp := p.parseExpression(LOWEST)
+	if exp != nil {
+		stmt.ReturnValues = append(stmt.ReturnValues, exp)
+	}
 
 	for p.peekTokenIs(lexer.COMMA) {
 		p.nextToken()
 		p.nextToken()
-		stmt.ReturnValues = append(stmt.ReturnValues, p.parseExpression(LOWEST))
+		exp := p.parseExpression(LOWEST)
+		if exp != nil {
+			stmt.ReturnValues = append(stmt.ReturnValues, exp)
+		}
 	}
 
 	if p.peekTokenIs(lexer.SEMICOLON) {
@@ -954,7 +972,7 @@ func (p *Parser) parseInfixExpression(left Expression) Expression {
 
 func isBinaryOp(t lexer.TokenType) bool {
 	switch t {
-	case lexer.PLUS, lexer.MINUS, lexer.SLASH, lexer.ASTERISK,
+	case lexer.PLUS, lexer.MINUS, lexer.SLASH, lexer.ASTERISK, lexer.PERCENT,
 		lexer.EQ, lexer.NOT_EQ, lexer.LT, lexer.GT, lexer.LTE, lexer.GTE,
 		lexer.DAN, lexer.ATAU,
 		lexer.AND, lexer.OR, lexer.XOR, lexer.LSHIFT, lexer.RSHIFT:
