@@ -20,8 +20,9 @@ const (
 	KindMap
 	KindMulti // For multiple return values
 	KindUnknown
-	KindError
+	KindError     // Internal Compiler Error
 	KindNull
+	KindUserError // User-facing 'Error' type
 )
 
 type Type interface {
@@ -57,23 +58,24 @@ func (t *BasicType) AssignableTo(target Type) bool {
 	// Null assignment rules
 	if t.K == KindNull {
 		k := target.Kind()
-		// Null assignable to reference types: Array, Map, Struct, Interface, Function, String
+		// Null assignable to reference types: Array, Map, Struct, Interface, Function, String, UserError
 		// And Null itself
-		return k == KindArray || k == KindMap || k == KindStruct || k == KindInterface || k == KindFunction || k == KindString || k == KindNull
+		return k == KindArray || k == KindMap || k == KindStruct || k == KindInterface || k == KindFunction || k == KindString || k == KindNull || k == KindUserError
 	}
 
 	return t.Equals(target)
 }
 
 var (
-	IntType     = &BasicType{K: KindInt, Name: "Int"}
-	FloatType   = &BasicType{K: KindFloat, Name: "Float"}
-	StringType  = &BasicType{K: KindString, Name: "String"}
-	BoolType    = &BasicType{K: KindBool, Name: "Bool"}
-	VoidType    = &BasicType{K: KindVoid, Name: "Void"}
-	UnknownType = &BasicType{K: KindUnknown, Name: "Unknown"}
-	ErrorType   = &BasicType{K: KindError, Name: "Error"}
-	NullType    = &BasicType{K: KindNull, Name: "Null"}
+	IntType       = &BasicType{K: KindInt, Name: "Int"}
+	FloatType     = &BasicType{K: KindFloat, Name: "Float"}
+	StringType    = &BasicType{K: KindString, Name: "String"}
+	BoolType      = &BasicType{K: KindBool, Name: "Bool"}
+	VoidType      = &BasicType{K: KindVoid, Name: "Void"}
+	UnknownType   = &BasicType{K: KindUnknown, Name: "Unknown"}
+	ErrorType     = &BasicType{K: KindError, Name: "Error"} // Internal Sentinel
+	NullType      = &BasicType{K: KindNull, Name: "Null"}
+	UserErrorType = &BasicType{K: KindUserError, Name: "Error"} // User Type
 )
 
 type ArrayType struct {

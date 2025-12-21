@@ -55,6 +55,24 @@ project-root/
 
 ## Riwayat Perubahan
 
+### Version 1.6.2 - 2025-12-20
+**Checksum**: SHA256:VARIOUS
+**Perubahan**:
+- **Type System**: Added `KindUserError` and `UserErrorType` to `pkg/checker/types.go` to distinguish user-facing `Error` from internal compiler errors.
+- **Type System**: Updated `AssignableTo` to allow `Null` assignment to `UserErrorType`.
+- **Checker**: Registered `Error` as `UserErrorType` in global scope in `pkg/checker/checker.go`.
+- **Tests**: Added `pkg/checker/error_type_test.go` verifying `Error` usage and `nil` assignment.
+
+**Konteks Sesi**:
+- **Closing Gap**: Menyelesaikan gap kedua di mana tipe `Error` (User-Facing) belum didefinisikan, menghalangi pola "Error as Value".
+- Memisahkan `KindError` (Internal) dan `KindUserError` (Eksternal) untuk keamanan.
+
+**File Terkait**:
+- `pkg/checker/types.go` (SHA256:c9a585076ffa13a9926395270bf8c009be40b85050a0aab687c9d26841c1e71c)
+- `pkg/checker/checker.go` (SHA256:fcae13d286847ba2998e097969f726980e57c55887f1c4e4230edcf4ae2963a3)
+- `pkg/checker/error_type_test.go` (SHA256:2a9797abbbaa40a5bf5edf116e25ee67ba5abb16dcc4e33973b27128e85c0c69)
+- `.vzoel.jules/technical-debt.morph.vz` (SHA256:c97935f7ae70410fa92dcbbf6bb33a869d6ad4aafd7b1400cf033eb3ae1d0816)
+
 ### Version 1.6.1 - 2025-12-20
 **Checksum**: SHA256:VARIOUS
 **Perubahan**:

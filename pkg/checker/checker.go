@@ -24,6 +24,7 @@ func New() *Checker {
 	c.scope.DefineType("Float", FloatType)
 	c.scope.DefineType("String", StringType)
 	c.scope.DefineType("Bool", BoolType)
+	c.scope.DefineType("Error", UserErrorType) // User-facing 'Error' type
 
 	// Register built-in functions (Stdlib Prototype)
 	// parse_int(String) -> (Int, String)
