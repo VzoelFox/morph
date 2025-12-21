@@ -55,6 +55,20 @@ project-root/
 
 ## Riwayat Perubahan
 
+### Version 1.7.3 - 2025-12-20
+**Checksum**: SHA256:VARIOUS
+**Perubahan**:
+- **Analysis**: Fixed "Tree Walk Blindness" in `analyzer.go` by adding traversal for `ArrayLiteral`, `HashLiteral`, `IndexExpression`, and `MemberExpression`.
+- **Analysis**: Improved `inferType` to support `MemberExpression` and Literals.
+- **Tests**: Added tests for Call Graph completeness and Type Inference.
+
+**Konteks Sesi**:
+- **Analysis Foundation**: Memperkuat pondasi alat analisis agar tidak "buta" terhadap struktur AST yang lebih dalam, sesuai arahan user.
+
+**File Terkait**:
+- `pkg/analysis/analyzer.go` (SHA256:6affdb6232dad3e4e4e3d4192b583169b98679f9adf7c97121bb1d8b7ea837a0)
+- `pkg/analysis/analyzer_test.go` (SHA256:9921017608e692e25746ad25b14114d319de5d82a4137254ae8f851f690138af)
+
 ### Version 1.7.2 - 2025-12-20
 **Checksum**: SHA256:VARIOUS
 **Perubahan**:
