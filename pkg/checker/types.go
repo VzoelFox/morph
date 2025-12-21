@@ -31,6 +31,8 @@ type Type interface {
 	String() string
 	Equals(other Type) bool
 	AssignableTo(target Type) bool
+	GetMember(name string) (Type, bool)
+	Index(key Type) (Type, error)
 }
 
 type BasicType struct {
@@ -65,6 +67,14 @@ func (t *BasicType) AssignableTo(target Type) bool {
 	}
 
 	return t.Equals(target)
+}
+
+func (t *BasicType) GetMember(name string) (Type, bool) {
+	return nil, false
+}
+
+func (t *BasicType) Index(key Type) (Type, error) {
+	return nil, fmt.Errorf("Index operation not supported on type %s", t.String())
 }
 
 var (
@@ -105,6 +115,17 @@ func (t *ModuleType) AssignableTo(target Type) bool {
 	return t.Equals(target)
 }
 
+func (t *ModuleType) GetMember(name string) (Type, bool) {
+	if typ, ok := t.Exports[name]; ok {
+		return typ, true
+	}
+	return nil, false
+}
+
+func (t *ModuleType) Index(key Type) (Type, error) {
+	return nil, fmt.Errorf("Index operation not supported on type %s", t.String())
+}
+
 type ArrayType struct {
 	Element Type
 }
@@ -137,6 +158,17 @@ func (t *ArrayType) AssignableTo(target Type) bool {
 	}
 	// Arrays are invariant (must be Equal)
 	return t.Equals(target)
+}
+
+func (t *ArrayType) GetMember(name string) (Type, bool) {
+	return nil, false
+}
+
+func (t *ArrayType) Index(key Type) (Type, error) {
+	if key.Kind() != KindInt {
+		return t.Element, fmt.Errorf("Array index must be Int")
+	}
+	return t.Element, nil
 }
 
 type MapType struct {
@@ -176,6 +208,17 @@ func (t *MapType) AssignableTo(target Type) bool {
 	}
 	// Maps are invariant
 	return t.Equals(target)
+}
+
+func (t *MapType) GetMember(name string) (Type, bool) {
+	return nil, false
+}
+
+func (t *MapType) Index(key Type) (Type, error) {
+	if !t.Key.Equals(key) {
+		return t.Value, fmt.Errorf("Map key type mismatch: expected %s, got %s", t.Key.String(), key.String())
+	}
+	return t.Value, nil
 }
 
 type StructType struct {
@@ -226,6 +269,20 @@ func (t *StructType) AssignableTo(target Type) bool {
 	return t.Equals(target)
 }
 
+func (t *StructType) GetMember(name string) (Type, bool) {
+	if fieldType, exists := t.Fields[name]; exists {
+		return fieldType, true
+	}
+	if methodType, exists := t.Methods[name]; exists {
+		return methodType, true
+	}
+	return nil, false
+}
+
+func (t *StructType) Index(key Type) (Type, error) {
+	return nil, fmt.Errorf("Index operation not supported on type %s", t.String())
+}
+
 type InterfaceType struct {
 	Name    string
 	Methods map[string]*FunctionType
@@ -257,6 +314,14 @@ func (t *InterfaceType) AssignableTo(target Type) bool {
 	// For now, identity only.
 	// Future: check if t methods are superset of target methods
 	return t.Equals(target)
+}
+
+func (t *InterfaceType) GetMember(name string) (Type, bool) {
+	return nil, false
+}
+
+func (t *InterfaceType) Index(key Type) (Type, error) {
+	return nil, fmt.Errorf("Index operation not supported on type %s", t.String())
 }
 
 type FunctionType struct {
@@ -332,6 +397,14 @@ func (t *FunctionType) AssignableTo(target Type) bool {
 	return t.Equals(target)
 }
 
+func (t *FunctionType) GetMember(name string) (Type, bool) {
+	return nil, false
+}
+
+func (t *FunctionType) Index(key Type) (Type, error) {
+	return nil, fmt.Errorf("Index operation not supported on type %s", t.String())
+}
+
 type MultiType struct {
 	Types []Type
 }
@@ -379,4 +452,12 @@ func (t *MultiType) AssignableTo(target Type) bool {
 		return true
 	}
 	return false
+}
+
+func (t *MultiType) GetMember(name string) (Type, bool) {
+	return nil, false
+}
+
+func (t *MultiType) Index(key Type) (Type, error) {
+	return nil, fmt.Errorf("Index operation not supported on type %s", t.String())
 }

@@ -55,6 +55,20 @@ project-root/
 
 ## Riwayat Perubahan
 
+### Version 1.8.1 - 2025-12-20
+**Checksum**: SHA256:REFACTOR_TYPE_SYSTEM
+**Perubahan**:
+- **Type System**: Expanded `Type` interface with `GetMember` and `Index` methods. Implemented behavior in `StructType`, `ModuleType`, `ArrayType`, `MapType`.
+- **Checker**: Refactored `checker.go` to use `Type` interface methods instead of manual type casting for member access and indexing.
+- **Robustness**: Improved error handling for indexing operations in Type System.
+
+**Konteks Sesi**:
+- **Refactoring**: Addressing "Anemic Domain Model" in Type System. Moving logic from Controller (Checker) to Model (Types).
+
+**File Terkait**:
+- `pkg/checker/types.go` (SHA256:f886047e21bd3c6bc8444ac85749eb1cc5dd927b9a4716a489a3afdb8893af2d)
+- `pkg/checker/checker.go` (SHA256:83ca925d87949073eb64b6802c144b7104c29fa2b57c0f75ff457fb0a7f86958)
+
 ### Version 1.8.0 - 2025-12-20
 **Checksum**: SHA256:BASELINE_RESET
 **Perubahan**:

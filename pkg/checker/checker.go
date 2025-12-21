@@ -636,30 +636,23 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 	case *parser.MemberExpression:
 		objType := c.checkExpression(exp.Object)
 
+		if objType.Kind() == KindUnknown {
+			return UnknownType
+		}
+
+		if memberType, ok := objType.GetMember(exp.Member.Value); ok {
+			return memberType
+		}
+
 		if objType.Kind() == KindModule {
 			mod := objType.(*ModuleType)
-			if t, ok := mod.Exports[exp.Member.Value]; ok {
-				return t
-			}
 			c.addError(exp.Token.Line, exp.Token.Column, "Module '%s' does not export '%s'", mod.Name, exp.Member.Value)
-			return ErrorType
-		}
-
-		if objType.Kind() != KindStruct {
+		} else if objType.Kind() == KindStruct {
+			st := objType.(*StructType)
+			c.addError(exp.Token.Line, exp.Token.Column, "Field or method '%s' not found in struct '%s'", exp.Member.Value, st.Name)
+		} else {
 			c.addError(exp.Token.Line, exp.Token.Column, "Cannot access member on non-struct/module type %s", objType.String())
-			return ErrorType
 		}
-
-		st := objType.(*StructType)
-		if fieldType, exists := st.Fields[exp.Member.Value]; exists {
-			return fieldType
-		}
-
-		if methodType, exists := st.Methods[exp.Member.Value]; exists {
-			return methodType
-		}
-
-		c.addError(exp.Token.Line, exp.Token.Column, "Field or method '%s' not found in struct '%s'", exp.Member.Value, st.Name)
 		return ErrorType
 
 	case *parser.ArrayLiteral:
@@ -713,25 +706,19 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 		leftType := c.checkExpression(exp.Left)
 		idxType := c.checkExpression(exp.Index)
 
-		if leftType.Kind() == KindArray {
-			if idxType.Kind() != KindInt {
-				c.addError(exp.Token.Line, exp.Token.Column, "Array index must be Int")
-			}
-			return leftType.(*ArrayType).Element
+		if leftType.Kind() == KindUnknown {
+			return UnknownType
 		}
 
-		if leftType.Kind() == KindMap {
-			mt := leftType.(*MapType)
-			if !mt.Key.Equals(idxType) {
-				c.addError(exp.Token.Line, exp.Token.Column, "Map key type mismatch: expected %s, got %s", mt.Key.String(), idxType.String())
+		resType, err := leftType.Index(idxType)
+		if err != nil {
+			c.addError(exp.Token.Line, exp.Token.Column, "%s", err.Error())
+			if resType != nil {
+				return resType
 			}
-			return mt.Value
+			return UnknownType
 		}
-
-		if leftType.Kind() != KindUnknown {
-			c.addError(exp.Token.Line, exp.Token.Column, "Index operation not supported on type %s", leftType.String())
-		}
-		return UnknownType
+		return resType
 
 	case *parser.PrefixExpression:
 		right := c.checkExpression(exp.Right)
