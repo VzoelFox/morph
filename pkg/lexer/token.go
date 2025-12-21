@@ -81,12 +81,15 @@ const (
 	STRUKTUR   = "STRUKTUR"
 	INTERFACE  = "INTERFACE"
 	VAR        = "VAR"
+	TETAPAN    = "TETAPAN"
 	MAP        = "MAP"
 	COMMENT    = "COMMENT"
 )
 
 var keywords = map[string]TokenType{
 	"var":        VAR,
+	"tetapan":    TETAPAN,
+	"const":      TETAPAN,
 	"map":        MAP,
 	"struktur":   STRUKTUR,
 	"antarmuka":  INTERFACE,
