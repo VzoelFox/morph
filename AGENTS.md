@@ -54,6 +54,22 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.10.0 - 2025-12-20
+**Checksum**: SHA256:IMPORT_FIX
+**Perubahan**:
+- **Checker**: Fixed Import System to correctly distinguish between Exported Types (Structs/Interfaces) and Exported Values (Functions/Vars).
+- **Types**: Added `ExportInfo` struct to `ModuleType.Exports` to track `IsType` metadata.
+- **Parser**: Fixed critical panic in `ReturnStatement.String()` when expression is missing (nil pointer dereference).
+- **Parser**: Updated `parseReturnStatement` to correctly handle empty returns (e.g. `kembalikan;`).
+
+**Konteks Sesi**:
+- **Bug Fix**: Menyelesaikan isu di mana exported variable salah dikenali sebagai type definition, dan sebaliknya.
+- **Robustness**: Menangani edge case pada `ReturnStatement` yang menyebabkan crash pada compiler jika AST di-dump (debug).
+
+**File Terkait**:
+- `pkg/checker/checker.go` (SHA256:d316a9c683e2fe62892fbfc60a7047d4dc71df63e6d27279b3b93395981bd521)
+- `pkg/checker/types.go` (SHA256:770accfdab1cd5bcd76b01c59489cc639f98567079faa05bd0410dbd6325f138)
+- `pkg/parser/parser.go` (SHA256:8e23a7939ccb4bd9f112acd82675b046f07530f6fd0422aee13f318b554096ec)
 
 ### Version 1.9.0 - 2025-12-20
 **Checksum**: SHA256:REMOVE_ANALYSIS

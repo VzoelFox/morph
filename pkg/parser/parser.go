@@ -563,14 +563,30 @@ func (p *Parser) parseStructStatement() *StructStatement {
 func (p *Parser) parseReturnStatement() *ReturnStatement {
 	stmt := &ReturnStatement{Token: p.curToken, ReturnValues: []Expression{}}
 
-	p.nextToken()
+	p.nextToken() // move past KEMBALIKAN
 
-	stmt.ReturnValues = append(stmt.ReturnValues, p.parseExpression(LOWEST))
+	// Handle empty return (void)
+	// If followed by semicolon, newline (if treated as such), or AKHIR/LAINNYA/EOF
+	if p.curTokenIs(lexer.SEMICOLON) {
+		return stmt
+	}
+	// For other terminators that might immediately follow
+	if p.curTokenIs(lexer.AKHIR) || p.curTokenIs(lexer.LAINNYA) || p.curTokenIs(lexer.EOF) || p.curTokenIs(lexer.RBRACE) {
+		return stmt
+	}
+
+	exp := p.parseExpression(LOWEST)
+	if exp != nil {
+		stmt.ReturnValues = append(stmt.ReturnValues, exp)
+	}
 
 	for p.peekTokenIs(lexer.COMMA) {
 		p.nextToken()
 		p.nextToken()
-		stmt.ReturnValues = append(stmt.ReturnValues, p.parseExpression(LOWEST))
+		exp := p.parseExpression(LOWEST)
+		if exp != nil {
+			stmt.ReturnValues = append(stmt.ReturnValues, exp)
+		}
 	}
 
 	if p.peekTokenIs(lexer.SEMICOLON) {
