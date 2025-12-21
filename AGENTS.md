@@ -55,6 +55,67 @@ project-root/
 
 ## Riwayat Perubahan
 
+### Version 1.8.0 - 2025-12-20
+**Checksum**: SHA256:BASELINE_RESET
+**Perubahan**:
+- **INTEGRITY RESET**: Melakukan "Baseline Validation" untuk seluruh file dalam project.
+- **Audit**: Verifikasi manual Lexer & Parser (Robustness confirmed).
+- **Cleanup**: Memastikan tidak ada sisa referensi `morphlang` dalam kode.
+- **Snapshot**: Mencatat ulang checksum seluruh file core untuk menghapus keraguan "untracked source of truth".
+
+**Konteks Sesi**:
+- **Total Reconciliation**: Mengoreksi kesalahan sejarah penamaan repo dengan menetapkan baseline baru yang bersih di bawah `github.com/VzoelFox/morph`.
+- Semua file di bawah ini telah diverifikasi eksistensi dan integritasnya.
+
+**File Terkait (Integrity Snapshot)**:
+- `go.mod` (SHA256:c7de783d9e3378d10d7865c5c05a3d05652403e1016f735455185a905f911340)
+- `pkg/analysis/analyzer.go` (SHA256:6affdb6232dad3e4e4e3d4192b583169b98679f9adf7c97121bb1d8b7ea837a0)
+- `pkg/analysis/analyzer_test.go` (SHA256:9921017608e692e25746ad25b14114d319de5d82a4137254ae8f851f690138af)
+- `pkg/analysis/context.go` (SHA256:ac8b6422aedd2122b7546a841a30e99f212714fbbc8b2e419a176e5e501788a4)
+- `pkg/checker/casting_test.go` (SHA256:c3d45c5384f975bc9ac059a19999797dc5ef385b11770e58ed7c1fd857badfc6)
+- `pkg/checker/checker.go` (SHA256:a838dd5e2b9b6bdfdebda2bce6c3124e25ed2ed98ba7730d8f7df85ffa5429fd)
+- `pkg/checker/checker_test.go` (SHA256:78f07e699921a3c0fea532e8b34779d51e758fdfaeeabb1f999ec27724dadfa1)
+- `pkg/checker/control_flow_test.go` (SHA256:09956aa267a1a7662723efae230b86f621839b49c2a8dcd3513bf43dc4235686)
+- `pkg/checker/cycle_test.go` (SHA256:4ab36e3ad47d9904bff3738fe7fc24542d903dbbab3697f4d3be61efa98578b2)
+- `pkg/checker/deadcode_test.go` (SHA256:fb440573764fad90c9a865184693010c4589802738621e5695715e9e4a8ab14b)
+- `pkg/checker/error_type_test.go` (SHA256:710dd5f54741e0dc9f24f59afc01d516d8b704bdc33935db38469da64aa50ce0)
+- `pkg/checker/errors.go` (SHA256:43107505cf0e76efd5474968506d004d0490eecda63b374e25f77c964ad491ca)
+- `pkg/checker/import_test.go` (SHA256:6af0dab28a04048c6ad7f84f75a4d6a4778babfd90372e2154d88326ea7c6a81)
+- `pkg/checker/import_type_test.go` (SHA256:d3e4e47f4952872b084fa8534cae971e07d2d2dd35ee777fb14cda471b6f14b5)
+- `pkg/checker/inference_test.go` (SHA256:770423524f01322d0e14bb8b8a73cd8a7117a113573160f0c4fe1b43604fe478)
+- `pkg/checker/interface_impl_test.go` (SHA256:daeab0b14dc212fe8a677dc56c08f6c93c25b8ef7f11497560df1777df7c9e70)
+- `pkg/checker/interface_test.go` (SHA256:3ee134f3302b24e9da721053e59f22918c4956b150a941dabaa497cea6d94d09)
+- `pkg/checker/interface_type_test.go` (SHA256:2273994f0a1894e7938603f126825052ef35f9b9065aadf72f5d51847fbd644f)
+- `pkg/checker/literal_strict_test.go` (SHA256:08b2d78e37c7909817e421afab1cd756fc958cba9087a77d5463943c685dbc29)
+- `pkg/checker/literal_test.go` (SHA256:10cee976311b9691e6c8e8e501338f919299c3e6e4c4e2eacfef871f7e36b6f6)
+- `pkg/checker/member_test.go` (SHA256:1522dc679f3a42c5dfdfe7191a0efbd4b33fca20489a8ef8883429c66f016b04)
+- `pkg/checker/method_test.go` (SHA256:6d4bfdb2e09de588b509e2c8248c9e3408dd36a02e66b2027cb4b493904e4fe3)
+- `pkg/checker/robustness_test.go` (SHA256:9a533733b7cee0b03650ff2106ca733b02a0090a99f783c1812ae05eb92b29e2)
+- `pkg/checker/scope.go` (SHA256:88e4cf157d74d0dc9bc7f5386bbcb001c85f41092c7329c071b2a29ee6182d48)
+- `pkg/checker/shadow_test.go` (SHA256:0d322aff551049f20f6dc9658b2745d6c0d45c9188d56568f0c996841634aff5)
+- `pkg/checker/types.go` (SHA256:9daab5997e83b86b48b9e5107325b14719da4afc6701a5f2ae36309091b578c1)
+- `pkg/checker/unused_test.go` (SHA256:391450fd74e3c68b1339ae52eadb21f3f2955ae089afa09411af08631f549879)
+- `pkg/lexer/lexer.go` (SHA256:67eecc541c9c62537d64a5a89c32cfafadd24fd8bd0e3925abe8f61d86f36168)
+- `pkg/lexer/lexer_extra_test.go` (SHA256:d01711a23bb91c9f31311f3fc110fd975bf45f0880a8ea67a4145c7cfe64b1c0)
+- `pkg/lexer/lexer_float_test.go` (SHA256:ff1cd427658b44afcfd6fa8f2d9cbf64178b3a23868c22d265dba88c510eb09c)
+- `pkg/lexer/lexer_test.go` (SHA256:11e08b90bee1f2d870b31ec032b1bdd9d7e2e37adea3c281751a8e9726584305)
+- `pkg/lexer/token.go` (SHA256:4aec196a9d797ffc2ce893f0390dc0df4abece2bd4999444d4f1684b905fe1fe)
+- `pkg/lexer/token_test.go` (SHA256:75e77d83a49979fe01699b5715da6f7e200d6ee55afdc7bed4f7f706040fa3ec)
+- `pkg/lexer/utils.go` (SHA256:9fa86f0fd053d13368bd946ca3d09b72e8d2835c510cb4179c2bf21885a1f233)
+- `pkg/parser/ast.go` (SHA256:db046bb39eddfe463415312ef30ae4bc687d54f0befffba084a8de06148a0d3f)
+- `pkg/parser/ast_test.go` (SHA256:0c316b04de9c188ea2459e7d7992a9b20507d5791f8f02072b65f8fe05514217)
+- `pkg/parser/comment_test.go` (SHA256:e8eaf4bda6a04c91794e970d4e372fe228d883ddf01ea38271503a65c9e4fa21)
+- `pkg/parser/interface_test.go` (SHA256:2963cc5915f265bdb8041f8ff83fd1a05a3973bf5267671d7f38d51cb17e94b3)
+- `pkg/parser/method_test.go` (SHA256:4e6f447524c64fad5fba414e8529792124afa3661f1ff636475b7340bc0f3c10)
+- `pkg/parser/multi_return_test.go` (SHA256:158778277a88e205ba3e4edc1d960e29240a595b949c1b2e6399f020445e4298)
+- `pkg/parser/parser.go` (SHA256:25bb8247ed272723f781a49eb31b97213b97f52266ccc315bce02af104e2c4ac)
+- `pkg/parser/parser_extra_test.go` (SHA256:34f4990d9c764a53b104542e8c7baa6f3c7f82288d1b4ee4cae3b04e478f868a)
+- `pkg/parser/parser_fixes_test.go` (SHA256:400c4ee9580a628eec4057bac2b2673c3c7844237c73d4053db07fd6796244ec)
+- `pkg/parser/parser_test.go` (SHA256:2272df775fdfbf6650c2c8c205dcb24e3dec8c091b95dd86d3b9bca8177f1a1e)
+- `pkg/parser/struct_literal_test.go` (SHA256:7e0f3c6b6c42eac6d7aa15ebcea9756825748cf11deebd8a5de54f78fe8c1bf5)
+- `pkg/parser/struct_test.go` (SHA256:e2b7ec62f1040c2f0f00ac201d3086a1db11ed51d6f0b8b5cc0999364a07afd8)
+- `pkg/parser/var_test.go` (SHA256:7a87f92a373259a0114d4964f3c9a17ee91c896465066761c3175d1eef8995de)
+
 ### Version 1.7.3 - 2025-12-20
 **Checksum**: SHA256:VARIOUS
 **Perubahan**:

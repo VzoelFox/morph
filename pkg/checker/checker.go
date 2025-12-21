@@ -79,6 +79,9 @@ func (c *Checker) collectDefinitions(program *parser.Program) {
 	// 0. Process Imports first
 	for _, stmt := range program.Statements {
 		if imp, ok := stmt.(*parser.ImportStatement); ok {
+			if imp == nil {
+				continue
+			}
 			c.checkImport(imp)
 		}
 	}
@@ -86,8 +89,14 @@ func (c *Checker) collectDefinitions(program *parser.Program) {
 	// 1. Structs first (types)
 	for _, stmt := range program.Statements {
 		if s, ok := stmt.(*parser.StructStatement); ok {
+			if s == nil {
+				continue
+			}
 			c.defineStruct(s)
 		} else if i, ok := stmt.(*parser.InterfaceStatement); ok {
+			if i == nil {
+				continue
+			}
 			c.defineInterface(i)
 		}
 	}
@@ -96,8 +105,14 @@ func (c *Checker) collectDefinitions(program *parser.Program) {
 	for _, stmt := range program.Statements {
 		switch s := stmt.(type) {
 		case *parser.VarStatement:
+			if s == nil {
+				continue
+			}
 			c.defineVar(s)
 		case *parser.ExpressionStatement:
+			if s == nil {
+				continue
+			}
 			if fn, ok := s.Expression.(*parser.FunctionLiteral); ok {
 				if fn.Name != "" {
 					c.defineFunction(fn)
@@ -278,7 +293,11 @@ func (c *Checker) defineVar(s *parser.VarStatement) {
 	}
 	for _, name := range s.Names {
 		if existing, ok := c.scope.variables[name.Value]; ok {
-			c.addError(name.Token.Line, name.Token.Column, "Global variable '%s' already declared (type: %s)", name.Value, existing.Type.String())
+			existingTypeStr := "<nil>"
+			if existing.Type != nil {
+				existingTypeStr = existing.Type.String()
+			}
+			c.addError(name.Token.Line, name.Token.Column, "Global variable '%s' already declared (type: %s)", name.Value, existingTypeStr)
 			continue
 		}
 		c.scope.DefineVariable(name.Value, t, name.Token.Line, name.Token.Column)
@@ -910,7 +929,15 @@ func (c *Checker) leaveScope() {
 }
 
 func (c *Checker) addError(line, col int, format string, args ...interface{}) {
-	c.Errors = append(c.Errors, NewTypeError(line, col, format, args...))
+	err := NewTypeError(line, col, format, args...)
+	// Deduplicate
+	if len(c.Errors) > 0 {
+		last := c.Errors[len(c.Errors)-1]
+		if last.Line == err.Line && last.Column == err.Column && last.Message == err.Message {
+			return
+		}
+	}
+	c.Errors = append(c.Errors, err)
 }
 
 func (c *Checker) addWarning(line, col int, format string, args ...interface{}) {
