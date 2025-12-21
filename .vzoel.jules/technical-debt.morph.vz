@@ -18,6 +18,10 @@
 - **Data Flow**: Implement Liveness Analysis and Variable Definition/Usage tracking.
 
 ### Resolved / Closed
+- **Import System**: Enhanced to support Qualified Types (`Module.Type`) and Private Type visibility. (2025-12-20)
+- **Import System**: Implemented `ImportStatement` checking, Module Type, Cycle Detection, and Member Access. (2025-12-20)
+- **Type System**: Defined user-facing `Error` type (`UserErrorType`) and enabled `Null` assignment. (2025-12-20)
+- **Type System**: Implemented Interface Implementation Check (Duck Typing) via `AssignableTo`. (2025-12-20)
 - **Type Checker**: Control Flow validation (`If`, `While`) and Nested Return Type check. (2025-12-20)
 - **Type Checker**: Support for `NullLiteral` assignment (e.g. `var x User = kosong`). (2025-12-20)
 - **Type Checker**: Field access validation (`x.name`) and Struct Instantiation `User{...}`. (2025-12-20)

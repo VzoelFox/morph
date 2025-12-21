@@ -55,6 +55,101 @@ project-root/
 
 ## Riwayat Perubahan
 
+### Version 1.7.1 - 2025-12-20
+**Checksum**: SHA256:VARIOUS
+**Perubahan**:
+- **Parser**: Updated `parseType` to support Qualified Types (e.g., `Module.Type`).
+- **AST**: Added `QualifiedType` node.
+- **Checker**: Updated `resolveType` to resolve Qualified Types from imported modules.
+- **Checker**: Updated `checkImport` to export Types (Structs/Interfaces) from modules.
+- **Tests**: Added `pkg/checker/import_type_test.go` verifying cross-module type usage.
+
+**Konteks Sesi**:
+- **Tightening Integration**: Menutup gap fundamental di mana tipe data antar-module tidak bisa digunakan.
+- Sekarang developer bisa melakukan `var u model.User` (Type Resolution) selain `model.NewUser()` (Value Resolution).
+
+**File Terkait**:
+- `pkg/parser/ast.go` (SHA256:db046bb39eddfe463415312ef30ae4bc687d54f0befffba084a8de06148a0d3f)
+- `pkg/parser/parser.go` (SHA256:8279f1bd69b0a8894ea65a4870a19a54af85c992e90e1e7edd801856cd1e8441)
+- `pkg/checker/types.go` (SHA256:9daab5997e83b86b48b9e5107325b14719da4afc6701a5f2ae36309091b578c1)
+- `pkg/checker/checker.go` (SHA256:679519a419be7de45c0aae08b880b9622295144d1fa6890fe1512657807ce31e)
+- `pkg/checker/import_type_test.go` (SHA256:a799b6e8c2bd3840399173959734442d9d1e1fe37d1a9e93aed4db0449643eb7)
+- `.vzoel.jules/technical-debt.morph.vz` (SHA256:c52593ebdd0bd3d57ad2970c79459bd17c84e77647867d2f1c87b8ac0d240195)
+
+### Version 1.7.0 - 2025-12-20
+**Checksum**: SHA256:VARIOUS
+**Perubahan**:
+- **Import System**: Implemented `ImportStatement` processing in `pkg/checker/checker.go`.
+- **Type System**: Added `KindModule` and `ModuleType` to support module namespaces.
+- **Checker**: Added `Importer` interface and `SetImporter` to `Checker` for loading external modules (robust integration foundation).
+- **Checker**: Implemented Cycle Detection and Module Caching.
+- **Checker**: Implemented `MemberExpression` logic for `KindModule` access (e.g. `math.PI`).
+- **Tests**: Added `pkg/checker/import_test.go` with integration tests for imports, visibility, and cycles.
+
+**Konteks Sesi**:
+- **Building Foundation**: Mengimplementasikan sistem Import yang robust sebagai pondasi integrasi.
+- Menyelesaikan gap fungsional utama di mana `ambil` sebelumnya diabaikan oleh Checker.
+- Mendukung "Exported Symbols" (Uppercase) dan "Private Symbols" (Lowercase).
+
+**File Terkait**:
+- `pkg/checker/types.go` (SHA256:9daab5997e83b86b48b9e5107325b14719da4afc6701a5f2ae36309091b578c1)
+- `pkg/checker/checker.go` (SHA256:1835cc16b7eab89d15bf36dac78c266da02079d77cd8d7dad9f7069cf45d1d0e)
+- `pkg/checker/import_test.go` (SHA256:228faec0cf5bfee2b14a8a2e94682453905966fa43922b645f5eebcccccd420f)
+- `.vzoel.jules/technical-debt.morph.vz` (SHA256:5bf1f421c6712d68e2a12db07762e1a36176c83dcff34daeffdbce840cb8d984)
+
+### Version 1.6.2 - 2025-12-20
+**Checksum**: SHA256:VARIOUS
+**Perubahan**:
+- **Type System**: Added `KindUserError` and `UserErrorType` to `pkg/checker/types.go` to distinguish user-facing `Error` from internal compiler errors.
+- **Type System**: Updated `AssignableTo` to allow `Null` assignment to `UserErrorType`.
+- **Checker**: Registered `Error` as `UserErrorType` in global scope in `pkg/checker/checker.go`.
+- **Tests**: Added `pkg/checker/error_type_test.go` verifying `Error` usage and `nil` assignment.
+
+**Konteks Sesi**:
+- **Closing Gap**: Menyelesaikan gap kedua di mana tipe `Error` (User-Facing) belum didefinisikan, menghalangi pola "Error as Value".
+- Memisahkan `KindError` (Internal) dan `KindUserError` (Eksternal) untuk keamanan.
+
+**File Terkait**:
+- `pkg/checker/types.go` (SHA256:c9a585076ffa13a9926395270bf8c009be40b85050a0aab687c9d26841c1e71c)
+- `pkg/checker/checker.go` (SHA256:fcae13d286847ba2998e097969f726980e57c55887f1c4e4230edcf4ae2963a3)
+- `pkg/checker/error_type_test.go` (SHA256:2a9797abbbaa40a5bf5edf116e25ee67ba5abb16dcc4e33973b27128e85c0c69)
+- `.vzoel.jules/technical-debt.morph.vz` (SHA256:c97935f7ae70410fa92dcbbf6bb33a869d6ad4aafd7b1400cf033eb3ae1d0816)
+
+### Version 1.6.1 - 2025-12-20
+**Checksum**: SHA256:VARIOUS
+**Perubahan**:
+- **Type System**: Added `AssignableTo` method to `Type` interface in `pkg/checker/types.go` and implemented logic for all types.
+- **Type System**: Implemented Interface Satisfaction check (Duck Typing) in `StructType.AssignableTo`.
+- **Checker**: Updated `pkg/checker/checker.go` to use `AssignableTo` instead of `Equals` for assignment, variable initialization, call arguments, and return values.
+- **Tests**: Added `pkg/checker/interface_impl_test.go` covering valid/invalid interface implementations.
+
+**Konteks Sesi**:
+- **Closing Gap**: Memperbaiki gap di mana Type Checker sudah mendukung definisi Interface tapi Type System belum mendukung pengecekan implementasi (Interface Satisfaction).
+- Menggantikan pengecekan Strict Equality (`Equals`) dengan `AssignableTo` untuk memungkinkan polymorphism (Struct -> Interface).
+
+**File Terkait**:
+- `pkg/checker/types.go` (SHA256:ef34daa0c8fd582511ed149ce49e89775a5240375c8c66f6860f36a8e6f32c56)
+- `pkg/checker/checker.go` (SHA256:14693b66b636b24654f1bc46156c9d9b4ab3914669df44ea9ea75064d5e35394)
+- `pkg/checker/interface_impl_test.go` (SHA256:bc43296c6708234da50fa1322c41abf708ae62c38eb699a914a89d68df9e05c9)
+- `.vzoel.jules/technical-debt.morph.vz` (SHA256:7a0e8d7dcfa881108e600d2c03a37db6c26d01b5d2f4296e53b321414926839d)
+
+### Version 1.6.0 - 2025-12-20
+**Checksum**: SHA256:VARIOUS
+**Perubahan**:
+- **Refactor**: Renamed module from `morphlang` to `morph` in `go.mod` and all import paths.
+- **Tooling**: Created `checksum_gen.go` to automate SHA256 checksum generation for `AGENTS.md` compliance.
+- **Fix**: Updated `pkg/analysis/analyzer.go` to support current AST structure (fixing build errors exposed by refactor verification).
+- **Scope**: Updated all references in `pkg/` to use `github.com/VzoelFox/morph`.
+
+**Konteks Sesi**:
+- **Refactor & Tooling**: Melakukan refactor nama module sesuai permintaan user dan membuat tool otomatisasi checksum ("cide generator" / `jules` tool).
+- Memastikan integritas build dengan memperbaiki `pkg/analysis` yang tertinggal dari perubahan AST sebelumnya.
+
+**File Terkait**:
+- `go.mod` (SHA256:c7de783d9e3378d10d7865c5c05a3d05652403e1016f735455185a905f911340)
+- `pkg/analysis/analyzer.go` (SHA256:6dbd67bd3e12e9a7fb4c0af1b41ffc039675b9a14a7257749ae32d6d83350d60)
+- `checksum_gen.go` (SHA256:b06c465cd0259a681ff641323145fe87531dd3c7c947462b61c15ba63850ab76)
+
 ### Version 1.5.3 - 2025-12-20
 **Checksum**: SHA256:VARIOUS
 **Perubahan**:

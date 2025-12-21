@@ -3,7 +3,7 @@ package parser
 import (
 	"testing"
 
-	"github.com/VzoelFox/morphlang/pkg/lexer"
+	"github.com/VzoelFox/morph/pkg/lexer"
 )
 
 func TestStructLiteralParsing(t *testing.T) {

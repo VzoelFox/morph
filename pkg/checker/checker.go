@@ -1,22 +1,33 @@
 package checker
 
 import (
-	"github.com/VzoelFox/morphlang/pkg/parser"
+	"strings"
+
+	"github.com/VzoelFox/morph/pkg/parser"
 )
 
+type Importer interface {
+	Import(path string) (*parser.Program, error)
+}
+
 type Checker struct {
-	Errors      []TypeError
-	Warnings    []TypeWarning
-	scope       *Scope
-	returnStack []Type
+	Errors         []TypeError
+	Warnings       []TypeWarning
+	scope          *Scope
+	returnStack    []Type
+	importer       Importer
+	moduleCache    map[string]*ModuleType
+	loadingModules map[string]bool
 }
 
 func New() *Checker {
 	c := &Checker{
-		Errors:      []TypeError{},
-		Warnings:    []TypeWarning{},
-		scope:       NewScope(nil),
-		returnStack: []Type{},
+		Errors:         []TypeError{},
+		Warnings:       []TypeWarning{},
+		scope:          NewScope(nil),
+		returnStack:    []Type{},
+		moduleCache:    make(map[string]*ModuleType),
+		loadingModules: make(map[string]bool),
 	}
 
 	// Register primitive types
@@ -24,6 +35,7 @@ func New() *Checker {
 	c.scope.DefineType("Float", FloatType)
 	c.scope.DefineType("String", StringType)
 	c.scope.DefineType("Bool", BoolType)
+	c.scope.DefineType("Error", UserErrorType) // User-facing 'Error' type
 
 	// Register built-in functions (Stdlib Prototype)
 	// parse_int(String) -> (Int, String)
@@ -34,6 +46,10 @@ func New() *Checker {
 	c.scope.DefineVariable("parse_int", parseIntType, 0, 0)
 
 	return c
+}
+
+func (c *Checker) SetImporter(i Importer) {
+	c.importer = i
 }
 
 func (c *Checker) pushReturn(t Type) { c.returnStack = append(c.returnStack, t) }
@@ -60,6 +76,13 @@ func (c *Checker) Check(program *parser.Program) {
 }
 
 func (c *Checker) collectDefinitions(program *parser.Program) {
+	// 0. Process Imports first
+	for _, stmt := range program.Statements {
+		if imp, ok := stmt.(*parser.ImportStatement); ok {
+			c.checkImport(imp)
+		}
+	}
+
 	// 1. Structs first (types)
 	for _, stmt := range program.Statements {
 		if s, ok := stmt.(*parser.StructStatement); ok {
@@ -82,6 +105,118 @@ func (c *Checker) collectDefinitions(program *parser.Program) {
 			}
 		}
 	}
+}
+
+func (c *Checker) checkImport(imp *parser.ImportStatement) {
+	if c.importer == nil {
+		return
+	}
+
+	path := imp.Path
+	if c.loadingModules[path] {
+		c.addError(imp.Token.Line, imp.Token.Column, "Import cycle detected: %s", path)
+		return
+	}
+
+	if mod, cached := c.moduleCache[path]; cached {
+		c.registerModule(imp, mod)
+		return
+	}
+
+	c.loadingModules[path] = true
+	defer func() { delete(c.loadingModules, path) }()
+
+	importedProg, err := c.importer.Import(path)
+	if err != nil {
+		c.addError(imp.Token.Line, imp.Token.Column, "Failed to import module '%s': %v", path, err)
+		return
+	}
+
+	// Check imported module (recursively)
+	subChecker := New()
+	subChecker.importer = c.importer // Share importer
+	subChecker.moduleCache = c.moduleCache // Share cache
+	subChecker.loadingModules = c.loadingModules // Share loading state (for cycle detection)
+
+	// Collect definitions ONLY (Pass 1)
+	subChecker.Check(importedProg)
+
+	// Propagate errors from imported module
+	if len(subChecker.Errors) > 0 {
+		c.Errors = append(c.Errors, subChecker.Errors...)
+	}
+
+	// Harvest Exports (Uppercase)
+	exports := make(map[string]Type)
+
+	// Collect Variables (Functions/Vars) from Scope
+	for name, sym := range subChecker.scope.variables {
+		if isExported(name) {
+			exports[name] = sym.Type
+		}
+	}
+	// Collect Types (Structs, Interfaces) from Scope
+	for name, typ := range subChecker.scope.types {
+		if isExported(name) {
+			exports[name] = typ
+		}
+	}
+
+	mod := &ModuleType{
+		Name:    path, // or base name?
+		Exports: exports,
+	}
+
+	c.moduleCache[path] = mod
+	c.registerModule(imp, mod)
+}
+
+func (c *Checker) registerModule(imp *parser.ImportStatement, mod *ModuleType) {
+	// 2. From Import: dari "math" ambil Sin -> var Sin = mod.Exports["Sin"]
+	if len(imp.Identifiers) > 0 {
+		for _, name := range imp.Identifiers {
+			if typ, ok := mod.Exports[name]; ok {
+				// If it is a Type Definition (Struct/Interface), we define it as Type in current scope
+				// If it is a Value (Function/Var), we define it as Variable
+
+				// HACK: How to distinguish Type vs Value in `mod.Exports`?
+				// Both are `Type`. `StructType` is a Type. `FunctionType` is a Type.
+				// But `FunctionType` describes a VALUE. `StructType` describes a TYPE.
+				// In Morph, Structs are Types.
+				// But we also have Constructor? `User{...}`.
+				// For now, if Kind is Struct/Interface -> DefineType.
+				// Else -> DefineVariable.
+				// Wait, Struct Name is also used for Literal construction?
+				// In `checkExpression` -> `StructLiteral` uses `c.checkExpression(exp.Name)`.
+				// It expects an Identifier resolving to a Type (StructType).
+				// So if we define it as Type, `LookupType` works.
+
+				switch typ.Kind() {
+				case KindStruct, KindInterface:
+					c.scope.DefineType(name, typ)
+				default:
+					c.scope.DefineVariable(name, typ, imp.Token.Line, imp.Token.Column)
+				}
+			} else {
+				c.addError(imp.Token.Line, imp.Token.Column, "Module '%s' does not export '%s'", imp.Path, name)
+			}
+		}
+	} else {
+		// Define module as variable
+		parts := strings.Split(imp.Path, "/")
+		name := parts[len(parts)-1]
+		// Remove extension if any
+		if idx := strings.Index(name, "."); idx != -1 {
+			name = name[:idx]
+		}
+
+		c.scope.DefineVariable(name, mod, imp.Token.Line, imp.Token.Column)
+	}
+}
+
+func isExported(name string) bool {
+	if len(name) == 0 { return false }
+	return name[0] >= 'A' && name[0] <= 'Z'
 }
 
 func (c *Checker) defineStruct(s *parser.StructStatement) {
@@ -203,6 +338,31 @@ func (c *Checker) resolveType(n parser.TypeNode) Type {
 			c.addError(t.Token.Line, t.Token.Column, "Unknown type: %s", t.Name)
 			return UnknownType
 		}
+	case *parser.QualifiedType:
+		modType, ok := c.scope.LookupVariable(t.Package.Value)
+		if !ok {
+			c.addError(t.Token.Line, t.Token.Column, "Unknown module: %s", t.Package.Value)
+			return UnknownType
+		}
+
+		if modType.Kind() != KindModule {
+			c.addError(t.Token.Line, t.Token.Column, "Expected module, got %s", modType.String())
+			return UnknownType
+		}
+
+		mod := modType.(*ModuleType)
+		if typ, ok := mod.Exports[t.Name.Value]; ok {
+			// Is it a Type?
+			if typ.Kind() == KindStruct || typ.Kind() == KindInterface {
+				return typ
+			}
+			c.addError(t.Token.Line, t.Token.Column, "'%s' is not a type", t.Name.Value)
+			return UnknownType
+		}
+
+		c.addError(t.Token.Line, t.Token.Column, "Module '%s' does not export type '%s'", mod.Name, t.Name.Value)
+		return UnknownType
+
 	case *parser.ArrayType:
 		elem := c.resolveType(t.Element)
 		return &ArrayType{Element: elem}
@@ -276,7 +436,7 @@ func (c *Checker) checkStatement(s parser.Statement) {
 
 		expected := c.currentReturn()
 		if expected != nil {
-			if !expected.Equals(actual) && actual.Kind() != KindUnknown {
+			if !actual.AssignableTo(expected) && actual.Kind() != KindUnknown {
 				c.addError(stmt.Token.Line, stmt.Token.Column, "Return type mismatch: expected %s, got %s", expected.String(), actual.String())
 			}
 		}
@@ -324,7 +484,7 @@ func (c *Checker) checkAssignment(s *parser.AssignmentStatement) {
 		rhsType := valueTypes[i]
 
 		if lhsType.Kind() != KindUnknown && rhsType.Kind() != KindUnknown {
-			if !lhsType.Equals(rhsType) {
+			if !rhsType.AssignableTo(lhsType) {
 				c.addError(s.Token.Line, s.Token.Column, "Type mismatch in assignment: expected %s, got %s", lhsType.String(), rhsType.String())
 			}
 		}
@@ -372,7 +532,7 @@ func (c *Checker) checkVarStatement(s *parser.VarStatement) {
 			// Explicit Type
 			finalType = expected
 			if actual.Kind() != KindUnknown {
-				if !finalType.Equals(actual) {
+				if !actual.AssignableTo(finalType) {
 					c.addError(s.Token.Line, s.Token.Column, "Type mismatch for '%s': expected %s, got %s", name.Value, finalType.String(), actual.String())
 				}
 			}
@@ -445,7 +605,7 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 				continue
 			}
 			valType := c.checkExpression(valExpr)
-			if !expectedType.Equals(valType) {
+			if !valType.AssignableTo(expectedType) {
 				c.addError(exp.Token.Line, exp.Token.Column, "Field '%s' type mismatch: expected %s, got %s", key, expectedType.String(), valType.String())
 			}
 		}
@@ -457,8 +617,17 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 	case *parser.MemberExpression:
 		objType := c.checkExpression(exp.Object)
 
+		if objType.Kind() == KindModule {
+			mod := objType.(*ModuleType)
+			if t, ok := mod.Exports[exp.Member.Value]; ok {
+				return t
+			}
+			c.addError(exp.Token.Line, exp.Token.Column, "Module '%s' does not export '%s'", mod.Name, exp.Member.Value)
+			return ErrorType
+		}
+
 		if objType.Kind() != KindStruct {
-			c.addError(exp.Token.Line, exp.Token.Column, "Cannot access member on non-struct type %s", objType.String())
+			c.addError(exp.Token.Line, exp.Token.Column, "Cannot access member on non-struct/module type %s", objType.String())
 			return ErrorType
 		}
 
@@ -486,7 +655,7 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 		// Verify all elements match
 		for i, elem := range exp.Elements[1:] {
 			elemType := c.checkExpression(elem)
-			if !firstType.Equals(elemType) {
+			if !elemType.AssignableTo(firstType) {
 				c.addError(exp.Token.Line, exp.Token.Column, "Array element %d type mismatch: expected %s, got %s", i+1, firstType.String(), elemType.String())
 			}
 		}
@@ -510,11 +679,11 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 				continue
 			}
 
-			if !keyType.Equals(kt) {
+			if !kt.AssignableTo(keyType) {
 				c.addError(exp.Token.Line, exp.Token.Column, "Map key type mismatch: expected %s, got %s", keyType.String(), kt.String())
 			}
 
-			if !valType.Equals(vt) {
+			if !vt.AssignableTo(valType) {
 				c.addError(exp.Token.Line, exp.Token.Column, "Map value type mismatch: expected %s, got %s", valType.String(), vt.String())
 			}
 		}
@@ -675,7 +844,7 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 			}
 			for i, arg := range exp.Arguments {
 				argType := c.checkExpression(arg)
-				if !argType.Equals(f.Parameters[i]) {
+				if !argType.AssignableTo(f.Parameters[i]) {
 					c.addError(exp.Token.Line, exp.Token.Column, "Argument %d type mismatch: expected %s, got %s", i+1, f.Parameters[i].String(), argType.String())
 				}
 			}
@@ -708,8 +877,8 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 						return IntType
 					}
 
-					// Identity
-					if targetType.Equals(argType) {
+					// Identity or Assignable (e.g. Upcast)
+					if argType.AssignableTo(targetType) {
 						return targetType
 					}
 

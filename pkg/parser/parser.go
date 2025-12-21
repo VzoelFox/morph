@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/VzoelFox/morphlang/pkg/lexer"
+	"github.com/VzoelFox/morph/pkg/lexer"
 )
 
 const (
@@ -452,6 +452,20 @@ func (p *Parser) parseType() TypeNode {
 	}
 
 	if p.curTokenIs(lexer.IDENT) {
+		// Check for Qualified Type: Module.Type
+		if p.peekTokenIs(lexer.DOT) {
+			pkgIdent := &Identifier{Token: p.curToken, Value: p.curToken.Literal}
+			p.nextToken() // eat IDENT
+			// cur is DOT
+			p.nextToken() // eat DOT
+			// cur should be IDENT
+			if !p.curTokenIs(lexer.IDENT) {
+				p.addDetailedError(p.curToken, "Expected type name after dot")
+				return nil
+			}
+			nameIdent := &Identifier{Token: p.curToken, Value: p.curToken.Literal}
+			return &QualifiedType{Token: pkgIdent.Token, Package: pkgIdent, Name: nameIdent}
+		}
 		return &SimpleType{Token: p.curToken, Name: p.curToken.Literal}
 	}
 
