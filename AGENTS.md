@@ -55,6 +55,23 @@ project-root/
 
 ## Riwayat Perubahan
 
+### Version 1.6.0 - 2025-12-20
+**Checksum**: SHA256:VARIOUS
+**Perubahan**:
+- **Refactor**: Renamed module from `morphlang` to `morph` in `go.mod` and all import paths.
+- **Tooling**: Created `checksum_gen.go` to automate SHA256 checksum generation for `AGENTS.md` compliance.
+- **Fix**: Updated `pkg/analysis/analyzer.go` to support current AST structure (fixing build errors exposed by refactor verification).
+- **Scope**: Updated all references in `pkg/` to use `github.com/VzoelFox/morph`.
+
+**Konteks Sesi**:
+- **Refactor & Tooling**: Melakukan refactor nama module sesuai permintaan user dan membuat tool otomatisasi checksum ("cide generator" / `jules` tool).
+- Memastikan integritas build dengan memperbaiki `pkg/analysis` yang tertinggal dari perubahan AST sebelumnya.
+
+**File Terkait**:
+- `go.mod` (SHA256:c7de783d9e3378d10d7865c5c05a3d05652403e1016f735455185a905f911340)
+- `pkg/analysis/analyzer.go` (SHA256:6dbd67bd3e12e9a7fb4c0af1b41ffc039675b9a14a7257749ae32d6d83350d60)
+- `checksum_gen.go` (SHA256:b06c465cd0259a681ff641323145fe87531dd3c7c947462b61c15ba63850ab76)
+
 ### Version 1.5.3 - 2025-12-20
 **Checksum**: SHA256:VARIOUS
 **Perubahan**:

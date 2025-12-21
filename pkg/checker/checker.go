@@ -1,7 +1,7 @@
 package checker
 
 import (
-	"github.com/VzoelFox/morphlang/pkg/parser"
+	"github.com/VzoelFox/morph/pkg/parser"
 )
 
 type Checker struct {

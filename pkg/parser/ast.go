@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"strings"
 
-	"github.com/VzoelFox/morphlang/pkg/lexer"
+	"github.com/VzoelFox/morph/pkg/lexer"
 )
 
 // The base Node interface

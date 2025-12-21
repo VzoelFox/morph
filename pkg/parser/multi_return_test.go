@@ -2,7 +2,7 @@ package parser
 
 import (
 	"testing"
-	"github.com/VzoelFox/morphlang/pkg/lexer"
+	"github.com/VzoelFox/morph/pkg/lexer"
 )
 
 func TestMultiReturnParsing(t *testing.T) {
