@@ -40,31 +40,44 @@ func (e *Evaluator) Eval(node parser.Node, env *Environment) Object {
 		return e.evalBlockStatement(node, env)
 
 	case *parser.ReturnStatement:
-		var val Object = NULL
 		if len(node.ReturnValues) == 1 {
-			val = e.Eval(node.ReturnValues[0], env)
+			val := e.Eval(node.ReturnValues[0], env)
+			return &ReturnValue{Value: val}
+		} else if len(node.ReturnValues) > 1 {
+			elements := e.evalExpressions(node.ReturnValues, env)
+			if len(elements) == 1 && isError(elements[0]) {
+				return elements[0]
+			}
+			return &ReturnValue{Value: &Tuple{Elements: elements}}
 		}
-		// Todo: Handle multiple returns
-		return &ReturnValue{Value: val}
+		return &ReturnValue{Value: NULL}
 
 	case *parser.VarStatement:
-		val := e.Eval(node.Values[0], env)
-		if isError(val) {
-			return val
-		}
-		env.Define(node.Names[0].Value, val)
-		return val
+		return e.evalVarStatement(node, env)
 
 	case *parser.AssignmentStatement:
-		val := e.Eval(node.Values[0], env)
-		if isError(val) {
-			return val
+		return e.evalAssignmentStatement(node, env)
+
+	case *parser.PrefixExpression:
+		right := e.Eval(node.Right, env)
+		if isError(right) {
+			return right
 		}
-		// Handle member assignment? for now simple ident
-		if ident, ok := node.Names[0].(*parser.Identifier); ok {
-			env.Assign(ident.Value, val)
+		return e.evalPrefixExpression(node.Operator, right)
+
+	case *parser.InfixExpression:
+		left := e.Eval(node.Left, env)
+		if isError(left) {
+			return left
 		}
-		return val
+		right := e.Eval(node.Right, env)
+		if isError(right) {
+			return right
+		}
+		return e.evalInfixExpression(node.Operator, left, right)
+
+	case *parser.IfExpression:
+		return e.evalIfExpression(node, env)
 
 	case *parser.Identifier:
 		return e.evalIdentifier(node, env)
@@ -77,6 +90,9 @@ func (e *Evaluator) Eval(node parser.Node, env *Environment) Object {
 
 	case *parser.BooleanLiteral:
 		return nativeBoolToBooleanObject(node.Value)
+
+	case *parser.NullLiteral:
+		return NULL
 
 	case *parser.CallExpression:
 		function := e.Eval(node.Function, env)
@@ -92,7 +108,6 @@ func (e *Evaluator) Eval(node parser.Node, env *Environment) Object {
 	case *parser.FunctionLiteral:
 		if node.IsNative {
 			if fn, ok := GetNative(node.Name); ok {
-				// Define native function in env if named
 				if node.Name != "" {
 					env.Define(node.Name, fn)
 				}
@@ -100,9 +115,7 @@ func (e *Evaluator) Eval(node parser.Node, env *Environment) Object {
 			}
 			return newError("native function implementation not found: %s", node.Name)
 		}
-
 		fn := &Function{Parameters: node.Parameters, Body: node.Body, Env: env}
-		// Define function in env if named
 		if node.Name != "" {
 			env.Define(node.Name, fn)
 		}
@@ -114,9 +127,6 @@ func (e *Evaluator) Eval(node parser.Node, env *Environment) Object {
 			if err != nil {
 				return newError("Import error: %s", err.Error())
 			}
-			// Define identifiers
-			// If 'ambil "io"', define 'io' = mod
-			// Simplification: just use base name
 			name := node.Path // todo: basename
 			env.Define(name, mod)
 			return NULL
@@ -125,7 +135,9 @@ func (e *Evaluator) Eval(node parser.Node, env *Environment) Object {
 
 	case *parser.MemberExpression:
 		obj := e.Eval(node.Object, env)
-		if isError(obj) { return obj }
+		if isError(obj) {
+			return obj
+		}
 
 		if mod, ok := obj.(*Module); ok {
 			if val, ok := mod.Env.Get(node.Member.Value); ok {
@@ -147,10 +159,8 @@ func (e *Evaluator) Eval(node parser.Node, env *Environment) Object {
 
 func (e *Evaluator) evalProgram(program *parser.Program, env *Environment) Object {
 	var result Object
-
 	for _, statement := range program.Statements {
 		result = e.Eval(statement, env)
-
 		switch result := result.(type) {
 		case *ReturnValue:
 			return result.Value
@@ -158,16 +168,13 @@ func (e *Evaluator) evalProgram(program *parser.Program, env *Environment) Objec
 			return result
 		}
 	}
-
 	return result
 }
 
 func (e *Evaluator) evalBlockStatement(block *parser.BlockStatement, env *Environment) Object {
 	var result Object
-
 	for _, statement := range block.Statements {
 		result = e.Eval(statement, env)
-
 		if result != nil {
 			rt := result.Type()
 			if rt == RETURN_VALUE_OBJ || rt == ERROR_OBJ {
@@ -175,7 +182,6 @@ func (e *Evaluator) evalBlockStatement(block *parser.BlockStatement, env *Enviro
 			}
 		}
 	}
-
 	return result
 }
 
@@ -183,13 +189,11 @@ func (e *Evaluator) evalIdentifier(node *parser.Identifier, env *Environment) Ob
 	if val, ok := env.Get(node.Value); ok {
 		return val
 	}
-	// Check native registry? No, env should have it if imported/declared.
 	return newError("identifier not found: " + node.Value)
 }
 
 func (e *Evaluator) evalExpressions(exps []parser.Expression, env *Environment) []Object {
 	var result []Object
-
 	for _, eNode := range exps {
 		evaluated := e.Eval(eNode, env)
 		if isError(evaluated) {
@@ -197,7 +201,6 @@ func (e *Evaluator) evalExpressions(exps []parser.Expression, env *Environment) 
 		}
 		result = append(result, evaluated)
 	}
-
 	return result
 }
 
@@ -214,6 +217,182 @@ func (e *Evaluator) applyFunction(fn Object, args []Object) Object {
 		return fn.Fn(args...)
 	default:
 		return newError("not a function: %s", fn.Type())
+	}
+}
+
+func (e *Evaluator) evalVarStatement(node *parser.VarStatement, env *Environment) Object {
+	var values []Object
+	if len(node.Values) == 1 && len(node.Names) > 1 {
+		val := e.Eval(node.Values[0], env)
+		if isError(val) {
+			return val
+		}
+		if tuple, ok := val.(*Tuple); ok {
+			values = tuple.Elements
+		} else {
+			return newError("expected tuple for unpacking, got %s", val.Type())
+		}
+	} else {
+		values = e.evalExpressions(node.Values, env)
+		if len(values) == 1 && isError(values[0]) {
+			return values[0]
+		}
+	}
+
+	if len(node.Names) != len(values) {
+		return newError("mismatch assignment count: %d = %d", len(node.Names), len(values))
+	}
+
+	for i, name := range node.Names {
+		env.Define(name.Value, values[i])
+	}
+	return NULL
+}
+
+func (e *Evaluator) evalAssignmentStatement(node *parser.AssignmentStatement, env *Environment) Object {
+	var values []Object
+	if len(node.Values) == 1 && len(node.Names) > 1 {
+		val := e.Eval(node.Values[0], env)
+		if isError(val) {
+			return val
+		}
+		if tuple, ok := val.(*Tuple); ok {
+			values = tuple.Elements
+		} else {
+			return newError("expected tuple for unpacking, got %s", val.Type())
+		}
+	} else {
+		values = e.evalExpressions(node.Values, env)
+		if len(values) == 1 && isError(values[0]) {
+			return values[0]
+		}
+	}
+
+	if len(node.Names) != len(values) {
+		return newError("mismatch assignment count: %d = %d", len(node.Names), len(values))
+	}
+
+	for i, nameExpr := range node.Names {
+		// Assuming identifiers for now
+		if ident, ok := nameExpr.(*parser.Identifier); ok {
+			env.Assign(ident.Value, values[i])
+		} else {
+			// Todo: Handle other LHS like IndexExpression, MemberExpression
+			return newError("assignment to %T not supported yet", nameExpr)
+		}
+	}
+	return NULL
+}
+
+func (e *Evaluator) evalPrefixExpression(operator string, right Object) Object {
+	switch operator {
+	case "!":
+		return evalBangOperatorExpression(right)
+	case "-":
+		return evalMinusPrefixOperatorExpression(right)
+	default:
+		return newError("unknown operator: %s%s", operator, right.Type())
+	}
+}
+
+func (e *Evaluator) evalInfixExpression(operator string, left, right Object) Object {
+	switch {
+	case left.Type() == INTEGER_OBJ && right.Type() == INTEGER_OBJ:
+		return evalIntegerInfixExpression(operator, left, right)
+	case left.Type() == STRING_OBJ && right.Type() == STRING_OBJ:
+		return evalStringInfixExpression(operator, left, right)
+	case operator == "==":
+		return nativeBoolToBooleanObject(left == right) // Pointer comparison works for Booleans/Null
+	case operator == "!=":
+		return nativeBoolToBooleanObject(left != right)
+	case left.Type() != right.Type():
+		return newError("type mismatch: %s %s %s", left.Type(), operator, right.Type())
+	default:
+		return newError("unknown operator: %s %s %s", left.Type(), operator, right.Type())
+	}
+}
+
+func evalIntegerInfixExpression(operator string, left, right Object) Object {
+	leftVal := left.(*Integer).Value
+	rightVal := right.(*Integer).Value
+
+	switch operator {
+	case "+":
+		return &Integer{Value: leftVal + rightVal}
+	case "-":
+		return &Integer{Value: leftVal - rightVal}
+	case "*":
+		return &Integer{Value: leftVal * rightVal}
+	case "/":
+		return &Integer{Value: leftVal / rightVal}
+	case "<":
+		return nativeBoolToBooleanObject(leftVal < rightVal)
+	case ">":
+		return nativeBoolToBooleanObject(leftVal > rightVal)
+	case "==":
+		return nativeBoolToBooleanObject(leftVal == rightVal)
+	case "!=":
+		return nativeBoolToBooleanObject(leftVal != rightVal)
+	default:
+		return newError("unknown operator: %s %s %s", left.Type(), operator, right.Type())
+	}
+}
+
+func evalStringInfixExpression(operator string, left, right Object) Object {
+	if operator != "+" {
+		return newError("unknown operator: %s %s %s", left.Type(), operator, right.Type())
+	}
+	leftVal := left.(*String).Value
+	rightVal := right.(*String).Value
+	return &String{Value: leftVal + rightVal}
+}
+
+func evalBangOperatorExpression(right Object) Object {
+	switch right {
+	case TRUE:
+		return FALSE
+	case FALSE:
+		return TRUE
+	case NULL:
+		return TRUE
+	default:
+		return FALSE
+	}
+}
+
+func evalMinusPrefixOperatorExpression(right Object) Object {
+	if right.Type() != INTEGER_OBJ {
+		return newError("unknown operator: -%s", right.Type())
+	}
+	value := right.(*Integer).Value
+	return &Integer{Value: -value}
+}
+
+func (e *Evaluator) evalIfExpression(ie *parser.IfExpression, env *Environment) Object {
+	condition := e.Eval(ie.Condition, env)
+	if isError(condition) {
+		return condition
+	}
+
+	if isTruthy(condition) {
+		return e.Eval(ie.Consequence, env)
+	} else if ie.Alternative != nil {
+		return e.Eval(ie.Alternative, env)
+	} else {
+		return NULL
+	}
+}
+
+func isTruthy(obj Object) bool {
+	switch obj {
+	case NULL:
+		return false
+	case TRUE:
+		return true
+	case FALSE:
+		return false
+	default:
+		return true
 	}
 }
 
@@ -242,7 +421,6 @@ func isError(obj Object) bool {
 	return false
 }
 
-// Placeholder for GetNative, implemented in builtins.go
 func GetNative(name string) (*NativeFunction, bool) {
 	if fn, ok := NativeRegistry[name]; ok {
 		return &NativeFunction{Fn: fn, Name: name}, true

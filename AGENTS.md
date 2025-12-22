@@ -54,6 +54,29 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.17.0 - 2025-12-20
+**Checksum**: SHA256:STDLIB_CONV
+**Perubahan**:
+- **Evaluator**: Implemented complete expression evaluation (`Infix`, `Prefix`, `If`, `NullLiteral`).
+- **Evaluator**: Added `Tuple` support for multiple return values and assignment unpacking.
+- **Checker**: Updated `BinaryOp` to allow comparison between `Null` and nullable types (e.g. `Error`).
+- **Stdlib**: Added `stdlib/conv.fox` with `Atoi` (returning `(Int, Error)`) and `Itoa`.
+- **Runtime**: Implemented `pkg/evaluator/builtins_conv.go`.
+- **Driver**: Updated `cmd/morph/main.go` to register `conv`.
+- **Example**: Added `examples/conv_test.fox`.
+
+**Konteks Sesi**:
+- **Runtime Maturity**: Evaluator di-upgrade besar-besaran untuk mendukung operasi logika (`==`, `!=`, `+`) dan Tuple, memungkinkan kode yang lebih kompleks.
+- **Feature**: `stdlib/conv` memungkinkan konversi tipe string-int yang robust dengan error handling idiomatic.
+
+**File Terkait**:
+- `pkg/evaluator/evaluator.go`
+- `pkg/evaluator/object.go`
+- `pkg/checker/types.go`
+- `stdlib/conv.fox`
+- `pkg/evaluator/builtins_conv.go`
+- `cmd/morph/main.go`
+
 ### Version 1.16.0 - 2025-12-20
 **Checksum**: SHA256:STDLIB_TIME
 **Perubahan**:

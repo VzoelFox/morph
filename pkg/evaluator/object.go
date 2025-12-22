@@ -22,6 +22,7 @@ const (
 	NATIVE_OBJ       = "NATIVE"
 	STRUCT_OBJ       = "STRUCT"
 	MODULE_OBJ       = "MODULE"
+	TUPLE_OBJ        = "TUPLE"
 )
 
 type Object interface {
@@ -137,3 +138,20 @@ type Module struct {
 
 func (m *Module) Type() ObjectType { return MODULE_OBJ }
 func (m *Module) Inspect() string  { return "module(" + m.Name + ")" }
+
+type Tuple struct {
+	Elements []Object
+}
+
+func (t *Tuple) Type() ObjectType { return TUPLE_OBJ }
+func (t *Tuple) Inspect() string {
+	var out bytes.Buffer
+	elements := []string{}
+	for _, el := range t.Elements {
+		elements = append(elements, el.Inspect())
+	}
+	out.WriteString("(")
+	out.WriteString(strings.Join(elements, ", "))
+	out.WriteString(")")
+	return out.String()
+}

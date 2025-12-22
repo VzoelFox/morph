@@ -148,6 +148,7 @@ func main() {
 
 	evaluator.RegisterIO()
 	evaluator.RegisterTime()
+	evaluator.RegisterConv()
 
 	env := evaluator.NewEnvironment()
 	eval := evaluator.New(nil)
