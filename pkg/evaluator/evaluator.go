@@ -189,7 +189,7 @@ func (e *Evaluator) evalIdentifier(node *parser.Identifier, env *Environment) Ob
 	if val, ok := env.Get(node.Value); ok {
 		return val
 	}
-	return newError("identifier not found: " + node.Value)
+	return newError("identifier not found: %s", node.Value)
 }
 
 func (e *Evaluator) evalExpressions(exps []parser.Expression, env *Environment) []Object {
