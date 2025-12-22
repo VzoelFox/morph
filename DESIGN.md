@@ -25,6 +25,9 @@ Menggunakan gaya blok dengan keyword `akhir` (mirip Ruby/Lua) untuk mengurangi n
 - `kosong`: Nilai null (`nil`).
 - `benar` / `salah`: Boolean literal.
 
+### Tanda Baca
+- Titik koma (`;`) bersifat **opsional**. Parser akan mengabaikannya jika ada di akhir baris. Disarankan untuk tidak menggunakannya (Go-style) kecuali memisahkan multiple statement dalam satu baris.
+
 ### Entry Point
 Program Morph bersifat skrip linear. Tidak ada fungsi `utama` yang dipanggil secara implisit. Kode di level teratas akan dieksekusi. Konvensi umum adalah mendefinisikan fungsi `main` dan memanggilnya di akhir file.
 
