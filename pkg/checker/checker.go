@@ -17,8 +17,12 @@ type Checker struct {
 	scope          *Scope
 	returnStack    []Type
 	importer       Importer
-	moduleCache    map[string]*ModuleType
+	ModuleCache    map[string]*ModuleType
 	loadingModules map[string]bool
+}
+
+func IsChannel(t Type) bool {
+	return t.Kind() == KindChannel
 }
 
 func New() *Checker {
@@ -28,7 +32,7 @@ func New() *Checker {
 		Types:          make(map[parser.Node]Type),
 		scope:          NewScope(nil),
 		returnStack:    []Type{},
-		moduleCache:    make(map[string]*ModuleType),
+		ModuleCache:    make(map[string]*ModuleType),
 		loadingModules: make(map[string]bool),
 	}
 
@@ -149,7 +153,7 @@ func (c *Checker) checkImport(imp *parser.ImportStatement) {
 		return
 	}
 
-	if mod, cached := c.moduleCache[path]; cached {
+	if mod, cached := c.ModuleCache[path]; cached {
 		c.registerModule(imp, mod)
 		return
 	}
@@ -166,7 +170,7 @@ func (c *Checker) checkImport(imp *parser.ImportStatement) {
 	// Check imported module (recursively)
 	subChecker := New()
 	subChecker.importer = c.importer // Share importer
-	subChecker.moduleCache = c.moduleCache // Share cache
+	subChecker.ModuleCache = c.ModuleCache // Share cache
 	subChecker.loadingModules = c.loadingModules // Share loading state (for cycle detection)
 
 	// Collect definitions ONLY (Pass 1)
@@ -194,11 +198,12 @@ func (c *Checker) checkImport(imp *parser.ImportStatement) {
 	}
 
 	mod := &ModuleType{
-		Name:    path, // or base name?
+		Name:    path,
 		Exports: exports,
+		Program: importedProg,
 	}
 
-	c.moduleCache[path] = mod
+	c.ModuleCache[path] = mod
 	c.registerModule(imp, mod)
 }
 

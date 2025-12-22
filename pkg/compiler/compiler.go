@@ -29,11 +29,22 @@ func (c *Compiler) Compile(node parser.Node) (string, error) {
 	c.output.WriteString("void mph_native_print(MorphContext* ctx, MorphString* s);\n")
 	c.output.WriteString("void mph_native_print_int(MorphContext* ctx, mph_int n);\n\n")
 
+	// 1. Compile Modules
+	for path, mod := range c.checker.ModuleCache {
+		if mod.Program == nil {
+			continue
+		}
+		prefix := mangle(path)
+		if err := c.compileModule(mod.Program, prefix); err != nil {
+			return "", err
+		}
+	}
+
+	// 2. Compile Main Program
 	if prog, ok := node.(*parser.Program); ok {
-		for _, stmt := range prog.Statements {
-			if err := c.compileTopLevelStatement(stmt); err != nil {
-				return "", err
-			}
+		// Main program functions use "mph_" prefix
+		if err := c.compileModule(prog, "mph_"); err != nil {
+			return "", err
 		}
 	} else {
 		return "", fmt.Errorf("expected *parser.Program, got %T", node)
@@ -47,23 +58,40 @@ func (c *Compiler) Compile(node parser.Node) (string, error) {
 	return c.output.String(), nil
 }
 
-func (c *Compiler) compileTopLevelStatement(stmt parser.Statement) error {
-	if s, ok := stmt.(*parser.ExpressionStatement); ok {
-		if fn, ok := s.Expression.(*parser.FunctionLiteral); ok {
-			if fn.Name != "" {
-				return c.compileFunction(fn)
+func (c *Compiler) compileModule(prog *parser.Program, prefix string) error {
+	for _, stmt := range prog.Statements {
+		// Check for Function Definitions
+		isFunc := false
+		if s, ok := stmt.(*parser.ExpressionStatement); ok {
+			if fn, ok := s.Expression.(*parser.FunctionLiteral); ok {
+				if fn.Name != "" {
+					if err := c.compileFunction(fn, prefix); err != nil {
+						return err
+					}
+					isFunc = true
+				}
+			}
+		}
+
+		// If not a function, and we are in Main (prefix "mph_"), generate entry code
+		if !isFunc && prefix == "mph_" {
+			if err := c.compileStatement(stmt, &c.entryBody); err != nil {
+				return err
 			}
 		}
 	}
-	return c.compileStatement(stmt, &c.entryBody)
+	return nil
 }
 
-func (c *Compiler) compileFunction(fn *parser.FunctionLiteral) error {
+func (c *Compiler) compileFunction(fn *parser.FunctionLiteral, prefix string) error {
 	retType := "void"
 	if len(fn.ReturnTypes) > 0 {
 		if sim, ok := fn.ReturnTypes[0].(*parser.SimpleType); ok {
 			if sim.Name == "Int" {
 				retType = "mph_int"
+			}
+			if sim.Name == "Float" {
+				retType = "mph_float"
 			}
 			if sim.Name == "Bool" {
 				retType = "mph_bool"
@@ -71,7 +99,7 @@ func (c *Compiler) compileFunction(fn *parser.FunctionLiteral) error {
 		}
 	}
 
-	c.output.WriteString(fmt.Sprintf("%s mph_%s(MorphContext* ctx", retType, fn.Name))
+	c.output.WriteString(fmt.Sprintf("%s %s%s(MorphContext* ctx", retType, prefix, fn.Name))
 
 	for _, p := range fn.Parameters {
 		cType := "mph_int"
@@ -79,14 +107,27 @@ func (c *Compiler) compileFunction(fn *parser.FunctionLiteral) error {
 			if sim.Name == "String" {
 				cType = "MorphString*"
 			}
+			if sim.Name == "Float" {
+				cType = "mph_float"
+			}
 			if sim.Name == "Bool" {
 				cType = "mph_bool"
+			}
+			if sim.Name == "Channel" {
+				cType = "MorphChannel*"
 			}
 		}
 		c.output.WriteString(fmt.Sprintf(", %s %s", cType, p.Name.Value))
 	}
 
-	c.output.WriteString(") {\n")
+	c.output.WriteString(")")
+
+	if fn.IsNative {
+		c.output.WriteString(";\n\n")
+		return nil
+	}
+
+	c.output.WriteString(" {\n")
 
 	var body strings.Builder
 	if err := c.compileBlock(fn.Body, &body); err != nil {
@@ -114,6 +155,8 @@ func (c *Compiler) compileStatement(stmt parser.Statement, buf *strings.Builder)
 		return c.compileReturn(s, buf)
 	case *parser.AssignmentStatement:
 		return c.compileAssignment(s, buf)
+	case *parser.ImportStatement:
+		return nil
 	case *parser.BlockStatement:
 		buf.WriteString("{\n")
 		if err := c.compileBlock(s, buf); err != nil {
@@ -157,10 +200,14 @@ func (c *Compiler) compileVar(s *parser.VarStatement, buf *strings.Builder) erro
 	}
 
 	cType := "mph_int"
-	if typ != nil && typ.Kind() == checker.KindString {
-		cType = "MorphString*"
-	} else if typ != nil && typ.Kind() == checker.KindBool {
-		cType = "mph_bool"
+	if typ != nil {
+		if typ.Kind() == checker.KindString {
+			cType = "MorphString*"
+		} else if typ.Kind() == checker.KindBool {
+			cType = "mph_bool"
+		} else if typ.Kind() == checker.KindChannel {
+			cType = "MorphChannel*"
+		}
 	}
 
 	buf.WriteString(fmt.Sprintf("\t%s %s = %s;\n", cType, name, valCode))
@@ -252,6 +299,8 @@ func (c *Compiler) compileExpression(expr parser.Expression) (string, error) {
 			return "", err
 		}
 		return fmt.Sprintf("(%s%s)", e.Operator, right), nil
+	case *parser.MemberExpression:
+		return "", fmt.Errorf("property access not supported yet")
 	default:
 		return "", fmt.Errorf("unsupported expression: %T", expr)
 	}
@@ -259,10 +308,34 @@ func (c *Compiler) compileExpression(expr parser.Expression) (string, error) {
 
 func (c *Compiler) compileCall(call *parser.CallExpression) (string, error) {
 	var funcName string
+
 	if ident, ok := call.Function.(*parser.Identifier); ok {
-		funcName = ident.Value
+		// Local Function or Builtin
+		funcName = "mph_" + ident.Value
+		if ident.Value == "native_print" {
+			funcName = "mph_native_print"
+		} else if ident.Value == "native_print_int" {
+			funcName = "mph_native_print_int"
+		} else if ident.Value == "saluran_baru" {
+			funcName = "mph_channel_new"
+		} else if ident.Value == "kirim" {
+			funcName = "mph_channel_send"
+		} else if ident.Value == "terima" {
+			funcName = "mph_channel_recv"
+		} else if ident.Value == "luncurkan" {
+			return c.compileSpawn(call)
+		}
+	} else if mem, ok := call.Function.(*parser.MemberExpression); ok {
+		// Module Call: math.Add -> mph_stdlib_math_Add
+		objType := c.checker.Types[mem.Object]
+		if objType != nil && objType.Kind() == checker.KindModule {
+			modType := objType.(*checker.ModuleType)
+			funcName = mangle(modType.Name) + mem.Member.Value
+		} else {
+			return "", fmt.Errorf("method calls not supported yet")
+		}
 	} else {
-		return "", fmt.Errorf("only direct function calls supported in MVP")
+		return "", fmt.Errorf("complex function calls not supported")
 	}
 
 	var args []string
@@ -276,14 +349,26 @@ func (c *Compiler) compileCall(call *parser.CallExpression) (string, error) {
 		args = append(args, code)
 	}
 
-	if funcName == "native_print" {
-		return fmt.Sprintf("mph_native_print(%s)", strings.Join(args, ", ")), nil
-	}
-	if funcName == "native_print_int" {
-		return fmt.Sprintf("mph_native_print_int(%s)", strings.Join(args, ", ")), nil
-	}
+	return fmt.Sprintf("%s(%s)", funcName, strings.Join(args, ", ")), nil
+}
 
-	return fmt.Sprintf("mph_%s(%s)", funcName, strings.Join(args, ", ")), nil
+func (c *Compiler) compileSpawn(call *parser.CallExpression) (string, error) {
+	if len(call.Arguments) == 1 {
+		if ident, ok := call.Arguments[0].(*parser.Identifier); ok {
+			return fmt.Sprintf("mph_thread_spawn((MorphEntryFunction)mph_%s, NULL)", ident.Value), nil
+		}
+		return "", fmt.Errorf("luncurkan arg 1 must be named function")
+	} else if len(call.Arguments) == 2 {
+		if ident, ok := call.Arguments[0].(*parser.Identifier); ok {
+			arg, err := c.compileExpression(call.Arguments[1])
+			if err != nil {
+				return "", err
+			}
+			return fmt.Sprintf("mph_thread_spawn((MorphEntryFunction)mph_%s, (void*)%s)", ident.Value, arg), nil
+		}
+		return "", fmt.Errorf("luncurkan arg 1 must be named function")
+	}
+	return "", fmt.Errorf("luncurkan expects 1 or 2 arguments")
 }
 
 func (c *Compiler) compileInfix(ie *parser.InfixExpression) (string, error) {
@@ -308,4 +393,10 @@ func (c *Compiler) compileInfix(ie *parser.InfixExpression) (string, error) {
 	}
 
 	return fmt.Sprintf("(%s %s %s)", left, ie.Operator, right), nil
+}
+
+func mangle(path string) string {
+	s := strings.ReplaceAll(path, "/", "_")
+	s = strings.ReplaceAll(s, ".", "_")
+	return "mph_" + s + "_"
 }

@@ -3,6 +3,8 @@ package checker
 import (
 	"fmt"
 	"strings"
+
+	"github.com/VzoelFox/morph/pkg/parser"
 )
 
 type TypeKind int
@@ -25,6 +27,7 @@ const (
 	KindNull
 	KindUserError // User-facing 'Error' type
 	KindModule    // Module namespace
+	KindChannel   // Channel for concurrency
 )
 
 type Type interface {
@@ -216,6 +219,7 @@ type ExportInfo struct {
 type ModuleType struct {
 	Name    string
 	Exports map[string]ExportInfo
+	Program *parser.Program
 }
 
 func (t *ModuleType) Kind() TypeKind { return KindModule }

@@ -54,6 +54,24 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.24.0 - 2025-12-22
+**Checksum**: SHA256:MULTI_FILE_COMPILATION
+**Perubahan**:
+- **Checker**: Updated `ModuleType` to store `Program` (AST) and exported `ModuleCache`.
+- **Compiler**: Implemented multi-module compilation loop. Iterates all loaded modules and generates C code for them.
+- **Compiler**: Implemented Name Mangling (`mph_mod_func`) for imported functions.
+- **Compiler**: Updated `compileCall` to handle `MemberExpression` (module calls) by resolving to mangled names.
+- **Verification**: Verified with `import_test.fox` linking against `stdlib/math.fox`.
+
+**Konteks Sesi**:
+- **Linking**: Enabling standard library usage in compiled C binaries by static linking of all dependencies.
+- **Strategy**: Concatenation of all transpiled C code into a single compilation unit (`out.c` + `runtime.c`).
+
+**File Terkait**:
+- `pkg/checker/checker.go`
+- `pkg/checker/types.go`
+- `pkg/compiler/compiler.go`
+
 ### Version 1.22.0 - 2025-12-22
 **Checksum**: SHA256:COMPILER_LOGIC
 **Perubahan**:

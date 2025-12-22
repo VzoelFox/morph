@@ -1,0 +1,8 @@
+ambil "math"
+
+fungsi main() Void
+  var sum = math.Add(10, 20)
+  native_print_int(sum)
+akhir
+
+main()
