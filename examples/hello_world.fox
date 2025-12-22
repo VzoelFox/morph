@@ -1,0 +1,7 @@
+ambil "io"
+
+fungsi main() Void
+    io.Write(io.Stdout, "Hello World from Morph!\n")
+akhir
+
+main()

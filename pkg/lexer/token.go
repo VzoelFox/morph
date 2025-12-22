@@ -64,6 +64,7 @@ const (
 
 	// Keywords
 	FUNGSI     = "FUNGSI"
+	NATIVE     = "NATIVE"
 	JIKA       = "JIKA"
 	ATAU_JIKA  = "ATAU_JIKA"
 	LAINNYA    = "LAINNYA"
@@ -95,6 +96,7 @@ var keywords = map[string]TokenType{
 	"struktur":   STRUKTUR,
 	"antarmuka":  INTERFACE,
 	"fungsi":     FUNGSI,
+	"native":     NATIVE,
 	"jika":       JIKA,
 	"atau_jika":  ATAU_JIKA,
 	"lainnya":    LAINNYA,
