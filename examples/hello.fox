@@ -1,0 +1,20 @@
+ambil "std/math";
+
+struktur Point
+    x Int
+    y Int
+akhir
+
+fungsi main()
+    var p = Point(10, 20)
+    var p2 = Point{x: 10, y: 20}
+
+    jika p == p2
+        # Ini valid karena Point tidak mengandung map/slice
+        p.x = math.Add(10, 20)
+    akhir
+
+    var bitwise_test = 10 & 2
+    var shift_test = 1 << 4
+    var pi = math.PI
+akhir
