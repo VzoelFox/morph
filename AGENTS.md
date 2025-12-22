@@ -54,6 +54,181 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.24.0 - 2025-12-22
+**Checksum**: SHA256:MULTI_FILE_COMPILATION
+**Perubahan**:
+- **Checker**: Updated `ModuleType` to store `Program` (AST) and exported `ModuleCache`.
+- **Compiler**: Implemented multi-module compilation loop. Iterates all loaded modules and generates C code for them.
+- **Compiler**: Implemented Name Mangling (`mph_mod_func`) for imported functions.
+- **Compiler**: Updated `compileCall` to handle `MemberExpression` (module calls) by resolving to mangled names.
+- **Verification**: Verified with `import_test.fox` linking against `stdlib/math.fox`.
+
+**Konteks Sesi**:
+- **Linking**: Enabling standard library usage in compiled C binaries by static linking of all dependencies.
+- **Strategy**: Concatenation of all transpiled C code into a single compilation unit (`out.c` + `runtime.c`).
+
+**File Terkait**:
+- `pkg/checker/checker.go`
+- `pkg/checker/types.go`
+- `pkg/compiler/compiler.go`
+
+### Version 1.22.0 - 2025-12-22
+**Checksum**: SHA256:COMPILER_LOGIC
+**Perubahan**:
+- **Checker**: Updated to store and expose Type information in `Types map[Node]Type`.
+- **Compiler**: Implemented logic for Variables (`var`), Assignment (`=`), Control Flow (`if`, `while`, `return`), and Infix Expressions.
+- **Compiler**: Integrated with Checker types to distinguish Primitive Ops vs Runtime Calls (String concatenation).
+- **Runtime**: Added `mph_string_concat`, `mph_string_eq`, `mph_native_print_int`.
+- **Test**: Verified with `fibonacci.fox` (Recursive logic + Arithmetic).
+
+**Konteks Sesi**:
+- **Turing Complete**: The C Compiler now supports the core logic required for real algorithms.
+- **Type-Aware**: Compiler uses the Checker's analysis instead of guessing types.
+
+**File Terkait**:
+- `pkg/checker/checker.go`
+- `pkg/compiler/compiler.go`
+- `pkg/compiler/runtime/morph.h.tpl`
+- `pkg/compiler/runtime/runtime.c.tpl`
+
+### Version 1.21.0 - 2025-12-22
+**Checksum**: SHA256:MEMORY_FOUNDATION
+**Perubahan**:
+- **Runtime**: Implemented "Cabinet/Drawer/Tray" memory system in `morph.h` and `runtime.c`.
+- **Runtime**: Implemented `mph_alloc` using Bump Pointer strategy.
+- **Runtime**: Implemented `mph_string_new` to allocate strings on the heap.
+- **Compiler**: Updated to wrap String Literals in `mph_string_new` calls.
+- **Compiler**: Verified dynamic memory allocation works end-to-end with `hello_compiler.fox`.
+
+**Konteks Sesi**:
+- **Memory Sprint**: Moving from `malloc` wrapper to structured memory management.
+- **Prerequisite**: Dynamic allocation is required for String operations and future GC.
+
+**File Terkait**:
+- `pkg/compiler/runtime/morph.h.tpl`
+- `pkg/compiler/runtime/runtime.c.tpl`
+- `pkg/compiler/compiler.go`
+
+### Version 1.20.0 - 2025-12-22
+**Checksum**: SHA256:COMPILER_MVP
+**Perubahan**:
+- **Feature**: Implemented `pkg/compiler` (C Transpiler MVP).
+- **Runtime**: Created `pkg/compiler/runtime/` with `morph.h` and `runtime.c` (Skeleton with Context passing).
+- **CLI**: Added `morph build <file.fox>` command.
+- **Assets**: Embedded runtime files using `pkg/compiler/runtime/assets.go`.
+- **Tests**: Added `pkg/compiler/compiler_test.go` and `examples/hello_compiler.fox`.
+
+**Konteks Sesi**:
+- **Pivot**: Executing the "Compile to C" strategy.
+- **Architecture**: Enforced `MorphContext` passing in generated code for future Memory/Scheduler integration.
+- **Hybrid**: Compiler uses `malloc` (Leaky) for now as per "Option A" decision.
+
+**File Terkait**:
+- `pkg/compiler/compiler.go`
+- `pkg/compiler/runtime/morph.h.tpl`
+- `pkg/compiler/runtime/runtime.c.tpl`
+- `cmd/morph/main.go`
+
+### Version 1.19.0 - 2025-12-22
+**Checksum**: SHA256:RECONCILIATION
+**Perubahan**:
+- **ROADMAP**: Updated to reflect completed Phase 2 (Type Checker) and Phase 3 (Interpreter).
+- **ROADMAP**: Pivoted from LLVM target to C Output Generator (as per user instruction).
+- **DESIGN**: Clarified Semicolon (;) usage is Optional.
+- **INTEGRITY**: Performed full reconciliation of codebase. Detected and recorded Ghost Changes in core files (`checker.go`, `types.go`, `lexer.go`).
+- **INTEGRITY**: Added previously untracked files (`pkg/evaluator/*`, new tests) to the snapshot.
+
+**Konteks Sesi**:
+- **Reconciliation**: User requested deep analysis and alignment of docs with code.
+- **Strategy Change**: User decided to switch from LLVM to C output for simplicity/control.
+- **Baseline Reset**: Establishing a new trustworthy baseline for v1.19.0.
+
+**File Terkait (Integrity Snapshot)**:
+- `.gitignore` (SHA256:ceb41a5eb8d150f70847edfc424c84c7f4afdb8db6fb3a7455581e3cf82c5c7e)
+- `.morph.vz/context/session-alignment-and-cleanup.md` (SHA256:db9caa4272473d5754d5f7d32eab81949426f43033fd96b6c03aedbc3c16c38c)
+- `.morph.vz/context/session-analysis-robustness.md` (SHA256:4ab5564c75e1dd0d2f60e2efb689301db5a2d278fc4e68ab60a57e09eccfc8fe)
+- `.morph.vz/context/session-analysis-tool.md` (SHA256:1f0deaa3c7db461b2ddf38b06fd90ee4e2c9aee8438ebd4cc32e55fade8548f0)
+- `.morph.vz/context/session-initial-rename.md` (SHA256:7b965abd7ddc75dadd4671e40c02b3d8b91724dca4de881bcbb3610498bd5a12)
+- `.vzoel.jules/next-improvements.morph.vz` (SHA256:ab8b3a79f476723e639bb1215ace0ab9028e9bcfd872759fa71b88d5d3328bab)
+- `.vzoel.jules/technical-debt.morph.vz` (SHA256:8f897ac1779f19ec381fc98bf3dc345de285694ac5006b1078f2247803e64942)
+- `AGENTS.md` (SHA256:5c3cb0445c6c3fc4ad3e6ab36ca02115f416322a871a338278ec41cc4872e748)
+- `DESIGN.md` (SHA256:19ed91d6c523d7c2648f75697d2b13dd0329f66b63dd48f4e81d49289af8d296)
+- `README.md` (SHA256:d942402c95838ebdbb68c1466ca5bce8466093dc216fae4bfb32ee8690d11566)
+- `ROADMAP.md` (SHA256:c850314e5b35b48a502a552e13f36af9256a95a404fb7be9a0c8d077290959f0)
+- `cmd/morph/main.go` (SHA256:0e637ffdc12288804e3b23ccd4518748181268216641a3c60a54d0f7b3ed19f9)
+- `docs/ABSTRACTION_LAYER.md` (SHA256:03a47eab83fc0ebdcdc1bde61c5a63fdc943ab99fb6ec274ee70707d9bc5da85)
+- `docs/MEMORY_LAYOUT.md` (SHA256:78afa5757406f76d04fd83680e3a34bdeea1fedc65747f47214e218f1d8984cd)
+- `docs/RUNTIME_API.md` (SHA256:085603953c96e20d2b84e8f6f71e545c836c659989db92b09ab1111c19ce831c)
+- `examples/clock.fox` (SHA256:ae20d2d7b0814eff78a10d04b04c6364eb7262e33b34f66aed2a1e24a4eee2b1)
+- `examples/conv_test.fox` (SHA256:49a4915ba6098b081bc25aca3a03367a81e0063c3d8693c42995c381be5d3a8a)
+- `examples/hello.fox` (SHA256:af4cd9c4f25a2f6943462fedb9eb41848daa79550cbde9fe53a9f6ee1b2e8946)
+- `examples/hello_world.fox` (SHA256:e753904dcfa22d412c771f0ebb5f2f33a85cea911aef44c3cdbcb7176dc25c46)
+- `examples/std/math.fox` (SHA256:b109da33bb229f33a4a7a80e8707b9c3645de01c19e6cc6c6d88080e70b176a9)
+- `go.mod` (SHA256:c7de783d9e3378d10d7865c5c05a3d05652403e1016f735455185a905f911340)
+- `pkg/checker/bitwise_test.go` (SHA256:00268e7307bd5bf4130ff32b167ae064dc9644f2839e2e0ef7e56dc175d2bed3)
+- `pkg/checker/casting_test.go` (SHA256:c3d45c5384f975bc9ac059a19999797dc5ef385b11770e58ed7c1fd857badfc6)
+- `pkg/checker/checker.go` (SHA256:d742762e1e5e5988ea9163fe21c8fe406d118dd2efea9ebfe53951657816787f)
+- `pkg/checker/checker_test.go` (SHA256:fbf7d6961b5cd24833141c69d7a1667fa3dadac641cfdbf84a29e72d5b9456fc)
+- `pkg/checker/const_test.go` (SHA256:1e75c4170d04f7df2cf4d8e72206664463ffa463c6ec63003eaf8a60192919cc)
+- `pkg/checker/control_flow_test.go` (SHA256:09956aa267a1a7662723efae230b86f621839b49c2a8dcd3513bf43dc4235686)
+- `pkg/checker/cycle_test.go` (SHA256:4ab36e3ad47d9904bff3738fe7fc24542d903dbbab3697f4d3be61efa98578b2)
+- `pkg/checker/deadcode_test.go` (SHA256:fb440573764fad90c9a865184693010c4589802738621e5695715e9e4a8ab14b)
+- `pkg/checker/error_type_test.go` (SHA256:710dd5f54741e0dc9f24f59afc01d516d8b704bdc33935db38469da64aa50ce0)
+- `pkg/checker/errors.go` (SHA256:43107505cf0e76efd5474968506d004d0490eecda63b374e25f77c964ad491ca)
+- `pkg/checker/import_test.go` (SHA256:6af0dab28a04048c6ad7f84f75a4d6a4778babfd90372e2154d88326ea7c6a81)
+- `pkg/checker/import_type_test.go` (SHA256:d3e4e47f4952872b084fa8534cae971e07d2d2dd35ee777fb14cda471b6f14b5)
+- `pkg/checker/inference_test.go` (SHA256:770423524f01322d0e14bb8b8a73cd8a7117a113573160f0c4fe1b43604fe478)
+- `pkg/checker/interface_impl_test.go` (SHA256:daeab0b14dc212fe8a677dc56c08f6c93c25b8ef7f11497560df1777df7c9e70)
+- `pkg/checker/interface_test.go` (SHA256:3ee134f3302b24e9da721053e59f22918c4956b150a941dabaa497cea6d94d09)
+- `pkg/checker/interface_type_test.go` (SHA256:2273994f0a1894e7938603f126825052ef35f9b9065aadf72f5d51847fbd644f)
+- `pkg/checker/literal_strict_test.go` (SHA256:08b2d78e37c7909817e421afab1cd756fc958cba9087a77d5463943c685dbc29)
+- `pkg/checker/literal_test.go` (SHA256:10cee976311b9691e6c8e8e501338f919299c3e6e4c4e2eacfef871f7e36b6f6)
+- `pkg/checker/member_test.go` (SHA256:1522dc679f3a42c5dfdfe7191a0efbd4b33fca20489a8ef8883429c66f016b04)
+- `pkg/checker/method_test.go` (SHA256:6d4bfdb2e09de588b509e2c8248c9e3408dd36a02e66b2027cb4b493904e4fe3)
+- `pkg/checker/native_check_test.go` (SHA256:1ba33193e3148c0378f2e920fd9fbdc2a45f9081dc72be3ed2e120efc1561d22)
+- `pkg/checker/pointer_test.go` (SHA256:322456075ecf1eaf35a298958e8e9662149209b2d102cbdb6edce507d22ecf04)
+- `pkg/checker/robustness_test.go` (SHA256:9a533733b7cee0b03650ff2106ca733b02a0090a99f783c1812ae05eb92b29e2)
+- `pkg/checker/scope.go` (SHA256:a5bca3140144a65b04d37b3807752ea3255e290bc796653263745f039739debf)
+- `pkg/checker/shadow_test.go` (SHA256:0d322aff551049f20f6dc9658b2745d6c0d45c9188d56568f0c996841634aff5)
+- `pkg/checker/struct_extra_test.go` (SHA256:ca0ac7bd0ed2a4a0e02cc0482293fc5e122f364fb60c9e504394c5cec4ef30cc)
+- `pkg/checker/types.go` (SHA256:a3b17681ab558ffc65195e5e1d3c0121e0b724b3068948de32f46bd1a9afbcc4)
+- `pkg/checker/unused_test.go` (SHA256:391450fd74e3c68b1339ae52eadb21f3f2955ae089afa09411af08631f549879)
+- `pkg/evaluator/builtins.go` (SHA256:c4c867ac3f05f770dab6150544ef07f5b44235c1e975f0e77b1260e9ff5dda56)
+- `pkg/evaluator/builtins_conv.go` (SHA256:0b25a68a08abdd2445686359d35ddb530e632eb83567d51a8e287e55b2808661)
+- `pkg/evaluator/builtins_io.go` (SHA256:b7be12eca036c1fcdc45a5f2e9ef2ab7d770108ba80966cd6eceea1e98fd9d8f)
+- `pkg/evaluator/builtins_time.go` (SHA256:9728ecd0cefbe4a5f26748cc73b9c11d1a1632aeec56048bd5f6b6940781d1da)
+- `pkg/evaluator/env.go` (SHA256:d94baafb69d05d88233c4b19a8d5a49eac6e967f8c353b13947521013f0e83c6)
+- `pkg/evaluator/evaluator.go` (SHA256:af8591275ac59c275d41fd0675779f13798cff3d5ab84457c480345a485f7022)
+- `pkg/evaluator/object.go` (SHA256:95d605d6dfae50376713266178d35a64b5aa3887b92f7b28c94a00696d8d4cee)
+- `pkg/lexer/lexer.go` (SHA256:97d9e016d7438e81e15e1f60971309310d1992df1c1c97e69a9f453c8f289780)
+- `pkg/lexer/lexer_extra_test.go` (SHA256:d01711a23bb91c9f31311f3fc110fd975bf45f0880a8ea67a4145c7cfe64b1c0)
+- `pkg/lexer/lexer_float_test.go` (SHA256:ff1cd427658b44afcfd6fa8f2d9cbf64178b3a23868c22d265dba88c510eb09c)
+- `pkg/lexer/lexer_test.go` (SHA256:11e08b90bee1f2d870b31ec032b1bdd9d7e2e37adea3c281751a8e9726584305)
+- `pkg/lexer/token.go` (SHA256:5b7a7ae450e5718ce076b4d581c8d12c037f0527ac404b77324930fcd736a7c7)
+- `pkg/lexer/token_test.go` (SHA256:75e77d83a49979fe01699b5715da6f7e200d6ee55afdc7bed4f7f706040fa3ec)
+- `pkg/lexer/utils.go` (SHA256:9fa86f0fd053d13368bd946ca3d09b72e8d2835c510cb4179c2bf21885a1f233)
+- `pkg/parser/ast.go` (SHA256:d5a19e2f6163bab797a4406f083e8f38cae207463e80a8475488ffd8e5a5c948)
+- `pkg/parser/ast_test.go` (SHA256:0c316b04de9c188ea2459e7d7992a9b20507d5791f8f02072b65f8fe05514217)
+- `pkg/parser/call_extra_test.go` (SHA256:dfed7e5f873400e0548a3f5ed328ab582ce0f8a78cdc40d5a19d5a9bad67f2d7)
+- `pkg/parser/call_test.go` (SHA256:92e8312e0f9f741542ee88bc30435349e624c3dfd9612d737485acb887249a5b)
+- `pkg/parser/comment_test.go` (SHA256:e8eaf4bda6a04c91794e970d4e372fe228d883ddf01ea38271503a65c9e4fa21)
+- `pkg/parser/interface_test.go` (SHA256:2963cc5915f265bdb8041f8ff83fd1a05a3973bf5267671d7f38d51cb17e94b3)
+- `pkg/parser/method_test.go` (SHA256:4e6f447524c64fad5fba414e8529792124afa3661f1ff636475b7340bc0f3c10)
+- `pkg/parser/multi_return_test.go` (SHA256:158778277a88e205ba3e4edc1d960e29240a595b949c1b2e6399f020445e4298)
+- `pkg/parser/native_test.go` (SHA256:7e9363f32c30b0684a4b12904e9db97fe2741c7b28e62c85c42288a870fd29ee)
+- `pkg/parser/parser.go` (SHA256:6776ed7513a8e7ea68e031e6247cd67187e72e52de64a958a3fef054803c5bad)
+- `pkg/parser/parser_extra_test.go` (SHA256:34f4990d9c764a53b104542e8c7baa6f3c7f82288d1b4ee4cae3b04e478f868a)
+- `pkg/parser/parser_fixes_test.go` (SHA256:400c4ee9580a628eec4057bac2b2673c3c7844237c73d4053db07fd6796244ec)
+- `pkg/parser/parser_test.go` (SHA256:2272df775fdfbf6650c2c8c205dcb24e3dec8c091b95dd86d3b9bca8177f1a1e)
+- `pkg/parser/struct_literal_test.go` (SHA256:7e0f3c6b6c42eac6d7aa15ebcea9756825748cf11deebd8a5de54f78fe8c1bf5)
+- `pkg/parser/struct_test.go` (SHA256:e2b7ec62f1040c2f0f00ac201d3086a1db11ed51d6f0b8b5cc0999364a07afd8)
+- `pkg/parser/var_test.go` (SHA256:7a87f92a373259a0114d4964f3c9a17ee91c896465066761c3175d1eef8995de)
+- `stdlib/conv.fox` (SHA256:0471151b7bcc8c9728aaf2326a5e98e56a227c2af1277faf99700505595df0b8)
+- `stdlib/io.fox` (SHA256:4aaebd681169a9849e6bf661446e5230a2b500845129306e71c6197fea3e1d52)
+- `stdlib/math.fox` (SHA256:b109da33bb229f33a4a7a80e8707b9c3645de01c19e6cc6c6d88080e70b176a9)
+- `stdlib/string.fox` (SHA256:87d8f4db419659037af0ae5c5a3092343eea44bb413d6c46b2dc43baa2a3a988)
+- `stdlib/time.fox` (SHA256:ee2fa652c2ac49ce869d0045984649fbc34b5eb1a61b832c04d4bd5535432671)
+
 ### Version 1.18.0 - 2025-12-22
 **Checksum**: SHA256:REVERSE_ENGINEER_DESIGN
 **Perubahan**:

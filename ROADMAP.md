@@ -9,15 +9,16 @@ Membangun bahasa pemrograman prosedural yang aman (Error as Value), mudah dipaha
 - [x] **Lexer & Parser**: Porting dari referensi dan disesuaikan.
 - [x] **Tooling Awal**: `pkg/analysis` untuk generate context AI.
 
-## Fase 2: Semantik & Tipe (🚧 Selanjutnya)
-- [ ] **Type Checker**: Validasi tipe statis (Int, String, Bool, Struct).
-- [ ] **Semantic Analyzer**: Validasi scope variable dan function signature (lebih mendalam dari `pkg/analysis`).
-- [ ] **AST Validations**: Pengecekan error logic (misal: return di luar fungsi).
+## Fase 2: Semantik & Tipe (✅ Selesai)
+- [x] **Type Checker**: Validasi tipe statis (Int, String, Bool, Struct).
+- [x] **Semantic Analyzer**: Validasi scope variable dan function signature (lebih mendalam dari `pkg/analysis`).
+- [x] **AST Validations**: Pengecekan error logic (misal: return di luar fungsi).
 
-## Fase 3: Code Generation (Target: LLVM)
-- [ ] **LLVM IR Generator**: Mengubah AST menjadi LLVM IR (`.ll`).
-- [ ] **Compiler Driver**: CLI untuk build file `.fox` menjadi executable.
-- [ ] **Basic Runtime**: Print, String operations, Memory alloc (malloc wrapper).
+## Fase 3: Code Generation & Runtime (Target: C Output)
+- [x] **Tree-Walking Interpreter**: Eksekusi langsung kode Morph (`pkg/evaluator`).
+- [ ] **C Output Generator**: Transpile AST menjadi kode C (menggantikan LLVM).
+- [x] **Compiler Driver**: CLI untuk build file `.fox` menjadi executable.
+- [x] **Basic Runtime**: Print, String operations, Memory alloc (malloc wrapper).
 
 ## Fase 4: Self-Hosting
 - [ ] **Morph-in-Morph**: Menulis ulang Lexer & Parser menggunakan bahasa Morph.

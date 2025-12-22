@@ -13,20 +13,26 @@ type Importer interface {
 type Checker struct {
 	Errors         []TypeError
 	Warnings       []TypeWarning
+	Types          map[parser.Node]Type
 	scope          *Scope
 	returnStack    []Type
 	importer       Importer
-	moduleCache    map[string]*ModuleType
+	ModuleCache    map[string]*ModuleType
 	loadingModules map[string]bool
+}
+
+func IsChannel(t Type) bool {
+	return t.Kind() == KindChannel
 }
 
 func New() *Checker {
 	c := &Checker{
 		Errors:         []TypeError{},
 		Warnings:       []TypeWarning{},
+		Types:          make(map[parser.Node]Type),
 		scope:          NewScope(nil),
 		returnStack:    []Type{},
-		moduleCache:    make(map[string]*ModuleType),
+		ModuleCache:    make(map[string]*ModuleType),
 		loadingModules: make(map[string]bool),
 	}
 
@@ -44,6 +50,20 @@ func New() *Checker {
 		ReturnTypes: []Type{IntType, StringType},
 	}
 	c.scope.DefineVariable("parse_int", parseIntType, true, 0, 0)
+
+	// native_print(String) -> Void
+	nativePrintType := &FunctionType{
+		Parameters:  []Type{StringType},
+		ReturnTypes: []Type{VoidType},
+	}
+	c.scope.DefineVariable("native_print", nativePrintType, true, 0, 0)
+
+	// native_print_int(Int) -> Void
+	nativePrintIntType := &FunctionType{
+		Parameters:  []Type{IntType},
+		ReturnTypes: []Type{VoidType},
+	}
+	c.scope.DefineVariable("native_print_int", nativePrintIntType, true, 0, 0)
 
 	return c
 }
@@ -133,7 +153,7 @@ func (c *Checker) checkImport(imp *parser.ImportStatement) {
 		return
 	}
 
-	if mod, cached := c.moduleCache[path]; cached {
+	if mod, cached := c.ModuleCache[path]; cached {
 		c.registerModule(imp, mod)
 		return
 	}
@@ -150,7 +170,7 @@ func (c *Checker) checkImport(imp *parser.ImportStatement) {
 	// Check imported module (recursively)
 	subChecker := New()
 	subChecker.importer = c.importer // Share importer
-	subChecker.moduleCache = c.moduleCache // Share cache
+	subChecker.ModuleCache = c.ModuleCache // Share cache
 	subChecker.loadingModules = c.loadingModules // Share loading state (for cycle detection)
 
 	// Collect definitions ONLY (Pass 1)
@@ -178,11 +198,12 @@ func (c *Checker) checkImport(imp *parser.ImportStatement) {
 	}
 
 	mod := &ModuleType{
-		Name:    path, // or base name?
+		Name:    path,
 		Exports: exports,
+		Program: importedProg,
 	}
 
-	c.moduleCache[path] = mod
+	c.ModuleCache[path] = mod
 	c.registerModule(imp, mod)
 }
 
@@ -592,6 +613,12 @@ func (c *Checker) checkVarStatement(s *parser.VarStatement) {
 }
 
 func (c *Checker) checkExpression(e parser.Expression) Type {
+	t := c.checkExpressionInternal(e)
+	c.Types[e] = t
+	return t
+}
+
+func (c *Checker) checkExpressionInternal(e parser.Expression) Type {
 	switch exp := e.(type) {
 	case *parser.IntegerLiteral:
 		return IntType
