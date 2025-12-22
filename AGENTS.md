@@ -54,6 +54,34 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.13.1 - 2025-12-20
+**Checksum**: SHA256:BITWISE_TESTS
+**Perubahan**:
+- **Tests**: Added `pkg/checker/bitwise_test.go` to confirm existence and correctness of bitwise operations (`&`, `|`, `^`, `<<`, `>>`, `~`).
+
+**Konteks Sesi**:
+- **Verification**: User requested update on bitwise operations. Investigation showed implementation was complete but lacked dedicated tests. Added test suite to close the gap.
+
+**File Terkait**:
+- `pkg/checker/bitwise_test.go` (SHA256:00268e7307bd5bf4130ff32b167ae064dc9644f2839e2e0ef7e56dc175d2bed3)
+
+### Version 1.13.0 - 2025-12-20
+**Checksum**: SHA256:STRUCT_IMPROVEMENTS
+**Perubahan**:
+- **Type System**: Added `FieldOrder` to `StructType` to support ordered fields.
+- **Type System**: Added `IsComparable` method to `Type` interface and implementations.
+- **Checker**: Implemented `StructType.Call` to support Struct Constructor syntax (e.g., `User(1, "Name")`).
+- **Checker**: Implemented strict Struct Equality logic in `StructType.BinaryOp` (structs with non-comparable fields like maps/arrays cannot be compared).
+- **Tests**: Added `pkg/checker/struct_extra_test.go` to verify constructors and comparability.
+
+**Konteks Sesi**:
+- **Feature**: Memenuhi request user untuk mendukung syntax constructor struct yang lebih ringkas dan memastikan keamanan tipe saat membandingkan struct (deep equality safety).
+
+**File Terkait**:
+- `pkg/checker/types.go` (SHA256:a511933792bfe3cff4c4292650bc4b4bccc3332f047f37cb62695e3874f8f9cc)
+- `pkg/checker/checker.go` (SHA256:60bfa7d8b70b908f865e007ae66314bc6f3eb51d1ec6c8f6a7dd12dd58993df8)
+- `pkg/checker/struct_extra_test.go` (SHA256:29e0a9a3ed7ac5d1424a0ca682c442209005fb3160e664bd221e14f177670de5)
+
 ### Version 1.12.0 - 2025-12-20
 **Checksum**: SHA256:STRING_INDEXING
 **Perubahan**:
