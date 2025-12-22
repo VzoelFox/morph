@@ -73,7 +73,7 @@ func (fi *FileImporter) parseFile(path string) (*parser.Program, error) {
 		for _, err := range p.Errors() {
 			msg += fmt.Sprintf("  %s\n", err.String())
 		}
-		return nil, fmt.Errorf(msg)
+		return nil, fmt.Errorf("%s", msg)
 	}
 
 	return prog, nil
