@@ -24,7 +24,7 @@ func (c *Compiler) Compile(node parser.Node) (string, error) {
 
 	// Forward declarations for native bindings (Temporary)
 	c.output.WriteString("// Native bindings\n")
-	c.output.WriteString("void mph_native_print(MorphContext* ctx, const char* s);\n\n")
+	c.output.WriteString("void mph_native_print(MorphContext* ctx, MorphString* s);\n\n")
 
 	if prog, ok := node.(*parser.Program); ok {
 		for _, stmt := range prog.Statements {
@@ -98,7 +98,7 @@ func (c *Compiler) compileExpression(expr parser.Expression) (string, error) {
 	case *parser.CallExpression:
 		return c.compileCall(e)
 	case *parser.StringLiteral:
-		return fmt.Sprintf("\"%s\"", e.Value), nil
+		return fmt.Sprintf("mph_string_new(ctx, \"%s\")", e.Value), nil
 	case *parser.IntegerLiteral:
 		return fmt.Sprintf("%d", e.Value), nil
 	default:

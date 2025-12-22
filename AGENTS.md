@@ -54,6 +54,24 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.21.0 - 2025-12-22
+**Checksum**: SHA256:MEMORY_FOUNDATION
+**Perubahan**:
+- **Runtime**: Implemented "Cabinet/Drawer/Tray" memory system in `morph.h` and `runtime.c`.
+- **Runtime**: Implemented `mph_alloc` using Bump Pointer strategy.
+- **Runtime**: Implemented `mph_string_new` to allocate strings on the heap.
+- **Compiler**: Updated to wrap String Literals in `mph_string_new` calls.
+- **Compiler**: Verified dynamic memory allocation works end-to-end with `hello_compiler.fox`.
+
+**Konteks Sesi**:
+- **Memory Sprint**: Moving from `malloc` wrapper to structured memory management.
+- **Prerequisite**: Dynamic allocation is required for String operations and future GC.
+
+**File Terkait**:
+- `pkg/compiler/runtime/morph.h.tpl`
+- `pkg/compiler/runtime/runtime.c.tpl`
+- `pkg/compiler/compiler.go`
+
 ### Version 1.20.0 - 2025-12-22
 **Checksum**: SHA256:COMPILER_MVP
 **Perubahan**:
