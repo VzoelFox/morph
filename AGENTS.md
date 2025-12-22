@@ -54,6 +54,23 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.14.1 - 2025-12-20
+**Checksum**: SHA256:STDLIB_INFRA
+**Perubahan**:
+- **Tooling**: Enhanced `cmd/morph/main.go` to support multiple search paths (`FileImporter.SearchPaths`).
+- **Stdlib**: Created `stdlib/` directory as the central location for standard libraries.
+- **Stdlib**: Added `stdlib/math.fox` (moved from examples) and `stdlib/string.fox`.
+- **Example**: Updated `examples/hello.fox` to use direct imports (`ambil "math"`, `ambil "string"`).
+
+**Konteks Sesi**:
+- **Infrastructure**: Membangun fondasi untuk "Standard Library Import" agar library standar bisa diakses tanpa relative path, sesuai strategi "Import Load" yang disepakati.
+
+**File Terkait**:
+- `cmd/morph/main.go` (SHA256:6f9e4c4f1813412724ba75e2cfed1e634db97bbdd47efc438ed0c62b9fffab28)
+- `stdlib/math.fox` (SHA256:b109da33bb229f33a4a7a80e8707b9c3645de01c19e6cc6c6d88080e70b176a9)
+- `stdlib/string.fox` (SHA256:87d8f4db419659037af0ae5c5a3092343eea44bb413d6c46b2dc43baa2a3a988)
+- `examples/hello.fox` (SHA256:c2a0f0ce680c71d0da04fa52e8b540f55d69a056640739be67282509dcb99f4f)
+
 ### Version 1.14.0 - 2025-12-20
 **Checksum**: SHA256:CLI_DRIVER
 **Perubahan**:

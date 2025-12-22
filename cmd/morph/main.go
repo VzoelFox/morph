@@ -12,21 +12,33 @@ import (
 
 // FileImporter implements checker.Importer to load files from disk
 type FileImporter struct {
-	Root string
+	SearchPaths []string
 }
 
 func (fi *FileImporter) Import(path string) (*parser.Program, error) {
-	// Simple resolution: relative to Root or absolute
-	fullPath := path
-	if !filepath.IsAbs(path) {
-		fullPath = filepath.Join(fi.Root, path)
+	// 1. Try Absolute Path
+	if filepath.IsAbs(path) {
+		return fi.parseFile(path)
+	}
+
+	// 2. Try Search Paths
+	for _, root := range fi.SearchPaths {
+		fullPath := filepath.Join(root, path)
 		// Add extension if missing
 		if filepath.Ext(fullPath) == "" {
 			fullPath += ".fox"
 		}
+
+		if _, err := os.Stat(fullPath); err == nil {
+			return fi.parseFile(fullPath)
+		}
 	}
 
-	content, err := os.ReadFile(fullPath)
+	return nil, fmt.Errorf("module '%s' not found", path)
+}
+
+func (fi *FileImporter) parseFile(path string) (*parser.Program, error) {
+	content, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +48,6 @@ func (fi *FileImporter) Import(path string) (*parser.Program, error) {
 	prog := p.ParseProgram()
 
 	if len(p.Errors()) > 0 {
-		// Convert parser errors to single error string for now
 		msg := "Parser errors in module " + path + ":\n"
 		for _, err := range p.Errors() {
 			msg += fmt.Sprintf("  %s\n", err.String())
@@ -82,7 +93,13 @@ func main() {
 	// Setup Importer
 	absPath, _ := filepath.Abs(filename)
 	rootDir := filepath.Dir(absPath)
-	c.SetImporter(&FileImporter{Root: rootDir})
+
+	// Default Search Paths:
+	// 1. Directory of the input file
+	// 2. ./stdlib (Standard Library)
+	searchPaths := []string{rootDir, "stdlib"}
+
+	c.SetImporter(&FileImporter{SearchPaths: searchPaths})
 
 	c.Check(program)
 

@@ -1,4 +1,5 @@
-ambil "std/math";
+ambil "math";
+ambil "string";
 
 struktur Point
     x Int
@@ -17,4 +18,8 @@ fungsi main()
     var bitwise_test = 10 & 2
     var shift_test = 1 << 4
     var pi = math.PI
+
+    # Test String Stdlib
+    var s = string.Concat("Hello", " World");
+    var len = string.Length(s);
 akhir
