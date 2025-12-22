@@ -812,17 +812,19 @@ func (c *Checker) checkExpression(e parser.Expression) Type {
 			retStack = &MultiType{Types: returnTypes}
 		}
 
-		c.pushReturn(retStack)
-		c.checkNodes(exp.Body.Statements)
+		if !exp.IsNative {
+			c.pushReturn(retStack)
+			c.checkNodes(exp.Body.Statements)
 
-		// Check if all paths return (if function expects return)
-		if len(returnTypes) > 0 && returnTypes[0].Kind() != KindVoid {
-			if !c.allPathsReturn(exp.Body) {
-				c.addError(exp.Token.Line, exp.Token.Column, "Not all code paths return a value")
+			// Check if all paths return (if function expects return)
+			if len(returnTypes) > 0 && returnTypes[0].Kind() != KindVoid {
+				if !c.allPathsReturn(exp.Body) {
+					c.addError(exp.Token.Line, exp.Token.Column, "Not all code paths return a value")
+				}
 			}
-		}
 
-		c.popReturn()
+			c.popReturn()
+		}
 
 		c.leaveScope()
 

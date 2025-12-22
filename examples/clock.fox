@@ -1,0 +1,10 @@
+ambil "io"
+ambil "time"
+
+fungsi main() Void
+    io.Write(io.Stdout, "Start sleep...\n")
+    time.Sleep(1000)
+    io.Write(io.Stdout, "End sleep.\n")
+akhir
+
+main()

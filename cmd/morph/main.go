@@ -6,9 +6,30 @@ import (
 	"path/filepath"
 
 	"github.com/VzoelFox/morph/pkg/checker"
+	"github.com/VzoelFox/morph/pkg/evaluator"
 	"github.com/VzoelFox/morph/pkg/lexer"
 	"github.com/VzoelFox/morph/pkg/parser"
 )
+
+// EvalImporter implements evaluator.Importer
+type EvalImporter struct {
+	base *FileImporter
+	eval *evaluator.Evaluator
+}
+
+func (ei *EvalImporter) Import(path string) (*evaluator.Module, error) {
+	// Reuse base parsing logic
+	prog, err := ei.base.Import(path)
+	if err != nil {
+		return nil, err
+	}
+
+	modEnv := evaluator.NewEnvironment()
+	// Eval module body
+	ei.eval.Eval(prog, modEnv)
+
+	return &evaluator.Module{Name: path, Env: modEnv}, nil
+}
 
 // FileImporter implements checker.Importer to load files from disk
 type FileImporter struct {
@@ -121,4 +142,26 @@ func main() {
 	}
 
 	fmt.Println("✅ Validasi Sukses! (Syntax & Types OK)")
+
+	// 3. Execution (Interpreter)
+	fmt.Println("🚀 Executing...")
+
+	evaluator.RegisterIO()
+	evaluator.RegisterTime()
+
+	env := evaluator.NewEnvironment()
+	eval := evaluator.New(nil)
+
+	fileImporter := &FileImporter{SearchPaths: searchPaths}
+	evalImporter := &EvalImporter{
+		base: fileImporter,
+		eval: eval,
+	}
+	eval.SetImporter(evalImporter)
+
+	result := eval.Eval(program, env)
+	if result != nil && result.Type() == evaluator.ERROR_OBJ {
+		fmt.Printf("❌ Runtime Error: %s\n", result.Inspect())
+		os.Exit(1)
+	}
 }
