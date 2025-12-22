@@ -1,9 +1,9 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.1.0
+- **Versi**: 1.2.0
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
-- **Terakhir Diupdate**: 2025-12-20
+- **Terakhir Diupdate**: 2025-12-22
 - **Status**: Active
 
 ---
@@ -54,6 +54,23 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.18.0 - 2025-12-22
+**Checksum**: SHA256:REVERSE_ENGINEER_DESIGN
+**Perubahan**:
+- **Documentation**: Updated `DESIGN.md` (Reverse Engineering) to accurately reflect current Codebase state (Syntax, Types, Stdlib).
+- **Documentation**: Added Technical Debt entry regarding `Int`/`int` capitalization.
+- **Spec**: Updated `DESIGN.md` syntax sections (Keywords, Entry Point, Types).
+- **Spec**: Standardized `DESIGN.md` language to Indonesian.
+- **Roadmap**: Moved Concurrency and Memory Management to Roadmap section.
+
+**Konteks Sesi**:
+- **Strategic Alignment**: Making documentation the source of truth for the *current* implementation, acknowledging gaps as technical debt.
+- **Clarification**: User confirmed "Reverse Engineering" means updating Design to match Code.
+
+**File Terkait**:
+- `DESIGN.md` (SHA256:aec9003fa1e5e788515eca9ad0f0aa21679c9e3e0e59ae70820c0625719417f2)
+- `.vzoel.jules/technical-debt.morph.vz` (SHA256:8f897ac1779f19ec381fc98bf3dc345de285694ac5006b1078f2247803e64942)
+
 ### Version 1.17.0 - 2025-12-20
 **Checksum**: SHA256:STDLIB_CONV
 **Perubahan**:
@@ -145,7 +162,7 @@ project-root/
 
 **Konteks Sesi**:
 - **Milestone**: Memasuki Fase 3 (awal) dengan menyediakan cara untuk menjalankan compiler (parsing & type checking) pada file `.fox` nyata.
-- **Verification**: User meminta untuk "menjalankan compiler yang sudah ada".
+- **Verification**: User meminta "menjalankan compiler yang sudah ada".
 
 **File Terkait**:
 - `cmd/morph/main.go` (SHA256:ccbd734cf102c9a5bfbbc27cf7bb55d09c5780b74dce907c4de4622fe0f2b363)
