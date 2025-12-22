@@ -32,6 +32,7 @@ type Type interface {
 	String() string
 	Equals(other Type) bool
 	AssignableTo(target Type) bool
+	IsComparable() bool
 	GetMember(name string) (Type, bool)
 	Index(key Type) (Type, error)
 	BinaryOp(op string, right Type) (Type, error)
@@ -65,6 +66,16 @@ func (t *BasicType) AssignableTo(target Type) bool {
 		return k == KindArray || k == KindMap || k == KindPointer || k == KindInterface || k == KindFunction || k == KindString || k == KindNull || k == KindUserError
 	}
 	return t.Equals(target)
+}
+
+func (t *BasicType) IsComparable() bool {
+	switch t.K {
+	case KindInt, KindFloat, KindString, KindBool, KindNull, KindUserError:
+		return true
+	case KindVoid, KindUnknown, KindError:
+		return false
+	}
+	return false
 }
 
 func (t *BasicType) GetMember(name string) (Type, bool) {
@@ -216,6 +227,7 @@ func (t *ModuleType) AssignableTo(target Type) bool {
 	}
 	return t.Equals(target)
 }
+func (t *ModuleType) IsComparable() bool { return false }
 func (t *ModuleType) GetMember(name string) (Type, bool) {
 	if info, ok := t.Exports[name]; ok {
 		return info.Type, true
@@ -265,6 +277,7 @@ func (t *ArrayType) AssignableTo(target Type) bool {
 	}
 	return t.Equals(target)
 }
+func (t *ArrayType) IsComparable() bool { return false }
 func (t *ArrayType) GetMember(name string) (Type, bool) {
 	return nil, false
 }
@@ -325,6 +338,7 @@ func (t *MapType) AssignableTo(target Type) bool {
 	}
 	return t.Equals(target)
 }
+func (t *MapType) IsComparable() bool { return false }
 func (t *MapType) GetMember(name string) (Type, bool) {
 	return nil, false
 }
@@ -351,9 +365,10 @@ func (t *MapType) Call(args []Type) (Type, string, error) {
 }
 
 type StructType struct {
-	Name    string
-	Fields  map[string]Type
-	Methods map[string]*FunctionType
+	Name       string
+	Fields     map[string]Type
+	FieldOrder []string
+	Methods    map[string]*FunctionType
 }
 
 func (t *StructType) Kind() TypeKind { return KindStruct }
@@ -391,6 +406,16 @@ func (t *StructType) AssignableTo(target Type) bool {
 	}
 	return t.Equals(target)
 }
+
+func (t *StructType) IsComparable() bool {
+	for _, fieldType := range t.Fields {
+		if !fieldType.IsComparable() {
+			return false
+		}
+	}
+	return true
+}
+
 func (t *StructType) GetMember(name string) (Type, bool) {
 	if fieldType, exists := t.Fields[name]; exists {
 		return fieldType, true
@@ -405,6 +430,9 @@ func (t *StructType) Index(key Type) (Type, error) {
 }
 func (t *StructType) BinaryOp(op string, right Type) (Type, error) {
 	if op == "==" || op == "!=" {
+		if !t.IsComparable() {
+			return nil, fmt.Errorf("Struct %s is not comparable (contains map, array, or function)", t.Name)
+		}
 		if t.Equals(right) {
 			return BoolType, nil
 		}
@@ -416,9 +444,21 @@ func (t *StructType) PrefixOp(op string) (Type, error) {
 	return nil, fmt.Errorf("Prefix operator %s not supported on struct", op)
 }
 func (t *StructType) Call(args []Type) (Type, string, error) {
-	// Constructor logic could be here, but usually StructLiteral is used.
-	// We return error for now.
-	return nil, "", fmt.Errorf("Cannot call struct type")
+	// Struct Constructor logic
+	if len(args) != len(t.FieldOrder) {
+		return nil, "", fmt.Errorf("Struct %s constructor requires %d arguments, got %d", t.Name, len(t.FieldOrder), len(args))
+	}
+
+	for i, arg := range args {
+		fieldName := t.FieldOrder[i]
+		expectedType := t.Fields[fieldName]
+
+		if !arg.AssignableTo(expectedType) {
+			return nil, "", fmt.Errorf("Argument %d (%s) type mismatch: expected %s, got %s", i+1, fieldName, expectedType.String(), arg.String())
+		}
+	}
+
+	return t, "", nil
 }
 
 type InterfaceType struct {
@@ -449,6 +489,7 @@ func (t *InterfaceType) AssignableTo(target Type) bool {
 	}
 	return t.Equals(target)
 }
+func (t *InterfaceType) IsComparable() bool { return true }
 func (t *InterfaceType) GetMember(name string) (Type, bool) {
 	return nil, false
 }
@@ -539,6 +580,7 @@ func (t *FunctionType) AssignableTo(target Type) bool {
 	}
 	return t.Equals(target)
 }
+func (t *FunctionType) IsComparable() bool { return false }
 func (t *FunctionType) GetMember(name string) (Type, bool) {
 	return nil, false
 }
@@ -618,6 +660,7 @@ func (t *MultiType) AssignableTo(target Type) bool {
 	}
 	return false
 }
+func (t *MultiType) IsComparable() bool { return false }
 func (t *MultiType) GetMember(name string) (Type, bool) {
 	return nil, false
 }
@@ -661,6 +704,7 @@ func (t *PointerType) AssignableTo(target Type) bool {
 	}
 	return t.Equals(target)
 }
+func (t *PointerType) IsComparable() bool { return true }
 func (t *PointerType) GetMember(name string) (Type, bool) {
 	// Auto-dereference support for convenience (p.Name vs (*p).Name)
 	return t.Element.GetMember(name)
