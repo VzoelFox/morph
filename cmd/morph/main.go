@@ -147,6 +147,7 @@ func main() {
 	fmt.Println("🚀 Executing...")
 
 	evaluator.RegisterIO()
+	evaluator.RegisterTime()
 
 	env := evaluator.NewEnvironment()
 	eval := evaluator.New(nil)

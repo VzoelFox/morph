@@ -54,6 +54,23 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.16.0 - 2025-12-20
+**Checksum**: SHA256:STDLIB_TIME
+**Perubahan**:
+- **Stdlib**: Added `stdlib/time.fox` with `Now` (Unix ms) and `Sleep` (ms).
+- **Runtime**: Implemented `pkg/evaluator/builtins_time.go` bridging to Go `time` package.
+- **Example**: Added `examples/clock.fox` to demonstrate `time.Sleep`.
+
+**Konteks Sesi**:
+- **Feature Expansion**: Menambahkan modul `time` sebagai langkah "realistis" berikutnya untuk interaktivitas dasar.
+- **Strategy**: Implementasi `Sleep` yang blocking dipilih untuk stabilitas API awal, dengan TODO untuk upgrade ke async saat Scheduler tersedia.
+
+**File Terkait**:
+- `stdlib/time.fox`
+- `pkg/evaluator/builtins_time.go`
+- `cmd/morph/main.go`
+- `examples/clock.fox`
+
 ### Version 1.15.0 - 2025-12-20
 **Checksum**: SHA256:RUNTIME_IO
 **Perubahan**:

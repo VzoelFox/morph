@@ -7,7 +7,16 @@ import (
 )
 
 func TestCallExpressionParsing_FunctionContext(t *testing.T) {
-	// Case 3: Explicit Void (Should pass)
+	// Case 0: 0 args
+	runTest(t, "fungsi main() Void foo() akhir", "Case 0")
+
+	// Case 1: 1 arg
+	runTest(t, "fungsi main() Void foo(a) akhir", "Case 1")
+
+	// Case 2: 2 args
+	runTest(t, "fungsi main() Void foo(a, b) akhir", "Case 2")
+
+	// Case 3: IO Write
 	runTest(t, "fungsi main() Void io.Write(a, b) akhir", "Case 3")
 }
 
