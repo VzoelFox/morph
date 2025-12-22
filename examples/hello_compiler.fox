@@ -1,0 +1,5 @@
+fungsi main() Void
+	native_print("Hello from C Compiler!")
+akhir
+
+main()

@@ -1,0 +1,48 @@
+package compiler
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/VzoelFox/morph/pkg/lexer"
+	"github.com/VzoelFox/morph/pkg/parser"
+)
+
+func TestCompileHelloWorld(t *testing.T) {
+	input := `
+	fungsi main() Void
+		native_print("Hello World")
+	akhir
+	main()
+	`
+
+	l := lexer.New(input)
+	p := parser.New(l)
+	prog := p.ParseProgram()
+
+	if len(p.Errors()) > 0 {
+		t.Fatalf("Parser errors: %v", p.Errors())
+	}
+
+	comp := New()
+	code, err := comp.Compile(prog)
+	if err != nil {
+		t.Fatalf("Compiler error: %v", err)
+	}
+
+	t.Logf("Generated C Code:\n%s", code)
+
+	// Basic assertions
+	if !strings.Contains(code, "void mph_main(MorphContext* ctx)") {
+		t.Errorf("Expected function definition for main")
+	}
+	if !strings.Contains(code, "mph_native_print(ctx, mph_string_new(ctx, \"Hello World\"))") {
+		t.Errorf("Expected native_print call with string construction")
+	}
+	if !strings.Contains(code, "void morph_entry_point(MorphContext* ctx)") {
+		t.Errorf("Expected entry point")
+	}
+	if !strings.Contains(code, "mph_main(ctx)") {
+		t.Errorf("Expected main() call in entry point")
+	}
+}
