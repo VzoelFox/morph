@@ -1,0 +1,13 @@
+fungsi fib(n Int) Int
+  jika n < 2
+    kembalikan n
+  akhir
+  kembalikan fib(n - 1) + fib(n - 2)
+akhir
+
+fungsi main() Void
+  var f = fib(10)
+  native_print_int(f)
+akhir
+
+main()
