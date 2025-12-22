@@ -54,6 +54,26 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.20.0 - 2025-12-22
+**Checksum**: SHA256:COMPILER_MVP
+**Perubahan**:
+- **Feature**: Implemented `pkg/compiler` (C Transpiler MVP).
+- **Runtime**: Created `pkg/compiler/runtime/` with `morph.h` and `runtime.c` (Skeleton with Context passing).
+- **CLI**: Added `morph build <file.fox>` command.
+- **Assets**: Embedded runtime files using `pkg/compiler/runtime/assets.go`.
+- **Tests**: Added `pkg/compiler/compiler_test.go` and `examples/hello_compiler.fox`.
+
+**Konteks Sesi**:
+- **Pivot**: Executing the "Compile to C" strategy.
+- **Architecture**: Enforced `MorphContext` passing in generated code for future Memory/Scheduler integration.
+- **Hybrid**: Compiler uses `malloc` (Leaky) for now as per "Option A" decision.
+
+**File Terkait**:
+- `pkg/compiler/compiler.go`
+- `pkg/compiler/runtime/morph.h.tpl`
+- `pkg/compiler/runtime/runtime.c.tpl`
+- `cmd/morph/main.go`
+
 ### Version 1.19.0 - 2025-12-22
 **Checksum**: SHA256:RECONCILIATION
 **Perubahan**:

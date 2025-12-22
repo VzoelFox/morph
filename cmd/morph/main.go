@@ -3,9 +3,13 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/VzoelFox/morph/pkg/checker"
+	"github.com/VzoelFox/morph/pkg/compiler"
+	cruntime "github.com/VzoelFox/morph/pkg/compiler/runtime"
 	"github.com/VzoelFox/morph/pkg/evaluator"
 	"github.com/VzoelFox/morph/pkg/lexer"
 	"github.com/VzoelFox/morph/pkg/parser"
@@ -81,12 +85,88 @@ func (fi *FileImporter) parseFile(path string) (*parser.Program, error) {
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Printf("Morph Compiler (Frontend)\n")
-		fmt.Printf("Usage: morph <filename.fox>\n")
+		fmt.Printf("Morph Compiler\n")
+		fmt.Printf("Usage:\n")
+		fmt.Printf("  morph <filename.fox>        (Run Interpreter)\n")
+		fmt.Printf("  morph build <filename.fox>  (Compile to C)\n")
 		os.Exit(1)
 	}
 
-	filename := os.Args[1]
+	arg1 := os.Args[1]
+	if arg1 == "build" {
+		if len(os.Args) < 3 {
+			fmt.Println("Usage: morph build <filename.fox>")
+			os.Exit(1)
+		}
+		runBuild(os.Args[2])
+	} else {
+		runInterpreter(arg1)
+	}
+}
+
+func runBuild(filename string) {
+	// 1. Parse
+	content, err := os.ReadFile(filename)
+	if err != nil {
+		fmt.Printf("Error reading file: %v\n", err)
+		os.Exit(1)
+	}
+
+	l := lexer.New(string(content))
+	p := parser.New(l)
+	prog := p.ParseProgram()
+
+	if len(p.Errors()) > 0 {
+		fmt.Println("❌ Parser Errors:")
+		for _, err := range p.Errors() {
+			fmt.Println(err)
+		}
+		os.Exit(1)
+	}
+
+	// 2. Compile
+	fmt.Println("🛠️  Transpiling to C...")
+	comp := compiler.New()
+	cCode, err := comp.Compile(prog)
+	if err != nil {
+		fmt.Printf("❌ Compilation Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	// 3. Write Assets
+	absPath, _ := filepath.Abs(filename)
+	workDir := filepath.Dir(absPath)
+	baseName := strings.TrimSuffix(filepath.Base(filename), filepath.Ext(filename))
+	outC := filepath.Join(workDir, baseName+".c")
+	outExe := filepath.Join(workDir, baseName)
+
+	if err := os.WriteFile(filepath.Join(workDir, "morph.h"), []byte(cruntime.MorphHeader), 0644); err != nil {
+		fmt.Printf("Error writing header: %v\n", err)
+		os.Exit(1)
+	}
+	if err := os.WriteFile(filepath.Join(workDir, "runtime.c"), []byte(cruntime.RuntimeSource), 0644); err != nil {
+		fmt.Printf("Error writing runtime: %v\n", err)
+		os.Exit(1)
+	}
+	if err := os.WriteFile(outC, []byte(cCode), 0644); err != nil {
+		fmt.Printf("Error writing C source: %v\n", err)
+		os.Exit(1)
+	}
+
+	// 4. GCC
+	fmt.Println("🔨 Compiling with GCC...")
+	cmd := exec.Command("gcc", "-o", outExe, outC, filepath.Join(workDir, "runtime.c"))
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("❌ GCC Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("✅ Build Success! Output: %s\n", outExe)
+}
+
+func runInterpreter(filename string) {
 	content, err := os.ReadFile(filename)
 	if err != nil {
 		fmt.Printf("Error reading file: %v\n", err)
@@ -111,20 +191,14 @@ func main() {
 	// 2. Type Checking
 	c := checker.New()
 
-	// Setup Importer
 	absPath, _ := filepath.Abs(filename)
 	rootDir := filepath.Dir(absPath)
-
-	// Default Search Paths:
-	// 1. Directory of the input file
-	// 2. ./stdlib (Standard Library)
 	searchPaths := []string{rootDir, "stdlib"}
 
 	c.SetImporter(&FileImporter{SearchPaths: searchPaths})
 
 	c.Check(program)
 
-	// Print Warnings
 	if len(c.Warnings) > 0 {
 		fmt.Println("⚠️  Warnings:")
 		for _, warn := range c.Warnings {
@@ -132,7 +206,6 @@ func main() {
 		}
 	}
 
-	// Print Errors
 	if len(c.Errors) > 0 {
 		fmt.Println("❌ Type Errors:")
 		for _, err := range c.Errors {
