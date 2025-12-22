@@ -1114,7 +1114,16 @@ func (p *Parser) parseFunctionLiteral() Expression {
 		}
 	}
 
-	p.nextToken() // Advance to body start
+	p.nextToken() // Advance to body start OR native keyword
+
+	if p.curTokenIs(lexer.NATIVE) {
+		lit.IsNative = true
+		// Optional semicolon
+		if p.peekTokenIs(lexer.SEMICOLON) {
+			p.nextToken()
+		}
+		return lit
+	}
 
 	lit.Body = p.parseBlockStatement()
 

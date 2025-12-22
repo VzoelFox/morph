@@ -435,6 +435,7 @@ type FunctionLiteral struct {
 	Parameters  []*Parameter
 	ReturnTypes []TypeNode
 	Body        *BlockStatement
+	IsNative    bool
 	Doc         string
 }
 
@@ -479,8 +480,12 @@ func (fl *FunctionLiteral) String() string {
 		out.WriteString(" ")
 	}
 
-	out.WriteString(fl.Body.String())
-	out.WriteString(" akhir")
+	if fl.IsNative {
+		out.WriteString("native")
+	} else {
+		out.WriteString(fl.Body.String())
+		out.WriteString(" akhir")
+	}
 	return out.String()
 }
 
