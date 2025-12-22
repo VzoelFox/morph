@@ -28,6 +28,14 @@ Menggunakan gaya blok dengan keyword `akhir` (mirip Ruby/Lua) untuk mengurangi n
 ### Tanda Baca
 - Titik koma (`;`) bersifat **opsional**. Parser akan mengabaikannya jika ada di akhir baris. Disarankan untuk tidak menggunakannya (Go-style) kecuali memisahkan multiple statement dalam satu baris.
 
+### Interpolasi String
+Mendukung penyisipan ekspresi dalam string menggunakan sintaks `#{}`.
+```fox
+var nama = "Dunia"
+var pesan = "Halo, #{nama}!"
+```
+**Catatan**: Fitur ini didukung di tingkat Parser namun belum sepenuhnya diimplementasikan di Checker/Compiler (Partial Support).
+
 ### Entry Point
 Program Morph bersifat skrip linear. Tidak ada fungsi `utama` yang dipanggil secara implisit. Kode di level teratas akan dieksekusi. Konvensi umum adalah mendefinisikan fungsi `main` dan memanggilnya di akhir file.
 
@@ -140,16 +148,18 @@ akhir
 Fitur berikut adalah bagian dari rencana jangka panjang dan belum tersedia di implementasi saat ini.
 
 ### A. Konkurensi (Concurrency)
-Rencana menggunakan model **Green Threads** (mirip Goroutine) dengan keyword `jalankan`.
+Rencana menggunakan model **Green Threads** (mirip Goroutine) dengan fungsi bawaan `luncurkan`.
 ```fox
 # Syntax Proposal
 fungsi worker(id Int) Void
     ...
 akhir
 
-jalankan worker(1)
+luncurkan(worker, 1)
 ```
-Status: *Planned (Post-Self-Host)*. Saat ini Morph berjalan single-threaded.
+Status: *Partially Implemented (Compiler Logic Only)*.
+- Compiler mendukung `luncurkan`, `saluran_baru`, `kirim`, `terima`.
+- Checker & Runtime belum mendukung fitur ini (Ghost Features).
 
 ### B. Manajemen Memori
 Rencana menggunakan pendekatan semi-manual atau region-based. Saat ini manajemen memori ditangani sepenuhnya oleh Garbage Collector dari host language (Go).

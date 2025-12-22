@@ -54,6 +54,22 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.25.0 - 2025-12-22
+**Checksum**: SHA256:REVERSE_ENGINEERING_ALIGNMENT
+**Perubahan**:
+- **Documentation**: Updated `DESIGN.md` to reflect "Ghost Features" (Concurrency `luncurkan`, String Interpolation) and current status (Partial Implementation).
+- **Roadmap**: Marked "C Output Generator" as Complete in `ROADMAP.md`.
+- **Technical Debt**: Recorded "Ghost Features" (Concurrency, Interpolation, Missing Channel Type) in `.vzoel.jules/technical-debt.morph.vz`.
+
+**Konteks Sesi**:
+- **Alignment**: Reverse Engineering phase. Updating documentation to strictly match the codebase state, including acknowledging "Ghost Code" (implemented in some layers but unusable).
+- **Decision**: Adopted `luncurkan` (Compiler Logic) over `jalankan` (Old Design) as the target keyword.
+
+**File Terkait**:
+- `DESIGN.md` (SHA256:cf3119e18c3f6da290626ca0de991ba9aeb018187e0fab45ae480e2460a5df6c)
+- `ROADMAP.md` (SHA256:6f2997ba30f766839dcee6e104306278a8f8ac19855a9e02f836977ee2ffd160)
+- `.vzoel.jules/technical-debt.morph.vz` (SHA256:a03886330e8c87c48ec1db3824b4b88d2d2e6d56129b1cbf99b60f2060f9f50e)
+
 ### Version 1.24.0 - 2025-12-22
 **Checksum**: SHA256:MULTI_FILE_COMPILATION
 **Perubahan**:
