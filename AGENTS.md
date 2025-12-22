@@ -54,6 +54,17 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.13.1 - 2025-12-20
+**Checksum**: SHA256:BITWISE_TESTS
+**Perubahan**:
+- **Tests**: Added `pkg/checker/bitwise_test.go` to confirm existence and correctness of bitwise operations (`&`, `|`, `^`, `<<`, `>>`, `~`).
+
+**Konteks Sesi**:
+- **Verification**: User requested update on bitwise operations. Investigation showed implementation was complete but lacked dedicated tests. Added test suite to close the gap.
+
+**File Terkait**:
+- `pkg/checker/bitwise_test.go` (SHA256:00268e7307bd5bf4130ff32b167ae064dc9644f2839e2e0ef7e56dc175d2bed3)
+
 ### Version 1.13.0 - 2025-12-20
 **Checksum**: SHA256:STRUCT_IMPROVEMENTS
 **Perubahan**:
