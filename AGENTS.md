@@ -54,6 +54,25 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.22.0 - 2025-12-22
+**Checksum**: SHA256:COMPILER_LOGIC
+**Perubahan**:
+- **Checker**: Updated to store and expose Type information in `Types map[Node]Type`.
+- **Compiler**: Implemented logic for Variables (`var`), Assignment (`=`), Control Flow (`if`, `while`, `return`), and Infix Expressions.
+- **Compiler**: Integrated with Checker types to distinguish Primitive Ops vs Runtime Calls (String concatenation).
+- **Runtime**: Added `mph_string_concat`, `mph_string_eq`, `mph_native_print_int`.
+- **Test**: Verified with `fibonacci.fox` (Recursive logic + Arithmetic).
+
+**Konteks Sesi**:
+- **Turing Complete**: The C Compiler now supports the core logic required for real algorithms.
+- **Type-Aware**: Compiler uses the Checker's analysis instead of guessing types.
+
+**File Terkait**:
+- `pkg/checker/checker.go`
+- `pkg/compiler/compiler.go`
+- `pkg/compiler/runtime/morph.h.tpl`
+- `pkg/compiler/runtime/runtime.c.tpl`
+
 ### Version 1.21.0 - 2025-12-22
 **Checksum**: SHA256:MEMORY_FOUNDATION
 **Perubahan**:

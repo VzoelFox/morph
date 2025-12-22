@@ -124,18 +124,36 @@ func runBuild(filename string) {
 		os.Exit(1)
 	}
 
-	// 2. Compile
+	// 2. Type Checking
+	c := checker.New()
+
+	absPath, _ := filepath.Abs(filename)
+	rootDir := filepath.Dir(absPath)
+	searchPaths := []string{rootDir, "stdlib"}
+
+	c.SetImporter(&FileImporter{SearchPaths: searchPaths})
+	c.Check(prog)
+
+	if len(c.Errors) > 0 {
+		fmt.Println("❌ Type Errors:")
+		for _, err := range c.Errors {
+			fmt.Printf("  [%d:%d] %s\n", err.Line, err.Column, err.Message)
+		}
+		os.Exit(1)
+	}
+
+	// 3. Compile
 	fmt.Println("🛠️  Transpiling to C...")
-	comp := compiler.New()
-	cCode, err := comp.Compile(prog)
+	comp := compiler.New(c)
+	var cCode string
+	cCode, err = comp.Compile(prog)
 	if err != nil {
 		fmt.Printf("❌ Compilation Error: %v\n", err)
 		os.Exit(1)
 	}
 
 	// 3. Write Assets
-	absPath, _ := filepath.Abs(filename)
-	workDir := filepath.Dir(absPath)
+	workDir := rootDir
 	baseName := strings.TrimSuffix(filepath.Base(filename), filepath.Ext(filename))
 	outC := filepath.Join(workDir, baseName+".c")
 	outExe := filepath.Join(workDir, baseName)

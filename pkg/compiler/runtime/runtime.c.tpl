@@ -71,6 +71,29 @@ MorphString* mph_string_new(MorphContext* ctx, const char* literal) {
     return str;
 }
 
+MorphString* mph_string_concat(MorphContext* ctx, MorphString* a, MorphString* b) {
+    size_t len = a->length + b->length;
+    MorphString* str = (MorphString*)mph_alloc(ctx, sizeof(MorphString));
+    str->length = len;
+
+    char* data = (char*)mph_alloc(ctx, len + 1);
+    memcpy(data, a->data, a->length);
+    memcpy(data + a->length, b->data, b->length);
+    data[len] = '\0';
+
+    str->data = data;
+    return str;
+}
+
+mph_bool mph_string_eq(MorphString* a, MorphString* b) {
+    if (a->length != b->length) return 0;
+    return memcmp(a->data, b->data, a->length) == 0;
+}
+
+void mph_native_print_int(MorphContext* ctx, mph_int n) {
+    printf("%ld\n", n);
+}
+
 // --- Entry Point ---
 
 int main() {

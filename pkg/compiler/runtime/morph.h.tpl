@@ -57,6 +57,11 @@ Drawer* mph_new_drawer(Cabinet* cab);
 
 // Strings
 MorphString* mph_string_new(MorphContext* ctx, const char* literal);
+MorphString* mph_string_concat(MorphContext* ctx, MorphString* a, MorphString* b);
+mph_bool mph_string_eq(MorphString* a, MorphString* b);
+
+// Debug
+void mph_native_print_int(MorphContext* ctx, mph_int n);
 
 // Entry Point
 void morph_entry_point(MorphContext* ctx);

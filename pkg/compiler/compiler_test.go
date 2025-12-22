@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/VzoelFox/morph/pkg/checker"
 	"github.com/VzoelFox/morph/pkg/lexer"
 	"github.com/VzoelFox/morph/pkg/parser"
 )
@@ -24,7 +25,10 @@ func TestCompileHelloWorld(t *testing.T) {
 		t.Fatalf("Parser errors: %v", p.Errors())
 	}
 
-	comp := New()
+	c := checker.New()
+	c.Check(prog)
+
+	comp := New(c)
 	code, err := comp.Compile(prog)
 	if err != nil {
 		t.Fatalf("Compiler error: %v", err)
