@@ -4,6 +4,17 @@
 **Last Updated**: 2025-12-22
 
 ### Pending / Open
+- **Ghost Feature (Concurrency)**: `pkg/compiler` mengimplementasikan logic `luncurkan`, `saluran_baru`, dll, namun `pkg/checker` dan `pkg/compiler/runtime` tidak mendukung simbol-simbol ini.
+    - **Impact**: Fitur konkurensi tidak bisa digunakan karena Checker akan error "undefined variable", dan Runtime C akan error "undefined reference".
+    - **Action**: Implementasi definisi di Checker dan fungsi di Runtime C, atau hapus logic di Compiler.
+
+- **Ghost Feature (String Interpolation)**: `pkg/lexer` dan `pkg/parser` mendukung sintaks `#{expr}`, namun `pkg/checker` dan `pkg/compiler` tidak memiliki logic untuk memproses `InterpolatedString` node.
+    - **Impact**: Kode dengan interpolasi akan crash/error saat compile.
+    - **Action**: Implementasi handling `InterpolatedString` di Checker (convert to concat) dan Compiler.
+
+- **Missing Channel Type**: `pkg/checker/types.go` memiliki `KindChannel` tapi tidak ada struct `ChannelType` atau implementasi method-nya.
+    - **Action**: Implementasi `ChannelType`.
+
 - **Inkonsistensi Penamaan Tipe Primitif**: Kode implementasi saat ini menggunakan PascalCase (`Int`, `String`, `Bool`) untuk tipe primitif, sedangkan `DESIGN.md` (dan konvensi umum) merekomendasikan lowercase (`int`, `string`, `bool`).
     - **Action**: Refactor `pkg/checker`, `pkg/parser`, dan `pkg/lexer` untuk mendukung lowercase types di masa depan.
     - **Note**: Saat ini didokumentasikan sebagai `Int`/`String` di `DESIGN.md` (Reverse Engineering) untuk akurasi.
