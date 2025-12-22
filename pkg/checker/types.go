@@ -119,6 +119,17 @@ func (t *BasicType) BinaryOp(op string, right Type) (Type, error) {
 		if t.Equals(right) {
 			return BoolType, nil
 		}
+		// Allow comparison with Null if assignable
+		if t.K == KindNull {
+			if t.AssignableTo(right) {
+				return BoolType, nil
+			}
+		}
+		if right.Kind() == KindNull {
+			if right.AssignableTo(t) {
+				return BoolType, nil
+			}
+		}
 		return nil, fmt.Errorf("Cannot compare different types %s and %s", t.String(), right.String())
 	case "&&", "||":
 		if t.K == KindBool && right.Kind() == KindBool {

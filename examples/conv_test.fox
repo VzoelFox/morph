@@ -1,0 +1,16 @@
+ambil "io"
+ambil "conv"
+
+fungsi main() Void
+    var s = "123"
+    var res, err = conv.Atoi(s)
+
+    jika err == kosong
+        var output = "Success: " + conv.Itoa(res) + "\n"
+        io.Write(io.Stdout, output)
+    lainnya
+        io.Write(io.Stdout, "Failed\n")
+    akhir
+akhir
+
+main()

@@ -1,0 +1,10 @@
+struktur File
+  fd Int
+akhir
+
+fungsi make_file(fd Int) File native
+var Stdout = make_file(1)
+
+fungsi Open(path String) File native
+fungsi Write(f File, s String) Int native
+fungsi Close(f File) Int native

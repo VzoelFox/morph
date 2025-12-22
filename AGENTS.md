@@ -54,6 +54,71 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.17.0 - 2025-12-20
+**Checksum**: SHA256:STDLIB_CONV
+**Perubahan**:
+- **Evaluator**: Implemented complete expression evaluation (`Infix`, `Prefix`, `If`, `NullLiteral`).
+- **Evaluator**: Added `Tuple` support for multiple return values and assignment unpacking.
+- **Checker**: Updated `BinaryOp` to allow comparison between `Null` and nullable types (e.g. `Error`).
+- **Stdlib**: Added `stdlib/conv.fox` with `Atoi` (returning `(Int, Error)`) and `Itoa`.
+- **Runtime**: Implemented `pkg/evaluator/builtins_conv.go`.
+- **Driver**: Updated `cmd/morph/main.go` to register `conv`.
+- **Example**: Added `examples/conv_test.fox`.
+
+**Konteks Sesi**:
+- **Runtime Maturity**: Evaluator di-upgrade besar-besaran untuk mendukung operasi logika (`==`, `!=`, `+`) dan Tuple, memungkinkan kode yang lebih kompleks.
+- **Feature**: `stdlib/conv` memungkinkan konversi tipe string-int yang robust dengan error handling idiomatic.
+
+**File Terkait**:
+- `pkg/evaluator/evaluator.go`
+- `pkg/evaluator/object.go`
+- `pkg/checker/types.go`
+- `stdlib/conv.fox`
+- `pkg/evaluator/builtins_conv.go`
+- `cmd/morph/main.go`
+
+### Version 1.16.0 - 2025-12-20
+**Checksum**: SHA256:STDLIB_TIME
+**Perubahan**:
+- **Stdlib**: Added `stdlib/time.fox` with `Now` (Unix ms) and `Sleep` (ms).
+- **Runtime**: Implemented `pkg/evaluator/builtins_time.go` bridging to Go `time` package.
+- **Example**: Added `examples/clock.fox` to demonstrate `time.Sleep`.
+
+**Konteks Sesi**:
+- **Feature Expansion**: Menambahkan modul `time` sebagai langkah "realistis" berikutnya untuk interaktivitas dasar.
+- **Strategy**: Implementasi `Sleep` yang blocking dipilih untuk stabilitas API awal, dengan TODO untuk upgrade ke async saat Scheduler tersedia.
+
+**File Terkait**:
+- `stdlib/time.fox`
+- `pkg/evaluator/builtins_time.go`
+- `cmd/morph/main.go`
+- `examples/clock.fox`
+
+### Version 1.15.0 - 2025-12-20
+**Checksum**: SHA256:RUNTIME_IO
+**Perubahan**:
+- **Core**: Implemented `pkg/evaluator` (Tree-walking Interpreter).
+- **Core**: Added `native` keyword support in Lexer, Parser, and AST.
+- **Checker**: Updated to skip body checks for `native` functions.
+- **Stdlib**: Created `stdlib/io.fox` with native `Open`, `Read`, `Write`, `Close`.
+- **Runtime**: Implemented native IO bindings (`builtins_io.go`) wrapping Go's `os` package.
+- **Driver**: Updated `cmd/morph/main.go` to run the Evaluator after checking.
+- **Example**: Created `examples/hello_world.fox` demonstrating working "Hello World".
+
+**Konteks Sesi**:
+- **Major Milestone**: Memasuki Fase 3 (Runtime). Morph sekarang bisa mengeksekusi kode!
+- **Feature**: User meminta "Hello World" yang nyata (baca/tulis/buka).
+- **Resolution**: Implementasi Interpreter + Stdlib IO + Native Bridge.
+- **Learnings**: Parser ambiguity (Identifier as Return Type vs Body start) resolved by explicit return type `Void` in example.
+
+**File Terkait**:
+- `cmd/morph/main.go`
+- `pkg/evaluator/*`
+- `stdlib/io.fox`
+- `examples/hello_world.fox`
+- `pkg/parser/parser.go`
+- `pkg/checker/checker.go`
+
 ### Version 1.14.1 - 2025-12-20
 **Checksum**: SHA256:STDLIB_INFRA
 **Perubahan**:
