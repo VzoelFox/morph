@@ -220,9 +220,13 @@ func isExported(name string) bool {
 
 func (c *Checker) defineStruct(s *parser.StructStatement) {
 	st := &StructType{
-		Name:    s.Name.Value,
-		Fields:  make(map[string]Type),
-		Methods: make(map[string]*FunctionType),
+		Name:       s.Name.Value,
+		Fields:     make(map[string]Type),
+		FieldOrder: make([]string, 0, len(s.Fields)),
+		Methods:    make(map[string]*FunctionType),
+	}
+	for _, f := range s.Fields {
+		st.FieldOrder = append(st.FieldOrder, f.Name)
 	}
 	c.scope.DefineType(s.Name.Value, st)
 }

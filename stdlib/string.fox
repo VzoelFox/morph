@@ -1,0 +1,9 @@
+fungsi Length(s String) Int
+    # Mock implementation
+    kembalikan 0;
+akhir
+
+fungsi Concat(a String, b String) String
+    # Mock implementation
+    kembalikan a + b;
+akhir

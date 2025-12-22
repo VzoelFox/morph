@@ -54,6 +54,65 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.14.1 - 2025-12-20
+**Checksum**: SHA256:STDLIB_INFRA
+**Perubahan**:
+- **Tooling**: Enhanced `cmd/morph/main.go` to support multiple search paths (`FileImporter.SearchPaths`).
+- **Stdlib**: Created `stdlib/` directory as the central location for standard libraries.
+- **Stdlib**: Added `stdlib/math.fox` (moved from examples) and `stdlib/string.fox`.
+- **Example**: Updated `examples/hello.fox` to use direct imports (`ambil "math"`, `ambil "string"`).
+
+**Konteks Sesi**:
+- **Infrastructure**: Membangun fondasi untuk "Standard Library Import" agar library standar bisa diakses tanpa relative path, sesuai strategi "Import Load" yang disepakati.
+
+**File Terkait**:
+- `cmd/morph/main.go` (SHA256:6f9e4c4f1813412724ba75e2cfed1e634db97bbdd47efc438ed0c62b9fffab28)
+- `stdlib/math.fox` (SHA256:b109da33bb229f33a4a7a80e8707b9c3645de01c19e6cc6c6d88080e70b176a9)
+- `stdlib/string.fox` (SHA256:87d8f4db419659037af0ae5c5a3092343eea44bb413d6c46b2dc43baa2a3a988)
+- `examples/hello.fox` (SHA256:c2a0f0ce680c71d0da04fa52e8b540f55d69a056640739be67282509dcb99f4f)
+
+### Version 1.14.0 - 2025-12-20
+**Checksum**: SHA256:CLI_DRIVER
+**Perubahan**:
+- **Tooling**: Created `cmd/morph/main.go` as the CLI Driver (Frontend Compiler).
+- **Tooling**: Implemented `FileImporter` in `main.go` to support importing modules from the file system.
+- **Example**: Created `examples/hello.fox` and `examples/std/math.fox` to demonstrate functionality.
+
+**Konteks Sesi**:
+- **Milestone**: Memasuki Fase 3 (awal) dengan menyediakan cara untuk menjalankan compiler (parsing & type checking) pada file `.fox` nyata.
+- **Verification**: User meminta untuk "menjalankan compiler yang sudah ada".
+
+**File Terkait**:
+- `cmd/morph/main.go` (SHA256:ccbd734cf102c9a5bfbbc27cf7bb55d09c5780b74dce907c4de4622fe0f2b363)
+
+### Version 1.13.1 - 2025-12-20
+**Checksum**: SHA256:BITWISE_TESTS
+**Perubahan**:
+- **Tests**: Added `pkg/checker/bitwise_test.go` to confirm existence and correctness of bitwise operations (`&`, `|`, `^`, `<<`, `>>`, `~`).
+
+**Konteks Sesi**:
+- **Verification**: User requested update on bitwise operations. Investigation showed implementation was complete but lacked dedicated tests. Added test suite to close the gap.
+
+**File Terkait**:
+- `pkg/checker/bitwise_test.go` (SHA256:00268e7307bd5bf4130ff32b167ae064dc9644f2839e2e0ef7e56dc175d2bed3)
+
+### Version 1.13.0 - 2025-12-20
+**Checksum**: SHA256:STRUCT_IMPROVEMENTS
+**Perubahan**:
+- **Type System**: Added `FieldOrder` to `StructType` to support ordered fields.
+- **Type System**: Added `IsComparable` method to `Type` interface and implementations.
+- **Checker**: Implemented `StructType.Call` to support Struct Constructor syntax (e.g., `User(1, "Name")`).
+- **Checker**: Implemented strict Struct Equality logic in `StructType.BinaryOp` (structs with non-comparable fields like maps/arrays cannot be compared).
+- **Tests**: Added `pkg/checker/struct_extra_test.go` to verify constructors and comparability.
+
+**Konteks Sesi**:
+- **Feature**: Memenuhi request user untuk mendukung syntax constructor struct yang lebih ringkas dan memastikan keamanan tipe saat membandingkan struct (deep equality safety).
+
+**File Terkait**:
+- `pkg/checker/types.go` (SHA256:a511933792bfe3cff4c4292650bc4b4bccc3332f047f37cb62695e3874f8f9cc)
+- `pkg/checker/checker.go` (SHA256:60bfa7d8b70b908f865e007ae66314bc6f3eb51d1ec6c8f6a7dd12dd58993df8)
+- `pkg/checker/struct_extra_test.go` (SHA256:29e0a9a3ed7ac5d1424a0ca682c442209005fb3160e664bd221e14f177670de5)
+
 ### Version 1.12.0 - 2025-12-20
 **Checksum**: SHA256:STRING_INDEXING
 **Perubahan**:
