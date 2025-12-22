@@ -54,6 +54,20 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.14.0 - 2025-12-20
+**Checksum**: SHA256:CLI_DRIVER
+**Perubahan**:
+- **Tooling**: Created `cmd/morph/main.go` as the CLI Driver (Frontend Compiler).
+- **Tooling**: Implemented `FileImporter` in `main.go` to support importing modules from the file system.
+- **Example**: Created `examples/hello.fox` and `examples/std/math.fox` to demonstrate functionality.
+
+**Konteks Sesi**:
+- **Milestone**: Memasuki Fase 3 (awal) dengan menyediakan cara untuk menjalankan compiler (parsing & type checking) pada file `.fox` nyata.
+- **Verification**: User meminta untuk "menjalankan compiler yang sudah ada".
+
+**File Terkait**:
+- `cmd/morph/main.go` (SHA256:ccbd734cf102c9a5bfbbc27cf7bb55d09c5780b74dce907c4de4622fe0f2b363)
+
 ### Version 1.13.1 - 2025-12-20
 **Checksum**: SHA256:BITWISE_TESTS
 **Perubahan**:

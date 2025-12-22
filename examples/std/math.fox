@@ -1,0 +1,10 @@
+var PI Float = 3.14159;
+
+fungsi Add(a Int, b Int) Int
+    kembalikan a + b;
+akhir
+
+fungsi Sin(x Float) Float
+    # Mock implementation
+    kembalikan x;
+akhir
