@@ -6,5 +6,7 @@ fungsi make_file(fd int) File native
 var Stdout = make_file(1)
 
 fungsi Open(path string) File native
+fungsi Create(path string) File native
+fungsi Read(f File, size int) string native
 fungsi Write(f File, s string) int native
 fungsi Close(f File) int native

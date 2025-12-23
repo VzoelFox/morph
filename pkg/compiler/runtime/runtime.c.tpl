@@ -123,6 +123,100 @@ void* mph_array_at(MorphContext* ctx, MorphArray* arr, mph_int index) {
     return (uint8_t*)arr->data + (index * arr->element_size);
 }
 
+// --- I/O Implementation ---
+
+#define MAX_FILES 1024
+FILE* mph_file_table[MAX_FILES];
+int mph_file_count = 3; // 0,1,2 reserved
+int mph_files_initialized = 0;
+
+void mph_init_files() {
+    if (mph_files_initialized) return;
+    mph_file_table[0] = stdin;
+    mph_file_table[1] = stdout;
+    mph_file_table[2] = stderr;
+    mph_files_initialized = 1;
+}
+
+typedef struct InternalFile {
+    mph_int fd;
+} InternalFile;
+
+void* mph_io_make_file(MorphContext* ctx, mph_int fd) {
+    mph_init_files();
+    InternalFile* f = (InternalFile*)mph_alloc(ctx, sizeof(InternalFile));
+    f->fd = fd;
+    return f;
+}
+
+void* mph_io_Open(MorphContext* ctx, MorphString* path) {
+    mph_init_files();
+    if (mph_file_count >= MAX_FILES) return NULL;
+
+    FILE* handle = fopen(path->data, "r");
+    if (!handle) return NULL;
+
+    int fd = mph_file_count++;
+    mph_file_table[fd] = handle;
+
+    InternalFile* f = (InternalFile*)mph_alloc(ctx, sizeof(InternalFile));
+    f->fd = fd;
+    return f;
+}
+
+void* mph_io_Create(MorphContext* ctx, MorphString* path) {
+    mph_init_files();
+    if (mph_file_count >= MAX_FILES) return NULL;
+
+    FILE* handle = fopen(path->data, "w+");
+    if (!handle) return NULL;
+
+    int fd = mph_file_count++;
+    mph_file_table[fd] = handle;
+
+    InternalFile* f = (InternalFile*)mph_alloc(ctx, sizeof(InternalFile));
+    f->fd = fd;
+    return f;
+}
+
+MorphString* mph_io_Read(MorphContext* ctx, void* f, mph_int size) {
+    mph_init_files();
+    if (!f) return mph_string_new(ctx, "");
+    mph_int fd = ((InternalFile*)f)->fd;
+    if (fd < 0 || fd >= MAX_FILES || !mph_file_table[fd]) return mph_string_new(ctx, "");
+
+    char* buf = (char*)mph_alloc(ctx, size + 1);
+    size_t read = fread(buf, 1, size, mph_file_table[fd]);
+    buf[read] = '\0';
+
+    MorphString* s = (MorphString*)mph_alloc(ctx, sizeof(MorphString));
+    s->data = buf;
+    s->length = read;
+    return s;
+}
+
+mph_int mph_io_Write(MorphContext* ctx, void* f, MorphString* s) {
+    mph_init_files();
+    if (!f) return -1;
+    mph_int fd = ((InternalFile*)f)->fd;
+    if (fd < 0 || fd >= MAX_FILES || !mph_file_table[fd]) return -1;
+
+    return fwrite(s->data, 1, s->length, mph_file_table[fd]);
+}
+
+mph_int mph_io_Close(MorphContext* ctx, void* f) {
+    mph_init_files();
+    if (!f) return -1;
+    mph_int fd = ((InternalFile*)f)->fd;
+    if (fd < 0 || fd >= MAX_FILES || !mph_file_table[fd]) return -1;
+
+    if (fd <= 2) return 0;
+
+    int res = fclose(mph_file_table[fd]);
+    mph_file_table[fd] = NULL;
+    return res;
+}
+
 void mph_native_print_int(MorphContext* ctx, mph_int n) {
     printf("%ld\n", n);
 }

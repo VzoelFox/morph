@@ -611,6 +611,9 @@ func (c *Compiler) mapCheckerTypeToC(t checker.Type, prefix string) string {
 		return "MorphChannel*"
 	case checker.KindStruct:
 		if st, ok := t.(*checker.StructType); ok {
+			if st.Module != "" {
+				return mangle(st.Module) + st.Name + "*"
+			}
 			return "mph_" + st.Name + "*"
 		}
 	case checker.KindArray:

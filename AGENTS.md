@@ -54,6 +54,29 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.32.0 - 2025-12-23
+**Checksum**: SHA256:IO_AND_STRUCT_MODULES
+**Perubahan**:
+- **Feature**: Implemented Standard I/O (`Create`, `Open`, `Read`, `Write`, `Close`) in C Runtime using `FILE*` and file table.
+- **Stdlib**: Updated `stdlib/io.fox` to include `Create` and `Read` (matching C Runtime).
+- **Evaluator**: Updated `pkg/evaluator/builtins_io.go` to implement `Read` (using `os.File`).
+- **Checker**: Added `Module` field to `StructType` to support correct C name mangling for imported structs.
+- **Compiler**: Updated `mapCheckerTypeToC` to use `StructType.Module`.
+- **Test**: Added `examples/io_test.fox`.
+
+**Konteks Sesi**:
+- **Self-Hosting Foundation**: Closing the "File I/O Gap". Compiler now supports reading/writing files, enabling it to read source code. Also fixed critical bug in cross-module struct compilation.
+
+**File Terkait**:
+- `pkg/compiler/runtime/morph.h.tpl` (SHA256:83de3162cea858b1435652400060a22c0d8425ea8cad1a7f162fa3b2bcc7db9f)
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:cfcdb3caeadd8acf6a3922631bddce0ca3d7a317a2900af7cb02bcce3b88df88)
+- `pkg/compiler/compiler.go` (SHA256:56ecd0d5dc7de41f57e47c70ca2f19fd9b14aeb840b5dd9a8023b7b3f15dde6f)
+- `stdlib/io.fox` (SHA256:d773ed500a4913b883011e96899d4fd9369b95b4b306caa658ee2e29a1406bba)
+- `pkg/evaluator/builtins_io.go` (SHA256:a19c6a226dc23f2ee9ff006b22b8938dd4a23711b479eeaf36b8244c697d4219)
+- `pkg/checker/types.go` (SHA256:10ca0c21b41159512adabf0c851c041110a95fc6e815240d66e2c70ab0a1ae27)
+- `pkg/checker/checker.go` (SHA256:394c016db203c4b7d48eef83c02e1c545a74680e945049c9892379f386b8fec4)
+- `examples/io_test.fox` (SHA256:d61754c63db46fc0b9e9941c44bada2c2f2fa739da0d1043dfc64c63995b70bc)
+
 ### Version 1.31.0 - 2025-12-23
 **Checksum**: SHA256:ARRAY_SUPPORT
 **Perubahan**:

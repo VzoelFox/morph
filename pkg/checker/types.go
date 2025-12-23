@@ -382,6 +382,7 @@ func (t *MapType) Call(args []Type) (Type, string, error) {
 
 type StructType struct {
 	Name       string
+	Module     string
 	Fields     map[string]Type
 	FieldOrder []string
 	Methods    map[string]*FunctionType
@@ -397,7 +398,8 @@ func (t *StructType) Equals(other Type) bool {
 		return true
 	}
 	if o, ok := other.(*StructType); ok {
-		return t.Name == o.Name
+		// Strict equality checks Module too
+		return t.Name == o.Name && t.Module == o.Module
 	}
 	return false
 }

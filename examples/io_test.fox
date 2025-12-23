@@ -1,0 +1,15 @@
+ambil "io"
+
+fungsi main() void
+  var f = io.Create("test_file.txt")
+  io.Write(f, "Hello File!")
+  io.Close(f)
+
+  var f2 = io.Open("test_file.txt")
+  var s = io.Read(f2, 100)
+  io.Close(f2)
+
+  native_print(s)
+akhir
+
+main()
