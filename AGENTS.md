@@ -1,7 +1,7 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.2.0
+- **Versi**: 1.33.0
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
 - **Terakhir Diupdate**: 2025-12-23
 - **Status**: Active
@@ -54,6 +54,26 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.33.0 - 2025-12-23
+**Checksum**: SHA256:CLOSURE_SUPPORT
+**Perubahan**:
+- **Runtime**: Implemented `MorphClosure` and `mph_closure_new` in C Runtime to support function closures.
+- **Compiler**: Refactored `Compiler` to use separate buffers (`typeDefs`, `funcDefs`) to solve hoisting and ordering issues for Env structs.
+- **Compiler**: Implemented `analyzeCaptures` (Pre-pass analysis) to correctly identify free variables and exclude parameters (fixing the "y undeclared" bug).
+- **Compiler**: Implemented consistent naming for anonymous functions using `getAnonFuncName` (pointer address).
+- **Compiler**: Implemented `compileFunctionLiteral` to generate Env structs and instantiate closures.
+- **Test**: Added `examples/closure_test.fox` demonstrating `makeAdder` (capture + nested function).
+
+**Konteks Sesi**:
+- **Major Milestone**: Closure Support (Phase 3). Compiler now supports nested functions that capture variables from their environment (Immutable Capture MVP).
+- **Bug Fix**: Resolved critical issues from previous session (Naming Mismatch and Logic Error in Free Variable analysis).
+
+**File Terkait**:
+- `pkg/compiler/runtime/morph.h.tpl` (SHA256:b7b855a1135720fe0fc7f8dc706016339d26203c1c17f6fffe8e3af209836893)
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:add5864b6d9daf37f0b50a754dc9dac5ae7aacedd34a323d0c7b23cb1cb48149)
+- `pkg/compiler/compiler.go` (SHA256:84e50babdf5c217c7e4beb05bd01f7fcdfa8add9add72be5952db8111f1cfe5d)
+- `examples/closure_test.fox` (New)
+
 ### Version 1.32.0 - 2025-12-23
 **Checksum**: SHA256:IO_AND_STRUCT_MODULES
 **Perubahan**:
