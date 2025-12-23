@@ -671,3 +671,38 @@ func (as *AssignmentStatement) String() string {
 	out.WriteString(";")
 	return out.String()
 }
+
+type FunctionType struct {
+	Token       lexer.Token // The 'fungsi' token
+	Parameters  []TypeNode
+	ReturnTypes []TypeNode
+}
+
+func (ft *FunctionType) typeNode()            {}
+func (ft *FunctionType) TokenLiteral() string { return ft.Token.Literal }
+func (ft *FunctionType) String() string {
+	var out bytes.Buffer
+	out.WriteString("fungsi")
+	out.WriteString("(")
+	params := []string{}
+	for _, p := range ft.Parameters {
+		params = append(params, p.String())
+	}
+	out.WriteString(strings.Join(params, ", "))
+	out.WriteString(")")
+	if len(ft.ReturnTypes) > 0 {
+		out.WriteString(" ")
+		if len(ft.ReturnTypes) > 1 {
+			out.WriteString("(")
+		}
+		returns := []string{}
+		for _, rt := range ft.ReturnTypes {
+			returns = append(returns, rt.String())
+		}
+		out.WriteString(strings.Join(returns, ", "))
+		if len(ft.ReturnTypes) > 1 {
+			out.WriteString(")")
+		}
+	}
+	return out.String()
+}
