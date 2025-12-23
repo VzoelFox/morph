@@ -499,6 +499,71 @@ func (p *Parser) parseType() TypeNode {
 		return &MapType{Token: tok, Key: key, Value: val}
 	}
 
+	if p.curTokenIs(lexer.FUNGSI) {
+		tok := p.curToken
+		if !p.expectPeek(lexer.LPAREN) {
+			return nil
+		}
+		p.nextToken() // move to first param type or RPAREN
+
+		params := []TypeNode{}
+		if !p.curTokenIs(lexer.RPAREN) {
+			for {
+				pt := p.parseType()
+				if pt == nil {
+					return nil
+				}
+				params = append(params, pt)
+
+				if p.peekTokenIs(lexer.COMMA) {
+					p.nextToken()
+					p.nextToken()
+				} else {
+					break
+				}
+			}
+		}
+
+		if !p.expectPeek(lexer.RPAREN) {
+			return nil
+		}
+
+		// Optional return types
+		retTypes := []TypeNode{}
+		if p.peekTokenIs(lexer.LPAREN) {
+			p.nextToken() // move to (
+			p.nextToken() // move to first return type
+
+			for {
+				rt := p.parseType()
+				if rt == nil {
+					return nil
+				}
+				retTypes = append(retTypes, rt)
+
+				if p.peekTokenIs(lexer.COMMA) {
+					p.nextToken()
+					p.nextToken()
+				} else {
+					break
+				}
+			}
+
+			if !p.expectPeek(lexer.RPAREN) {
+				return nil
+			}
+		} else if p.peekIsType() {
+			p.nextToken()
+			rt := p.parseType()
+			if rt == nil {
+				return nil
+			}
+			retTypes = append(retTypes, rt)
+		}
+
+		return &FunctionType{Token: tok, Parameters: params, ReturnTypes: retTypes}
+	}
+
 	if p.curTokenIs(lexer.IDENT) {
 		// Check for Qualified Type: Module.Type
 		if p.peekTokenIs(lexer.DOT) {
@@ -1038,7 +1103,7 @@ func (p *Parser) parseIfExpression() Expression {
 
 func (p *Parser) peekIsType() bool {
 	t := p.peekToken.Type
-	return t == lexer.IDENT || t == lexer.LBRACKET || t == lexer.MAP || t == lexer.ASTERISK
+	return t == lexer.IDENT || t == lexer.LBRACKET || t == lexer.MAP || t == lexer.ASTERISK || t == lexer.FUNGSI
 }
 
 func (p *Parser) parseFunctionLiteral() Expression {

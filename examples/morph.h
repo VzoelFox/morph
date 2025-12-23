@@ -97,6 +97,16 @@ typedef struct MorphInterface {
     mph_int type_id;     // For Type Assertion (Unique ID)
 } MorphInterface;
 
+typedef struct MorphClosure {
+    void* function; // Generic function pointer (MorphClosureFunc)
+    void* env;      // Pointer to captured environment struct
+} MorphClosure;
+
+// Standard generic function signature for closures:
+// Returns void*, takes (Context, Env, ...Params)
+typedef void* (*MorphClosureFunc)(MorphContext*, void*, ...);
+
+
 // --- API ---
 
 // Memory
@@ -123,6 +133,9 @@ mph_int mph_map_len(MorphContext* ctx, MorphMap* map);
 
 // Interfaces
 void* mph_assert_type(MorphContext* ctx, MorphInterface iface, mph_int expected_id);
+
+// Closures
+MorphClosure* mph_closure_new(MorphContext* ctx, void* fn, void* env);
 
 // Debug
 void mph_native_print_int(MorphContext* ctx, mph_int n);

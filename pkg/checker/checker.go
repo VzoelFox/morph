@@ -452,6 +452,19 @@ func (c *Checker) resolveTypeInternal(n parser.TypeNode) Type {
 		key := c.resolveType(t.Key)
 		val := c.resolveType(t.Value)
 		return &MapType{Key: key, Value: val}
+	case *parser.FunctionType:
+		paramTypes := []Type{}
+		for _, p := range t.Parameters {
+			paramTypes = append(paramTypes, c.resolveType(p))
+		}
+		returnTypes := []Type{}
+		for _, rt := range t.ReturnTypes {
+			returnTypes = append(returnTypes, c.resolveType(rt))
+		}
+		if len(returnTypes) == 0 {
+			returnTypes = append(returnTypes, VoidType)
+		}
+		return &FunctionType{Parameters: paramTypes, ReturnTypes: returnTypes}
 	}
 	return UnknownType
 }
