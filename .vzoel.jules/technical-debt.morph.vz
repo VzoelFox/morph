@@ -16,6 +16,8 @@
 - Future context generation should reuse `pkg/checker` logic.
 
 ### Resolved / Closed
+- **Concurrency**: Implemented `Channel` type and built-in functions (`saluran_baru`, `kirim`, `terima`, `luncurkan`) in Checker and C Runtime (Pthreads). (2025-12-22)
+- **String Interpolation**: Implemented `InterpolatedString` support in `pkg/checker` (validates all parts are Strings) and `pkg/compiler` (nested `mph_string_concat` generation). (2025-12-22)
 - **Import System**: Enhanced to support Qualified Types (`Module.Type`) and Private Type visibility. (2025-12-20)
 - **Import System**: Implemented `ImportStatement` checking, Module Type, Cycle Detection, and Member Access. (2025-12-20)
 - **Type System**: Defined user-facing `Error` type (`UserErrorType`) and enabled `Null` assignment. (2025-12-20)

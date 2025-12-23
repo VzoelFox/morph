@@ -16,7 +16,7 @@ Membangun bahasa pemrograman prosedural yang aman (Error as Value), mudah dipaha
 
 ## Fase 3: Code Generation & Runtime (Target: C Output)
 - [x] **Tree-Walking Interpreter**: Eksekusi langsung kode Morph (`pkg/evaluator`).
-- [ ] **C Output Generator**: Transpile AST menjadi kode C (menggantikan LLVM).
+- [x] **C Output Generator**: Transpile AST menjadi kode C (menggantikan LLVM).
 - [x] **Compiler Driver**: CLI untuk build file `.fox` menjadi executable.
 - [x] **Basic Runtime**: Print, String operations, Memory alloc (malloc wrapper).
 

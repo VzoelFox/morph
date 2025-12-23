@@ -54,6 +54,66 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.27.0 - 2025-12-22
+**Checksum**: SHA256:CONCURRENCY_MVP
+**Perubahan**:
+- **Concurrency**: Implemented `Channel` type and built-in functions in `pkg/checker`.
+- **Runtime**: Implemented `MorphChannel` (mutex/cond) and threading in C Runtime.
+- **Checker**: Added `checkSpawn` logic for `luncurkan`.
+- **Documentation**: Updated `DESIGN.md` to reflect Concurrency support (MVP).
+- **Example**: Added `examples/concurrency.fox` demonstrating threads and channels.
+- **Technical Debt**: Resolved Concurrency Ghost Feature.
+
+**Konteks Sesi**:
+- **Feature Completion**: Concurrency is now fully functional end-to-end (Morph -> C -> Binary).
+- **Architecture**: Channels are allocated via `malloc` (outside bumped heap) to be thread-safe.
+
+**File Terkait**:
+- `DESIGN.md` (SHA256:434ac3b6f369f646058a904cad5780c39920b7d83cc795b1335090dd4b8d4719)
+- `pkg/checker/types.go` (SHA256:f2f81208c18d0d0b7f06e3b173897ad8aef2ebb1d1bd67489afb7cd7e223effb)
+- `pkg/checker/checker.go` (SHA256:bfc1020ba86c2b2a77ba0a5e04bec4d47be97caffec2db92f0e553dfa0c8e966)
+- `pkg/compiler/runtime/morph.h.tpl` (SHA256:b61f546fedf3852bf3aa65f0d75fd3117714b231fde764e5800f876a6402777e)
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:197674068ba03cde054b428396d9b6edac2b803a17b3510a0e38a4154c20c9cc)
+- `examples/concurrency.fox` (SHA256:24ab978af9c0054fd5100e787392322e66c971273f33e24c07013eb587aa1180)
+- `.vzoel.jules/technical-debt.morph.vz` (SHA256:4769f8fc661a1d1f0b962aa594d7e6962bc18220210491238189893fd424f644)
+
+### Version 1.26.0 - 2025-12-22
+**Checksum**: SHA256:STRING_INTERPOLATION
+**Perubahan**:
+- **Checker**: Implemented `InterpolatedString` support. Validates that all parts are of type `String`.
+- **Compiler**: Implemented `InterpolatedString` compilation. Generates nested `mph_string_concat` calls.
+- **Documentation**: Updated `DESIGN.md` to reflect full support for String Interpolation.
+- **Tests**: Added `pkg/checker/interpolation_test.go` and `pkg/compiler/interpolation_test.go`.
+- **Technical Debt**: Marked "Ghost Feature (String Interpolation)" as Resolved.
+
+**Konteks Sesi**:
+- **Feature Completion**: Closing the gap where `#{}` syntax was supported by Lexer/Parser but ignored by Checker/Compiler.
+- **Robustness**: Enforced strict typing for interpolation (all parts must be String) for now.
+
+**File Terkait**:
+- `DESIGN.md` (SHA256:e80148843b83d648bd550244f8a522a82ff4ece05606e3f7417d3bd06cb89063)
+- `pkg/checker/checker.go` (SHA256:7cdd0c732aee2419ebbc747883d56ecd1ca1954292726d0cffe2d83aac3f7486)
+- `pkg/compiler/compiler.go` (SHA256:d487a82883fd2ee899cd94d4a6abc509f3bca4f9f21ed7817679ed52796d0267)
+- `.vzoel.jules/technical-debt.morph.vz` (SHA256:9fec8454b46b29599efb0c9bec5bc793eb80603294c2b7d248c85de34e51d1c8)
+- `pkg/checker/interpolation_test.go` (SHA256:ae014a7c3fb1ed2fadb9a38be0414c8d851f396524cd71e6cfeba7ca5ad9fb97)
+- `pkg/compiler/interpolation_test.go` (SHA256:236c2c8110ebf58a2736c3353b2d536a527c84bccff5b616c2a3f53e9dbb2cce)
+
+### Version 1.25.0 - 2025-12-22
+**Checksum**: SHA256:REVERSE_ENGINEERING_ALIGNMENT
+**Perubahan**:
+- **Documentation**: Updated `DESIGN.md` to reflect "Ghost Features" (Concurrency `luncurkan`, String Interpolation) and current status (Partial Implementation).
+- **Roadmap**: Marked "C Output Generator" as Complete in `ROADMAP.md`.
+- **Technical Debt**: Recorded "Ghost Features" (Concurrency, Interpolation, Missing Channel Type) in `.vzoel.jules/technical-debt.morph.vz`.
+
+**Konteks Sesi**:
+- **Alignment**: Reverse Engineering phase. Updating documentation to strictly match the codebase state, including acknowledging "Ghost Code" (implemented in some layers but unusable).
+- **Decision**: Adopted `luncurkan` (Compiler Logic) over `jalankan` (Old Design) as the target keyword.
+
+**File Terkait**:
+- `DESIGN.md` (SHA256:cf3119e18c3f6da290626ca0de991ba9aeb018187e0fab45ae480e2460a5df6c)
+- `ROADMAP.md` (SHA256:6f2997ba30f766839dcee6e104306278a8f8ac19855a9e02f836977ee2ffd160)
+- `.vzoel.jules/technical-debt.morph.vz` (SHA256:a03886330e8c87c48ec1db3824b4b88d2d2e6d56129b1cbf99b60f2060f9f50e)
+
 ### Version 1.24.0 - 2025-12-22
 **Checksum**: SHA256:MULTI_FILE_COMPILATION
 **Perubahan**:
