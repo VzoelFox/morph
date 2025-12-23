@@ -86,6 +86,30 @@ func New() *Checker {
 		ReturnTypes: []Type{IntType},
 	}, true, 0, 0)
 
+	// Map Primitives
+	// hapus(map[K]V, K) -> void
+	// Note: Generic functions not fully supported in Types, but logic handled in Compiler/Evaluator.
+	// We define it as a global variable but specific checking logic might be needed if strictly typed.
+	// For now, let's allow it to pass type checking by treating as custom validation or "magic" builtins.
+	// Since the Checker checks definition existence, we define it here.
+	// Ideally, `hapus` should be polymorphic. For now, we rely on `checkCall` special handling or relaxed check.
+	// But `Checker` is strict. Let's make `hapus` available as a known identifier, but its type
+	// will be checked specially in `checkCall` if we want full generic support.
+	//
+	// Workaround: Define `hapus` with `UnknownType` parameters so `checkCall` passes?
+	// No, `checkCall` verifies argument types against parameter types.
+	//
+	// Better approach for MVP: `hapus` is not a variable, it's a keyword-like builtin handled in `checkExpression`.
+	// However, to keep it simple, we define it here so `Identifier` lookup succeeds,
+	// and we might need to handle the "Generic" aspect.
+	// Let's use `KindUnknown` for params to allow anything for now, or just handle `hapus` explicitly in `checkExpression` (CallExpression).
+	// Current `checkExpression` handles `luncurkan` explicitly. We should do the same for `hapus` and `panjang`.
+	// So we DO NOT define them here as variables to avoid rigid type signature.
+	// Instead, we ensure `checkExpression` handles them BEFORE lookup.
+	// Wait, if we don't define them, `checkExpression` -> `Identifier` lookup fails?
+	// Yes.
+	// So we should define them as special types or handle `CallExpression` to check name BEFORE checking function expression.
+
 	return c
 }
 
@@ -913,8 +937,16 @@ func (c *Checker) checkExpressionInternal(e parser.Expression) Type {
 		return VoidType
 
 	case *parser.CallExpression:
-		if ident, ok := exp.Function.(*parser.Identifier); ok && ident.Value == "luncurkan" {
-			return c.checkSpawn(exp)
+		if ident, ok := exp.Function.(*parser.Identifier); ok {
+			if ident.Value == "luncurkan" {
+				return c.checkSpawn(exp)
+			}
+			if ident.Value == "hapus" {
+				return c.checkDelete(exp)
+			}
+			if ident.Value == "panjang" {
+				return c.checkLen(exp)
+			}
 		}
 
 		funcType := c.checkExpression(exp.Function)
@@ -975,6 +1007,42 @@ func (c *Checker) checkSpawn(call *parser.CallExpression) Type {
 	}
 
 	return VoidType
+}
+
+func (c *Checker) checkDelete(call *parser.CallExpression) Type {
+	if len(call.Arguments) != 2 {
+		c.addError(call.Token.Line, call.Token.Column, "hapus expects 2 arguments: map and key")
+		return VoidType
+	}
+
+	mapType := c.checkExpression(call.Arguments[0])
+	keyType := c.checkExpression(call.Arguments[1])
+
+	if mapType.Kind() != KindMap {
+		c.addError(call.Token.Line, call.Token.Column, "Argument 1 must be a map, got %s", mapType.String())
+		return VoidType
+	}
+
+	mt := mapType.(*MapType)
+	if !keyType.AssignableTo(mt.Key) {
+		c.addError(call.Token.Line, call.Token.Column, "Key type mismatch: expected %s, got %s", mt.Key.String(), keyType.String())
+	}
+
+	return VoidType
+}
+
+func (c *Checker) checkLen(call *parser.CallExpression) Type {
+	if len(call.Arguments) != 1 {
+		c.addError(call.Token.Line, call.Token.Column, "panjang expects 1 argument")
+		return IntType
+	}
+
+	argType := c.checkExpression(call.Arguments[0])
+	if argType.Kind() != KindArray && argType.Kind() != KindMap && argType.Kind() != KindString {
+		c.addError(call.Token.Line, call.Token.Column, "Argument must be Array, Map, or String, got %s", argType.String())
+	}
+
+	return IntType
 }
 
 func (c *Checker) enterScope() {

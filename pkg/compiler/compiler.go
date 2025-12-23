@@ -12,6 +12,7 @@ type Compiler struct {
 	output    strings.Builder
 	entryBody strings.Builder
 	checker   *checker.Checker
+	hasMain   bool
 }
 
 func New(c *checker.Checker) *Compiler {
@@ -57,6 +58,9 @@ func (c *Compiler) Compile(node parser.Node) (string, error) {
 
 	c.output.WriteString("\n// Entry Point\n")
 	c.output.WriteString("void morph_entry_point(MorphContext* ctx) {\n")
+	if c.hasMain {
+		c.output.WriteString("\tmph_main(ctx);\n")
+	}
 	c.output.WriteString(c.entryBody.String())
 	c.output.WriteString("}\n")
 
@@ -89,6 +93,10 @@ func (c *Compiler) compileModule(prog *parser.Program, prefix string) error {
 }
 
 func (c *Compiler) compileFunction(fn *parser.FunctionLiteral, prefix string) error {
+	if fn.Name == "main" && prefix == "mph_" {
+		c.hasMain = true
+	}
+
 	retType := "void"
 	if len(fn.ReturnTypes) > 0 {
 		var err error
@@ -203,25 +211,51 @@ func (c *Compiler) compileVar(s *parser.VarStatement, buf *strings.Builder, pref
 }
 
 func (c *Compiler) compileAssignment(s *parser.AssignmentStatement, buf *strings.Builder, prefix string) error {
-	var name string
+	valCode, err := c.compileExpression(s.Values[0], prefix)
+	if err != nil {
+		return err
+	}
+
 	if ident, ok := s.Names[0].(*parser.Identifier); ok {
-		name = ident.Value
+		buf.WriteString(fmt.Sprintf("\t%s = %s;\n", ident.Value, valCode))
+		return nil
 	} else if mem, ok := s.Names[0].(*parser.MemberExpression); ok {
 		objCode, err := c.compileExpression(mem.Object, prefix)
 		if err != nil {
 			return err
 		}
-		name = fmt.Sprintf("%s->%s", objCode, mem.Member.Value)
-	} else {
-		return fmt.Errorf("complex assignment not supported")
+		buf.WriteString(fmt.Sprintf("\t%s->%s = %s;\n", objCode, mem.Member.Value, valCode))
+		return nil
+	} else if idx, ok := s.Names[0].(*parser.IndexExpression); ok {
+		// Map or Array Assignment
+		objCode, err := c.compileExpression(idx.Left, prefix)
+		if err != nil { return err }
+
+		idxCode, err := c.compileExpression(idx.Index, prefix)
+		if err != nil { return err }
+
+		leftType := c.checker.Types[idx.Left]
+		if leftType != nil && leftType.Kind() == checker.KindMap {
+			mt := leftType.(*checker.MapType)
+
+			keyCast := fmt.Sprintf("(void*)%s", idxCode)
+			if mt.Key.Kind() == checker.KindInt {
+				keyCast = fmt.Sprintf("(void*)(int64_t)%s", idxCode)
+			}
+
+			valCast := fmt.Sprintf("(void*)%s", valCode)
+			if c.isPrimitive(mt.Value) {
+				valCast = fmt.Sprintf("(void*)(int64_t)%s", valCode)
+			}
+
+			buf.WriteString(fmt.Sprintf("\tmph_map_set(ctx, %s, %s, %s);\n", objCode, keyCast, valCast))
+			return nil
+		}
+
+		return fmt.Errorf("array/complex index assignment not supported yet")
 	}
 
-	valCode, err := c.compileExpression(s.Values[0], prefix)
-	if err != nil {
-		return err
-	}
-	buf.WriteString(fmt.Sprintf("\t%s = %s;\n", name, valCode))
-	return nil
+	return fmt.Errorf("complex assignment not supported")
 }
 
 func (c *Compiler) compileReturn(s *parser.ReturnStatement, buf *strings.Builder, prefix string) error {
@@ -280,7 +314,9 @@ func (c *Compiler) compileExpression(expr parser.Expression, prefix string) (str
 	case *parser.CallExpression:
 		return c.compileCall(e, prefix)
 	case *parser.StringLiteral:
-		return fmt.Sprintf("mph_string_new(ctx, \"%s\")", e.Value), nil
+		escaped := strings.ReplaceAll(e.Value, "\n", "\\n")
+		escaped = strings.ReplaceAll(escaped, "\"", "\\\"")
+		return fmt.Sprintf("mph_string_new(ctx, \"%s\")", escaped), nil
 	case *parser.InterpolatedString:
 		return c.compileInterpolatedString(e, prefix)
 	case *parser.IntegerLiteral:
@@ -310,11 +346,63 @@ func (c *Compiler) compileExpression(expr parser.Expression, prefix string) (str
 		return c.compileStructLiteral(e, prefix)
 	case *parser.ArrayLiteral:
 		return c.compileArrayLiteral(e, prefix)
+	case *parser.HashLiteral:
+		return c.compileHashLiteral(e, prefix)
 	case *parser.IndexExpression:
 		return c.compileIndex(e, prefix)
 	default:
 		return "", fmt.Errorf("unsupported expression: %T", expr)
 	}
+}
+
+func (c *Compiler) compileHashLiteral(hl *parser.HashLiteral, prefix string) (string, error) {
+	mapType := c.checker.Types[hl]
+	kindEnum := "MPH_KEY_PTR"
+
+	if mapType != nil {
+		if mt, ok := mapType.(*checker.MapType); ok {
+			if mt.Key.Kind() == checker.KindInt {
+				kindEnum = "MPH_KEY_INT"
+			} else if mt.Key.Kind() == checker.KindString {
+				kindEnum = "MPH_KEY_STRING"
+			}
+		}
+	} else if len(hl.Pairs) > 0 {
+		// Try to infer from first key if checker didn't catch it (unlikely)
+		for k := range hl.Pairs {
+			if _, ok := k.(*parser.IntegerLiteral); ok {
+				kindEnum = "MPH_KEY_INT"
+			} else if _, ok := k.(*parser.StringLiteral); ok {
+				kindEnum = "MPH_KEY_STRING"
+			}
+			break
+		}
+	}
+
+	var sb strings.Builder
+	sb.WriteString("({ ")
+	sb.WriteString(fmt.Sprintf("MorphMap* _m = mph_map_new(ctx, %s); ", kindEnum))
+
+	for key, val := range hl.Pairs {
+		keyCode, err := c.compileExpression(key, prefix)
+		if err != nil {
+			return "", err
+		}
+		valCode, err := c.compileExpression(val, prefix)
+		if err != nil {
+			return "", err
+		}
+		// Cast keys to void* for generic API. Integers are cast directly.
+		keyCast := fmt.Sprintf("(void*)%s", keyCode)
+		if kindEnum == "MPH_KEY_INT" {
+			keyCast = fmt.Sprintf("(void*)(int64_t)%s", keyCode)
+		}
+
+		sb.WriteString(fmt.Sprintf("mph_map_set(ctx, _m, %s, (void*)%s); ", keyCast, valCode))
+	}
+
+	sb.WriteString("_m; })")
+	return sb.String(), nil
 }
 
 func (c *Compiler) compileArrayLiteral(al *parser.ArrayLiteral, prefix string) (string, error) {
@@ -363,9 +451,40 @@ func (c *Compiler) compileIndex(ie *parser.IndexExpression, prefix string) (stri
 			elemCType := c.mapCheckerTypeToC(at.Element, prefix)
 			return fmt.Sprintf("*(%s*)mph_array_at(ctx, %s, %s)", elemCType, leftCode, indexCode), nil
 		}
+	} else if leftType.Kind() == checker.KindMap {
+		if mt, ok := leftType.(*checker.MapType); ok {
+			valCType := c.mapCheckerTypeToC(mt.Value, prefix)
+
+			keyCast := fmt.Sprintf("(void*)%s", indexCode)
+			if mt.Key.Kind() == checker.KindInt {
+				keyCast = fmt.Sprintf("(void*)(int64_t)%s", indexCode)
+			}
+
+			// Warning: Returns raw pointer, we cast it back to value type pointer then dereference?
+			// But map stores (void*)value.
+			// If value is pointer (String*, Struct*), we get (void*)ptr.
+			// If value is primitive (int), we stored (void*)int_val.
+
+			if c.isPrimitive(mt.Value) {
+				// Primitive stored as void* directly
+				return fmt.Sprintf("(%s)(int64_t)mph_map_get(ctx, %s, %s)", valCType, leftCode, keyCast), nil
+			} else {
+				// Pointer type stored as void*
+				return fmt.Sprintf("(%s)mph_map_get(ctx, %s, %s)", valCType, leftCode, keyCast), nil
+			}
+		}
 	}
 
 	return "", fmt.Errorf("index operation not supported for type %s", leftType.String())
+}
+
+func (c *Compiler) isPrimitive(t checker.Type) bool {
+	if t == nil { return true }
+	switch t.Kind() {
+	case checker.KindInt, checker.KindFloat, checker.KindBool:
+		return true
+	}
+	return false
 }
 
 func (c *Compiler) compileStructLiteral(sl *parser.StructLiteral, prefix string) (string, error) {
@@ -409,6 +528,10 @@ func (c *Compiler) compileCall(call *parser.CallExpression, prefix string) (stri
 			funcName = "mph_channel_recv"
 		} else if ident.Value == "luncurkan" {
 			return c.compileSpawn(call, prefix)
+		} else if ident.Value == "hapus" {
+			return c.compileDelete(call, prefix)
+		} else if ident.Value == "panjang" {
+			return c.compileLen(call, prefix)
 		}
 	} else if mem, ok := call.Function.(*parser.MemberExpression); ok {
 		objType := c.checker.Types[mem.Object]
@@ -434,6 +557,56 @@ func (c *Compiler) compileCall(call *parser.CallExpression, prefix string) (stri
 	}
 
 	return fmt.Sprintf("%s(%s)", funcName, strings.Join(args, ", ")), nil
+}
+
+func (c *Compiler) compileDelete(call *parser.CallExpression, prefix string) (string, error) {
+	if len(call.Arguments) != 2 {
+		return "", fmt.Errorf("hapus expects 2 arguments")
+	}
+
+	mapCode, err := c.compileExpression(call.Arguments[0], prefix)
+	if err != nil { return "", err }
+
+	keyCode, err := c.compileExpression(call.Arguments[1], prefix)
+	if err != nil { return "", err }
+
+	mapType := c.checker.Types[call.Arguments[0]]
+	if mapType == nil || mapType.Kind() != checker.KindMap {
+		return "", fmt.Errorf("hapus arg 1 must be map")
+	}
+	mt := mapType.(*checker.MapType)
+
+	keyCast := fmt.Sprintf("(void*)%s", keyCode)
+	if mt.Key.Kind() == checker.KindInt {
+		keyCast = fmt.Sprintf("(void*)(int64_t)%s", keyCode)
+	}
+
+	return fmt.Sprintf("mph_map_delete(ctx, %s, %s)", mapCode, keyCast), nil
+}
+
+func (c *Compiler) compileLen(call *parser.CallExpression, prefix string) (string, error) {
+	if len(call.Arguments) != 1 {
+		return "", fmt.Errorf("panjang expects 1 argument")
+	}
+
+	argCode, err := c.compileExpression(call.Arguments[0], prefix)
+	if err != nil { return "", err }
+
+	argType := c.checker.Types[call.Arguments[0]]
+	if argType == nil {
+		return "", fmt.Errorf("unknown type for panjang")
+	}
+
+	if argType.Kind() == checker.KindMap {
+		return fmt.Sprintf("mph_map_len(ctx, %s)", argCode), nil
+	} else if argType.Kind() == checker.KindArray {
+		// Array len access
+		return fmt.Sprintf("((MorphArray*)%s)->length", argCode), nil
+	} else if argType.Kind() == checker.KindString {
+		return fmt.Sprintf("((MorphString*)%s)->length", argCode), nil
+	}
+
+	return "", fmt.Errorf("panjang not supported for type %s", argType.String())
 }
 
 func (c *Compiler) compileSpawn(call *parser.CallExpression, prefix string) (string, error) {
@@ -589,7 +762,7 @@ func (c *Compiler) mapTypeToC(t parser.TypeNode, prefix string) (string, error) 
 	case *parser.ArrayType:
 		return "MorphArray*", nil
 	case *parser.MapType:
-		return "", fmt.Errorf("maps not supported yet")
+		return "MorphMap*", nil
 	}
 	return "", fmt.Errorf("unknown type node: %T", t)
 }
@@ -618,6 +791,8 @@ func (c *Compiler) mapCheckerTypeToC(t checker.Type, prefix string) string {
 		}
 	case checker.KindArray:
 		return "MorphArray*"
+	case checker.KindMap:
+		return "MorphMap*"
 	}
 	return "mph_int" // Fallback
 }
