@@ -36,6 +36,19 @@ void mph_init_memory(MorphContext* ctx) {
     mph_new_drawer(ctx->cabinet);
 }
 
+void mph_destroy_memory(MorphContext* ctx) {
+    if (ctx->cabinet == NULL) return;
+
+    Cabinet* cab = ctx->cabinet;
+    for (int i = 0; i < cab->drawer_count; i++) {
+        Drawer* d = cab->drawers[i];
+        if (d->data) free(d->data);
+        free(d);
+    }
+    free(cab);
+    ctx->cabinet = NULL;
+}
+
 void* mph_alloc(MorphContext* ctx, size_t size) {
     // 8-byte alignment
     size = (size + 7) & ~7;
@@ -102,6 +115,7 @@ int main() {
 
     morph_entry_point(&ctx);
 
+    mph_destroy_memory(&ctx);
     return 0;
 }
 
@@ -125,8 +139,8 @@ void* mph_thread_wrapper(void* ptr) {
 
     args->fn(&args->ctx, args->arg);
 
-    // Memory leak: args and ctx.cabinet are not freed.
-    // For MVP it's acceptable.
+    mph_destroy_memory(&args->ctx);
+    free(args);
     return NULL;
 }
 
@@ -153,6 +167,14 @@ MorphChannel* mph_channel_new(MorphContext* ctx) {
     c->tail = 0;
 
     return c;
+}
+
+void mph_channel_destroy(MorphContext* ctx, MorphChannel* c) {
+    pthread_mutex_destroy(&c->lock);
+    pthread_cond_destroy(&c->cond_send);
+    pthread_cond_destroy(&c->cond_recv);
+    free(c->buffer);
+    free(c);
 }
 
 void mph_channel_send(MorphContext* ctx, MorphChannel* c, mph_int val) {
