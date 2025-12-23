@@ -88,7 +88,7 @@ func (t *BasicType) GetMember(name string) (Type, bool) {
 func (t *BasicType) Index(key Type) (Type, error) {
 	if t.K == KindString {
 		if key.Kind() == KindInt {
-			// String indexing returns the byte value (Int)
+			// string indexing returns the byte value (Int)
 			return IntType, nil
 		}
 		return nil, fmt.Errorf("String index must be Int")
@@ -117,7 +117,7 @@ func (t *BasicType) BinaryOp(op string, right Type) (Type, error) {
 			return IntType, nil
 		}
 		// Future: Float modulo?
-		return nil, fmt.Errorf("Operator %% requires Int operands")
+		return nil, fmt.Errorf("Operator %% requires int operands")
 	case "==", "!=":
 		if t.Equals(right) {
 			return BoolType, nil
@@ -148,7 +148,7 @@ func (t *BasicType) BinaryOp(op string, right Type) (Type, error) {
 		if t.K == KindInt && right.Kind() == KindInt {
 			return IntType, nil
 		}
-		return nil, fmt.Errorf("Bitwise operator %s requires Int operands", op)
+		return nil, fmt.Errorf("Bitwise operator %s requires int operands", op)
 	}
 	return nil, fmt.Errorf("Unknown operator %s", op)
 }
@@ -172,7 +172,7 @@ func (t *BasicType) PrefixOp(op string) (Type, error) {
 		if t.K == KindInt {
 			return IntType, nil
 		}
-		return nil, fmt.Errorf("Operator ~ requires Int")
+		return nil, fmt.Errorf("Operator ~ requires int")
 	}
 	return nil, fmt.Errorf("Unknown prefix operator %s", op)
 }
@@ -200,16 +200,16 @@ func (t *BasicType) Call(args []Type) (Type, string, error) {
 }
 
 var (
-	IntType       = &BasicType{K: KindInt, Name: "Int"}
-	FloatType     = &BasicType{K: KindFloat, Name: "Float"}
-	StringType    = &BasicType{K: KindString, Name: "String"}
-	BoolType      = &BasicType{K: KindBool, Name: "Bool"}
-	VoidType      = &BasicType{K: KindVoid, Name: "Void"}
+	IntType       = &BasicType{K: KindInt, Name: "int"}
+	FloatType     = &BasicType{K: KindFloat, Name: "float"}
+	StringType    = &BasicType{K: KindString, Name: "string"}
+	BoolType      = &BasicType{K: KindBool, Name: "bool"}
+	VoidType      = &BasicType{K: KindVoid, Name: "void"}
 	UnknownType   = &BasicType{K: KindUnknown, Name: "Unknown"}
 	ErrorType     = &BasicType{K: KindError, Name: "Error"}
 	NullType      = &BasicType{K: KindNull, Name: "Null"}
-	UserErrorType = &BasicType{K: KindUserError, Name: "Error"}
-	ChannelType   = &BasicType{K: KindChannel, Name: "Channel"}
+	UserErrorType = &BasicType{K: KindUserError, Name: "error"}
+	ChannelType   = &BasicType{K: KindChannel, Name: "channel"}
 )
 
 type ExportInfo struct {

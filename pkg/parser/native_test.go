@@ -8,8 +8,8 @@ import (
 
 func TestNativeFunction(t *testing.T) {
 	input := `
-	fungsi Open(path String) File native
-	fungsi Write(f File, s String) Int native;
+	fungsi Open(path string) File native
+	fungsi Write(f File, s string) int native;
 	`
 
 	l := lexer.New(input)

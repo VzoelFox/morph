@@ -7,13 +7,13 @@ import (
 func TestMemberExpression(t *testing.T) {
 	input := `
     struktur User
-        id Int
-        name String
+        id int
+        name string
     akhir
 
     var u = User{id: 1, name: "Test"};
-    var x Int = u.id;
-    var y String = u.name;
+    var x int = u.id;
+    var y string = u.name;
     `
 	errors := check(input)
 	if len(errors) != 0 {
@@ -24,7 +24,7 @@ func TestMemberExpression(t *testing.T) {
 func TestMemberExpressionError(t *testing.T) {
 	input := `
     struktur User
-        id Int
+        id int
     akhir
 
     var u = User{id: 1};

@@ -13,10 +13,10 @@ func TestVarStatement(t *testing.T) {
 		expectedType string
 		expectedVal  interface{}
 	}{
-		{"var x Int = 5;", "x", "Int", 5},
-		{"var y String = \"hello\";", "y", "String", "hello"},
-		{"var z Bool = benar;", "z", "Bool", true},
-		{"var arr []Int = [1, 2];", "arr", "[]Int", nil}, // Value check skipped for array literal for brevity
+		{"var x int = 5;", "x", "int", 5},
+		{"var y string = \"hello\";", "y", "string", "hello"},
+		{"var z bool = benar;", "z", "bool", true},
+		{"var arr []int = [1, 2];", "arr", "[]int", nil}, // Value check skipped for array literal for brevity
 	}
 
 	for _, tt := range tests {
@@ -63,10 +63,10 @@ func TestVarStatement(t *testing.T) {
 
 func TestComplexTypes(t *testing.T) {
 	input := `
-var a []Int = [];
-var b map[String]Int = {};
+var a []int = [];
+var b map[string]int = {};
 var c [][]String = [];
-var d map[String]map[Int]Bool = {};
+var d map[string]map[int]bool = {};
 `
 	l := lexer.New(input)
 	p := New(l)
@@ -76,10 +76,10 @@ var d map[String]map[Int]Bool = {};
 	tests := []struct {
 		expectedType string
 	}{
-		{"[]Int"},
-		{"map[String]Int"},
+		{"[]int"},
+		{"map[string]int"},
 		{"[][]String"},
-		{"map[String]map[Int]Bool"},
+		{"map[string]map[int]bool"},
 	}
 
 	for i, tt := range tests {

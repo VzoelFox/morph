@@ -34,7 +34,6 @@ Mendukung penyisipan ekspresi dalam string menggunakan sintaks `#{}`.
 var nama = "Dunia"
 var pesan = "Halo, #{nama}!"
 ```
-**Catatan**: Fitur ini didukung sepenuhnya. Setiap bagian ekspresi `#{...}` harus bertipe `String`.
 
 ### Entry Point
 Program Morph bersifat skrip linear. Tidak ada fungsi `utama` yang dipanggil secara implisit. Kode di level teratas akan dieksekusi. Konvensi umum adalah mendefinisikan fungsi `main` dan memanggilnya di akhir file.
@@ -43,7 +42,7 @@ Program Morph bersifat skrip linear. Tidak ada fungsi `utama` yang dipanggil sec
 ```fox
 ambil "io"
 
-fungsi main() Void
+fungsi main() void
     io.Write(io.Stdout, "Halo, Dunia!\n")
 akhir
 
@@ -55,43 +54,43 @@ main()
 ### 2.1 Filosofi
 - **Statically Typed**: Semua tipe diketahui pada compile time.
 - **Strongly Typed**: Tidak ada implicit coercion yang tidak aman.
-- **Explicit Types**: Tipe primitif menggunakan PascalCase (`Int`, `String`) sesuai implementasi saat ini.
+- **Explicit Types**: Tipe primitif menggunakan lowercase (`int`, `string`) sesuai konvensi umum (sejak v1.28.0).
 
 ### 2.2 Tipe Primitif
 
 | Tipe   | Ukuran  | Deskripsi          | Contoh             |
 |--------|---------|--------------------|-------------------|
-| Int    | 64-bit  | Bilangan bulat     | 42, -10, 0        |
-| Float  | 64-bit  | Bilangan desimal   | 3.14, -0.5, 1.0   |
-| String | Dynamic | Teks (Immutable)   | "hello", "dunia"  |
-| Bool   | 1 byte  | Boolean            | benar, salah      |
-| Void   | 0 byte  | Tipe kosong        | (return type)     |
+| int    | 64-bit  | Bilangan bulat     | 42, -10, 0        |
+| float  | 64-bit  | Bilangan desimal   | 3.14, -0.5, 1.0   |
+| string | Dynamic | Teks (Immutable)   | "hello", "dunia"  |
+| bool   | 1 byte  | Boolean            | benar, salah      |
+| void   | 0 byte  | Tipe kosong        | (return type)     |
 
 **Catatan:**
-- `String` bersifat immutable. Indexing `str[i]` mengembalikan `Int` (byte value).
+- `string` bersifat immutable. Indexing `str[i]` mengembalikan `int` (byte value).
 - `kosong` adalah nilai null untuk tipe referensi (Array, Map, Function, Interface, Pointer, String).
 
 ### 2.3 Tipe Komposit
 
 #### Array (Homogeneous)
 ```fox
-var numbers []Int = [1, 2, 3]
-var names []String = ["Alice", "Bob"]
+var numbers []int = [1, 2, 3]
+var names []string = ["Alice", "Bob"]
 ```
 - Ukuran dinamis.
 - Tipe elemen harus seragam (homogen).
 
 #### Map (Hash Table)
 ```fox
-var ages map[String]Int = {"Alice": 30, "Bob": 25}
+var ages map[string]int = {"Alice": 30, "Bob": 25}
 ```
 - Key dan Value harus bertipe konsisten.
 
 #### Struct (Named Fields)
 ```fox
 struktur User
-    ID   Int
-    Name String
+    ID   int
+    Name string
 akhir
 
 # Inisialisasi Literal
@@ -112,9 +111,9 @@ var u2 = User(2, "Bob")
 
 ### 2.5 Null Safety
 ```fox
-var s String = kosong      # Valid
-var arr []Int = kosong     # Valid
-var i Int = kosong         # Error (Primitif tidak bisa kosong)
+var s string = kosong      # Valid
+var arr []int = kosong     # Valid
+var i int = kosong         # Error (Primitif tidak bisa kosong)
 ```
 
 ## 3. Standard Library
@@ -151,7 +150,7 @@ Fitur berikut adalah bagian dari rencana jangka panjang dan belum tersedia di im
 Rencana menggunakan model **Green Threads** (mirip Goroutine) dengan fungsi bawaan `luncurkan`.
 ```fox
 # Syntax Proposal
-fungsi worker(id Int) Void
+fungsi worker(id int) void
     ...
 akhir
 
@@ -159,10 +158,10 @@ luncurkan(worker, 1)
 ```
 Status: *Implemented (MVP)*.
 - Mendukung `luncurkan`, `saluran_baru`, `kirim`, `terima` (C Runtime via Pthreads).
-- Channel hanya mendukung tipe `Int` (int64) untuk saat ini.
+- Channel hanya mendukung tipe `int` (int64) untuk saat ini.
 
 ### B. Manajemen Memori
 Rencana menggunakan pendekatan semi-manual atau region-based. Saat ini manajemen memori ditangani sepenuhnya oleh Garbage Collector dari host language (Go).
 
-### C. Refactoring Tipe
-Rencana untuk memigrasikan nama tipe primitif menjadi lowercase (`int`, `string`) agar sesuai dengan konvensi umum. Saat ini menggunakan PascalCase (`Int`, `String`) sebagai batasan teknis sementara.
+### C. Refactoring Tipe (Resolved)
+Nama tipe primitif telah dimigrasikan menjadi lowercase (`int`, `string`, `bool`, `void`) pada v1.28.0.

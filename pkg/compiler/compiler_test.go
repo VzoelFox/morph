@@ -11,7 +11,7 @@ import (
 
 func TestCompileHelloWorld(t *testing.T) {
 	input := `
-	fungsi main() Void
+	fungsi main() void
 		native_print("Hello World")
 	akhir
 	main()

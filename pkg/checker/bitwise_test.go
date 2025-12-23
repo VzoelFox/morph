@@ -10,12 +10,12 @@ import (
 
 func TestBitwiseOps(t *testing.T) {
 	input := `
-	var a Int = 10 & 2;
-	var b Int = 10 | 2;
-	var c Int = 10 ^ 2;
-	var d Int = 10 << 2;
-	var e Int = 10 >> 2;
-	var f Int = ~10;
+	var a int = 10 & 2;
+	var b int = 10 | 2;
+	var c int = 10 ^ 2;
+	var d int = 10 << 2;
+	var e int = 10 >> 2;
+	var f int = ~10;
 	`
 	l := lexer.New(input)
 	p := parser.New(l)
@@ -34,12 +34,12 @@ func TestBitwiseOps(t *testing.T) {
 
 func TestBitwiseErrors(t *testing.T) {
 	input := `
-	var a Int = 10 & "2";
-	var b Int = 3.14 | 2;
-	var c Int = 3.14 ^ 3.14;
-	var d Int = "s" << 2;
-	var e Int = 10 >> "s";
-	var f Int = ~3.14;
+	var a int = 10 & "2";
+	var b int = 3.14 | 2;
+	var c int = 3.14 ^ 3.14;
+	var d int = "s" << 2;
+	var e int = 10 >> "s";
+	var f int = ~3.14;
 	`
 	l := lexer.New(input)
 	p := parser.New(l)
@@ -49,12 +49,12 @@ func TestBitwiseErrors(t *testing.T) {
 	c.Check(program)
 
 	expectedErrors := []string{
-		"Bitwise operator & requires Int operands",
-		"Bitwise operator | requires Int operands",
-		"Bitwise operator ^ requires Int operands",
-		"Bitwise operator << requires Int operands",
-		"Bitwise operator >> requires Int operands",
-		"Operator ~ requires Int",
+		"Bitwise operator & requires int operands",
+		"Bitwise operator | requires int operands",
+		"Bitwise operator ^ requires int operands",
+		"Bitwise operator << requires int operands",
+		"Bitwise operator >> requires int operands",
+		"Operator ~ requires int",
 	}
 
 	if len(c.Errors) != len(expectedErrors) {

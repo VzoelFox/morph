@@ -87,13 +87,13 @@ func (c *Compiler) compileFunction(fn *parser.FunctionLiteral, prefix string) er
 	retType := "void"
 	if len(fn.ReturnTypes) > 0 {
 		if sim, ok := fn.ReturnTypes[0].(*parser.SimpleType); ok {
-			if sim.Name == "Int" {
+			if sim.Name == "int" {
 				retType = "mph_int"
 			}
-			if sim.Name == "Float" {
+			if sim.Name == "float" {
 				retType = "mph_float"
 			}
-			if sim.Name == "Bool" {
+			if sim.Name == "bool" {
 				retType = "mph_bool"
 			}
 		}
@@ -104,16 +104,16 @@ func (c *Compiler) compileFunction(fn *parser.FunctionLiteral, prefix string) er
 	for _, p := range fn.Parameters {
 		cType := "mph_int"
 		if sim, ok := p.Type.(*parser.SimpleType); ok {
-			if sim.Name == "String" {
+			if sim.Name == "string" {
 				cType = "MorphString*"
 			}
-			if sim.Name == "Float" {
+			if sim.Name == "float" {
 				cType = "mph_float"
 			}
-			if sim.Name == "Bool" {
+			if sim.Name == "bool" {
 				cType = "mph_bool"
 			}
-			if sim.Name == "Channel" {
+			if sim.Name == "channel" {
 				cType = "MorphChannel*"
 			}
 		}

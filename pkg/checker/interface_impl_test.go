@@ -10,14 +10,14 @@ func TestInterfaceImplementationLogic(t *testing.T) {
 	// 1. Valid Implementation
 	inputValid := `
 antarmuka Speaker
-    fungsi Speak() String
+    fungsi Speak() string
 akhir
 
 struktur Dog
-    name String
+    name string
 akhir
 
-fungsi (d Dog) Speak() String
+fungsi (d Dog) Speak() string
     kembalikan "Woof"
 akhir
 
@@ -28,15 +28,15 @@ var s Speaker = Dog{name: "Buddy"}
 	// 2. Missing Method
 	inputMissing := `
 antarmuka Walker
-    fungsi Walk() Void
-    fungsi Run() Void
+    fungsi Walk() void
+    fungsi Run() void
 akhir
 
 struktur Robot
-    id Int
+    id int
 akhir
 
-fungsi (r Robot) Walk() Void
+fungsi (r Robot) Walk() void
     # Missing Run
 akhir
 
@@ -47,14 +47,14 @@ var w Walker = Robot{id: 1}
 	// 3. Wrong Signature
 	inputSignature := `
 antarmuka Calculator
-    fungsi Add(a Int, b Int) Int
+    fungsi Add(a int, b int) int
 akhir
 
 struktur Casio
-    model String
+    model string
 akhir
 
-fungsi (c Casio) Add(a Int, b Int) Float
+fungsi (c Casio) Add(a int, b int) float
     kembalikan 0.0 # Wrong return type
 akhir
 
@@ -72,6 +72,6 @@ func runTest(t *testing.T, input, name string, expectedErrors int) {
 	c.Check(program)
 
 	if len(c.Errors) != expectedErrors {
-		t.Errorf("Test '%s': expected %d errors, got %d. Errors: %v", name, expectedErrors, len(c.Errors), c.Errors)
+		t.Errorf("Test '%s': expected %d errors, got %d. errors: %v", name, expectedErrors, len(c.Errors), c.Errors)
 	}
 }

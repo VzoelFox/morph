@@ -27,8 +27,8 @@ func check(input string) []TypeError {
 
 func TestVarDeclaration(t *testing.T) {
 	input := `
-	var x Int = 5;
-	var y String = "hello";
+	var x int = 5;
+	var y string = "hello";
 	`
 	errors := check(input)
 	if len(errors) != 0 {
@@ -38,7 +38,7 @@ func TestVarDeclaration(t *testing.T) {
 
 func TestVarTypeMismatch(t *testing.T) {
 	input := `
-	var x Int = "hello";
+	var x int = "hello";
 	`
 	errors := check(input)
 	if len(errors) == 0 {
@@ -52,8 +52,8 @@ func TestVarTypeMismatch(t *testing.T) {
 
 func TestBinaryOp(t *testing.T) {
 	input := `
-	var x Int = 5 + 10;
-	var y Bool = 5 == 5;
+	var x int = 5 + 10;
+	var y bool = 5 == 5;
 	`
 	errors := check(input)
 	if len(errors) != 0 {
@@ -63,7 +63,7 @@ func TestBinaryOp(t *testing.T) {
 
 func TestBinaryOpMismatch(t *testing.T) {
 	input := `
-	var x Int = 5 + "s";
+	var x int = 5 + "s";
 	`
 	errors := check(input)
 	if len(errors) == 0 {
@@ -73,11 +73,11 @@ func TestBinaryOpMismatch(t *testing.T) {
 
 func TestFunctionCall(t *testing.T) {
 	input := `
-	fungsi add(a Int, b Int) Int
+	fungsi add(a int, b int) int
 		kembalikan a + b;
 	akhir
 
-	var res Int = add(1, 2);
+	var res int = add(1, 2);
 	`
 	errors := check(input)
 	if len(errors) != 0 {
@@ -87,7 +87,7 @@ func TestFunctionCall(t *testing.T) {
 
 func TestFunctionCallMismatch(t *testing.T) {
 	input := `
-	fungsi add(a Int, b Int) Int
+	fungsi add(a int, b int) int
 		kembalikan a + b;
 	akhir
 
@@ -106,19 +106,19 @@ func TestFunctionCallMismatch(t *testing.T) {
 func TestStructType(t *testing.T) {
 	input := `
 	struktur User
-		id Int
+		id int
 	akhir
 	var x User = 5;
 	`
 	errors := check(input)
 	if len(errors) == 0 {
-		t.Error("Expected mismatch User vs Int")
+		t.Error("Expected mismatch User vs int")
 	}
 }
 
 func TestReturnTypeMismatch(t *testing.T) {
 	input := `
-	fungsi add(a Int, b Int) Int
+	fungsi add(a int, b int) int
 		kembalikan "hello";
 	akhir
 	`
@@ -135,8 +135,8 @@ func TestReturnTypeMismatch(t *testing.T) {
 func TestStructLiteral(t *testing.T) {
 	input := `
 	struktur User
-		id Int
-		name String
+		id int
+		name string
 	akhir
 
 	var u User = User{id: 1, name: "Budi"};
@@ -150,7 +150,7 @@ func TestStructLiteral(t *testing.T) {
 func TestStructLiteralError(t *testing.T) {
 	input := `
 	struktur User
-		id Int
+		id int
 	akhir
 
 	var u User = User{id: "s"};
@@ -164,11 +164,11 @@ func TestStructLiteralError(t *testing.T) {
 func TestFieldAccess(t *testing.T) {
 	input := `
 	struktur User
-		id Int
+		id int
 	akhir
 
 	var u User = User{id: 1};
-	var i Int = u.id;
+	var i int = u.id;
 	`
 	errors := check(input)
 	if len(errors) != 0 {
@@ -179,7 +179,7 @@ func TestFieldAccess(t *testing.T) {
 func TestNullAssignment(t *testing.T) {
 	input := `
 	struktur User
-		id Int
+		id int
 	akhir
 
 	var u User = kosong;
@@ -192,7 +192,7 @@ func TestNullAssignment(t *testing.T) {
 
 func TestControlFlow(t *testing.T) {
 	input := `
-	var x Int = 10;
+	var x int = 10;
 	jika x == 10
 		x = 20;
 	akhir
@@ -205,7 +205,7 @@ func TestControlFlow(t *testing.T) {
 
 func TestControlFlowError(t *testing.T) {
 	input := `
-	var x Int = 10;
+	var x int = 10;
 	jika x
 		x = 20;
 	akhir
@@ -218,8 +218,8 @@ func TestControlFlowError(t *testing.T) {
 
 func TestNestedReturn(t *testing.T) {
 	input := `
-	fungsi outer() Int
-		fungsi inner() String
+	fungsi outer() int
+		fungsi inner() string
 			kembalikan "hello";
 		akhir
 		kembalikan 1;
@@ -233,8 +233,8 @@ func TestNestedReturn(t *testing.T) {
 
 func TestNestedReturnError(t *testing.T) {
 	input := `
-	fungsi outer() Int
-		fungsi inner() String
+	fungsi outer() int
+		fungsi inner() string
 			kembalikan 1;
 		akhir
 		kembalikan 1;

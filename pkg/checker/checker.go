@@ -37,49 +37,49 @@ func New() *Checker {
 	}
 
 	// Register primitive types
-	c.scope.DefineType("Int", IntType)
-	c.scope.DefineType("Float", FloatType)
-	c.scope.DefineType("String", StringType)
-	c.scope.DefineType("Bool", BoolType)
-	c.scope.DefineType("Error", UserErrorType) // User-facing 'Error' type
-	c.scope.DefineType("Channel", ChannelType)
+	c.scope.DefineType("int", IntType)
+	c.scope.DefineType("float", FloatType)
+	c.scope.DefineType("string", StringType)
+	c.scope.DefineType("bool", BoolType)
+	c.scope.DefineType("error", UserErrorType) // User-facing 'Error' type
+	c.scope.DefineType("channel", ChannelType)
 
 	// Register built-in functions (Stdlib Prototype)
-	// parse_int(String) -> (Int, String)
+	// parse_int(string) -> (int, string)
 	parseIntType := &FunctionType{
 		Parameters:  []Type{StringType},
 		ReturnTypes: []Type{IntType, StringType},
 	}
 	c.scope.DefineVariable("parse_int", parseIntType, true, 0, 0)
 
-	// native_print(String) -> Void
+	// native_print(string) -> void
 	nativePrintType := &FunctionType{
 		Parameters:  []Type{StringType},
 		ReturnTypes: []Type{VoidType},
 	}
 	c.scope.DefineVariable("native_print", nativePrintType, true, 0, 0)
 
-	// native_print_int(Int) -> Void
+	// native_print_int(int) -> void
 	nativePrintIntType := &FunctionType{
 		Parameters:  []Type{IntType},
 		ReturnTypes: []Type{VoidType},
 	}
 	c.scope.DefineVariable("native_print_int", nativePrintIntType, true, 0, 0)
 
-	// Concurrency Primitives (Int only for MVP)
-	// saluran_baru() -> Channel
+	// Concurrency Primitives (int only for MVP)
+	// saluran_baru() -> channel
 	c.scope.DefineVariable("saluran_baru", &FunctionType{
 		Parameters:  []Type{},
 		ReturnTypes: []Type{ChannelType},
 	}, true, 0, 0)
 
-	// kirim(Channel, Int) -> Void
+	// kirim(channel, int) -> void
 	c.scope.DefineVariable("kirim", &FunctionType{
 		Parameters:  []Type{ChannelType, IntType},
 		ReturnTypes: []Type{VoidType},
 	}, true, 0, 0)
 
-	// terima(Channel) -> Int
+	// terima(channel) -> int
 	c.scope.DefineVariable("terima", &FunctionType{
 		Parameters:  []Type{ChannelType},
 		ReturnTypes: []Type{IntType},
@@ -369,15 +369,15 @@ func (c *Checker) resolveType(n parser.TypeNode) Type {
 	switch t := n.(type) {
 	case *parser.SimpleType:
 		switch t.Name {
-		case "Int":
+		case "int":
 			return IntType
-		case "Float":
+		case "float":
 			return FloatType
-		case "String":
+		case "string":
 			return StringType
-		case "Bool":
+		case "bool":
 			return BoolType
-		case "Void":
+		case "void":
 			return VoidType
 		default:
 			if typ, ok := c.scope.LookupType(t.Name); ok {

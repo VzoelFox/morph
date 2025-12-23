@@ -41,7 +41,7 @@ func TestInterfaceType(t *testing.T) {
 		}
 	})
 
-	t.Run("String", func(t *testing.T) {
+	t.Run("string", func(t *testing.T) {
 		if iface1.String() != "Writer" {
 			t.Errorf("expected string 'Writer', got '%s'", iface1.String())
 		}

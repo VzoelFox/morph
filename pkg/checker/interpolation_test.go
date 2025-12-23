@@ -7,8 +7,8 @@ import (
 
 func TestInterpolation(t *testing.T) {
 	input := `
-	var name String = "Budi"
-	var msg String = "Halo #{name}"
+	var name string = "Budi"
+	var msg string = "Halo #{name}"
 	`
 	errors := check(input)
 	if len(errors) != 0 {
@@ -18,8 +18,8 @@ func TestInterpolation(t *testing.T) {
 
 func TestInterpolationMismatch(t *testing.T) {
 	input := `
-	var name String = "Budi"
-	var i Int = "Halo #{name}"
+	var name string = "Budi"
+	var i int = "Halo #{name}"
 	`
 	errors := check(input)
 	if len(errors) == 0 {
@@ -33,8 +33,8 @@ func TestInterpolationMismatch(t *testing.T) {
 
 func TestInterpolationNonString(t *testing.T) {
 	input := `
-	var i Int = 10
-	var msg String = "Number #{i}"
+	var i int = 10
+	var msg string = "Number #{i}"
 	`
 	// Strict check: Parts must be String
 	errors := check(input)

@@ -7,10 +7,10 @@ import (
 func TestMethodDefinitionAndCall(t *testing.T) {
 	input := `
 	struktur User
-		id Int
+		id int
 	akhir
 
-	fungsi (u User) getId() Int
+	fungsi (u User) getId() int
 		kembalikan u.id;
 	akhir
 
@@ -26,10 +26,10 @@ func TestMethodDefinitionAndCall(t *testing.T) {
 func TestMethodReceiverAccess(t *testing.T) {
 	input := `
 	struktur User
-		id Int
+		id int
 	akhir
 
-	fungsi (u User) weird() Int
+	fungsi (u User) weird() int
 		var x = u.id;
 		kembalikan x + 1;
 	akhir
@@ -43,7 +43,7 @@ func TestMethodReceiverAccess(t *testing.T) {
 func TestMethodNotFound(t *testing.T) {
 	input := `
 	struktur User
-		id Int
+		id int
 	akhir
 
 	var u = User{id: 5};
@@ -63,10 +63,10 @@ func TestMethodNotFound(t *testing.T) {
 func TestMethodGlobalScopeIsolation(t *testing.T) {
 	input := `
 	struktur User
-		id Int
+		id int
 	akhir
 
-	fungsi (u User) getId() Int
+	fungsi (u User) getId() int
 		kembalikan u.id;
 	akhir
 
@@ -81,7 +81,7 @@ func TestMethodGlobalScopeIsolation(t *testing.T) {
 
 func TestMethodOnNonStruct(t *testing.T) {
 	input := `
-	fungsi (i Int) test() {}
+	fungsi (i int) test() {}
 	`
 	errors := check(input)
 	if len(errors) == 0 {

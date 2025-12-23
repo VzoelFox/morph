@@ -11,8 +11,8 @@ import (
 
 func TestCompileInterpolation(t *testing.T) {
 	input := `
-	var name String = "Budi"
-	var msg String = "Halo #{name}"
+	var name string = "Budi"
+	var msg string = "Halo #{name}"
 	`
 
 	l := lexer.New(input)
@@ -32,10 +32,6 @@ func TestCompileInterpolation(t *testing.T) {
 	comp := New(c)
 	code, err := comp.Compile(prog)
 	if err != nil {
-		if strings.Contains(err.Error(), "unsupported expression") {
-			// This is expected failure for now, uncomment to fail test
-			t.Fatalf("Compiler error (expected): %v", err)
-		}
 		t.Fatalf("Compiler error: %v", err)
 	}
 

@@ -9,17 +9,17 @@ func TestImportExportedTypes(t *testing.T) {
 		modules: map[string]string{
 			"model": `
 				struktur User
-					name String
-					age Int
+					name string
+					age int
 				akhir
 
-				fungsi NewUser(n String) User
+				fungsi NewUser(n string) User
 					kembalikan User{name: n, age: 0}
 				akhir
 
 				# Private struct
 				struktur internalData
-					val Int
+					val int
 				akhir
 			`,
 		},
@@ -32,7 +32,7 @@ func TestImportExportedTypes(t *testing.T) {
 	var u model.User
 	u = model.NewUser("Alice")
 
-	var age Int = u.age
+	var age int = u.age
 	`
 	runImportTest(t, mock, input1, 0)
 

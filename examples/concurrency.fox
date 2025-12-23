@@ -1,9 +1,9 @@
-fungsi worker(arg Int) Void
+fungsi worker(arg int) void
     native_print("Worker started with:")
     native_print_int(arg)
 akhir
 
-fungsi producer(c Channel) Void
+fungsi producer(c channel) void
     var i = 0
     selama i < 5
         kirim(c, i)
@@ -12,7 +12,7 @@ fungsi producer(c Channel) Void
     kirim(c, -1) # Sentinel
 akhir
 
-fungsi main() Void
+fungsi main() void
     native_print("Start Main")
 
     # Test 1: Simple Thread
