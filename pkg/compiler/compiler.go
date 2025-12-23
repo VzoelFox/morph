@@ -287,6 +287,8 @@ func (c *Compiler) compileExpression(expr parser.Expression) (string, error) {
 		return c.compileCall(e)
 	case *parser.StringLiteral:
 		return fmt.Sprintf("mph_string_new(ctx, \"%s\")", e.Value), nil
+	case *parser.InterpolatedString:
+		return c.compileInterpolatedString(e)
 	case *parser.IntegerLiteral:
 		return fmt.Sprintf("%d", e.Value), nil
 	case *parser.Identifier:
@@ -369,6 +371,27 @@ func (c *Compiler) compileSpawn(call *parser.CallExpression) (string, error) {
 		return "", fmt.Errorf("luncurkan arg 1 must be named function")
 	}
 	return "", fmt.Errorf("luncurkan expects 1 or 2 arguments")
+}
+
+func (c *Compiler) compileInterpolatedString(is *parser.InterpolatedString) (string, error) {
+	if len(is.Parts) == 0 {
+		return "mph_string_new(ctx, \"\")", nil
+	}
+
+	current, err := c.compileExpression(is.Parts[0])
+	if err != nil {
+		return "", err
+	}
+
+	for _, part := range is.Parts[1:] {
+		next, err := c.compileExpression(part)
+		if err != nil {
+			return "", err
+		}
+		current = fmt.Sprintf("mph_string_concat(ctx, %s, %s)", current, next)
+	}
+
+	return current, nil
 }
 
 func (c *Compiler) compileInfix(ie *parser.InfixExpression) (string, error) {

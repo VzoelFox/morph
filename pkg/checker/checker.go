@@ -626,6 +626,14 @@ func (c *Checker) checkExpressionInternal(e parser.Expression) Type {
 		return FloatType
 	case *parser.StringLiteral:
 		return StringType
+	case *parser.InterpolatedString:
+		for _, part := range exp.Parts {
+			t := c.checkExpression(part)
+			if t.Kind() != KindString && t.Kind() != KindUnknown {
+				c.addError(exp.Token.Line, exp.Token.Column, "Interpolation requires String type, got %s", t.String())
+			}
+		}
+		return StringType
 	case *parser.BooleanLiteral:
 		return BoolType
 	case *parser.NullLiteral:
