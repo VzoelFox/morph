@@ -20,6 +20,9 @@ type Compiler struct {
 	StructIDs map[string]int
 
 	captures map[*parser.FunctionLiteral][]string
+
+    // Track active roots in current scope for popping
+    scopeRoots []int
 }
 
 func New(c *checker.Checker) *Compiler {
@@ -27,6 +30,7 @@ func New(c *checker.Checker) *Compiler {
 		checker:   c,
 		StructIDs: make(map[string]int),
 		captures:  make(map[*parser.FunctionLiteral][]string),
+        scopeRoots: []int{},
 	}
 }
 
@@ -53,6 +57,7 @@ func (c *Compiler) Compile(node parser.Node) (string, error) {
 	c.funcDefs.Reset()
 	c.entryBody.Reset()
 	c.captures = make(map[*parser.FunctionLiteral][]string)
+    c.scopeRoots = []int{}
 
 	c.output.WriteString("#include \"morph.h\"\n\n")
 
@@ -69,6 +74,11 @@ func (c *Compiler) Compile(node parser.Node) (string, error) {
 	if err := c.compileStructTypes(node); err != nil {
 		return "", err
 	}
+
+    // 1.1 Generate RTTI for Structs
+    if err := c.compileStructRTTI(node); err != nil {
+        return "", err
+    }
 
 	c.output.WriteString("// Type IDs\n")
 	for name, id := range c.StructIDs {
@@ -348,11 +358,15 @@ func (c *Compiler) compileFunction(fn *parser.FunctionLiteral, prefix string) er
 		c.funcDefs.WriteString(fmt.Sprintf("\t%s* _env = (%s*)_env_void;\n", envTypeName, envTypeName))
 	}
 
+    // Reset scope roots for new function
+    c.scopeRoots = []int{}
+
 	var body strings.Builder
 	if err := c.compileBlock(fn.Body, &body, prefix, fn); err != nil {
 		return err
 	}
 	c.funcDefs.WriteString(body.String())
+    // Implicit pop handled in compileBlock via }
 	c.funcDefs.WriteString("}\n\n")
 	return nil
 }
@@ -387,11 +401,18 @@ func (c *Compiler) findTypeForName(body parser.Statement, name string) checker.T
 }
 
 func (c *Compiler) compileBlock(block *parser.BlockStatement, buf *strings.Builder, prefix string, currentFn *parser.FunctionLiteral) error {
+    c.scopeRoots = append(c.scopeRoots, 0) // Push new scope
 	for _, stmt := range block.Statements {
 		if err := c.compileStatement(stmt, buf, prefix, currentFn); err != nil {
 			return err
 		}
 	}
+    // Pop roots for this scope
+    count := c.scopeRoots[len(c.scopeRoots)-1]
+    if count > 0 {
+        buf.WriteString(fmt.Sprintf("\tmph_gc_pop_roots(ctx, %d);\n", count))
+    }
+    c.scopeRoots = c.scopeRoots[:len(c.scopeRoots)-1] // Pop scope
 	return nil
 }
 
@@ -447,6 +468,16 @@ func (c *Compiler) compileVar(s *parser.VarStatement, buf *strings.Builder, pref
 	}
 
 	buf.WriteString(fmt.Sprintf("\t%s %s = %s;\n", cType, name, valCode))
+
+    // Inject Push Root if pointer type
+    if !c.isPrimitive(destType) {
+        buf.WriteString(fmt.Sprintf("\tmph_gc_push_root(ctx, &%s);\n", name))
+        // Increment count for current scope
+        if len(c.scopeRoots) > 0 {
+            c.scopeRoots[len(c.scopeRoots)-1]++
+        }
+    }
+
 	return nil
 }
 
@@ -514,6 +545,15 @@ func (c *Compiler) isCaptured(name string, fn *parser.FunctionLiteral) bool {
 }
 
 func (c *Compiler) compileReturn(s *parser.ReturnStatement, buf *strings.Builder, prefix string, fn *parser.FunctionLiteral) error {
+	// Pop all active roots in current function stack before returning
+    total := 0
+    for _, count := range c.scopeRoots {
+        total += count
+    }
+    if total > 0 {
+        buf.WriteString(fmt.Sprintf("\tmph_gc_pop_roots(ctx, %d);\n", total))
+    }
+
 	if len(s.ReturnValues) == 0 {
 		buf.WriteString("\treturn;\n")
 		return nil
@@ -528,11 +568,12 @@ func (c *Compiler) compileIf(ie *parser.IfExpression, buf *strings.Builder, pref
 	cond, err := c.compileExpression(ie.Condition, prefix, fn)
 	if err != nil { return err }
 	buf.WriteString(fmt.Sprintf("\tif (%s) {\n", cond))
-	c.compileStatement(ie.Consequence, buf, prefix, fn)
+    // Block inside
+	c.compileBlock(ie.Consequence, buf, prefix, fn) // Calls compileBlock which handles scope push/pop
 	buf.WriteString("\t}")
 	if ie.Alternative != nil {
 		buf.WriteString(" else {\n")
-		c.compileStatement(ie.Alternative, buf, prefix, fn)
+		c.compileBlock(ie.Alternative, buf, prefix, fn)
 		buf.WriteString("\t}\n")
 	} else { buf.WriteString("\n") }
 	return nil
@@ -542,7 +583,7 @@ func (c *Compiler) compileWhile(we *parser.WhileExpression, buf *strings.Builder
 	cond, err := c.compileExpression(we.Condition, prefix, fn)
 	if err != nil { return err }
 	buf.WriteString(fmt.Sprintf("\twhile (%s) {\n", cond))
-	c.compileStatement(we.Body, buf, prefix, fn)
+	c.compileBlock(we.Body, buf, prefix, fn)
 	buf.WriteString("\t}\n")
 	return nil
 }
@@ -605,7 +646,7 @@ func (c *Compiler) compileFunctionLiteral(fn *parser.FunctionLiteral, prefix str
 	var sb strings.Builder
 	sb.WriteString("({ ")
 	if len(captures) > 0 {
-		sb.WriteString(fmt.Sprintf("%s* _e = (%s*)mph_alloc(ctx, sizeof(%s)); ", envTypeName, envTypeName, envTypeName))
+		sb.WriteString(fmt.Sprintf("%s* _e = (%s*)mph_alloc(ctx, sizeof(%s), NULL); ", envTypeName, envTypeName, envTypeName))
 		for _, name := range captures {
 			val := name
 			if c.isCaptured(name, parentFn) {
@@ -613,9 +654,9 @@ func (c *Compiler) compileFunctionLiteral(fn *parser.FunctionLiteral, prefix str
 			}
 			sb.WriteString(fmt.Sprintf("_e->%s = %s; ", name, val))
 		}
-		sb.WriteString(fmt.Sprintf("mph_closure_new(ctx, (void*)%s%s, (void*)_e); ", prefix, funcName))
+		sb.WriteString(fmt.Sprintf("mph_closure_new(ctx, (void*)%s%s, (void*)_e, sizeof(%s)); ", prefix, funcName, envTypeName))
 	} else {
-		sb.WriteString(fmt.Sprintf("mph_closure_new(ctx, (void*)%s%s, NULL); ", prefix, funcName))
+		sb.WriteString(fmt.Sprintf("mph_closure_new(ctx, (void*)%s%s, NULL, 0); ", prefix, funcName))
 	}
 	sb.WriteString(" })")
 	return sb.String(), nil
@@ -798,7 +839,8 @@ func (c *Compiler) compileStructLiteral(sl *parser.StructLiteral, prefix string,
 
 	var sb strings.Builder
 	sb.WriteString("({ ")
-	sb.WriteString(fmt.Sprintf("%s* _t = (%s*)mph_alloc(ctx, sizeof(%s)); ", cTypeName, cTypeName, cTypeName))
+    // Pass pointer to global RTTI variable: &mph_ti_TypeName
+	sb.WriteString(fmt.Sprintf("%s* _t = (%s*)mph_alloc(ctx, sizeof(%s), &mph_ti_%s); ", cTypeName, cTypeName, cTypeName, cTypeName))
 	for fieldName, valExpr := range sl.Fields {
 		valCode, err := c.compileExpression(valExpr, prefix, fn)
 		if err != nil { return "", err }
@@ -811,14 +853,23 @@ func (c *Compiler) compileStructLiteral(sl *parser.StructLiteral, prefix string,
 func (c *Compiler) compileArrayLiteral(al *parser.ArrayLiteral, prefix string, fn *parser.FunctionLiteral) (string, error) {
 	arrType := c.checker.Types[al]
 	elemCType := "mph_int"
+    // Determine Element RTTI
+    rttiStr := "NULL"
+
 	if arrType != nil {
 		if at, ok := arrType.(*checker.ArrayType); ok {
 			elemCType = c.mapCheckerTypeToC(at.Element, prefix)
+            // If element is a struct, pass its RTTI
+            if st, ok := at.Element.(*checker.StructType); ok {
+                rttiStr = fmt.Sprintf("&mph_ti_%s", prefix + st.Name) // Assume local for now
+            } else if at.Element.Kind() == checker.KindString {
+                rttiStr = "&mph_ti_string_real"
+            }
 		}
 	}
 	var sb strings.Builder
 	sb.WriteString("({ ")
-	sb.WriteString(fmt.Sprintf("MorphArray* _a = mph_array_new(ctx, %d, sizeof(%s)); ", len(al.Elements), elemCType))
+	sb.WriteString(fmt.Sprintf("MorphArray* _a = mph_array_new(ctx, %d, sizeof(%s), %s); ", len(al.Elements), elemCType, rttiStr))
 	for i, el := range al.Elements {
 		valCode, err := c.compileExpression(el, prefix, fn)
 		if err != nil { return "", err }
@@ -998,7 +1049,7 @@ func (c *Compiler) compileInterfaceCall(call *parser.CallExpression, mem *parser
 func (c *Compiler) isPrimitive(t checker.Type) bool {
 	if t == nil { return true }
 	switch t.Kind() {
-	case checker.KindInt, checker.KindFloat, checker.KindBool: return true
+	case checker.KindInt, checker.KindFloat, checker.KindBool, checker.KindVoid: return true
 	}
 	return false
 }
@@ -1100,4 +1151,63 @@ func (c *Compiler) mapTypeToC(t parser.TypeNode, prefix string) (string, error) 
 		return "MorphClosure*", nil
 	}
 	return "", fmt.Errorf("unknown type node: %T", t)
+}
+
+// New method to generate RTTI
+func (c *Compiler) compileStructRTTI(node parser.Node) error {
+    c.output.WriteString("// RTTI Definitions\n")
+
+    var generateRTTI func(prog *parser.Program, prefix string) error
+    generateRTTI = func(prog *parser.Program, prefix string) error {
+        for _, stmt := range prog.Statements {
+            if s, ok := stmt.(*parser.StructStatement); ok {
+                name := prefix + s.Name.Value
+                // Collect pointer offsets
+                var offsets []string
+                for _, f := range s.Fields {
+                    if c.isPointerType(f.Type) {
+                        offsets = append(offsets, fmt.Sprintf("offsetof(%s, %s)", name, f.Name))
+                    }
+                }
+
+                numPtrs := len(offsets)
+                offsetsStr := "NULL"
+                if numPtrs > 0 {
+                    offsetsStr = fmt.Sprintf("(size_t[]){%s}", strings.Join(offsets, ", "))
+                }
+
+                c.typeDefs.WriteString(fmt.Sprintf("MorphTypeInfo mph_ti_%s = { \"%s\", sizeof(%s), %d, %s };\n", name, s.Name.Value, name, numPtrs, offsetsStr))
+            }
+        }
+        return nil
+    }
+
+    // Modules
+	for path, mod := range c.checker.ModuleCache {
+		if mod.Program == nil { continue }
+		if err := generateRTTI(mod.Program, mangle(path)); err != nil { return err }
+	}
+
+    // Main
+	if prog, ok := node.(*parser.Program); ok {
+		if err := generateRTTI(prog, "mph_"); err != nil { return err }
+	}
+    c.output.WriteString("\n")
+    return nil
+}
+
+func (c *Compiler) isPointerType(t parser.TypeNode) bool {
+    // Strings, Arrays, Maps, Closures, Structs are pointers
+    switch ty := t.(type) {
+    case *parser.SimpleType:
+        switch ty.Name {
+        case "int", "float", "bool", "void": return false
+        default: return true // Structs are pointers
+        }
+    case *parser.QualifiedType: return true
+    case *parser.ArrayType: return true
+    case *parser.MapType: return true
+    case *parser.FunctionType: return true
+    }
+    return false
 }

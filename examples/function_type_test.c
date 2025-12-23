@@ -17,11 +17,11 @@ typedef struct Env_mph__main {
 // Function Definitions
 void mph_main(MorphContext* ctx, void* _env_void) {
 	Env_mph__main* _env = (Env_mph__main*)_env_void;
-mph_int mph_anon_0xc00007a140(MorphContext* ctx, void* _env_void, mph_int a, mph_int b) {
+mph_int mph_anon_0xc000110140(MorphContext* ctx, void* _env_void, mph_int a, mph_int b) {
 	return (a + b);
 }
 
-	MorphClosure* fn = ({ mph_closure_new(ctx, (void*)mph_anon_0xc00007a140, NULL);  });
+	MorphClosure* fn = ({ mph_closure_new(ctx, (void*)mph_anon_0xc000110140, NULL);  });
 	mph_int x = ((mph_int (*)(MorphContext*, void*, mph_int, mph_int))fn->function)(ctx, fn->env, 1, 2);
 	mph_native_print_int(ctx, x);
 }
