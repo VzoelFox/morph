@@ -1,2 +1,2 @@
-fungsi Atoi(s String) (Int, Error) native
-fungsi Itoa(i Int) String native
+fungsi Atoi(s string) (int, Error) native
+fungsi Itoa(i int) string native

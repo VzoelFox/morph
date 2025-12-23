@@ -19,7 +19,7 @@ func checkWarn(input string) ([]TypeError, []TypeWarning) {
 }
 
 func TestFloatLiteral(t *testing.T) {
-	input := `var f Float = 5.5;`
+	input := `var f float = 5.5;`
 	errors, _ := checkWarn(input)
 	if len(errors) != 0 {
 		t.Errorf("Expected no errors, got %v", errors)
@@ -27,11 +27,11 @@ func TestFloatLiteral(t *testing.T) {
 }
 
 func TestStrictMixing(t *testing.T) {
-	// Int + Float should fail
-	input := `var x Float = 5 + 5.5;`
+	// int + float should fail
+	input := `var x float = 5 + 5.5;`
 	errors, _ := checkWarn(input)
 	if len(errors) == 0 {
-		t.Error("Expected error for mixed types Int + Float")
+		t.Error("Expected error for mixed types int + float")
 	} else {
 		if !strings.Contains(errors[0].Message, "Operator + not defined") {
 			t.Errorf("Expected operator error, got %s", errors[0].Message)
@@ -40,8 +40,8 @@ func TestStrictMixing(t *testing.T) {
 }
 
 func TestFloatMath(t *testing.T) {
-	// Float + Float should succeed
-	input := `var x Float = 5.5 + 1.1;`
+	// float + float should succeed
+	input := `var x float = 5.5 + 1.1;`
 	errors, _ := checkWarn(input)
 	if len(errors) != 0 {
 		t.Errorf("Expected no errors, got %v", errors)
@@ -49,8 +49,8 @@ func TestFloatMath(t *testing.T) {
 }
 
 func TestCastingIntToFloat(t *testing.T) {
-	// Float(5) -> Float
-	input := `var x Float = Float(5);`
+	// float(5) -> float
+	input := `var x float = float(5);`
 	errors, warnings := checkWarn(input)
 	if len(errors) != 0 {
 		t.Errorf("Expected no errors, got %v", errors)
@@ -61,14 +61,14 @@ func TestCastingIntToFloat(t *testing.T) {
 }
 
 func TestCastingFloatToInt(t *testing.T) {
-	// Int(5.5) -> Int (Warning)
-	input := `var x Int = Int(5.5);`
+	// int(5.5) -> int (Warning)
+	input := `var x int = int(5.5);`
 	errors, warnings := checkWarn(input)
 	if len(errors) != 0 {
 		t.Errorf("Expected no errors, got %v", errors)
 	}
 	if len(warnings) == 0 {
-		t.Error("Expected warning for lossy cast Float->Int")
+		t.Error("Expected warning for lossy cast float->int")
 	} else {
 		if !strings.Contains(warnings[0].Message, "Lossy conversion") {
 			t.Errorf("Expected Lossy conversion warning, got %s", warnings[0].Message)
@@ -77,21 +77,21 @@ func TestCastingFloatToInt(t *testing.T) {
 }
 
 func TestCastingForbidden(t *testing.T) {
-	// Int("123") -> Error
-	input := `var x Int = Int("123");`
+	// int("123") -> error
+	input := `var x int = int("123");`
 	errors, _ := checkWarn(input)
 	if len(errors) == 0 {
-		t.Error("Expected error for String->Int cast")
+		t.Error("Expected error for string->int cast")
 	} else {
-		if !strings.Contains(errors[0].Message, "Cannot convert type String to Int") {
+		if !strings.Contains(errors[0].Message, "Cannot convert type string to int") {
 			t.Errorf("Expected Cannot convert error, got %s", errors[0].Message)
 		}
 	}
 }
 
 func TestCastingIdentity(t *testing.T) {
-	// Int(5) -> Int
-	input := `var x Int = Int(5);`
+	// int(5) -> int
+	input := `var x int = int(5);`
 	errors, _ := checkWarn(input)
 	if len(errors) != 0 {
 		t.Errorf("Expected no errors, got %v", errors)

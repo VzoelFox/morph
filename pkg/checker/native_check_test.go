@@ -9,7 +9,7 @@ import (
 
 func TestNativeFunctionCheck(t *testing.T) {
 	input := `
-	fungsi Open(path String) Int native
+	fungsi Open(path string) int native
 	`
 	l := lexer.New(input)
 	p := parser.New(l)

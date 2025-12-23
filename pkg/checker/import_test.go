@@ -18,7 +18,7 @@ func (m *MockImporter) Import(path string) (*parser.Program, error) {
 		// return nil, fmt.Errorf("module not found: %s", path)
 		// Return empty program or simple error?
 		// parser error?
-		return nil, nil // Error handled in checkImport by checking err!=nil. Wait, if err is nil?
+		return nil, nil // error handled in checkImport by checking err!=nil. Wait, if err is nil?
 	}
 	l := lexer.New(content)
 	p := parser.New(l)
@@ -30,14 +30,14 @@ func TestImportStatement(t *testing.T) {
 	mock := &MockImporter{
 		modules: map[string]string{
 			"math": `
-				fungsi Add(a Int, b Int) Int
+				fungsi Add(a int, b int) int
 					kembalikan a + b
 				akhir
 
-				var PI Float = 3.14
+				var PI float = 3.14
 
 				# Private (lowercase)
-				var secret Int = 42
+				var secret int = 42
 			`,
 			"cycle/a": `
 				ambil "cycle/b"
@@ -52,15 +52,15 @@ func TestImportStatement(t *testing.T) {
 	input1 := `
 	ambil "math"
 
-	var res Int = math.Add(1, 2)
-	var pi Float = math.PI
+	var res int = math.Add(1, 2)
+	var pi float = math.PI
 	`
 	runImportTest(t, mock, input1, 0)
 
 	// 2. Private Member Access (Should Fail)
 	input2 := `
 	ambil "math"
-	var s Int = math.secret
+	var s int = math.secret
 	`
 	runImportTest(t, mock, input2, 1) // Expected error: Module does not export 'secret'
 
@@ -88,7 +88,7 @@ func TestImportStatement(t *testing.T) {
 	// "cycle/a" is in loadingModules stack?
 	// main -> imports "cycle/a". loading["cycle/a"] = true.
 	// check("cycle/a") -> imports "cycle/b". loading["cycle/b"] = true.
-	// check("cycle/b") -> imports "cycle/a". loading["cycle/a"] is true. -> Error.
+	// check("cycle/b") -> imports "cycle/a". loading["cycle/a"] is true. -> error.
 	// So we expect error.
 	runImportTest(t, mock, input5, 1)
 }
@@ -103,6 +103,6 @@ func runImportTest(t *testing.T, importer Importer, input string, expectedErrors
 	c.Check(program)
 
 	if len(c.Errors) != expectedErrors {
-		t.Errorf("Input:\n%s\nExpected %d errors, got %d. Errors: %v", input, expectedErrors, len(c.Errors), c.Errors)
+		t.Errorf("Input:\n%s\nExpected %d errors, got %d. errors: %v", input, expectedErrors, len(c.Errors), c.Errors)
 	}
 }

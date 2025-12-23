@@ -7,9 +7,9 @@ import (
 
 func TestShadowingWarning(t *testing.T) {
 	input := `
-	var x Int = 5
+	var x int = 5
 	jika true
-		var x String = "hello"  # Should warn
+		var x string = "hello"  # Should warn
 		x + "world"
 	akhir
 	x + 1
@@ -27,11 +27,11 @@ func TestShadowingWarning(t *testing.T) {
 func TestNoShadowingNewScope(t *testing.T) {
 	input := `
 	jika true
-		var x Int = 1
+		var x int = 1
 		x + 1
 	akhir
 	jika true
-		var x String = "a"  # Different scope, no shadow
+		var x string = "a"  # Different scope, no shadow
 		x + "b"
 	akhir
 	`
@@ -43,8 +43,8 @@ func TestNoShadowingNewScope(t *testing.T) {
 
 func TestSameScopeRedeclaration(t *testing.T) {
 	input := `
-	var x Int = 1
-	var x String = "hello"  # Same scope - ERROR
+	var x int = 1
+	var x string = "hello"  # Same scope - ERROR
 	`
 	errors, _ := checkWarn(input)
 	if len(errors) == 0 {
@@ -58,13 +58,13 @@ func TestSameScopeRedeclaration(t *testing.T) {
 
 func TestNestedShadowing(t *testing.T) {
 	input := `
-	var x Int = 1
+	var x int = 1
 	x + 1
 	jika true
-		var x String = "a"  # Shadow level 1
+		var x string = "a"  # Shadow level 1
 		x + "b"
 		jika true
-			var x Bool = true  # Shadow level 2
+			var x bool = true  # Shadow level 2
 			!x
 		akhir
 	akhir
@@ -77,8 +77,8 @@ func TestNestedShadowing(t *testing.T) {
 
 func TestShadowingInFunctionParam(t *testing.T) {
 	input := `
-    var x Int = 5;
-    fungsi test(x Int)
+    var x int = 5;
+    fungsi test(x int)
         x + 1
     akhir
 	x + 1

@@ -8,7 +8,7 @@ import (
 
 func TestMethodParsing(t *testing.T) {
 	input := `
-	fungsi (u User) getId() Int
+	fungsi (u User) getId() int
 		kembalikan u.id;
 	akhir
 	`
@@ -53,7 +53,7 @@ func TestMethodParsing(t *testing.T) {
 func TestAnonymousFunctionParsing(t *testing.T) {
 	// Verify regression
 	input := `
-	var f = fungsi(x Int) Int
+	var f = fungsi(x int) int
 		kembalikan x;
 	akhir;
 	`

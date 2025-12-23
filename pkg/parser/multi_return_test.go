@@ -6,7 +6,7 @@ import (
 )
 
 func TestMultiReturnParsing(t *testing.T) {
-	input := `fungsi f() (Int, String) kembalikan 1, "s"; akhir`
+	input := `fungsi f() (int, string) kembalikan 1, "s"; akhir`
 	l := lexer.New(input)
 	p := New(l)
 	program := p.ParseProgram()
@@ -18,11 +18,11 @@ func TestMultiReturnParsing(t *testing.T) {
 	if len(fn.ReturnTypes) != 2 {
 		t.Fatalf("Expect 2 return types, got %d", len(fn.ReturnTypes))
 	}
-	if fn.ReturnTypes[0].String() != "Int" {
-		t.Errorf("Type 0 not Int")
+	if fn.ReturnTypes[0].String() != "int" {
+		t.Errorf("Type 0 not int")
 	}
-	if fn.ReturnTypes[1].String() != "String" {
-		t.Errorf("Type 1 not String")
+	if fn.ReturnTypes[1].String() != "string" {
+		t.Errorf("Type 1 not string")
 	}
 
 	ret := fn.Body.Statements[0].(*ReturnStatement)

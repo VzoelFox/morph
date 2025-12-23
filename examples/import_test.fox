@@ -1,6 +1,6 @@
 ambil "math"
 
-fungsi main() Void
+fungsi main() void
   var sum = math.Add(10, 20)
   native_print_int(sum)
 akhir

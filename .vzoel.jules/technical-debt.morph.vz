@@ -4,9 +4,7 @@
 **Last Updated**: 2025-12-22
 
 ### Pending / Open
-- **Inkonsistensi Penamaan Tipe Primitif**: Kode implementasi saat ini menggunakan PascalCase (`Int`, `String`, `Bool`) untuk tipe primitif, sedangkan `DESIGN.md` (dan konvensi umum) merekomendasikan lowercase (`int`, `string`, `bool`).
-    - **Action**: Refactor `pkg/checker`, `pkg/parser`, dan `pkg/lexer` untuk mendukung lowercase types di masa depan.
-    - **Note**: Saat ini didokumentasikan sebagai `Int`/`String` di `DESIGN.md` (Reverse Engineering) untuk akurasi.
+(None)
 
 ### Future Improvements (Deferred)
 **Note**: Do not implement these until Type Checker (`pkg/checker`) is fully robust and tested.
@@ -16,6 +14,9 @@
 - Future context generation should reuse `pkg/checker` logic.
 
 ### Resolved / Closed
+- **Type Refactoring**: Refactored all primitive types to lowercase (`int`, `string`, `bool`, `void`, `float`). Updated all source, tests, and examples. (2025-12-23)
+- **Concurrency**: Implemented `Channel` type and built-in functions (`saluran_baru`, `kirim`, `terima`, `luncurkan`) in Checker and C Runtime (Pthreads). (2025-12-23)
+- **String Interpolation**: Implemented `InterpolatedString` support in `pkg/checker` (validates all parts are Strings) and `pkg/compiler` (nested `mph_string_concat` generation). (2025-12-23)
 - **Import System**: Enhanced to support Qualified Types (`Module.Type`) and Private Type visibility. (2025-12-20)
 - **Import System**: Implemented `ImportStatement` checking, Module Type, Cycle Detection, and Member Access. (2025-12-20)
 - **Type System**: Defined user-facing `Error` type (`UserErrorType`) and enabled `Null` assignment. (2025-12-20)

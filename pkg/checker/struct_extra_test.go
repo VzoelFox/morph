@@ -11,14 +11,14 @@ import (
 func TestStructConstructor(t *testing.T) {
 	input := `
 	struktur User
-		id Int
-		name String
+		id int
+		name string
 	akhir
 
 	var u = User(1, "Alice");
 	var u2 = User(2, "Bob");
 
-	# Error cases
+	# error cases
 	var err1 = User(1); # Missing arg
 	var err2 = User(1, 2); # Type mismatch
 	var err3 = User("Alice", 1); # Wrong order
@@ -36,8 +36,8 @@ func TestStructConstructor(t *testing.T) {
 
 	expectedErrors := []string{
 		"Struct User constructor requires 2 arguments, got 1",
-		"Argument 2 (name) type mismatch: expected String, got Int",
-		"Argument 1 (id) type mismatch: expected Int, got String",
+		"Argument 2 (name) type mismatch: expected string, got int",
+		"Argument 1 (id) type mismatch: expected int, got string",
 	}
 
 	if len(c.Errors) != len(expectedErrors) {
@@ -68,16 +68,16 @@ func TestStructConstructor(t *testing.T) {
 func TestStructComparability(t *testing.T) {
 	input := `
 	struktur Point
-		x Int
-		y Int
+		x int
+		y int
 	akhir
 
 	struktur Container
-		data []Int
+		data []int
 	akhir
 
 	struktur Invalid
-		m map[String]Int
+		m map[string]int
 	akhir
 
 	var p1 = Point(1, 2);

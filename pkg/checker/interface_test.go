@@ -10,11 +10,11 @@ func TestInterfaceDefinition(t *testing.T) {
 	input := `
 # Definisikan tipe error kustom untuk pengujian
 struktur MyError
-    msg String
+    msg string
 akhir
 
 antarmuka Pembaca
-    fungsi Baca(p []Int) (Int, MyError)
+    fungsi Baca(p []int) (int, MyError)
     fungsi Tutup() MyError
 akhir
 `
@@ -60,8 +60,8 @@ akhir
 	if len(bacaMethod.Parameters) != 1 {
 		t.Errorf("expected 1 parameter for 'Baca', got %d", len(bacaMethod.Parameters))
 	} else {
-		if bacaMethod.Parameters[0].String() != "[]Int" {
-			t.Errorf("expected param type '[]Int', got %s", bacaMethod.Parameters[0].String())
+		if bacaMethod.Parameters[0].String() != "[]int" {
+			t.Errorf("expected param type '[]int', got %s", bacaMethod.Parameters[0].String())
 		}
 	}
 
@@ -69,7 +69,7 @@ akhir
 		t.Errorf("expected 2 return types for 'Baca', got %d", len(bacaMethod.ReturnTypes))
 	} else {
 		if !bacaMethod.ReturnTypes[0].Equals(IntType) {
-			t.Errorf("expected return type 1 to be 'Int', got %s", bacaMethod.ReturnTypes[0].String())
+			t.Errorf("expected return type 1 to be 'int', got %s", bacaMethod.ReturnTypes[0].String())
 		}
 		if bacaMethod.ReturnTypes[1].String() != "MyError" {
 			t.Errorf("expected return type 2 to be 'MyError', got %s", bacaMethod.ReturnTypes[1].String())

@@ -1,4 +1,4 @@
-fungsi main() Void
+fungsi main() void
 	native_print("Hello from C Compiler!")
 akhir
 
