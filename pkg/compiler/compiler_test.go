@@ -37,7 +37,7 @@ func TestCompileHelloWorld(t *testing.T) {
 	t.Logf("Generated C Code:\n%s", code)
 
 	// Basic assertions
-	if !strings.Contains(code, "void mph_main(MorphContext* ctx)") {
+	if !strings.Contains(code, "void mph_main(MorphContext* ctx, void* _env_void)") {
 		t.Errorf("Expected function definition for main")
 	}
 	if !strings.Contains(code, "mph_native_print(ctx, mph_string_new(ctx, \"Hello World\"))") {
@@ -46,7 +46,7 @@ func TestCompileHelloWorld(t *testing.T) {
 	if !strings.Contains(code, "void morph_entry_point(MorphContext* ctx)") {
 		t.Errorf("Expected entry point")
 	}
-	if !strings.Contains(code, "mph_main(ctx)") {
+	if !strings.Contains(code, "mph_main(ctx, NULL)") {
 		t.Errorf("Expected main() call in entry point")
 	}
 }

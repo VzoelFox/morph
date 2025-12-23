@@ -277,6 +277,15 @@ mph_int mph_map_len(MorphContext* ctx, MorphMap* map) {
     return (mph_int)map->count;
 }
 
+// --- Closure Implementation ---
+
+MorphClosure* mph_closure_new(MorphContext* ctx, void* fn, void* env) {
+    MorphClosure* c = (MorphClosure*)mph_alloc(ctx, sizeof(MorphClosure));
+    c->function = fn;
+    c->env = env;
+    return c;
+}
+
 // --- Interface Implementation ---
 
 void* mph_assert_type(MorphContext* ctx, MorphInterface iface, mph_int expected_id) {

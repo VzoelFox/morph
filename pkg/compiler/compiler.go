@@ -678,7 +678,29 @@ func (c *Compiler) compileCall(call *parser.CallExpression, prefix string, fn *p
 	if isDirect {
 		return fmt.Sprintf("%s(%s)", funcCode, strings.Join(args, ", ")), nil
 	} else {
-		return fmt.Sprintf("((MorphClosureFunc)%s->function)(%s)", funcCode, strings.Join(args, ", ")), nil
+		// Generic cast
+		cast := "MorphClosureFunc"
+
+		// Attempt precise cast if Checker knows the type
+		funcType := c.checker.Types[call.Function]
+		if funcType != nil && funcType.Kind() == checker.KindFunction {
+			ft := funcType.(*checker.FunctionType)
+
+			retType := "void"
+			if len(ft.ReturnTypes) > 0 {
+				retType = c.mapCheckerTypeToC(ft.ReturnTypes[0], prefix)
+			}
+
+			var paramTypes []string
+			paramTypes = append(paramTypes, "MorphContext*")
+			paramTypes = append(paramTypes, "void*")
+			for _, p := range ft.Parameters {
+				paramTypes = append(paramTypes, c.mapCheckerTypeToC(p, prefix))
+			}
+			cast = fmt.Sprintf("%s (*)(%s)", retType, strings.Join(paramTypes, ", "))
+		}
+
+		return fmt.Sprintf("((%s)%s->function)(%s)", cast, funcCode, strings.Join(args, ", ")), nil
 	}
 }
 
@@ -686,6 +708,16 @@ func (c *Compiler) isLocal(name string, fn *parser.FunctionLiteral) bool {
 	if fn == nil { return false }
 	for _, p := range fn.Parameters {
 		if p.Name.Value == name { return true }
+	}
+	// Also check local variables
+	if fn.Body != nil {
+		for _, stmt := range fn.Body.Statements {
+			if vs, ok := stmt.(*parser.VarStatement); ok {
+				for _, n := range vs.Names {
+					if n.Value == name { return true }
+				}
+			}
+		}
 	}
 	return false
 }
@@ -952,8 +984,8 @@ func (c *Compiler) compileInterfaceCall(call *parser.CallExpression, mem *parser
 	}
 
 	methodType := iface.Methods[mem.Member.Value]
-	retType, _ := c.mapTypeToC(nil, prefix), ""
-	if len(methodType.ReturnTypes) > 0 { retType, _ = c.mapCheckerTypeToC(methodType.ReturnTypes[0], prefix), "" }
+	retType := "void"
+	if len(methodType.ReturnTypes) > 0 { retType = c.mapCheckerTypeToC(methodType.ReturnTypes[0], prefix) }
 	var paramTypes []string
 	paramTypes = append(paramTypes, "MorphContext*")
 	paramTypes = append(paramTypes, "void*")
