@@ -64,6 +64,13 @@ typedef struct MorphString {
     size_t length;
 } MorphString;
 
+typedef struct MorphArray {
+    void* data;
+    size_t length;
+    size_t capacity;
+    size_t element_size;
+} MorphArray;
+
 // --- API ---
 
 // Memory
@@ -76,6 +83,10 @@ Drawer* mph_new_drawer(Cabinet* cab);
 MorphString* mph_string_new(MorphContext* ctx, const char* literal);
 MorphString* mph_string_concat(MorphContext* ctx, MorphString* a, MorphString* b);
 mph_bool mph_string_eq(MorphString* a, MorphString* b);
+
+// Arrays
+MorphArray* mph_array_new(MorphContext* ctx, size_t capacity, size_t element_size);
+void* mph_array_at(MorphContext* ctx, MorphArray* arr, mph_int index);
 
 // Debug
 void mph_native_print_int(MorphContext* ctx, mph_int n);

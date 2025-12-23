@@ -1,0 +1,7 @@
+fungsi main() void
+  var arr = [10, 20, 30]
+  var x = arr[1]
+  native_print_int(x)
+akhir
+
+main()

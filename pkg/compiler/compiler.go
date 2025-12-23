@@ -146,7 +146,6 @@ func (c *Compiler) compileStatement(stmt parser.Statement, buf *strings.Builder,
 	case *parser.ImportStatement:
 		return nil
 	case *parser.StructStatement:
-		// Structs are handled in compileStructTypes pass
 		return nil
 	case *parser.BlockStatement:
 		buf.WriteString("{\n")
@@ -156,7 +155,6 @@ func (c *Compiler) compileStatement(stmt parser.Statement, buf *strings.Builder,
 		buf.WriteString("}\n")
 		return nil
 	case *parser.ExpressionStatement:
-		// Handle Control Flow Expressions as Statements in C
 		if ifExpr, ok := s.Expression.(*parser.IfExpression); ok {
 			return c.compileIf(ifExpr, buf, prefix)
 		}
@@ -193,24 +191,11 @@ func (c *Compiler) compileVar(s *parser.VarStatement, buf *strings.Builder, pref
 			return err
 		}
 	} else {
-		// Inference fallback
 		typ := c.checker.Types[s.Names[0]]
 		if typ == nil {
 			typ = c.checker.Types[s.Values[0]]
 		}
-
-		if typ != nil {
-			if typ.Kind() == checker.KindString {
-				cType = "MorphString*"
-			} else if typ.Kind() == checker.KindBool {
-				cType = "mph_bool"
-			} else if typ.Kind() == checker.KindChannel {
-				cType = "MorphChannel*"
-			} else if typ.Kind() == checker.KindStruct {
-				// Assume local struct pointer for inferred types
-				cType = prefix + typ.String() + "*"
-			}
-		}
+		cType = c.mapCheckerTypeToC(typ, prefix)
 	}
 
 	buf.WriteString(fmt.Sprintf("\t%s %s = %s;\n", cType, name, valCode))
@@ -222,7 +207,6 @@ func (c *Compiler) compileAssignment(s *parser.AssignmentStatement, buf *strings
 	if ident, ok := s.Names[0].(*parser.Identifier); ok {
 		name = ident.Value
 	} else if mem, ok := s.Names[0].(*parser.MemberExpression); ok {
-		// Handle struct member assignment: u.age = 10
 		objCode, err := c.compileExpression(mem.Object, prefix)
 		if err != nil {
 			return err
@@ -321,25 +305,77 @@ func (c *Compiler) compileExpression(expr parser.Expression, prefix string) (str
 		if err != nil {
 			return "", err
 		}
-		// Assuming struct pointer access
 		return fmt.Sprintf("%s->%s", obj, e.Member.Value), nil
 	case *parser.StructLiteral:
 		return c.compileStructLiteral(e, prefix)
+	case *parser.ArrayLiteral:
+		return c.compileArrayLiteral(e, prefix)
+	case *parser.IndexExpression:
+		return c.compileIndex(e, prefix)
 	default:
 		return "", fmt.Errorf("unsupported expression: %T", expr)
 	}
 }
 
+func (c *Compiler) compileArrayLiteral(al *parser.ArrayLiteral, prefix string) (string, error) {
+	arrType := c.checker.Types[al]
+	elemCType := "mph_int"
+	if arrType != nil {
+		if at, ok := arrType.(*checker.ArrayType); ok {
+			elemCType = c.mapCheckerTypeToC(at.Element, prefix)
+		}
+	}
+
+	var sb strings.Builder
+	sb.WriteString("({ ")
+	sb.WriteString(fmt.Sprintf("MorphArray* _a = mph_array_new(ctx, %d, sizeof(%s)); ", len(al.Elements), elemCType))
+
+	for i, el := range al.Elements {
+		valCode, err := c.compileExpression(el, prefix)
+		if err != nil {
+			return "", err
+		}
+		sb.WriteString(fmt.Sprintf("((%s*)_a->data)[%d] = %s; ", elemCType, i, valCode))
+	}
+	sb.WriteString("_a; })")
+	return sb.String(), nil
+}
+
+func (c *Compiler) compileIndex(ie *parser.IndexExpression, prefix string) (string, error) {
+	leftCode, err := c.compileExpression(ie.Left, prefix)
+	if err != nil {
+		return "", err
+	}
+	indexCode, err := c.compileExpression(ie.Index, prefix)
+	if err != nil {
+		return "", err
+	}
+
+	leftType := c.checker.Types[ie.Left]
+	if leftType == nil {
+		return "", fmt.Errorf("unknown type for index expression")
+	}
+
+	if leftType.Kind() == checker.KindString {
+		return fmt.Sprintf("((MorphString*)%s)->data[%s]", leftCode, indexCode), nil
+	} else if leftType.Kind() == checker.KindArray {
+		if at, ok := leftType.(*checker.ArrayType); ok {
+			elemCType := c.mapCheckerTypeToC(at.Element, prefix)
+			return fmt.Sprintf("*(%s*)mph_array_at(ctx, %s, %s)", elemCType, leftCode, indexCode), nil
+		}
+	}
+
+	return "", fmt.Errorf("index operation not supported for type %s", leftType.String())
+}
+
 func (c *Compiler) compileStructLiteral(sl *parser.StructLiteral, prefix string) (string, error) {
-	// 1. Determine C Struct Name
 	var cTypeName string
 	if ident, ok := sl.Name.(*parser.Identifier); ok {
 		cTypeName = prefix + ident.Value
 	} else {
-		return "", fmt.Errorf("complex struct literals (imported) not supported yet")
+		return "", fmt.Errorf("complex struct literals not supported yet")
 	}
 
-	// 2. Build Initialization Code using Statement Expression
 	var sb strings.Builder
 	sb.WriteString("({ ")
 	sb.WriteString(fmt.Sprintf("%s* _t = (%s*)mph_alloc(ctx, sizeof(%s)); ", cTypeName, cTypeName, cTypeName))
@@ -360,7 +396,6 @@ func (c *Compiler) compileCall(call *parser.CallExpression, prefix string) (stri
 	var funcName string
 
 	if ident, ok := call.Function.(*parser.Identifier); ok {
-		// Local Function or Builtin
 		funcName = "mph_" + ident.Value
 		if ident.Value == "native_print" {
 			funcName = "mph_native_print"
@@ -376,7 +411,6 @@ func (c *Compiler) compileCall(call *parser.CallExpression, prefix string) (stri
 			return c.compileSpawn(call, prefix)
 		}
 	} else if mem, ok := call.Function.(*parser.MemberExpression); ok {
-		// Module Call: math.Add -> mph_stdlib_math_Add
 		objType := c.checker.Types[mem.Object]
 		if objType != nil && objType.Kind() == checker.KindModule {
 			modType := objType.(*checker.ModuleType)
@@ -472,12 +506,11 @@ func mangle(path string) string {
 	return "mph_" + s + "_"
 }
 
-// --- Struct Compilation Logic ---
+// --- Struct & Type Compilation Logic ---
 
 func (c *Compiler) compileStructTypes(node parser.Node) error {
 	c.output.WriteString("// Struct Definitions\n")
 
-	// 1. Compile Imported Module Structs
 	for path, mod := range c.checker.ModuleCache {
 		if mod.Program == nil {
 			continue
@@ -488,7 +521,6 @@ func (c *Compiler) compileStructTypes(node parser.Node) error {
 		}
 	}
 
-	// 2. Compile Main Program Structs
 	if prog, ok := node.(*parser.Program); ok {
 		if err := c.compileModuleStructs(prog, "mph_"); err != nil {
 			return err
@@ -500,7 +532,6 @@ func (c *Compiler) compileStructTypes(node parser.Node) error {
 }
 
 func (c *Compiler) compileModuleStructs(prog *parser.Program, prefix string) error {
-	// Pass 1: Forward Declarations (typedef)
 	for _, stmt := range prog.Statements {
 		if s, ok := stmt.(*parser.StructStatement); ok {
 			name := prefix + s.Name.Value
@@ -508,7 +539,6 @@ func (c *Compiler) compileModuleStructs(prog *parser.Program, prefix string) err
 		}
 	}
 
-	// Pass 2: Definitions
 	for _, stmt := range prog.Statements {
 		if s, ok := stmt.(*parser.StructStatement); ok {
 			if err := c.compileStructDef(s, prefix); err != nil {
@@ -552,16 +582,39 @@ func (c *Compiler) mapTypeToC(t parser.TypeNode, prefix string) (string, error) 
 		case "void":
 			return "void", nil
 		default:
-			// Assuming local struct
 			return prefix + ty.Name + "*", nil
 		}
 	case *parser.QualifiedType:
-		// module.Type -> mph_module_Type*
 		return "mph_" + ty.Package.Value + "_" + ty.Name.Value + "*", nil
 	case *parser.ArrayType:
-		return "", fmt.Errorf("arrays not supported yet")
+		return "MorphArray*", nil
 	case *parser.MapType:
 		return "", fmt.Errorf("maps not supported yet")
 	}
 	return "", fmt.Errorf("unknown type node: %T", t)
+}
+
+func (c *Compiler) mapCheckerTypeToC(t checker.Type, prefix string) string {
+	if t == nil {
+		return "mph_int"
+	}
+	switch t.Kind() {
+	case checker.KindInt:
+		return "mph_int"
+	case checker.KindFloat:
+		return "mph_float"
+	case checker.KindBool:
+		return "mph_bool"
+	case checker.KindString:
+		return "MorphString*"
+	case checker.KindChannel:
+		return "MorphChannel*"
+	case checker.KindStruct:
+		if st, ok := t.(*checker.StructType); ok {
+			return "mph_" + st.Name + "*"
+		}
+	case checker.KindArray:
+		return "MorphArray*"
+	}
+	return "mph_int" // Fallback
 }

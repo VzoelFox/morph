@@ -54,6 +54,23 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.31.0 - 2025-12-23
+**Checksum**: SHA256:ARRAY_SUPPORT
+**Perubahan**:
+- **Runtime**: Implemented `MorphArray` struct and API (`mph_array_new`, `mph_array_at`) in C Runtime.
+- **Compiler**: Implemented `ArrayLiteral` compilation using `mph_array_new`.
+- **Compiler**: Implemented `IndexExpression` compilation for Arrays.
+- **Test**: Added `examples/array_test.fox`.
+
+**Konteks Sesi**:
+- **Self-Hosting Foundation**: Implementing dynamic arrays (slices), a critical primitive for the compiler's own logic.
+
+**File Terkait**:
+- `pkg/compiler/runtime/morph.h.tpl` (SHA256:83de3162cea858b1435652400060a22c0d8425ea8cad1a7f162fa3b2bcc7db9f)
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:85296d4313b92e8eb5e0a28e3d620335f6a6c35383f2651f4b5d1859c5f4c973)
+- `pkg/compiler/compiler.go` (SHA256:d3a7d7874b180da578b400953874bdc59bdbe07acc9e7d0dc4490a2c9264f861)
+- `examples/array_test.fox` (SHA256:2228084eceb17f9d68b8a98736aa93f739aad8770209f532b0cccab9246aba00)
+
 ### Version 1.30.0 - 2025-12-23
 **Checksum**: SHA256:STRUCT_COMPILER_SUPPORT
 **Perubahan**:

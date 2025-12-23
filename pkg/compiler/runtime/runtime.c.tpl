@@ -103,6 +103,26 @@ mph_bool mph_string_eq(MorphString* a, MorphString* b) {
     return memcmp(a->data, b->data, a->length) == 0;
 }
 
+// --- Array Implementation ---
+
+MorphArray* mph_array_new(MorphContext* ctx, size_t capacity, size_t element_size) {
+    MorphArray* arr = (MorphArray*)mph_alloc(ctx, sizeof(MorphArray));
+    arr->length = capacity;
+    arr->capacity = capacity;
+    arr->element_size = element_size;
+
+    arr->data = mph_alloc(ctx, capacity * element_size);
+    return arr;
+}
+
+void* mph_array_at(MorphContext* ctx, MorphArray* arr, mph_int index) {
+    if (index < 0 || index >= arr->length) {
+        printf("Panic: Array index out of bounds\n");
+        exit(1);
+    }
+    return (uint8_t*)arr->data + (index * arr->element_size);
+}
+
 void mph_native_print_int(MorphContext* ctx, mph_int n) {
     printf("%ld\n", n);
 }
