@@ -6,9 +6,7 @@
 #include <pthread.h>
 
 // --- Constants ---
-#define DRAWER_SIZE (128 * 1024)
-#define TRAY_SIZE   (64 * 1024)
-#define MAX_DRAWERS 1024
+// Removed Drawer/Tray constants as we are moving to Malloc + GC
 
 // --- Types ---
 typedef int64_t mph_int;
@@ -16,40 +14,41 @@ typedef double  mph_float;
 typedef int     mph_bool;
 typedef void    mph_void;
 
-// --- Memory Structures ---
+// --- Memory Structures (Tiered Memory / GC) ---
 
-typedef struct Tray {
-    uint8_t* start;
-    uint8_t* current;
-    uint8_t* end;
-} Tray;
+// Forward declarations
+struct MorphTypeInfo;
+struct ObjectHeader;
 
-typedef struct Drawer {
-    uint32_t id;
-    Tray primary;
-    // secondary reserved for GC
-    uint8_t* data; // Allocated region (128KB)
-} Drawer;
+typedef struct MorphTypeInfo {
+    const char* name;
+    size_t size;            // Size of payload
+    int num_pointers;       // How many pointers in payload
+    size_t* pointer_offsets; // Offsets of pointers relative to payload start
+} MorphTypeInfo;
 
-typedef struct Cabinet {
-    Drawer* drawers[MAX_DRAWERS];
-    int active_drawer_index;
-    int drawer_count;
-} Cabinet;
+typedef struct ObjectHeader {
+    struct ObjectHeader* next;  // Global GC list
+    MorphTypeInfo* type;        // RTTI
+    uint8_t flags;              // 0x1: Marked, 0x2: Swapped
+    uint32_t last_access;       // For LRU Eviction
+} ObjectHeader;
 
+// Memory Context now tracks the Heap Head
 typedef struct MorphContext {
-    Cabinet* cabinet;
-    void* scheduler; // Placeholder
+    ObjectHeader* heap_head;    // Linked list of all allocated objects
+    size_t allocated_bytes;     // Total bytes currently allocated
+    size_t next_gc_threshold;   // When to trigger next GC
+    void* scheduler;            // Placeholder
 } MorphContext;
 
 typedef void (*MorphEntryFunction)(MorphContext* ctx, void* arg);
 
 typedef struct MorphChannel {
     pthread_mutex_t lock;
-    pthread_cond_t cond_send; // Wait if full
-    pthread_cond_t cond_recv; // Wait if empty
+    pthread_cond_t cond_send;
+    pthread_cond_t cond_recv;
 
-    // Circular Buffer for Ints
     int64_t* buffer;
     int capacity;
     int count;
@@ -58,14 +57,17 @@ typedef struct MorphChannel {
 } MorphChannel;
 
 // --- Object Structures ---
+// NOTE: These are the "Payloads" after the ObjectHeader
 
 typedef struct MorphString {
-    const char* data;
+    char* data;    // Pointer to C string (Malloc-ed separately for now, or embedded?)
+                   // Optimization: data usually points to separate malloc block.
+                   // The String struct itself is on Heap.
     size_t length;
 } MorphString;
 
 typedef struct MorphArray {
-    void* data;
+    void* data;    // Pointer to data block
     size_t length;
     size_t capacity;
     size_t element_size;
@@ -92,18 +94,16 @@ typedef struct MorphMap {
 } MorphMap;
 
 typedef struct MorphInterface {
-    void* instance;      // Pointer to the struct data
-    void** vtable;       // Array of function pointers
-    mph_int type_id;     // For Type Assertion (Unique ID)
+    void* instance;
+    void** vtable;
+    mph_int type_id;
 } MorphInterface;
 
 typedef struct MorphClosure {
-    void* function; // Generic function pointer (MorphClosureFunc)
-    void* env;      // Pointer to captured environment struct
+    void* function;
+    void* env;
 } MorphClosure;
 
-// Standard generic function signature for closures:
-// Returns void*, takes (Context, Env, ...Params)
 typedef void* (*MorphClosureFunc)(MorphContext*, void*, ...);
 
 
@@ -112,8 +112,14 @@ typedef void* (*MorphClosureFunc)(MorphContext*, void*, ...);
 // Memory
 void mph_init_memory(MorphContext* ctx);
 void mph_destroy_memory(MorphContext* ctx);
-void* mph_alloc(MorphContext* ctx, size_t size);
-Drawer* mph_new_drawer(Cabinet* cab);
+
+// New Allocator: requires TypeInfo for GC
+// Generic allocations (arrays/maps internals) can pass NULL type_info,
+// but they won't be scanned by GC (must be leaves or managed manually).
+void* mph_alloc(MorphContext* ctx, size_t size, MorphTypeInfo* type_info);
+
+// GC
+void mph_gc_collect(MorphContext* ctx);
 
 // Strings
 MorphString* mph_string_new(MorphContext* ctx, const char* literal);
@@ -135,7 +141,7 @@ mph_int mph_map_len(MorphContext* ctx, MorphMap* map);
 void* mph_assert_type(MorphContext* ctx, MorphInterface iface, mph_int expected_id);
 
 // Closures
-MorphClosure* mph_closure_new(MorphContext* ctx, void* fn, void* env);
+MorphClosure* mph_closure_new(MorphContext* ctx, void* fn, void* env, int env_size);
 
 // Debug
 void mph_native_print_int(MorphContext* ctx, mph_int n);

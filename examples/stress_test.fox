@@ -1,0 +1,11 @@
+fungsi main() void
+    var i int = 0
+
+    selama i < 100000
+        var s string = "temp string " + "created"
+        var a []int = [i, i + 1, i + 2]
+        i = i + 1
+    akhir
+akhir
+
+main()
