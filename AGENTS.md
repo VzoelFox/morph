@@ -54,6 +54,20 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.30.0 - 2025-12-23
+**Checksum**: SHA256:STRUCT_COMPILER_SUPPORT
+**Perubahan**:
+- **Feature**: Implemented Struct Support in C Compiler (`StructStatement` -> `struct`, `StructLiteral` -> `mph_alloc`, `MemberExpression` -> `->`).
+- **Compiler**: Refactored `Compiler` to support multi-pass compilation (Types then Code).
+- **Test**: Added `examples/struct_test.fox` verifying Struct Definition, Instantiation, and Field Access.
+
+**Konteks Sesi**:
+- **Self-Hosting Foundation**: Implementing the first "Complex Type" (Struct) in the C Compiler, a prerequisite for self-hosting.
+
+**File Terkait**:
+- `pkg/compiler/compiler.go` (SHA256:026469d6e069e26e0a2f7c0e3335e91b8cf4ab8a786f8ae105f5183dc6a82f0b)
+- `examples/struct_test.fox` (SHA256:0f54fcd7a2dd3cc0f76c079ddc1a512f303961a0dd599c388c90779a2077b2e8)
+
 ### Version 1.29.0 - 2025-12-23
 **Checksum**: SHA256:DEVOPS_AND_MEMORY_FIX
 **Perubahan**:
