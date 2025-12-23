@@ -509,6 +509,9 @@ func (t *InterfaceType) AssignableTo(target Type) bool {
 }
 func (t *InterfaceType) IsComparable() bool { return true }
 func (t *InterfaceType) GetMember(name string) (Type, bool) {
+	if method, ok := t.Methods[name]; ok {
+		return method, true
+	}
 	return nil, false
 }
 func (t *InterfaceType) Index(key Type) (Type, error) {

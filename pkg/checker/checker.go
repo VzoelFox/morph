@@ -394,6 +394,12 @@ func (c *Checker) defineFunction(fn *parser.FunctionLiteral) {
 }
 
 func (c *Checker) resolveType(n parser.TypeNode) Type {
+	t := c.resolveTypeInternal(n)
+	c.Types[n] = t
+	return t
+}
+
+func (c *Checker) resolveTypeInternal(n parser.TypeNode) Type {
 	switch t := n.(type) {
 	case *parser.SimpleType:
 		switch t.Name {
@@ -947,6 +953,9 @@ func (c *Checker) checkExpressionInternal(e parser.Expression) Type {
 			if ident.Value == "panjang" {
 				return c.checkLen(exp)
 			}
+			if ident.Value == "assert" {
+				return c.checkAssert(exp)
+			}
 		}
 
 		funcType := c.checkExpression(exp.Function)
@@ -1043,6 +1052,27 @@ func (c *Checker) checkLen(call *parser.CallExpression) Type {
 	}
 
 	return IntType
+}
+
+func (c *Checker) checkAssert(call *parser.CallExpression) Type {
+	if len(call.Arguments) != 2 {
+		c.addError(call.Token.Line, call.Token.Column, "assert expects 2 arguments: interface and type")
+		return ErrorType
+	}
+
+	ifaceType := c.checkExpression(call.Arguments[0])
+	if ifaceType.Kind() != KindInterface {
+		c.addError(call.Token.Line, call.Token.Column, "Argument 1 must be an interface, got %s", ifaceType.String())
+	}
+
+	// Argument 2 must be a Type
+	// checkExpression returns Type if Identifier is a Type
+	targetType := c.checkExpression(call.Arguments[1])
+	if targetType.Kind() != KindStruct {
+		c.addError(call.Token.Line, call.Token.Column, "Argument 2 must be a struct type for assertion")
+	}
+
+	return targetType
 }
 
 func (c *Checker) enterScope() {

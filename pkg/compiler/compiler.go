@@ -13,10 +13,23 @@ type Compiler struct {
 	entryBody strings.Builder
 	checker   *checker.Checker
 	hasMain   bool
+	StructIDs map[string]int
 }
 
 func New(c *checker.Checker) *Compiler {
-	return &Compiler{checker: c}
+	return &Compiler{
+		checker:   c,
+		StructIDs: make(map[string]int),
+	}
+}
+
+func (c *Compiler) getStructID(name string) int {
+	if id, ok := c.StructIDs[name]; ok {
+		return id
+	}
+	id := len(c.StructIDs) + 1
+	c.StructIDs[name] = id
+	return id
 }
 
 func (c *Compiler) Compile(node parser.Node) (string, error) {
@@ -30,10 +43,17 @@ func (c *Compiler) Compile(node parser.Node) (string, error) {
 	c.output.WriteString("void mph_native_print(MorphContext* ctx, MorphString* s);\n")
 	c.output.WriteString("void mph_native_print_int(MorphContext* ctx, mph_int n);\n\n")
 
-	// 0. Compile Types (Structs)
+	// 0. Compile Types (Structs) and generate IDs
 	if err := c.compileStructTypes(node); err != nil {
 		return "", err
 	}
+
+	// Generate Type ID Macros
+	c.output.WriteString("// Type IDs\n")
+	for name, id := range c.StructIDs {
+		c.output.WriteString(fmt.Sprintf("#define MPH_TYPE_%s %d\n", name, id))
+	}
+	c.output.WriteString("\n")
 
 	// 1. Compile Modules
 	for path, mod := range c.checker.ModuleCache {
@@ -106,7 +126,31 @@ func (c *Compiler) compileFunction(fn *parser.FunctionLiteral, prefix string) er
 		}
 	}
 
-	c.output.WriteString(fmt.Sprintf("%s %s%s(MorphContext* ctx", retType, prefix, fn.Name))
+	funcName := fn.Name
+	if fn.Receiver != nil {
+		// Method: mph_ReceiverType_MethodName
+		// Need to get receiver type name.
+		// fn.Receiver.Type is TypeNode.
+		recvTypeName := ""
+		if st, ok := fn.Receiver.Type.(*parser.SimpleType); ok {
+			recvTypeName = st.Name
+		} else if qt, ok := fn.Receiver.Type.(*parser.QualifiedType); ok {
+			recvTypeName = qt.Package.Value + "_" + qt.Name.Value
+		}
+		if recvTypeName != "" {
+			funcName = recvTypeName + "_" + fn.Name
+		}
+	}
+
+	c.output.WriteString(fmt.Sprintf("%s %s%s(MorphContext* ctx", retType, prefix, funcName))
+
+	if fn.Receiver != nil {
+		cType, err := c.mapTypeToC(fn.Receiver.Type, prefix)
+		if err != nil {
+			return err
+		}
+		c.output.WriteString(fmt.Sprintf(", %s %s", cType, fn.Receiver.Name.Value))
+	}
 
 	for _, p := range fn.Parameters {
 		cType, err := c.mapTypeToC(p.Type, prefix)
@@ -155,6 +199,8 @@ func (c *Compiler) compileStatement(stmt parser.Statement, buf *strings.Builder,
 		return nil
 	case *parser.StructStatement:
 		return nil
+	case *parser.InterfaceStatement:
+		return nil
 	case *parser.BlockStatement:
 		buf.WriteString("{\n")
 		if err := c.compileBlock(s, buf, prefix); err != nil {
@@ -186,24 +232,44 @@ func (c *Compiler) compileVar(s *parser.VarStatement, buf *strings.Builder, pref
 		return fmt.Errorf("multi-var not supported in compiler yet")
 	}
 	name := s.Names[0].Value
+
+	// Check Interface Assignment
+	var destType checker.Type
+	if s.Type != nil {
+		destType = c.checker.Types[s.Type]
+	} else {
+		// Inference
+		destType = c.checker.Types[s.Names[0]]
+		if destType == nil { destType = c.checker.Types[s.Values[0]] }
+	}
+
 	valCode, err := c.compileExpression(s.Values[0], prefix)
 	if err != nil {
 		return err
 	}
 
+	srcType := c.checker.Types[s.Values[0]]
+	if destType != nil && destType.Kind() == checker.KindInterface && srcType != nil && srcType.Kind() == checker.KindStruct {
+		// Interface conversion
+		valCode, err = c.compileInterfaceConversion(destType.(*checker.InterfaceType), srcType.(*checker.StructType), valCode, prefix)
+		if err != nil { return err }
+	}
+
 	cType := "mph_int"
+	// Prefer resolved Checker type (from Variable Name or Explicit Type Node)
 	if s.Type != nil {
-		var err error
-		cType, err = c.mapTypeToC(s.Type, prefix)
-		if err != nil {
-			return err
+		// Explicit type node, look it up in checker cache
+		if typeNodeType := c.checker.Types[s.Type]; typeNodeType != nil {
+			cType = c.mapCheckerTypeToC(typeNodeType, prefix)
+		} else {
+			// Fallback to AST string mapping (unlikely if checker ran)
+			var err error
+			cType, err = c.mapTypeToC(s.Type, prefix)
+			if err != nil { return err }
 		}
-	} else {
-		typ := c.checker.Types[s.Names[0]]
-		if typ == nil {
-			typ = c.checker.Types[s.Values[0]]
-		}
-		cType = c.mapCheckerTypeToC(typ, prefix)
+	} else if destType != nil {
+		// Inferred type
+		cType = c.mapCheckerTypeToC(destType, prefix)
 	}
 
 	buf.WriteString(fmt.Sprintf("\t%s %s = %s;\n", cType, name, valCode))
@@ -214,6 +280,14 @@ func (c *Compiler) compileAssignment(s *parser.AssignmentStatement, buf *strings
 	valCode, err := c.compileExpression(s.Values[0], prefix)
 	if err != nil {
 		return err
+	}
+
+	// Check Interface Conversion
+	srcType := c.checker.Types[s.Values[0]]
+	destType := c.checker.Types[s.Names[0]]
+	if destType != nil && destType.Kind() == checker.KindInterface && srcType.Kind() == checker.KindStruct {
+		valCode, err = c.compileInterfaceConversion(destType.(*checker.InterfaceType), srcType.(*checker.StructType), valCode, prefix)
+		if err != nil { return err }
 	}
 
 	if ident, ok := s.Names[0].(*parser.Identifier); ok {
@@ -312,6 +386,10 @@ func (c *Compiler) compileWhile(we *parser.WhileExpression, buf *strings.Builder
 func (c *Compiler) compileExpression(expr parser.Expression, prefix string) (string, error) {
 	switch e := expr.(type) {
 	case *parser.CallExpression:
+		// Check for assertion: assert(iface, Type)
+		if ident, ok := e.Function.(*parser.Identifier); ok && ident.Value == "assert" {
+			return c.compileTypeAssertion(e, prefix)
+		}
 		return c.compileCall(e, prefix)
 	case *parser.StringLiteral:
 		escaped := strings.ReplaceAll(e.Value, "\n", "\\n")
@@ -538,6 +616,8 @@ func (c *Compiler) compileCall(call *parser.CallExpression, prefix string) (stri
 		if objType != nil && objType.Kind() == checker.KindModule {
 			modType := objType.(*checker.ModuleType)
 			funcName = mangle(modType.Name) + mem.Member.Value
+		} else if objType != nil && objType.Kind() == checker.KindInterface {
+			return c.compileInterfaceCall(call, mem, objType.(*checker.InterfaceType), prefix)
 		} else {
 			return "", fmt.Errorf("method calls not supported yet")
 		}
@@ -557,6 +637,123 @@ func (c *Compiler) compileCall(call *parser.CallExpression, prefix string) (stri
 	}
 
 	return fmt.Sprintf("%s(%s)", funcName, strings.Join(args, ", ")), nil
+}
+
+func (c *Compiler) compileInterfaceCall(call *parser.CallExpression, mem *parser.MemberExpression, iface *checker.InterfaceType, prefix string) (string, error) {
+	// 1. Find Method Index (Alphabetical Order)
+	// We must sort methods same as VTable generation!
+	ifaceMethods := make([]string, 0, len(iface.Methods))
+	for k := range iface.Methods {
+		ifaceMethods = append(ifaceMethods, k)
+	}
+	for i := 0; i < len(ifaceMethods); i++ {
+		for j := i + 1; j < len(ifaceMethods); j++ {
+			if ifaceMethods[i] > ifaceMethods[j] {
+				ifaceMethods[i], ifaceMethods[j] = ifaceMethods[j], ifaceMethods[i]
+			}
+		}
+	}
+
+	methodIndex := -1
+	for i, name := range ifaceMethods {
+		if name == mem.Member.Value {
+			methodIndex = i
+			break
+		}
+	}
+	if methodIndex == -1 {
+		return "", fmt.Errorf("method %s not found in interface %s", mem.Member.Value, iface.Name)
+	}
+
+	// 2. Compile Object (Interface)
+	objCode, err := c.compileExpression(mem.Object, prefix)
+	if err != nil { return "", err }
+
+	// 3. Compile Arguments
+	var args []string
+	args = append(args, "ctx") // Context
+
+	// Add instance as 'this'
+	// objCode is MorphInterface (value type). We need .instance
+	// Wait, compileExpression returns string of expression.
+	// If objCode is a variable name, we use `var.instance`.
+	// But `objCode` could be an expression returning MorphInterface.
+	// Safe to use `(objCode).instance`?
+	// Note: MorphInterface is passed by value.
+	// So `((MorphInterface)objCode).instance`
+
+	instanceCode := fmt.Sprintf("(%s).instance", objCode)
+	args = append(args, instanceCode)
+
+	for _, arg := range call.Arguments {
+		code, err := c.compileExpression(arg, prefix)
+		if err != nil { return "", err }
+		args = append(args, code)
+	}
+
+	// 4. Generate Call
+	// ((MethodSig) (objCode).vtable[idx])(...)
+	// We need to cast function pointer to correct signature.
+	// For now, let's assume `void (*)(MorphContext*, void*, ...)` generic sig?
+	// No, arguments have types. C is strict.
+	// We should generate `typedef` for function signatures?
+	// Or cast to specific signature matching method params.
+
+	methodType := iface.Methods[mem.Member.Value]
+
+	// Build function pointer type string
+	// retType (*)(MorphContext*, void*, arg1Type, arg2Type)
+	retType, _ := c.mapTypeToC(nil, prefix) // void default?
+	if len(methodType.ReturnTypes) > 0 {
+		retType, _ = c.mapCheckerTypeToC(methodType.ReturnTypes[0], prefix), ""
+	}
+
+	var paramTypes []string
+	paramTypes = append(paramTypes, "MorphContext*")
+	paramTypes = append(paramTypes, "void*") // 'this'
+
+	for _, p := range methodType.Parameters {
+		pt := c.mapCheckerTypeToC(p, prefix)
+		paramTypes = append(paramTypes, pt)
+	}
+
+	fnPtrType := fmt.Sprintf("%s (*)(%s)", retType, strings.Join(paramTypes, ", "))
+
+	callCode := fmt.Sprintf("((%s)(%s).vtable[%d])(%s)", fnPtrType, objCode, methodIndex, strings.Join(args, ", "))
+	return callCode, nil
+}
+
+func (c *Compiler) compileTypeAssertion(call *parser.CallExpression, prefix string) (string, error) {
+	if len(call.Arguments) != 2 {
+		return "", fmt.Errorf("assert expects 2 arguments: interface and type")
+	}
+
+	ifaceCode, err := c.compileExpression(call.Arguments[0], prefix)
+	if err != nil { return "", err }
+
+	// Arg 2 must be type name (Identifier) representing a struct?
+	// `pkg/checker` resolves types. But here `call.Arguments[1]` is an Expression.
+	// Ideally `assert(i, User)` -> `User` is parsed as Type?
+	// No, `User` is identifier. Checker resolves it to Type?
+	// If `User` is a type name, `Identifier` lookup returns Type?
+	// `checker.checkExpression` handles Identifier: if it's a type, it returns Type.
+	// So `c.checker.Types[arg1]` should be the type we want.
+
+	targetType := c.checker.Types[call.Arguments[1]]
+	if targetType == nil {
+		return "", fmt.Errorf("unknown type for assertion")
+	}
+
+	// Must be struct
+	if targetType.Kind() != checker.KindStruct {
+		return "", fmt.Errorf("can only assert to struct type")
+	}
+	st := targetType.(*checker.StructType)
+
+	targetID := c.getStructID(st.Name)
+	targetCType := c.mapCheckerTypeToC(st, prefix)
+
+	return fmt.Sprintf("(%s)mph_assert_type(ctx, %s, %d)", targetCType, ifaceCode, targetID), nil
 }
 
 func (c *Compiler) compileDelete(call *parser.CallExpression, prefix string) (string, error) {
@@ -724,6 +921,8 @@ func (c *Compiler) compileModuleStructs(prog *parser.Program, prefix string) err
 
 func (c *Compiler) compileStructDef(s *parser.StructStatement, prefix string) error {
 	name := prefix + s.Name.Value
+	c.getStructID(name) // Register ID
+
 	c.output.WriteString(fmt.Sprintf("struct %s {\n", name))
 
 	for _, field := range s.Fields {
@@ -767,6 +966,73 @@ func (c *Compiler) mapTypeToC(t parser.TypeNode, prefix string) (string, error) 
 	return "", fmt.Errorf("unknown type node: %T", t)
 }
 
+func (c *Compiler) compileInterfaceConversion(iface *checker.InterfaceType, st *checker.StructType, srcCode string, prefix string) (string, error) {
+	// 2. Generate Static VTable (if needed - currently we generate it locally or globally?)
+	// Global is better to avoid dupes, but for MVP local/expression is fine if we use Statement Expression?
+	// No, VTable array must be static/global.
+	// We can inject it into `output` before `entry_point`.
+	// But `output` is currently being written to.
+	// We should buffer definitions or write them at top.
+	// HACK: For MVP, let's use a Statement Expression with static array inside?
+	// `({ static void* vt[] = { ... }; vt; })` - Valid in GCC.
+
+	var sb strings.Builder
+	sb.WriteString("({ ")
+	sb.WriteString("static void* _vt[] = { ")
+
+	// 3. Populate VTable
+	// Order matches Interface Methods
+	// We need to sort methods by name to ensure consistent order?
+	// `pkg/checker` stores `Methods map[string]*FunctionType`. Map order is random!
+	// We need deterministic order.
+	// Does `InterfaceType` have ordered keys? No.
+	// We must sort keys.
+	// `Checker` doesn't expose sorted keys. We should sort them here.
+
+	// Wait, `InterfaceType` in `checker` doesn't have order.
+	// We need to define canonical order. Alphabetical?
+	// Yes, assume alphabetical for vtable slots.
+	// We also need to mangle struct method names correctly.
+
+	// Sort Interface Methods
+	ifaceMethods := make([]string, 0, len(iface.Methods))
+	for k := range iface.Methods {
+		ifaceMethods = append(ifaceMethods, k)
+	}
+	// Sort ifaceMethods ... need "sort" package
+	// Assuming simple sort.
+	for i := 0; i < len(ifaceMethods); i++ {
+		for j := i + 1; j < len(ifaceMethods); j++ {
+			if ifaceMethods[i] > ifaceMethods[j] {
+				ifaceMethods[i], ifaceMethods[j] = ifaceMethods[j], ifaceMethods[i]
+			}
+		}
+	}
+
+	for i, mName := range ifaceMethods {
+		if i > 0 { sb.WriteString(", ") }
+		// Find struct method
+		// Struct methods are mangled as `mph_StructName_MethodName`.
+		// If struct is imported, it's `mph_Pkg_StructName_MethodName`.
+		// We need logic to resolve struct method name.
+		structMethodName := fmt.Sprintf("%s%s_%s", prefix, st.Name, mName)
+		if st.Module != "" {
+			structMethodName = mangle(st.Module) + st.Name + "_" + mName
+		}
+		sb.WriteString("(void*)" + structMethodName)
+	}
+
+	sb.WriteString(" }; ");
+
+	// 4. Create Interface Struct
+	// (MorphInterface){ .instance = (void*)src, .vtable = _vt, .type_id = ID }
+	structID := c.getStructID(st.Name)
+	sb.WriteString(fmt.Sprintf("(MorphInterface){ .instance = (void*)%s, .vtable = _vt, .type_id = %d };", srcCode, structID))
+	sb.WriteString(" })")
+
+	return sb.String(), nil
+}
+
 func (c *Compiler) mapCheckerTypeToC(t checker.Type, prefix string) string {
 	if t == nil {
 		return "mph_int"
@@ -793,6 +1059,8 @@ func (c *Compiler) mapCheckerTypeToC(t checker.Type, prefix string) string {
 		return "MorphArray*"
 	case checker.KindMap:
 		return "MorphMap*"
+	case checker.KindInterface:
+		return "MorphInterface" // Value type
 	}
 	return "mph_int" // Fallback
 }

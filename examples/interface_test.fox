@@ -1,0 +1,38 @@
+antarmuka Speaker
+  fungsi Speak() string
+akhir
+
+struktur Human
+  Name string
+akhir
+
+fungsi (h Human) Speak() string
+  kembalikan "Hello, I am " + h.Name
+akhir
+
+struktur Dog
+  Name string
+akhir
+
+fungsi (d Dog) Speak() string
+  kembalikan "Woof! " + d.Name
+akhir
+
+fungsi main() void
+  native_print("--- Interface Test ---")
+
+  var h = Human{Name: "Jules"}
+  var s Speaker = h
+  native_print(s.Speak())
+
+  var d = Dog{Name: "Buddy"}
+  s = d
+  native_print(s.Speak())
+
+  native_print("\n--- Type Assertion ---")
+  var h2 = assert(s, Dog) # s is Dog now
+  native_print("Asserted Dog Name: " + h2.Name)
+
+  # This should panic
+  # var fail = assert(s, Human)
+akhir
