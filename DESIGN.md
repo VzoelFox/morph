@@ -34,7 +34,7 @@ Mendukung penyisipan ekspresi dalam string menggunakan sintaks `#{}`.
 var nama = "Dunia"
 var pesan = "Halo, #{nama}!"
 ```
-**Catatan**: Fitur ini didukung di tingkat Parser namun belum sepenuhnya diimplementasikan di Checker/Compiler (Partial Support).
+**Catatan**: Fitur ini didukung sepenuhnya. Setiap bagian ekspresi `#{...}` harus bertipe `String`.
 
 ### Entry Point
 Program Morph bersifat skrip linear. Tidak ada fungsi `utama` yang dipanggil secara implisit. Kode di level teratas akan dieksekusi. Konvensi umum adalah mendefinisikan fungsi `main` dan memanggilnya di akhir file.
