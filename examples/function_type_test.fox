@@ -1,0 +1,8 @@
+fungsi main() void
+  var fn fungsi(int, int) int = fungsi(a int, b int) int
+    kembalikan a + b;
+  akhir;
+
+  var x = fn(1, 2);
+  native_print_int(x);
+akhir

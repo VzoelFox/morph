@@ -54,6 +54,31 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.34.0 - 2025-12-23
+**Checksum**: SHA256:FUNCTION_TYPE_SUPPORT
+**Perubahan**:
+- **Parser**: Implemented `FunctionType` struct and parsing logic in `pkg/parser/ast.go` and `pkg/parser/parser.go`. Supports syntax like `var f fungsi(int) int`.
+- **Checker**: Implemented `FunctionType` resolution in `pkg/checker/checker.go`.
+- **Compiler**: Implemented C code generation for `FunctionType` in `pkg/compiler/compiler.go` (mapping to `MorphClosure*`).
+- **Compiler**: Fixed `compileCall` to use precise function pointer casting based on Checker types (replacing generic `MorphClosureFunc` cast).
+- **Compiler**: Fixed `isLocal` to correctly detect local variables in function bodies (scanning `VarStatement`s).
+- **Runtime**: Implemented `mph_closure_new` in `pkg/compiler/runtime/runtime.c.tpl`.
+- **Tests**: Added `examples/function_type_test.fox` verifying end-to-end function type usage.
+- **Tests**: Updated `TestCompileHelloWorld` in `pkg/compiler/compiler_test.go` to match new closure-based output.
+
+**Konteks Sesi**:
+- **Feature**: Implementing First-Class Function Types. This allows variables to store functions with specific signatures and enables higher-order functions.
+- **Bug Fixes**: Fixed compiler errors related to missing `FunctionType` and invalid C casting.
+
+**File Terkait**:
+- `pkg/parser/ast.go` (SHA256:d84f3eaafcc8970687aaaa616409fb206fa0ee68b1085d16b543ec1f3f6fc683)
+- `pkg/parser/parser.go` (SHA256:0baee31d0380d97537720e88da20e916dade444209a66098c158c8de2133b5ab)
+- `pkg/checker/checker.go` (SHA256:49096e887eea488346ed960c81c71e7b22d9c006f54d53eedfac0f1988a7220b)
+- `pkg/compiler/compiler.go` (SHA256:67359d4cc507170cb27ab202abd85df77762d6ea1b37ed693f2d6d87b3ec0b99)
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:db2a239d02dea1a6cca2c84ac9ed32d2770a34458e1302e256add488c52ebd0a)
+- `pkg/compiler/compiler_test.go` (SHA256:0ef4ec2802773542db01caea08b06a2f9e1131e549fc84d2f8f88b26586497a1)
+- `examples/function_type_test.fox` (SHA256:0ffb8e167c7c997e462564255e7e2bc06babbd90bd67529ae2f9b0b056612989)
+
 ### Version 1.33.0 - 2025-12-23
 **Checksum**: SHA256:CLOSURE_SUPPORT
 **Perubahan**:
