@@ -20,7 +20,7 @@ func runConstTest(t *testing.T, input string, expectedErrors int) {
 	c.Check(program)
 
 	if len(c.Errors) != expectedErrors {
-		t.Errorf("Input:\n%s\nExpected %d errors, got %d. Errors: %v", input, expectedErrors, len(c.Errors), c.Errors)
+		t.Errorf("Input:\n%s\nExpected %d errors, got %d. errors: %v", input, expectedErrors, len(c.Errors), c.Errors)
 	}
 }
 
@@ -33,7 +33,7 @@ func TestConstImmutability(t *testing.T) {
 	`
 	runConstTest(t, input1, 0)
 
-	// 2. Reassignment Error
+	// 2. Reassignment error
 	input2 := `
 	tetapan PI = 3.14
 	PI = 3.14159
@@ -53,7 +53,7 @@ func TestConstImmutability(t *testing.T) {
 func TestConstWithoutValue(t *testing.T) {
 	// Parser should reject this
 	input := `
-	tetapan PI Int;
+	tetapan PI int;
 	`
 	l := lexer.New(input)
 	p := parser.New(l)

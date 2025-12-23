@@ -1,7 +1,7 @@
 ambil "io"
 ambil "conv"
 
-fungsi main() Void
+fungsi main() void
     var s = "123"
     var res, err = conv.Atoi(s)
 

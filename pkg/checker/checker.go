@@ -37,33 +37,53 @@ func New() *Checker {
 	}
 
 	// Register primitive types
-	c.scope.DefineType("Int", IntType)
-	c.scope.DefineType("Float", FloatType)
-	c.scope.DefineType("String", StringType)
-	c.scope.DefineType("Bool", BoolType)
-	c.scope.DefineType("Error", UserErrorType) // User-facing 'Error' type
+	c.scope.DefineType("int", IntType)
+	c.scope.DefineType("float", FloatType)
+	c.scope.DefineType("string", StringType)
+	c.scope.DefineType("bool", BoolType)
+	c.scope.DefineType("error", UserErrorType) // User-facing 'Error' type
+	c.scope.DefineType("channel", ChannelType)
 
 	// Register built-in functions (Stdlib Prototype)
-	// parse_int(String) -> (Int, String)
+	// parse_int(string) -> (int, string)
 	parseIntType := &FunctionType{
 		Parameters:  []Type{StringType},
 		ReturnTypes: []Type{IntType, StringType},
 	}
 	c.scope.DefineVariable("parse_int", parseIntType, true, 0, 0)
 
-	// native_print(String) -> Void
+	// native_print(string) -> void
 	nativePrintType := &FunctionType{
 		Parameters:  []Type{StringType},
 		ReturnTypes: []Type{VoidType},
 	}
 	c.scope.DefineVariable("native_print", nativePrintType, true, 0, 0)
 
-	// native_print_int(Int) -> Void
+	// native_print_int(int) -> void
 	nativePrintIntType := &FunctionType{
 		Parameters:  []Type{IntType},
 		ReturnTypes: []Type{VoidType},
 	}
 	c.scope.DefineVariable("native_print_int", nativePrintIntType, true, 0, 0)
+
+	// Concurrency Primitives (int only for MVP)
+	// saluran_baru() -> channel
+	c.scope.DefineVariable("saluran_baru", &FunctionType{
+		Parameters:  []Type{},
+		ReturnTypes: []Type{ChannelType},
+	}, true, 0, 0)
+
+	// kirim(channel, int) -> void
+	c.scope.DefineVariable("kirim", &FunctionType{
+		Parameters:  []Type{ChannelType, IntType},
+		ReturnTypes: []Type{VoidType},
+	}, true, 0, 0)
+
+	// terima(channel) -> int
+	c.scope.DefineVariable("terima", &FunctionType{
+		Parameters:  []Type{ChannelType},
+		ReturnTypes: []Type{IntType},
+	}, true, 0, 0)
 
 	return c
 }
@@ -349,15 +369,15 @@ func (c *Checker) resolveType(n parser.TypeNode) Type {
 	switch t := n.(type) {
 	case *parser.SimpleType:
 		switch t.Name {
-		case "Int":
+		case "int":
 			return IntType
-		case "Float":
+		case "float":
 			return FloatType
-		case "String":
+		case "string":
 			return StringType
-		case "Bool":
+		case "bool":
 			return BoolType
-		case "Void":
+		case "void":
 			return VoidType
 		default:
 			if typ, ok := c.scope.LookupType(t.Name); ok {
@@ -626,6 +646,14 @@ func (c *Checker) checkExpressionInternal(e parser.Expression) Type {
 		return FloatType
 	case *parser.StringLiteral:
 		return StringType
+	case *parser.InterpolatedString:
+		for _, part := range exp.Parts {
+			t := c.checkExpression(part)
+			if t.Kind() != KindString && t.Kind() != KindUnknown {
+				c.addError(exp.Token.Line, exp.Token.Column, "Interpolation requires String type, got %s", t.String())
+			}
+		}
+		return StringType
 	case *parser.BooleanLiteral:
 		return BoolType
 	case *parser.NullLiteral:
@@ -881,6 +909,10 @@ func (c *Checker) checkExpressionInternal(e parser.Expression) Type {
 		return VoidType
 
 	case *parser.CallExpression:
+		if ident, ok := exp.Function.(*parser.Identifier); ok && ident.Value == "luncurkan" {
+			return c.checkSpawn(exp)
+		}
+
 		funcType := c.checkExpression(exp.Function)
 		if funcType.Kind() == KindUnknown {
 			return UnknownType
@@ -903,6 +935,42 @@ func (c *Checker) checkExpressionInternal(e parser.Expression) Type {
 	}
 
 	return UnknownType
+}
+
+func (c *Checker) checkSpawn(call *parser.CallExpression) Type {
+	if len(call.Arguments) < 1 || len(call.Arguments) > 2 {
+		c.addError(call.Token.Line, call.Token.Column, "luncurkan expects 1 or 2 arguments")
+		return ErrorType
+	}
+
+	// Arg 1: Function
+	fnType := c.checkExpression(call.Arguments[0])
+	if fnType.Kind() != KindFunction {
+		c.addError(call.Token.Line, call.Token.Column, "Argument 1 must be a function, got %s", fnType.String())
+		return ErrorType
+	}
+	ft := fnType.(*FunctionType)
+
+	// Arg 2: Argument (Optional)
+	if len(call.Arguments) == 2 {
+		argType := c.checkExpression(call.Arguments[1])
+
+		// Match with function param
+		if len(ft.Parameters) != 1 {
+			c.addError(call.Token.Line, call.Token.Column, "Function passed to luncurkan must accept exactly 1 argument")
+			return ErrorType
+		}
+		if !argType.AssignableTo(ft.Parameters[0]) {
+			c.addError(call.Token.Line, call.Token.Column, "Argument type mismatch: expected %s, got %s", ft.Parameters[0].String(), argType.String())
+		}
+	} else {
+		// 0 args passed
+		if len(ft.Parameters) != 0 {
+			c.addError(call.Token.Line, call.Token.Column, "Function requires arguments")
+		}
+	}
+
+	return VoidType
 }
 
 func (c *Checker) enterScope() {

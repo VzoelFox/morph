@@ -1,7 +1,7 @@
 ambil "io"
 ambil "time"
 
-fungsi main() Void
+fungsi main() void
     io.Write(io.Stdout, "Start sleep...\n")
     time.Sleep(1000)
     io.Write(io.Stdout, "End sleep.\n")

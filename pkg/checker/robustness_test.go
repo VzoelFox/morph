@@ -5,7 +5,7 @@ import (
 )
 
 func TestEmptyArrayWithType(t *testing.T) {
-	input := `var a []Int = []`
+	input := `var a []int = []`
 	errors := check(input)
 	if len(errors) != 0 {
 		t.Errorf("Expected no errors for empty array with type, got %v", errors)
@@ -13,7 +13,7 @@ func TestEmptyArrayWithType(t *testing.T) {
 }
 
 func TestEmptyMapWithType(t *testing.T) {
-	input := `var m map[String]Int = {}`
+	input := `var m map[string]int = {}`
 	errors := check(input)
 	if len(errors) != 0 {
 		t.Errorf("Expected no errors for empty map with type, got %v", errors)
@@ -38,7 +38,7 @@ func TestEmptyMapNoType(t *testing.T) {
 
 func TestEmptyArrayFunctionParam(t *testing.T) {
 	input := `
-	fungsi process(items []String)
+	fungsi process(items []string)
 		kembalikan
 	akhir
 
@@ -51,7 +51,7 @@ func TestEmptyArrayFunctionParam(t *testing.T) {
 }
 
 func TestNestedEmptyArrays(t *testing.T) {
-	input := `var nested [][]Int = [[], []]`
+	input := `var nested [][]int = [[], []]`
 	errors := check(input)
 	if len(errors) != 0 {
 		t.Errorf("Expected no errors for nested empty arrays, got %v", errors)

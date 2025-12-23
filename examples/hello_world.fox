@@ -1,6 +1,6 @@
 ambil "io"
 
-fungsi main() Void
+fungsi main() void
     io.Write(io.Stdout, "Hello World from Morph!\n")
 akhir
 

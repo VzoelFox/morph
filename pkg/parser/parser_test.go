@@ -427,7 +427,7 @@ func TestIfElseExpression(t *testing.T) {
 }
 
 func TestFunctionLiteralParsing(t *testing.T) {
-	input := `fungsi(x Int, y Int) Int x + y akhir`
+	input := `fungsi(x int, y int) int x + y akhir`
 
 	l := lexer.New(input)
 	p := New(l)
@@ -457,19 +457,19 @@ func TestFunctionLiteralParsing(t *testing.T) {
 	}
 
 	testLiteralExpression(t, function.Parameters[0].Name, "x")
-	if function.Parameters[0].Type.String() != "Int" {
-		t.Errorf("parameter 0 type not Int. got=%s", function.Parameters[0].Type.String())
+	if function.Parameters[0].Type.String() != "int" {
+		t.Errorf("parameter 0 type not int. got=%s", function.Parameters[0].Type.String())
 	}
 	testLiteralExpression(t, function.Parameters[1].Name, "y")
-	if function.Parameters[1].Type.String() != "Int" {
-		t.Errorf("parameter 1 type not Int. got=%s", function.Parameters[1].Type.String())
+	if function.Parameters[1].Type.String() != "int" {
+		t.Errorf("parameter 1 type not int. got=%s", function.Parameters[1].Type.String())
 	}
 
 	if len(function.ReturnTypes) == 0 {
 		t.Fatalf("function.ReturnTypes is empty")
 	}
-	if function.ReturnTypes[0].String() != "Int" {
-		t.Errorf("function.ReturnTypes[0] not Int. got=%s", function.ReturnTypes[0].String())
+	if function.ReturnTypes[0].String() != "int" {
+		t.Errorf("function.ReturnTypes[0] not int. got=%s", function.ReturnTypes[0].String())
 	}
 
 	if len(function.Body.Statements) != 1 {
@@ -492,8 +492,8 @@ func TestFunctionParameterParsing(t *testing.T) {
 		expectedParams []string
 	}{
 		{"fungsi() akhir", []string{}},
-		{"fungsi(x Int) akhir", []string{"x"}},
-		{"fungsi(x Int, y Int, z Int) akhir", []string{"x", "y", "z"}},
+		{"fungsi(x int) akhir", []string{"x"}},
+		{"fungsi(x int, y int, z int) akhir", []string{"x", "y", "z"}},
 	}
 
 	for _, tt := range tests {

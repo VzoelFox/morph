@@ -1,10 +1,10 @@
-var PI Float = 3.14159;
+var PI float = 3.14159;
 
-fungsi Add(a Int, b Int) Int
+fungsi Add(a int, b int) int
     kembalikan a + b;
 akhir
 
-fungsi Sin(x Float) Float
+fungsi Sin(x float) float
     # Mock implementation
     kembalikan x;
 akhir

@@ -20,37 +20,37 @@ func runPointerTest(t *testing.T, input string, expectedErrors int) {
 	c.Check(program)
 
 	if len(c.Errors) != expectedErrors {
-		t.Errorf("Input:\n%s\nExpected %d errors, got %d. Errors: %v", input, expectedErrors, len(c.Errors), c.Errors)
+		t.Errorf("Input:\n%s\nExpected %d errors, got %d. errors: %v", input, expectedErrors, len(c.Errors), c.Errors)
 	}
 }
 
 func TestPointers(t *testing.T) {
 	// 1. Basic Pointer Declaration
 	input1 := `
-	var x Int = 10
-	var p *Int = &x
-	var y Int = *p
+	var x int = 10
+	var p *int = &x
+	var y int = *p
 	`
 	runPointerTest(t, input1, 0)
 
 	// 2. Dereference
 	input2 := `
-	var x Int = 10
-	var p *Int = &x
-	var z Int = *p
+	var x int = 10
+	var p *int = &x
+	var z int = *p
 	`
 	runPointerTest(t, input2, 0)
 
 	// 3. Null assignment
 	input3 := `
-	var p *Int = kosong
+	var p *int = kosong
 	`
 	runPointerTest(t, input3, 0)
 
 	// 4. Struct Null assignment (Should Fail now)
 	input4 := `
 	struktur User
-		id Int
+		id int
 	akhir
 	var u User = kosong
 	`
@@ -59,7 +59,7 @@ func TestPointers(t *testing.T) {
 	// 5. Pointer to Struct Null assignment (Should Pass)
 	input5 := `
 	struktur User
-		id Int
+		id int
 	akhir
 	var u *User = kosong
 	`
@@ -67,7 +67,7 @@ func TestPointers(t *testing.T) {
 
 	// 6. Invalid AddressOf
 	input6 := `
-	var p *Int = &10
+	var p *int = &10
 	`
 	runPointerTest(t, input6, 1)
 }

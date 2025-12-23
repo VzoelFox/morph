@@ -54,6 +54,34 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.28.0 - 2025-12-23
+**Checksum**: SHA256:REFACTOR_AND_FEATURES
+**Perubahan**:
+- **Refactoring**: Renamed all primitive types from PascalCase (`Int`, `String`) to lowercase (`int`, `string`) across the entire codebase (Checker, Compiler, Runtime, Stdlib, Examples, Tests).
+- **Concurrency**: Implemented `Channel` type and built-in functions (`saluran_baru`, `kirim`, `terima`, `luncurkan`). Implemented C Runtime support (pthreads).
+- **Interpolation**: Implemented `InterpolatedString` support in Checker and Compiler.
+- **Documentation**: Updated `DESIGN.md` to reflect new lowercase types and feature status.
+- **Roadmap**: Marked C Output Generator as Complete.
+- **Technical Debt**: Resolved all active items.
+
+**Konteks Sesi**:
+- **Consolidation**: Executed a major refactor and feature implementation sweep to align the codebase with the design goals (lowercase types) and close technical gaps (Ghost Features).
+- **Recovery**: Restored work after a reset, ensuring all features are present and functional.
+
+**File Terkait**:
+- `pkg/checker/types.go` (SHA256:6576b72eda264e0187d55c2252bda9f33301215e192b1353796295bfee474d36)
+- `pkg/checker/checker.go` (SHA256:856331e94f1f602b1953263cfe3f49e696b8962b9be9beaef8539776b8dde812)
+- `pkg/compiler/compiler.go` (SHA256:a7f6120c5a2e952c7885719ee123e3671349f4ea3e4da1d631a01ede6e083e61)
+- `pkg/compiler/runtime/morph.h.tpl` (SHA256:b61f546fedf3852bf3aa65f0d75fd3117714b231fde764e5800f876a6402777e)
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:197674068ba03cde054b428396d9b6edac2b803a17b3510a0e38a4154c20c9cc)
+- `pkg/parser/ast.go` (SHA256:d5a19e2f6163bab797a4406f083e8f38cae207463e80a8475488ffd8e5a5c948)
+- `DESIGN.md` (SHA256:5fb9db016d529a9fac85692da7415d387e370af79b289662bef0cd9866e0064e)
+- `ROADMAP.md` (SHA256:6f2997ba30f766839dcee6e104306278a8f8ac19855a9e02f836977ee2ffd160)
+- `.vzoel.jules/technical-debt.morph.vz` (SHA256:693b6c6d0e4bee4c9e8afabdf661f145b3ae56b844c84038c8ae3d52a4fb9ac3)
+- `pkg/checker/interpolation_test.go` (SHA256:89076cb570c886ff412c2605932d4e2b309790dde0fcc356a02649b810443561)
+- `pkg/compiler/interpolation_test.go` (SHA256:6d962b1d1d9a78bf382ad9dd9ac6cf87ffb6f5d9d2fb8097dc4b1c18b790162a)
+- `examples/concurrency.fox` (SHA256:3771cedccdc3d8d63a63ed48bdcb693642bcb9688b4c62dcd41ec25fe996502e)
+
 ### Version 1.24.0 - 2025-12-22
 **Checksum**: SHA256:MULTI_FILE_COMPILATION
 **Perubahan**:

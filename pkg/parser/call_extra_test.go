@@ -8,16 +8,16 @@ import (
 
 func TestCallExpressionParsing_FunctionContext(t *testing.T) {
 	// Case 0: 0 args
-	runTest(t, "fungsi main() Void foo() akhir", "Case 0")
+	runTest(t, "fungsi main() void foo() akhir", "Case 0")
 
 	// Case 1: 1 arg
-	runTest(t, "fungsi main() Void foo(a) akhir", "Case 1")
+	runTest(t, "fungsi main() void foo(a) akhir", "Case 1")
 
 	// Case 2: 2 args
-	runTest(t, "fungsi main() Void foo(a, b) akhir", "Case 2")
+	runTest(t, "fungsi main() void foo(a, b) akhir", "Case 2")
 
 	// Case 3: IO Write
-	runTest(t, "fungsi main() Void io.Write(a, b) akhir", "Case 3")
+	runTest(t, "fungsi main() void io.Write(a, b) akhir", "Case 3")
 }
 
 func runTest(t *testing.T, input string, name string) {

@@ -6,7 +6,7 @@ import (
 
 func TestControlFlowMissingReturn(t *testing.T) {
 	input := `
-    fungsi test(x Int) Int
+    fungsi test(x int) int
         jika x > 0
             kembalikan 1;
         akhir
@@ -25,7 +25,7 @@ func TestControlFlowMissingReturn(t *testing.T) {
 
 func TestControlFlowAllPathsReturn(t *testing.T) {
 	input := `
-    fungsi test(x Int) Int
+    fungsi test(x int) int
         jika x > 0
             kembalikan 1;
         lainnya
@@ -41,7 +41,7 @@ func TestControlFlowAllPathsReturn(t *testing.T) {
 
 func TestControlFlowNested(t *testing.T) {
 	input := `
-    fungsi test(x Int) Int
+    fungsi test(x int) int
         jika x > 0
             jika x > 10
                 kembalikan 2;
@@ -61,7 +61,7 @@ func TestControlFlowNested(t *testing.T) {
 
 func TestControlFlowVoidFunction(t *testing.T) {
 	input := `
-    fungsi test(x Int)
+    fungsi test(x int)
         jika x > 0
             var y = 1;
         akhir
@@ -75,7 +75,7 @@ func TestControlFlowVoidFunction(t *testing.T) {
 
 func TestControlFlowWhileDoesntGuarantee(t *testing.T) {
 	input := `
-    fungsi test() Int
+    fungsi test() int
         selama true
             kembalikan 1;
         akhir
@@ -89,7 +89,7 @@ func TestControlFlowWhileDoesntGuarantee(t *testing.T) {
 
 func TestControlFlowBlockReturn(t *testing.T) {
 	input := `
-    fungsi test(x Int) Int
+    fungsi test(x int) int
         jika x > 0
             var y = x + 1;
             kembalikan y;

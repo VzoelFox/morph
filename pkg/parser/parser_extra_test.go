@@ -32,7 +32,7 @@ func TestInterpolatedString(t *testing.T) {
 		t.Fatalf("InterpolatedString parts wrong. want 3, got %d", len(is.Parts))
 	}
 
-	// Part 0: String "Hello "
+	// Part 0: string "Hello "
 	if sl, ok := is.Parts[0].(*StringLiteral); !ok || sl.Value != "Hello " {
 		t.Errorf("Part 0 wrong. got %T %v", is.Parts[0], is.Parts[0])
 	}
@@ -40,7 +40,7 @@ func TestInterpolatedString(t *testing.T) {
 	if ident, ok := is.Parts[1].(*Identifier); !ok || ident.Value != "name" {
 		t.Errorf("Part 1 wrong. got %T %v", is.Parts[1], is.Parts[1])
 	}
-	// Part 2: String "!"
+	// Part 2: string "!"
 	if sl, ok := is.Parts[2].(*StringLiteral); !ok || sl.Value != "!" {
 		t.Errorf("Part 2 wrong. got %T %v", is.Parts[2], is.Parts[2])
 	}

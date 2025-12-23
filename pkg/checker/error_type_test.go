@@ -10,12 +10,12 @@ func TestErrorTypeUsage(t *testing.T) {
 	// Test: Declaration, Null Assignment, Function Return
 	input := `
     # 1. Declaration & Init with Null (kosong)
-    var e Error = kosong
+    var e error = kosong
 
-    # 3. Function returning Error
-    fungsi mightFail(x Int) (Int, Error)
+    # 3. Function returning error
+    fungsi mightFail(x int) (int, error)
         jika x < 0
-            # Return variable of type Error
+            # Return variable of type error
             kembalikan 0, e
         akhir
         # Return literal null (kosong)

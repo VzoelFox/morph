@@ -12,7 +12,7 @@ func TestInference(t *testing.T) {
 
 func TestMultiReturnCheck(t *testing.T) {
 	input := `
-	fungsi f() (Int, Int)
+	fungsi f() (int, int)
 		kembalikan 1, 2;
 	akhir
 
