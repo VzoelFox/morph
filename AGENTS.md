@@ -3,7 +3,7 @@
 ## Metadata Dokumen
 - **Versi**: 1.2.0
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
-- **Terakhir Diupdate**: 2025-12-22
+- **Terakhir Diupdate**: 2025-12-23
 - **Status**: Active
 
 ---
@@ -54,6 +54,40 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.30.0 - 2025-12-23
+**Checksum**: SHA256:STRUCT_COMPILER_SUPPORT
+**Perubahan**:
+- **Feature**: Implemented Struct Support in C Compiler (`StructStatement` -> `struct`, `StructLiteral` -> `mph_alloc`, `MemberExpression` -> `->`).
+- **Compiler**: Refactored `Compiler` to support multi-pass compilation (Types then Code).
+- **Test**: Added `examples/struct_test.fox` verifying Struct Definition, Instantiation, and Field Access.
+
+**Konteks Sesi**:
+- **Self-Hosting Foundation**: Implementing the first "Complex Type" (Struct) in the C Compiler, a prerequisite for self-hosting.
+
+**File Terkait**:
+- `pkg/compiler/compiler.go` (SHA256:026469d6e069e26e0a2f7c0e3335e91b8cf4ab8a786f8ae105f5183dc6a82f0b)
+- `examples/struct_test.fox` (SHA256:0f54fcd7a2dd3cc0f76c079ddc1a512f303961a0dd599c388c90779a2077b2e8)
+
+### Version 1.29.0 - 2025-12-23
+**Checksum**: SHA256:DEVOPS_AND_MEMORY_FIX
+**Perubahan**:
+- **DevOps**: Added `.gitignore` (Whitelist strategy) to prevent artifact conflicts.
+- **DevOps**: Added `.github/workflows/ci.yml` and `docs/GIT_WORKFLOW.md`.
+- **Runtime**: Implemented `mph_destroy_memory` in `pkg/compiler/runtime/runtime.c.tpl` to fix memory leaks in Context/Cabinet.
+- **Runtime**: Fixed memory leaks in `main` and `mph_thread_wrapper`.
+- **Cleanup**: Removed accidental artifact files (`examples/concurrency`, `*.c`, `*.h`) from repository.
+- **API**: Added `mph_channel_destroy` to C Runtime.
+
+**Konteks Sesi**:
+- **Stabilization**: Fixing critical memory leaks and establishing proper git workflow/ignore rules to resolve conflicts from previous sessions.
+
+**File Terkait**:
+- `.gitignore` (SHA256:1586a6e0dccb15b418604e22cc270c9e66e3bd9ba4aa44501973a42597b1cbf4)
+- `.github/workflows/ci.yml` (SHA256:ac10f7ea1d8a8cf8f5473fb832426a56091b03ece85d055d030363a4816a9f90)
+- `docs/GIT_WORKFLOW.md` (SHA256:a19aae76af8c6d9b3b227b950d168ba8f775a11a6c22b343187d9063cc638ed0)
+- `pkg/compiler/runtime/morph.h.tpl` (SHA256:81b57db011a21be030f0286117dcc9c923a902af5d7762dc2b26d2d61717bb7a)
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:21e4fad7a088ffcf9bc75c530799f4f445c199197a4b9de0e9aac9b78df5bf25)
+
 ### Version 1.28.0 - 2025-12-23
 **Checksum**: SHA256:REFACTOR_AND_FEATURES
 **Perubahan**:
