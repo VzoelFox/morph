@@ -1,0 +1,37 @@
+fungsi worker(arg Int) Void
+    native_print("Worker started with:")
+    native_print_int(arg)
+akhir
+
+fungsi producer(c Channel) Void
+    var i = 0
+    selama i < 5
+        kirim(c, i)
+        i = i + 1
+    akhir
+    kirim(c, -1) # Sentinel
+akhir
+
+fungsi main() Void
+    native_print("Start Main")
+
+    # Test 1: Simple Thread
+    luncurkan(worker, 999)
+
+    # Test 2: Channel Communication
+    var c = saluran_baru()
+    luncurkan(producer, c)
+
+    var val = 0
+    selama val != -1
+        val = terima(c)
+        jika val != -1
+            native_print("Received:")
+            native_print_int(val)
+        akhir
+    akhir
+
+    native_print("Done Main")
+akhir
+
+main()

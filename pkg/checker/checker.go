@@ -42,6 +42,7 @@ func New() *Checker {
 	c.scope.DefineType("String", StringType)
 	c.scope.DefineType("Bool", BoolType)
 	c.scope.DefineType("Error", UserErrorType) // User-facing 'Error' type
+	c.scope.DefineType("Channel", ChannelType)
 
 	// Register built-in functions (Stdlib Prototype)
 	// parse_int(String) -> (Int, String)
@@ -64,6 +65,25 @@ func New() *Checker {
 		ReturnTypes: []Type{VoidType},
 	}
 	c.scope.DefineVariable("native_print_int", nativePrintIntType, true, 0, 0)
+
+	// Concurrency Primitives (Int only for MVP)
+	// saluran_baru() -> Channel
+	c.scope.DefineVariable("saluran_baru", &FunctionType{
+		Parameters:  []Type{},
+		ReturnTypes: []Type{ChannelType},
+	}, true, 0, 0)
+
+	// kirim(Channel, Int) -> Void
+	c.scope.DefineVariable("kirim", &FunctionType{
+		Parameters:  []Type{ChannelType, IntType},
+		ReturnTypes: []Type{VoidType},
+	}, true, 0, 0)
+
+	// terima(Channel) -> Int
+	c.scope.DefineVariable("terima", &FunctionType{
+		Parameters:  []Type{ChannelType},
+		ReturnTypes: []Type{IntType},
+	}, true, 0, 0)
 
 	return c
 }
@@ -889,6 +909,10 @@ func (c *Checker) checkExpressionInternal(e parser.Expression) Type {
 		return VoidType
 
 	case *parser.CallExpression:
+		if ident, ok := exp.Function.(*parser.Identifier); ok && ident.Value == "luncurkan" {
+			return c.checkSpawn(exp)
+		}
+
 		funcType := c.checkExpression(exp.Function)
 		if funcType.Kind() == KindUnknown {
 			return UnknownType
@@ -911,6 +935,42 @@ func (c *Checker) checkExpressionInternal(e parser.Expression) Type {
 	}
 
 	return UnknownType
+}
+
+func (c *Checker) checkSpawn(call *parser.CallExpression) Type {
+	if len(call.Arguments) < 1 || len(call.Arguments) > 2 {
+		c.addError(call.Token.Line, call.Token.Column, "luncurkan expects 1 or 2 arguments")
+		return ErrorType
+	}
+
+	// Arg 1: Function
+	fnType := c.checkExpression(call.Arguments[0])
+	if fnType.Kind() != KindFunction {
+		c.addError(call.Token.Line, call.Token.Column, "Argument 1 must be a function, got %s", fnType.String())
+		return ErrorType
+	}
+	ft := fnType.(*FunctionType)
+
+	// Arg 2: Argument (Optional)
+	if len(call.Arguments) == 2 {
+		argType := c.checkExpression(call.Arguments[1])
+
+		// Match with function param
+		if len(ft.Parameters) != 1 {
+			c.addError(call.Token.Line, call.Token.Column, "Function passed to luncurkan must accept exactly 1 argument")
+			return ErrorType
+		}
+		if !argType.AssignableTo(ft.Parameters[0]) {
+			c.addError(call.Token.Line, call.Token.Column, "Argument type mismatch: expected %s, got %s", ft.Parameters[0].String(), argType.String())
+		}
+	} else {
+		// 0 args passed
+		if len(ft.Parameters) != 0 {
+			c.addError(call.Token.Line, call.Token.Column, "Function requires arguments")
+		}
+	}
+
+	return VoidType
 }
 
 func (c *Checker) enterScope() {

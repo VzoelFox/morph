@@ -209,6 +209,7 @@ var (
 	ErrorType     = &BasicType{K: KindError, Name: "Error"}
 	NullType      = &BasicType{K: KindNull, Name: "Null"}
 	UserErrorType = &BasicType{K: KindUserError, Name: "Error"}
+	ChannelType   = &BasicType{K: KindChannel, Name: "Channel"}
 )
 
 type ExportInfo struct {

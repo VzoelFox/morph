@@ -54,6 +54,29 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.27.0 - 2025-12-22
+**Checksum**: SHA256:CONCURRENCY_MVP
+**Perubahan**:
+- **Concurrency**: Implemented `Channel` type and built-in functions in `pkg/checker`.
+- **Runtime**: Implemented `MorphChannel` (mutex/cond) and threading in C Runtime.
+- **Checker**: Added `checkSpawn` logic for `luncurkan`.
+- **Documentation**: Updated `DESIGN.md` to reflect Concurrency support (MVP).
+- **Example**: Added `examples/concurrency.fox` demonstrating threads and channels.
+- **Technical Debt**: Resolved Concurrency Ghost Feature.
+
+**Konteks Sesi**:
+- **Feature Completion**: Concurrency is now fully functional end-to-end (Morph -> C -> Binary).
+- **Architecture**: Channels are allocated via `malloc` (outside bumped heap) to be thread-safe.
+
+**File Terkait**:
+- `DESIGN.md` (SHA256:434ac3b6f369f646058a904cad5780c39920b7d83cc795b1335090dd4b8d4719)
+- `pkg/checker/types.go` (SHA256:f2f81208c18d0d0b7f06e3b173897ad8aef2ebb1d1bd67489afb7cd7e223effb)
+- `pkg/checker/checker.go` (SHA256:bfc1020ba86c2b2a77ba0a5e04bec4d47be97caffec2db92f0e553dfa0c8e966)
+- `pkg/compiler/runtime/morph.h.tpl` (SHA256:b61f546fedf3852bf3aa65f0d75fd3117714b231fde764e5800f876a6402777e)
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:197674068ba03cde054b428396d9b6edac2b803a17b3510a0e38a4154c20c9cc)
+- `examples/concurrency.fox` (SHA256:24ab978af9c0054fd5100e787392322e66c971273f33e24c07013eb587aa1180)
+- `.vzoel.jules/technical-debt.morph.vz` (SHA256:4769f8fc661a1d1f0b962aa594d7e6962bc18220210491238189893fd424f644)
+
 ### Version 1.26.0 - 2025-12-22
 **Checksum**: SHA256:STRING_INTERPOLATION
 **Perubahan**:

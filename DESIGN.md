@@ -157,9 +157,9 @@ akhir
 
 luncurkan(worker, 1)
 ```
-Status: *Partially Implemented (Compiler Logic Only)*.
-- Compiler mendukung `luncurkan`, `saluran_baru`, `kirim`, `terima`.
-- Checker & Runtime belum mendukung fitur ini (Ghost Features).
+Status: *Implemented (MVP)*.
+- Mendukung `luncurkan`, `saluran_baru`, `kirim`, `terima` (C Runtime via Pthreads).
+- Channel hanya mendukung tipe `Int` (int64) untuk saat ini.
 
 ### B. Manajemen Memori
 Rencana menggunakan pendekatan semi-manual atau region-based. Saat ini manajemen memori ditangani sepenuhnya oleh Garbage Collector dari host language (Go).
