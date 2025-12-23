@@ -1,2 +1,37 @@
+# Comprehensive Gitignore (Whitelist Strategy)
+
+# 1. Ignore Everything by Default
+*
+
+# 2. Whitelist Directories (Recursive)
+!*/
+!cmd/**
+!docs/**
+!examples/**
+!pkg/**
+!stdlib/**
+!.morph.vz/**
+!.vzoel.jules/**
+
+# 3. Whitelist Root Files
+!AGENTS.md
+!DESIGN.md
+!README.md
+!ROADMAP.md
+!checksum_gen.go
+!go.mod
+!go.sum
+!.gitignore
+
+# 4. Whitelist Github Workflows (if any)
+!.github/**
+
+# 5. Explicitly Ignore Artifacts (Just in case they sneak in via whitelist rules)
 morph
+*.exe
+*.o
+*.a
+*.so
+*.dylib
 *.test
+out.c

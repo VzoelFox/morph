@@ -36,6 +36,19 @@ void mph_init_memory(MorphContext* ctx) {
     mph_new_drawer(ctx->cabinet);
 }
 
+void mph_destroy_memory(MorphContext* ctx) {
+    if (ctx->cabinet == NULL) return;
+
+    Cabinet* cab = ctx->cabinet;
+    for (int i = 0; i < cab->drawer_count; i++) {
+        Drawer* d = cab->drawers[i];
+        if (d->data) free(d->data);
+        free(d);
+    }
+    free(cab);
+    ctx->cabinet = NULL;
+}
+
 void* mph_alloc(MorphContext* ctx, size_t size) {
     // 8-byte alignment
     size = (size + 7) & ~7;
@@ -90,6 +103,120 @@ mph_bool mph_string_eq(MorphString* a, MorphString* b) {
     return memcmp(a->data, b->data, a->length) == 0;
 }
 
+// --- Array Implementation ---
+
+MorphArray* mph_array_new(MorphContext* ctx, size_t capacity, size_t element_size) {
+    MorphArray* arr = (MorphArray*)mph_alloc(ctx, sizeof(MorphArray));
+    arr->length = capacity;
+    arr->capacity = capacity;
+    arr->element_size = element_size;
+
+    arr->data = mph_alloc(ctx, capacity * element_size);
+    return arr;
+}
+
+void* mph_array_at(MorphContext* ctx, MorphArray* arr, mph_int index) {
+    if (index < 0 || index >= arr->length) {
+        printf("Panic: Array index out of bounds\n");
+        exit(1);
+    }
+    return (uint8_t*)arr->data + (index * arr->element_size);
+}
+
+// --- I/O Implementation ---
+
+#define MAX_FILES 1024
+FILE* mph_file_table[MAX_FILES];
+int mph_file_count = 3; // 0,1,2 reserved
+int mph_files_initialized = 0;
+
+void mph_init_files() {
+    if (mph_files_initialized) return;
+    mph_file_table[0] = stdin;
+    mph_file_table[1] = stdout;
+    mph_file_table[2] = stderr;
+    mph_files_initialized = 1;
+}
+
+typedef struct InternalFile {
+    mph_int fd;
+} InternalFile;
+
+void* mph_io_make_file(MorphContext* ctx, mph_int fd) {
+    mph_init_files();
+    InternalFile* f = (InternalFile*)mph_alloc(ctx, sizeof(InternalFile));
+    f->fd = fd;
+    return f;
+}
+
+void* mph_io_Open(MorphContext* ctx, MorphString* path) {
+    mph_init_files();
+    if (mph_file_count >= MAX_FILES) return NULL;
+
+    FILE* handle = fopen(path->data, "r");
+    if (!handle) return NULL;
+
+    int fd = mph_file_count++;
+    mph_file_table[fd] = handle;
+
+    InternalFile* f = (InternalFile*)mph_alloc(ctx, sizeof(InternalFile));
+    f->fd = fd;
+    return f;
+}
+
+void* mph_io_Create(MorphContext* ctx, MorphString* path) {
+    mph_init_files();
+    if (mph_file_count >= MAX_FILES) return NULL;
+
+    FILE* handle = fopen(path->data, "w+");
+    if (!handle) return NULL;
+
+    int fd = mph_file_count++;
+    mph_file_table[fd] = handle;
+
+    InternalFile* f = (InternalFile*)mph_alloc(ctx, sizeof(InternalFile));
+    f->fd = fd;
+    return f;
+}
+
+MorphString* mph_io_Read(MorphContext* ctx, void* f, mph_int size) {
+    mph_init_files();
+    if (!f) return mph_string_new(ctx, "");
+    mph_int fd = ((InternalFile*)f)->fd;
+    if (fd < 0 || fd >= MAX_FILES || !mph_file_table[fd]) return mph_string_new(ctx, "");
+
+    char* buf = (char*)mph_alloc(ctx, size + 1);
+    size_t read = fread(buf, 1, size, mph_file_table[fd]);
+    buf[read] = '\0';
+
+    MorphString* s = (MorphString*)mph_alloc(ctx, sizeof(MorphString));
+    s->data = buf;
+    s->length = read;
+    return s;
+}
+
+mph_int mph_io_Write(MorphContext* ctx, void* f, MorphString* s) {
+    mph_init_files();
+    if (!f) return -1;
+    mph_int fd = ((InternalFile*)f)->fd;
+    if (fd < 0 || fd >= MAX_FILES || !mph_file_table[fd]) return -1;
+
+    return fwrite(s->data, 1, s->length, mph_file_table[fd]);
+}
+
+mph_int mph_io_Close(MorphContext* ctx, void* f) {
+    mph_init_files();
+    if (!f) return -1;
+    mph_int fd = ((InternalFile*)f)->fd;
+    if (fd < 0 || fd >= MAX_FILES || !mph_file_table[fd]) return -1;
+
+    if (fd <= 2) return 0;
+
+    int res = fclose(mph_file_table[fd]);
+    mph_file_table[fd] = NULL;
+    return res;
+}
+
 void mph_native_print_int(MorphContext* ctx, mph_int n) {
     printf("%ld\n", n);
 }
@@ -102,6 +229,7 @@ int main() {
 
     morph_entry_point(&ctx);
 
+    mph_destroy_memory(&ctx);
     return 0;
 }
 
@@ -125,8 +253,8 @@ void* mph_thread_wrapper(void* ptr) {
 
     args->fn(&args->ctx, args->arg);
 
-    // Memory leak: args and ctx.cabinet are not freed.
-    // For MVP it's acceptable.
+    mph_destroy_memory(&args->ctx);
+    free(args);
     return NULL;
 }
 
@@ -153,6 +281,14 @@ MorphChannel* mph_channel_new(MorphContext* ctx) {
     c->tail = 0;
 
     return c;
+}
+
+void mph_channel_destroy(MorphContext* ctx, MorphChannel* c) {
+    pthread_mutex_destroy(&c->lock);
+    pthread_cond_destroy(&c->cond_send);
+    pthread_cond_destroy(&c->cond_recv);
+    free(c->buffer);
+    free(c);
 }
 
 void mph_channel_send(MorphContext* ctx, MorphChannel* c, mph_int val) {

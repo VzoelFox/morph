@@ -63,6 +63,36 @@ func RegisterIO() {
 		return &Integer{Value: int64(n)}
 	})
 
+	RegisterNative("Read", func(args ...Object) Object {
+		if len(args) != 2 {
+			return newError("wrong number of arguments. got=%d, want=2", len(args))
+		}
+
+		fileObj, ok := args[0].(*StructInstance)
+		if !ok || fileObj.Name != "File" {
+			return newError("first argument must be File")
+		}
+
+		fdObj, ok := fileObj.Fields["fd"].(*Integer)
+		if !ok {
+			return newError("File.fd is not Integer")
+		}
+
+		sizeObj, ok := args[1].(*Integer)
+		if !ok {
+			return newError("second argument must be Integer")
+		}
+
+		f := os.NewFile(uintptr(fdObj.Value), "external")
+		buf := make([]byte, sizeObj.Value)
+		n, err := f.Read(buf)
+		if err != nil && err.Error() != "EOF" {
+			return newError("Read error: %s", err.Error())
+		}
+
+		return &String{Value: string(buf[:n])}
+	})
+
 	RegisterNative("Open", func(args ...Object) Object {
 		if len(args) != 1 {
 			return newError("wrong number of arguments. got=%d, want=1", len(args))

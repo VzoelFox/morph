@@ -1,0 +1,18 @@
+struktur User
+  id int
+  age int
+  active bool
+akhir
+
+fungsi main() void
+  var u = User{
+    id: 1,
+    age: 25,
+    active: benar
+  }
+
+  native_print_int(u.id)
+  native_print_int(u.age)
+akhir
+
+main()

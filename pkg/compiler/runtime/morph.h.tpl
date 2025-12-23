@@ -64,10 +64,18 @@ typedef struct MorphString {
     size_t length;
 } MorphString;
 
+typedef struct MorphArray {
+    void* data;
+    size_t length;
+    size_t capacity;
+    size_t element_size;
+} MorphArray;
+
 // --- API ---
 
 // Memory
 void mph_init_memory(MorphContext* ctx);
+void mph_destroy_memory(MorphContext* ctx);
 void* mph_alloc(MorphContext* ctx, size_t size);
 Drawer* mph_new_drawer(Cabinet* cab);
 
@@ -76,11 +84,16 @@ MorphString* mph_string_new(MorphContext* ctx, const char* literal);
 MorphString* mph_string_concat(MorphContext* ctx, MorphString* a, MorphString* b);
 mph_bool mph_string_eq(MorphString* a, MorphString* b);
 
+// Arrays
+MorphArray* mph_array_new(MorphContext* ctx, size_t capacity, size_t element_size);
+void* mph_array_at(MorphContext* ctx, MorphArray* arr, mph_int index);
+
 // Debug
 void mph_native_print_int(MorphContext* ctx, mph_int n);
 
 // Concurrency
 MorphChannel* mph_channel_new(MorphContext* ctx);
+void mph_channel_destroy(MorphContext* ctx, MorphChannel* c);
 void mph_channel_send(MorphContext* ctx, MorphChannel* c, mph_int val);
 mph_int mph_channel_recv(MorphContext* ctx, MorphChannel* c);
 void mph_thread_spawn(MorphEntryFunction fn, void* arg);

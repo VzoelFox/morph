@@ -19,6 +19,7 @@ type Checker struct {
 	importer       Importer
 	ModuleCache    map[string]*ModuleType
 	loadingModules map[string]bool
+	CurrentModule  string
 }
 
 func IsChannel(t Type) bool {
@@ -193,6 +194,8 @@ func (c *Checker) checkImport(imp *parser.ImportStatement) {
 	subChecker.ModuleCache = c.ModuleCache // Share cache
 	subChecker.loadingModules = c.loadingModules // Share loading state (for cycle detection)
 
+	subChecker.CurrentModule = path
+
 	// Collect definitions ONLY (Pass 1)
 	subChecker.Check(importedProg)
 
@@ -262,6 +265,7 @@ func isExported(name string) bool {
 func (c *Checker) defineStruct(s *parser.StructStatement) {
 	st := &StructType{
 		Name:       s.Name.Value,
+		Module:     c.CurrentModule,
 		Fields:     make(map[string]Type),
 		FieldOrder: make([]string, 0, len(s.Fields)),
 		Methods:    make(map[string]*FunctionType),

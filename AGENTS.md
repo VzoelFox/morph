@@ -3,7 +3,7 @@
 ## Metadata Dokumen
 - **Versi**: 1.2.0
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
-- **Terakhir Diupdate**: 2025-12-22
+- **Terakhir Diupdate**: 2025-12-23
 - **Status**: Active
 
 ---
@@ -54,6 +54,80 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.32.0 - 2025-12-23
+**Checksum**: SHA256:IO_AND_STRUCT_MODULES
+**Perubahan**:
+- **Feature**: Implemented Standard I/O (`Create`, `Open`, `Read`, `Write`, `Close`) in C Runtime using `FILE*` and file table.
+- **Stdlib**: Updated `stdlib/io.fox` to include `Create` and `Read` (matching C Runtime).
+- **Evaluator**: Updated `pkg/evaluator/builtins_io.go` to implement `Read` (using `os.File`).
+- **Checker**: Added `Module` field to `StructType` to support correct C name mangling for imported structs.
+- **Compiler**: Updated `mapCheckerTypeToC` to use `StructType.Module`.
+- **Test**: Added `examples/io_test.fox`.
+
+**Konteks Sesi**:
+- **Self-Hosting Foundation**: Closing the "File I/O Gap". Compiler now supports reading/writing files, enabling it to read source code. Also fixed critical bug in cross-module struct compilation.
+
+**File Terkait**:
+- `pkg/compiler/runtime/morph.h.tpl` (SHA256:83de3162cea858b1435652400060a22c0d8425ea8cad1a7f162fa3b2bcc7db9f)
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:cfcdb3caeadd8acf6a3922631bddce0ca3d7a317a2900af7cb02bcce3b88df88)
+- `pkg/compiler/compiler.go` (SHA256:56ecd0d5dc7de41f57e47c70ca2f19fd9b14aeb840b5dd9a8023b7b3f15dde6f)
+- `stdlib/io.fox` (SHA256:d773ed500a4913b883011e96899d4fd9369b95b4b306caa658ee2e29a1406bba)
+- `pkg/evaluator/builtins_io.go` (SHA256:a19c6a226dc23f2ee9ff006b22b8938dd4a23711b479eeaf36b8244c697d4219)
+- `pkg/checker/types.go` (SHA256:10ca0c21b41159512adabf0c851c041110a95fc6e815240d66e2c70ab0a1ae27)
+- `pkg/checker/checker.go` (SHA256:394c016db203c4b7d48eef83c02e1c545a74680e945049c9892379f386b8fec4)
+- `examples/io_test.fox` (SHA256:d61754c63db46fc0b9e9941c44bada2c2f2fa739da0d1043dfc64c63995b70bc)
+
+### Version 1.31.0 - 2025-12-23
+**Checksum**: SHA256:ARRAY_SUPPORT
+**Perubahan**:
+- **Runtime**: Implemented `MorphArray` struct and API (`mph_array_new`, `mph_array_at`) in C Runtime.
+- **Compiler**: Implemented `ArrayLiteral` compilation using `mph_array_new`.
+- **Compiler**: Implemented `IndexExpression` compilation for Arrays.
+- **Test**: Added `examples/array_test.fox`.
+
+**Konteks Sesi**:
+- **Self-Hosting Foundation**: Implementing dynamic arrays (slices), a critical primitive for the compiler's own logic.
+
+**File Terkait**:
+- `pkg/compiler/runtime/morph.h.tpl` (SHA256:83de3162cea858b1435652400060a22c0d8425ea8cad1a7f162fa3b2bcc7db9f)
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:85296d4313b92e8eb5e0a28e3d620335f6a6c35383f2651f4b5d1859c5f4c973)
+- `pkg/compiler/compiler.go` (SHA256:d3a7d7874b180da578b400953874bdc59bdbe07acc9e7d0dc4490a2c9264f861)
+- `examples/array_test.fox` (SHA256:2228084eceb17f9d68b8a98736aa93f739aad8770209f532b0cccab9246aba00)
+
+### Version 1.30.0 - 2025-12-23
+**Checksum**: SHA256:STRUCT_COMPILER_SUPPORT
+**Perubahan**:
+- **Feature**: Implemented Struct Support in C Compiler (`StructStatement` -> `struct`, `StructLiteral` -> `mph_alloc`, `MemberExpression` -> `->`).
+- **Compiler**: Refactored `Compiler` to support multi-pass compilation (Types then Code).
+- **Test**: Added `examples/struct_test.fox` verifying Struct Definition, Instantiation, and Field Access.
+
+**Konteks Sesi**:
+- **Self-Hosting Foundation**: Implementing the first "Complex Type" (Struct) in the C Compiler, a prerequisite for self-hosting.
+
+**File Terkait**:
+- `pkg/compiler/compiler.go` (SHA256:026469d6e069e26e0a2f7c0e3335e91b8cf4ab8a786f8ae105f5183dc6a82f0b)
+- `examples/struct_test.fox` (SHA256:0f54fcd7a2dd3cc0f76c079ddc1a512f303961a0dd599c388c90779a2077b2e8)
+
+### Version 1.29.0 - 2025-12-23
+**Checksum**: SHA256:DEVOPS_AND_MEMORY_FIX
+**Perubahan**:
+- **DevOps**: Added `.gitignore` (Whitelist strategy) to prevent artifact conflicts.
+- **DevOps**: Added `.github/workflows/ci.yml` and `docs/GIT_WORKFLOW.md`.
+- **Runtime**: Implemented `mph_destroy_memory` in `pkg/compiler/runtime/runtime.c.tpl` to fix memory leaks in Context/Cabinet.
+- **Runtime**: Fixed memory leaks in `main` and `mph_thread_wrapper`.
+- **Cleanup**: Removed accidental artifact files (`examples/concurrency`, `*.c`, `*.h`) from repository.
+- **API**: Added `mph_channel_destroy` to C Runtime.
+
+**Konteks Sesi**:
+- **Stabilization**: Fixing critical memory leaks and establishing proper git workflow/ignore rules to resolve conflicts from previous sessions.
+
+**File Terkait**:
+- `.gitignore` (SHA256:1586a6e0dccb15b418604e22cc270c9e66e3bd9ba4aa44501973a42597b1cbf4)
+- `.github/workflows/ci.yml` (SHA256:ac10f7ea1d8a8cf8f5473fb832426a56091b03ece85d055d030363a4816a9f90)
+- `docs/GIT_WORKFLOW.md` (SHA256:a19aae76af8c6d9b3b227b950d168ba8f775a11a6c22b343187d9063cc638ed0)
+- `pkg/compiler/runtime/morph.h.tpl` (SHA256:81b57db011a21be030f0286117dcc9c923a902af5d7762dc2b26d2d61717bb7a)
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:21e4fad7a088ffcf9bc75c530799f4f445c199197a4b9de0e9aac9b78df5bf25)
+
 ### Version 1.28.0 - 2025-12-23
 **Checksum**: SHA256:REFACTOR_AND_FEATURES
 **Perubahan**:
