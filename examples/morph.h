@@ -91,6 +91,12 @@ typedef struct MorphMap {
     MorphKeyKind key_kind;
 } MorphMap;
 
+typedef struct MorphInterface {
+    void* instance;      // Pointer to the struct data
+    void** vtable;       // Array of function pointers
+    mph_int type_id;     // For Type Assertion (Unique ID)
+} MorphInterface;
+
 // --- API ---
 
 // Memory
@@ -114,6 +120,9 @@ void mph_map_set(MorphContext* ctx, MorphMap* map, void* key, void* value);
 void* mph_map_get(MorphContext* ctx, MorphMap* map, void* key);
 void mph_map_delete(MorphContext* ctx, MorphMap* map, void* key);
 mph_int mph_map_len(MorphContext* ctx, MorphMap* map);
+
+// Interfaces
+void* mph_assert_type(MorphContext* ctx, MorphInterface iface, mph_int expected_id);
 
 // Debug
 void mph_native_print_int(MorphContext* ctx, mph_int n);

@@ -277,6 +277,17 @@ mph_int mph_map_len(MorphContext* ctx, MorphMap* map) {
     return (mph_int)map->count;
 }
 
+// --- Interface Implementation ---
+
+void* mph_assert_type(MorphContext* ctx, MorphInterface iface, mph_int expected_id) {
+    if (iface.type_id == expected_id) {
+        return iface.instance;
+    }
+    printf("Panic: Type assertion failed. Expected ID %ld, got %ld\n", expected_id, iface.type_id);
+    exit(1);
+    return NULL;
+}
+
 // --- I/O Implementation ---
 
 #define MAX_FILES 1024
