@@ -70,6 +70,11 @@ func (c *Compiler) Compile(node parser.Node) (string, error) {
 		return "", err
 	}
 
+    // 1.1 Generate RTTI for Structs
+    if err := c.compileStructRTTI(node); err != nil {
+        return "", err
+    }
+
 	c.output.WriteString("// Type IDs\n")
 	for name, id := range c.StructIDs {
 		c.output.WriteString(fmt.Sprintf("#define MPH_TYPE_%s %d\n", name, id))
@@ -605,7 +610,7 @@ func (c *Compiler) compileFunctionLiteral(fn *parser.FunctionLiteral, prefix str
 	var sb strings.Builder
 	sb.WriteString("({ ")
 	if len(captures) > 0 {
-		sb.WriteString(fmt.Sprintf("%s* _e = (%s*)mph_alloc(ctx, sizeof(%s)); ", envTypeName, envTypeName, envTypeName))
+		sb.WriteString(fmt.Sprintf("%s* _e = (%s*)mph_alloc(ctx, sizeof(%s), NULL); ", envTypeName, envTypeName, envTypeName))
 		for _, name := range captures {
 			val := name
 			if c.isCaptured(name, parentFn) {
@@ -613,9 +618,9 @@ func (c *Compiler) compileFunctionLiteral(fn *parser.FunctionLiteral, prefix str
 			}
 			sb.WriteString(fmt.Sprintf("_e->%s = %s; ", name, val))
 		}
-		sb.WriteString(fmt.Sprintf("mph_closure_new(ctx, (void*)%s%s, (void*)_e); ", prefix, funcName))
+		sb.WriteString(fmt.Sprintf("mph_closure_new(ctx, (void*)%s%s, (void*)_e, sizeof(%s)); ", prefix, funcName, envTypeName))
 	} else {
-		sb.WriteString(fmt.Sprintf("mph_closure_new(ctx, (void*)%s%s, NULL); ", prefix, funcName))
+		sb.WriteString(fmt.Sprintf("mph_closure_new(ctx, (void*)%s%s, NULL, 0); ", prefix, funcName))
 	}
 	sb.WriteString(" })")
 	return sb.String(), nil
@@ -798,7 +803,8 @@ func (c *Compiler) compileStructLiteral(sl *parser.StructLiteral, prefix string,
 
 	var sb strings.Builder
 	sb.WriteString("({ ")
-	sb.WriteString(fmt.Sprintf("%s* _t = (%s*)mph_alloc(ctx, sizeof(%s)); ", cTypeName, cTypeName, cTypeName))
+    // Pass pointer to global RTTI variable: &mph_ti_TypeName
+	sb.WriteString(fmt.Sprintf("%s* _t = (%s*)mph_alloc(ctx, sizeof(%s), &mph_ti_%s); ", cTypeName, cTypeName, cTypeName, cTypeName))
 	for fieldName, valExpr := range sl.Fields {
 		valCode, err := c.compileExpression(valExpr, prefix, fn)
 		if err != nil { return "", err }
@@ -1100,4 +1106,63 @@ func (c *Compiler) mapTypeToC(t parser.TypeNode, prefix string) (string, error) 
 		return "MorphClosure*", nil
 	}
 	return "", fmt.Errorf("unknown type node: %T", t)
+}
+
+// New method to generate RTTI
+func (c *Compiler) compileStructRTTI(node parser.Node) error {
+    c.output.WriteString("// RTTI Definitions\n")
+
+    var generateRTTI func(prog *parser.Program, prefix string) error
+    generateRTTI = func(prog *parser.Program, prefix string) error {
+        for _, stmt := range prog.Statements {
+            if s, ok := stmt.(*parser.StructStatement); ok {
+                name := prefix + s.Name.Value
+                // Collect pointer offsets
+                var offsets []string
+                for _, f := range s.Fields {
+                    if c.isPointerType(f.Type) {
+                        offsets = append(offsets, fmt.Sprintf("offsetof(%s, %s)", name, f.Name))
+                    }
+                }
+
+                numPtrs := len(offsets)
+                offsetsStr := "NULL"
+                if numPtrs > 0 {
+                    offsetsStr = fmt.Sprintf("(size_t[]){%s}", strings.Join(offsets, ", "))
+                }
+
+                c.typeDefs.WriteString(fmt.Sprintf("MorphTypeInfo mph_ti_%s = { \"%s\", sizeof(%s), %d, %s };\n", name, s.Name.Value, name, numPtrs, offsetsStr))
+            }
+        }
+        return nil
+    }
+
+    // Modules
+	for path, mod := range c.checker.ModuleCache {
+		if mod.Program == nil { continue }
+		if err := generateRTTI(mod.Program, mangle(path)); err != nil { return err }
+	}
+
+    // Main
+	if prog, ok := node.(*parser.Program); ok {
+		if err := generateRTTI(prog, "mph_"); err != nil { return err }
+	}
+    c.output.WriteString("\n")
+    return nil
+}
+
+func (c *Compiler) isPointerType(t parser.TypeNode) bool {
+    // Strings, Arrays, Maps, Closures, Structs are pointers
+    switch ty := t.(type) {
+    case *parser.SimpleType:
+        switch ty.Name {
+        case "int", "float", "bool", "void": return false
+        default: return true // Structs are pointers
+        }
+    case *parser.QualifiedType: return true
+    case *parser.ArrayType: return true
+    case *parser.MapType: return true
+    case *parser.FunctionType: return true
+    }
+    return false
 }

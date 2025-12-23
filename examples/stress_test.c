@@ -6,6 +6,8 @@ void mph_native_print_int(MorphContext* ctx, mph_int n);
 
 // Struct Definitions
 
+// RTTI Definitions
+
 // Type IDs
 
 // Struct Definitions (Env & Types)
