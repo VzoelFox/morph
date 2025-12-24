@@ -422,6 +422,24 @@ func (c *Compiler) compileFunction(fn *parser.FunctionLiteral, prefix string) er
         }
 	}
 
+	// 3. Register Pointer Parameters as Roots
+    // Receiver
+	if fn.Receiver != nil {
+        if c.isPointerType(fn.Receiver.Type) {
+            c.funcDefs.WriteString(fmt.Sprintf("\tmph_gc_push_root(ctx, (void**)&%s);\n", fn.Receiver.Name.Value))
+        }
+    }
+    // Params
+    var roots int
+    if fn.Receiver != nil && c.isPointerType(fn.Receiver.Type) { roots++ }
+
+	for _, p := range fn.Parameters {
+        if c.isPointerType(p.Type) {
+		    c.funcDefs.WriteString(fmt.Sprintf("\tmph_gc_push_root(ctx, (void**)&%s);\n", p.Name.Value))
+            roots++
+        }
+	}
+
 	// 3. Cast Env
 	if len(captures) > 0 {
 		fnBuilder.WriteString(fmt.Sprintf("\t%s* _env = (%s*)_env_void;\n", envTypeName, envTypeName))
