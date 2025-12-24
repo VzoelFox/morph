@@ -1,0 +1,24 @@
+ambil "conv"
+
+fungsi main() void
+    native_print("Starting GC Container Test")
+
+    # 1. Test Array with Pointers (Strings)
+    var arr = ["A", "B", "C"]
+
+    # 2. Test Map with Pointers (Values)
+    var m = {"k1": "v1", "k2": "v2"}
+
+    # Loop to force allocation and maybe GC
+    var i = 0
+    selama i < 100
+        var s = "Garbage" + conv.Itoa(i) # Allocates string
+        i = i + 1
+    akhir
+
+    # Access containers to ensure they are still valid (not collected)
+    native_print("Array[0]: " + arr[0])
+    native_print("Map[k1]: " + m["k1"])
+
+    native_print("GC Container Test Done")
+akhir

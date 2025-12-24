@@ -26,7 +26,7 @@
 # 4. Whitelist Github Workflows (if any)
 !.github/**
 
-# 5. Explicitly Ignore Artifacts (Just in case they sneak in via whitelist rules)
+# 5. Explicitly Ignore Artifacts (Even inside whitelisted directories)
 morph
 *.exe
 *.o
@@ -35,3 +35,10 @@ morph
 *.dylib
 *.test
 out.c
+*_out.c
+
+# Ignore Generated C/H files in examples/ but keep .fox files
+examples/*.c
+examples/*.h
+examples/function_type_test
+examples/stress_test

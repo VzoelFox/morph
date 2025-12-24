@@ -27,11 +27,6 @@ func main() {
 			}
 			// Skip .morph.vz but NOT .vzoel.jules
 			if info.Name() == ".morph.vz" {
-				// But wait, .morph.vz/context might need checksums?
-				// User said "archive context".
-				// But existing checksums/updates.sha256 exist?
-				// Let's assume we skip .morph.vz/checksums but scan .morph.vz/context?
-				// But if we write to .morph.vz/checksums, we shouldn't scan it.
 				return nil // Don't skip dir yet, check subdirs
 			}
 			return nil
@@ -51,9 +46,36 @@ func main() {
 		if info.Name() == "checksum_gen.go" {
 			return nil
 		}
-        // Skip compiled binaries
+
+        // Skip binaries and artifacts
         if info.Name() == "jules" || strings.HasSuffix(info.Name(), ".exe") {
              return nil
+        }
+
+        // Skip C/H/O artifacts unless they are source templates in pkg/compiler/runtime
+        ext := filepath.Ext(info.Name())
+        if ext == ".o" || ext == ".a" || ext == ".so" || ext == ".dylib" || ext == ".test" {
+            return nil
+        }
+
+        // Skip .c and .h files unless they are templates (ending in .tpl) or inside pkg/compiler/runtime (source)
+        // Actually runtime.c is renamed to runtime.c.tpl in repo.
+        // So we should generally skip .c and .h unless specific exceptions?
+        // Let's rely on extension check.
+        if (ext == ".c" || ext == ".h") && !strings.HasSuffix(path, ".tpl") {
+            // Check if it's explicitly allowed source?
+            // Currently Morph uses .tpl for embedded C source.
+            // So any raw .c/.h file is likely an artifact.
+            return nil
+        }
+
+        // Skip binary files without extension in examples/
+        if strings.Contains(path, "examples/") && ext == "" {
+            // Check if executable bit is set? Hard in portable Go.
+            // Just skip common binary names or everything without ext in examples/ except known ones?
+            // .fox files have extension.
+            // So scanning examples/ without extension is likely binaries.
+            return nil
         }
 
 		return generateChecksum(path)
@@ -91,7 +113,6 @@ func generateChecksum(path string) error {
     content := fmt.Sprintf("%s  %s\n", hash, cleanPath)
 
     // Target file
-    // If path is "pkg/lexer/token.go", target is ".morph.vz/checksums/pkg/lexer/token.go.sha256"
     targetPath := filepath.Join(checksumDir, cleanPath+".sha256")
 
     if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
