@@ -1,7 +1,7 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.33.0
+- **Versi**: 1.35.0
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
 - **Terakhir Diupdate**: 2025-12-23
 - **Status**: Active
@@ -54,6 +54,31 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.35.0 - 2025-12-23
+**Checksum**: SHA256:TIERED_MEMORY_GC
+**Perubahan**:
+- **Runtime**: Implemented Tiered Memory (RAM <-> Disk Swap) with `ObjectHeader` flags (`FLAG_SWAPPED`, `last_access`).
+- **Runtime**: Implemented Garbage Collection (Mark-and-Sweep) with Shadow Stack root registration.
+- **Runtime**: Implemented `mph_gc_daemon` background thread for LRU eviction (Swap).
+- **Runtime**: Fixed deadlock in `mph_gc_collect` by using lockless helpers (`mph_swap_in_locked`).
+- **Compiler**: Injected `mph_gc_push_root` and `mph_gc_pop_roots` calls for pointer variables and parameters.
+- **Tooling**: Updated `.gitignore` and `checksum_gen.go` to ignore build artifacts (`.o`, `.c`, `.h` in examples) to resolve git conflicts.
+- **Stdlib**: Updated `stdlib/conv.fox` to match C Runtime ABI (stubbed `Atoi` return type).
+- **Tests**: Added `examples/stress_test.fox` to verify GC and Swap behavior.
+
+**Konteks Sesi**:
+- **Major Milestone**: Full GC implementation with experimental Tiered Memory support.
+- **Conflict Resolution**: Cleaned up repository artifacts that were causing issues in previous sessions.
+
+**File Terkait**:
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:59d87342797e88939b4f938d22dfb4282844d084022830f370890288828af7c3)
+- `pkg/compiler/runtime/morph.h.tpl` (SHA256:332d7870766442838340d02462bc6e32d348a27d23d907094073d32e920af30e)
+- `pkg/compiler/compiler.go` (SHA256:7f96023307204963666037a34692e0797304f323097e3a96707323f49372ef9e)
+- `.gitignore` (SHA256:94df2292f72e34e5684742a0494490f23730e663a7024776e03390097475d400)
+- `checksum_gen.go` (SHA256:0d944d67396009966bfb22923769934300e57202302760dc092003c2022d2630)
+- `stdlib/conv.fox` (SHA256:87747e9373976694e9f90240d423999990e633d42bc42709027220224424360e)
+- `examples/stress_test.fox` (SHA256:773ecb99839446f236f064f72740432247920409a6fc434444bc99f342724494)
+
 ### Version 1.34.0 - 2025-12-23
 **Checksum**: SHA256:FUNCTION_TYPE_SUPPORT
 **Perubahan**:

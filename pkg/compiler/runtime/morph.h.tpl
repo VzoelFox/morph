@@ -6,7 +6,9 @@
 #include <pthread.h>
 
 // --- Constants ---
-// Removed Drawer/Tray constants as we are moving to Malloc + GC
+#define GC_THRESHOLD (1024 * 1024) // 1MB
+#define DAEMON_SLEEP_MS 100
+#define SWAP_AGE_THRESHOLD_SEC 10
 
 // --- Types ---
 typedef int64_t mph_int;
@@ -31,14 +33,27 @@ typedef struct ObjectHeader {
     struct ObjectHeader* next;  // Global GC list
     MorphTypeInfo* type;        // RTTI
     uint8_t flags;              // 0x1: Marked, 0x2: Swapped
-    uint32_t last_access;       // For LRU Eviction
+    uint64_t last_access;       // Timestamp (ms) for LRU Eviction
+    uint64_t swap_id;           // ID for swap file
 } ObjectHeader;
 
-// Memory Context now tracks the Heap Head
+// Shadow Stack for Roots
+typedef struct StackRoot {
+    void** ptr; // Pointer to the local variable (which is a pointer to object)
+    struct StackRoot* next;
+} StackRoot;
+
 typedef struct MorphContext {
     ObjectHeader* heap_head;    // Linked list of all allocated objects
     size_t allocated_bytes;     // Total bytes currently allocated
     size_t next_gc_threshold;   // When to trigger next GC
+
+    StackRoot* stack_top;       // Top of Shadow Stack
+
+    pthread_t daemon_thread;    // GC/Swap Daemon
+    int daemon_running;
+    pthread_mutex_t memory_lock; // Lock for heap access (Daemon vs Main)
+
     void* scheduler;            // Placeholder
 } MorphContext;
 
@@ -57,12 +72,9 @@ typedef struct MorphChannel {
 } MorphChannel;
 
 // --- Object Structures ---
-// NOTE: These are the "Payloads" after the ObjectHeader
 
 typedef struct MorphString {
-    char* data;    // Pointer to C string (Malloc-ed separately for now, or embedded?)
-                   // Optimization: data usually points to separate malloc block.
-                   // The String struct itself is on Heap.
+    char* data;    // Pointer to C string
     size_t length;
 } MorphString;
 
@@ -113,18 +125,23 @@ typedef void* (*MorphClosureFunc)(MorphContext*, void*, ...);
 void mph_init_memory(MorphContext* ctx);
 void mph_destroy_memory(MorphContext* ctx);
 
-// New Allocator: requires TypeInfo for GC
-// Generic allocations (arrays/maps internals) can pass NULL type_info,
-// but they won't be scanned by GC (must be leaves or managed manually).
+// Shadow Stack
+void mph_gc_push_root(MorphContext* ctx, void** ptr);
+void mph_gc_pop_roots(MorphContext* ctx, int count);
+
+// Allocator
 void* mph_alloc(MorphContext* ctx, size_t size, MorphTypeInfo* type_info);
 
-// GC
+// GC & Tiered Memory
 void mph_gc_collect(MorphContext* ctx);
+void mph_start_daemon(MorphContext* ctx);
+void mph_stop_daemon(MorphContext* ctx);
+void mph_swap_in(MorphContext* ctx, void* obj); // Ensure object is in RAM
 
 // Strings
 MorphString* mph_string_new(MorphContext* ctx, const char* literal);
 MorphString* mph_string_concat(MorphContext* ctx, MorphString* a, MorphString* b);
-mph_bool mph_string_eq(MorphString* a, MorphString* b);
+mph_bool mph_string_eq(MorphContext* ctx, MorphString* a, MorphString* b);
 
 // Arrays
 MorphArray* mph_array_new(MorphContext* ctx, size_t capacity, size_t element_size);
