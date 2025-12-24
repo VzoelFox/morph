@@ -1,7 +1,7 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.35.0
+- **Versi**: 1.36.0
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
 - **Terakhir Diupdate**: 2025-12-23
 - **Status**: Active
@@ -54,6 +54,24 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.36.0 - 2025-12-23
+**Checksum**: SHA256:GC_CONTAINER_TRACING
+**Perubahan**:
+- **Runtime**: Added `mark_fn` to `MorphTypeInfo` to support custom GC marking logic.
+- **Runtime**: Implemented `mph_gc_mark_array` and `mph_gc_mark_map` to recursively trace elements/values.
+- **Runtime**: Updated `MorphArray` and `MorphMap` to store pointer flags (`elements_are_pointers`, `values_are_pointers`).
+- **Compiler**: Updated `compileArrayLiteral` and `compileHashLiteral` to detect pointer types and pass flags to runtime constructors.
+- **Tests**: Added `examples/gc_container_test.fox` (verified and removed).
+
+**Konteks Sesi**:
+- **GC Robustness**: Resolved "Container Blindness" where GC failed to mark objects stored inside Maps and Arrays, leading to potential Use-After-Free or leaks.
+- **Feature**: Dynamic Marking for Generic Containers.
+
+**File Terkait**:
+- `pkg/compiler/runtime/morph.h.tpl` (SHA256:889447387cc649479633e72dc0664d622f960f89e4720937a0709f7a934444c9)
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:39f88463994324c4493392470724bf288090ceb494eb728079bc796e6229af07)
+- `pkg/compiler/compiler.go` (SHA256:22d7328bf2c3c9902324dc8c9038294723048de7ef6993933c940600d230bc77)
+
 ### Version 1.35.0 - 2025-12-23
 **Checksum**: SHA256:TIERED_MEMORY_GC
 **Perubahan**:
@@ -644,6 +662,7 @@ project-root/
 - `pkg/checker/robustness_test.go` (SHA256:9a533733b7cee0b03650ff2106ca733b02a0090a99f783c1812ae05eb92b29e2)
 - `pkg/checker/scope.go` (SHA256:88e4cf157d74d0dc9bc7f5386bbcb001c85f41092c7329c071b2a29ee6182d48)
 - `pkg/checker/shadow_test.go` (SHA256:0d322aff551049f20f6dc9658b2745d6c0d45c9188d56568f0c996841634aff5)
+- `pkg/checker/struct_extra_test.go` (SHA256:ca0ac7bd0ed2a4a0e02cc0482293fc5e122f364fb60c9e504394c5cec4ef30cc)
 - `pkg/checker/types.go` (SHA256:9daab5997e83b86b48b9e5107325b14719da4afc6701a5f2ae36309091b578c1)
 - `pkg/checker/unused_test.go` (SHA256:391450fd74e3c68b1339ae52eadb21f3f2955ae089afa09411af08631f549879)
 - `pkg/lexer/lexer.go` (SHA256:67eecc541c9c62537d64a5a89c32cfafadd24fd8bd0e3925abe8f61d86f36168)

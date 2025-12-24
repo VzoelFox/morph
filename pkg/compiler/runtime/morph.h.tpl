@@ -21,12 +21,14 @@ typedef void    mph_void;
 // Forward declarations
 struct MorphTypeInfo;
 struct ObjectHeader;
+typedef struct MorphContext MorphContext; // Pre-declare context
 
 typedef struct MorphTypeInfo {
     const char* name;
     size_t size;            // Size of payload
     int num_pointers;       // How many pointers in payload
     size_t* pointer_offsets; // Offsets of pointers relative to payload start
+    void (*mark_fn)(MorphContext*, void*); // Custom marking function (e.g. for Containers)
 } MorphTypeInfo;
 
 typedef struct ObjectHeader {
@@ -43,7 +45,7 @@ typedef struct StackRoot {
     struct StackRoot* next;
 } StackRoot;
 
-typedef struct MorphContext {
+struct MorphContext {
     ObjectHeader* heap_head;    // Linked list of all allocated objects
     size_t allocated_bytes;     // Total bytes currently allocated
     size_t next_gc_threshold;   // When to trigger next GC
@@ -55,7 +57,7 @@ typedef struct MorphContext {
     pthread_mutex_t memory_lock; // Lock for heap access (Daemon vs Main)
 
     void* scheduler;            // Placeholder
-} MorphContext;
+};
 
 typedef void (*MorphEntryFunction)(MorphContext* ctx, void* arg);
 
@@ -83,6 +85,7 @@ typedef struct MorphArray {
     size_t length;
     size_t capacity;
     size_t element_size;
+    mph_bool elements_are_pointers; // Flag for GC
 } MorphArray;
 
 typedef enum {
@@ -103,6 +106,7 @@ typedef struct MorphMap {
     size_t capacity;
     size_t count;
     MorphKeyKind key_kind;
+    mph_bool values_are_pointers; // Flag for GC
 } MorphMap;
 
 typedef struct MorphInterface {
@@ -144,11 +148,11 @@ MorphString* mph_string_concat(MorphContext* ctx, MorphString* a, MorphString* b
 mph_bool mph_string_eq(MorphContext* ctx, MorphString* a, MorphString* b);
 
 // Arrays
-MorphArray* mph_array_new(MorphContext* ctx, size_t capacity, size_t element_size);
+MorphArray* mph_array_new(MorphContext* ctx, size_t capacity, size_t element_size, mph_bool is_ptr);
 void* mph_array_at(MorphContext* ctx, MorphArray* arr, mph_int index);
 
 // Maps
-MorphMap* mph_map_new(MorphContext* ctx, MorphKeyKind kind);
+MorphMap* mph_map_new(MorphContext* ctx, MorphKeyKind kind, mph_bool val_is_ptr);
 void mph_map_set(MorphContext* ctx, MorphMap* map, void* key, void* value);
 void* mph_map_get(MorphContext* ctx, MorphMap* map, void* key);
 void mph_map_delete(MorphContext* ctx, MorphMap* map, void* key);

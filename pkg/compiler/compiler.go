@@ -884,14 +884,16 @@ func (c *Compiler) compileStructLiteral(sl *parser.StructLiteral, prefix string,
 func (c *Compiler) compileArrayLiteral(al *parser.ArrayLiteral, prefix string, fn *parser.FunctionLiteral) (string, error) {
 	arrType := c.checker.Types[al]
 	elemCType := "mph_int"
+	isPtr := 0
 	if arrType != nil {
 		if at, ok := arrType.(*checker.ArrayType); ok {
 			elemCType = c.mapCheckerTypeToC(at.Element, prefix)
+			if c.isPointerCheckerType(at.Element) { isPtr = 1 }
 		}
 	}
 	var sb strings.Builder
 	sb.WriteString("({ ")
-	sb.WriteString(fmt.Sprintf("MorphArray* _a = mph_array_new(ctx, %d, sizeof(%s)); ", len(al.Elements), elemCType))
+	sb.WriteString(fmt.Sprintf("MorphArray* _a = mph_array_new(ctx, %d, sizeof(%s), %d); ", len(al.Elements), elemCType, isPtr))
 	for i, el := range al.Elements {
 		valCode, err := c.compileExpression(el, prefix, fn)
 		if err != nil { return "", err }
@@ -904,14 +906,16 @@ func (c *Compiler) compileArrayLiteral(al *parser.ArrayLiteral, prefix string, f
 func (c *Compiler) compileHashLiteral(hl *parser.HashLiteral, prefix string, fn *parser.FunctionLiteral) (string, error) {
 	mapType := c.checker.Types[hl]
 	kindEnum := "MPH_KEY_PTR"
+	valIsPtr := 0
 	if mapType != nil {
 		if mt, ok := mapType.(*checker.MapType); ok {
 			if mt.Key.Kind() == checker.KindInt { kindEnum = "MPH_KEY_INT" } else if mt.Key.Kind() == checker.KindString { kindEnum = "MPH_KEY_STRING" }
+			if c.isPointerCheckerType(mt.Value) { valIsPtr = 1 }
 		}
 	}
 	var sb strings.Builder
 	sb.WriteString("({ ")
-	sb.WriteString(fmt.Sprintf("MorphMap* _m = mph_map_new(ctx, %s); ", kindEnum))
+	sb.WriteString(fmt.Sprintf("MorphMap* _m = mph_map_new(ctx, %s, %d); ", kindEnum, valIsPtr))
 	for key, val := range hl.Pairs {
 		keyCode, err := c.compileExpression(key, prefix, fn)
 		if err != nil { return "", err }
