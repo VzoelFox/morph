@@ -424,6 +424,50 @@ func (we *WhileExpression) String() string {
 	return out.String()
 }
 
+type CaseClause struct {
+	Token  lexer.Token // kasus
+	Values []Expression
+	Body   *BlockStatement
+}
+
+func (cc *CaseClause) String() string {
+	var out bytes.Buffer
+	out.WriteString("kasus ")
+	vals := []string{}
+	for _, v := range cc.Values {
+		vals = append(vals, v.String())
+	}
+	out.WriteString(strings.Join(vals, ", "))
+	out.WriteString(": ")
+	out.WriteString(cc.Body.String())
+	return out.String()
+}
+
+type SwitchStatement struct {
+	Token     lexer.Token // pilih
+	Condition Expression
+	Cases     []*CaseClause
+	Default   *BlockStatement // lainnya
+}
+
+func (ss *SwitchStatement) statementNode()       {}
+func (ss *SwitchStatement) TokenLiteral() string { return ss.Token.Literal }
+func (ss *SwitchStatement) String() string {
+	var out bytes.Buffer
+	out.WriteString("pilih ")
+	out.WriteString(ss.Condition.String())
+	out.WriteString(" ")
+	for _, c := range ss.Cases {
+		out.WriteString(c.String())
+	}
+	if ss.Default != nil {
+		out.WriteString("lainnya: ")
+		out.WriteString(ss.Default.String())
+	}
+	out.WriteString("akhir")
+	return out.String()
+}
+
 type Parameter struct {
 	Token lexer.Token
 	Name  *Identifier

@@ -87,9 +87,13 @@ const (
 	TETAPAN    = "TETAPAN"
 	MAP        = "MAP"
 	COMMENT    = "COMMENT"
+	PILIH      = "PILIH"
+	KASUS      = "KASUS"
 )
 
 var keywords = map[string]TokenType{
+	"pilih":      PILIH,
+	"kasus":      KASUS,
 	"var":        VAR,
 	"tetapan":    TETAPAN,
 	"const":      TETAPAN,

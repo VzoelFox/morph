@@ -17,6 +17,7 @@ Menggunakan gaya blok dengan keyword `akhir` (mirip Ruby/Lua) untuk mengurangi n
 - `struktur`: Mendefinisikan tipe data komposit (struct).
 - `antarmuka`: Mendefinisikan interface.
 - `jika`, `atau_jika`, `lainnya`: Kontrol alur (if-else-if-else).
+- `pilih`, `kasus`: Seleksi percabangan (switch-case).
 - `selama`: Perulangan (while).
 - `kembalikan`: Return value.
 - `akhir`: Menutup blok kode.
