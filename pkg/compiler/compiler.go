@@ -202,7 +202,7 @@ func (c *Compiler) analyzeCaptures(node parser.Node) error {
 		case *parser.IfExpression:
 			walker(t.Condition)
 			walker(t.Consequence)
-			walker(t.Alternative)
+			if t.Alternative != nil { walker(t.Alternative) }
 		case *parser.WhileExpression:
 			walker(t.Condition)
 			walker(t.Body)
@@ -293,7 +293,7 @@ func (c *Compiler) getFreeVars(fn *parser.FunctionLiteral) []string {
 		case *parser.InterpolatedString:
 			for _, p := range t.Parts { walkBody(p) }
 		case *parser.IfExpression:
-			walkBody(t.Condition); walkBody(t.Consequence); walkBody(t.Alternative)
+			walkBody(t.Condition); walkBody(t.Consequence); if t.Alternative != nil { walkBody(t.Alternative) }
 		case *parser.WhileExpression:
 			walkBody(t.Condition); walkBody(t.Body)
 		}
@@ -1109,12 +1109,12 @@ func (c *Compiler) compileInfix(ie *parser.InfixExpression, prefix string, fn *p
 	if err != nil { return "", err }
 
 	if ie.Operator == "+" {
-		if c.checker.Types[ie.Left].Kind() == checker.KindString {
+		if t := c.checker.Types[ie.Left]; t != nil && t.Kind() == checker.KindString {
 			return fmt.Sprintf("mph_string_concat(ctx, %s, %s)", left, right), nil
 		}
 	}
 	if ie.Operator == "==" {
-		if c.checker.Types[ie.Left].Kind() == checker.KindString {
+		if t := c.checker.Types[ie.Left]; t != nil && t.Kind() == checker.KindString {
 			return fmt.Sprintf("mph_string_eq(ctx, %s, %s)", left, right), nil
 		}
 	}
