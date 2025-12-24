@@ -464,7 +464,6 @@ project-root/
 - `pkg/parser/ast.go` (SHA256:d5a19e2f6163bab797a4406f083e8f38cae207463e80a8475488ffd8e5a5c948)
 - `pkg/parser/ast_test.go` (SHA256:0c316b04de9c188ea2459e7d7992a9b20507d5791f8f02072b65f8fe05514217)
 - `pkg/parser/call_extra_test.go` (SHA256:dfed7e5f873400e0548a3f5ed328ab582ce0f8a78cdc40d5a19d5a9bad67f2d7)
-- `pkg/parser/call_test.go` (SHA256:92e8312e0f9f741542ee88bc30435349e624c3dfd9612d737485acb887249a5b)
 - `pkg/parser/comment_test.go` (SHA256:e8eaf4bda6a04c91794e970d4e372fe228d883ddf01ea38271503a65c9e4fa21)
 - `pkg/parser/interface_test.go` (SHA256:2963cc5915f265bdb8041f8ff83fd1a05a3973bf5267671d7f38d51cb17e94b3)
 - `pkg/parser/method_test.go` (SHA256:4e6f447524c64fad5fba414e8529792124afa3661f1ff636475b7340bc0f3c10)
