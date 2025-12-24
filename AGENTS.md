@@ -54,6 +54,29 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.40.0 - 2025-12-23
+**Checksum**: SHA256:CHAR_LITERALS_AND_ERROR_CHECKS
+**Perubahan**:
+- **Lexer**: Added `CHAR` token type and `readCharToken` logic to support Character Literals (`'a'`).
+- **Parser**: Added `CharLiteral` AST node and parsing logic (`parseCharLiteral`).
+- **Checker**: Updated `checkExpression` to resolve `CharLiteral` to `IntType`.
+- **Compiler**: Updated `compileExpression` to emit `CharLiteral` as integer values in C.
+- **Tests**: Added `examples/error_check.fox` verifying explicit `err != kosong` error handling pattern.
+- **Tests**: Added `examples/char_test.fox` verifying character literal usage.
+
+**Konteks Sesi**:
+- **Phase 1 Complete**: Error Handling robustness verified and Character Literals implemented (Lexer Prerequisite).
+- **Self-Hosting**: Codebase now supports character constants, a critical feature for porting the Lexer to Morph.
+
+**File Terkait**:
+- `pkg/lexer/token.go` (SHA256:793326fc3e9b61bae4becb2f7b1c857c3af2e72e0b723c2d9670fc8e777d0cda)
+- `pkg/lexer/lexer.go` (SHA256:212daefd07fad1647d7e5a613ec80465b82f9c0390bcaa6827d4f1f17bea87c5)
+- `pkg/parser/ast.go` (SHA256:4a8bb5bfdc3906f2bbb788d3eb69e028b11b2ff3ff116fa0fb83abf201980355)
+- `pkg/parser/parser.go` (SHA256:0baee31d0380d97537720e88da20e916dade444209a66098c158c8de2133b5ab)
+- `pkg/checker/checker.go` (SHA256:da153de93c84c22612361a01c863c5ac2acfa4356a5173f6745c25761e440078)
+- `pkg/compiler/compiler.go` (SHA256:a003533380710d29602a3e5d2e732b4ff7c68af13b37bd299b906ff21c42accf)
+- `examples/error_check.fox` (SHA256:80f03520f9f2cc81ccf7e3c3a419f6087a41a7e9eaa2ffedf886821f99b00617)
+
 ### Version 1.39.0 - 2025-12-23
 **Checksum**: SHA256:ERROR_HANDLING_MVP
 **Perubahan**:

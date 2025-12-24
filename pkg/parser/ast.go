@@ -230,6 +230,15 @@ func (n *NullLiteral) expressionNode()      {}
 func (n *NullLiteral) TokenLiteral() string { return n.Token.Literal }
 func (n *NullLiteral) String() string       { return n.Token.Literal }
 
+type CharLiteral struct {
+	Token lexer.Token
+	Value int64
+}
+
+func (cl *CharLiteral) expressionNode()      {}
+func (cl *CharLiteral) TokenLiteral() string { return cl.Token.Literal }
+func (cl *CharLiteral) String() string       { return cl.Token.Literal }
+
 type ArrayLiteral struct {
 	Token    lexer.Token // '['
 	Elements []Expression

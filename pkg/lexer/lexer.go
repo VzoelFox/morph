@@ -239,6 +239,8 @@ func (l *Lexer) readCodeToken() Token {
 			l.readChar() // consume opening "
 			return l.readStringToken(hasLeadingSpace)
 		}
+	case '\'':
+		tok = l.readCharToken(hasLeadingSpace)
 	case 0:
 		tok.Literal = ""
 		tok.Type = EOF
@@ -389,4 +391,46 @@ func (l *Lexer) readComment() string {
 		l.readChar()
 	}
 	return l.input[position:l.position]
+}
+
+func (l *Lexer) readCharToken(hasLeadingSpace bool) Token {
+	tokLine := l.line
+	tokCol := l.column
+
+	l.readChar() // consume opening '
+
+	content := ""
+	if l.ch == '\\' {
+		l.readChar()
+		switch l.ch {
+		case 'n':
+			content = "\n"
+		case 't':
+			content = "\t"
+		case '\'':
+			content = "'"
+		case '\\':
+			content = "\\"
+		case 'r':
+			content = "\r"
+		default:
+			content = string(l.ch)
+		}
+	} else {
+		content = string(l.ch)
+	}
+	l.readChar() // consume char
+
+	if l.ch != '\'' {
+		return Token{Type: ILLEGAL, Literal: "Unterminated char literal", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+	}
+	l.readChar() // consume closing '
+
+	return Token{
+		Type:            CHAR,
+		Literal:         content,
+		Line:            tokLine,
+		Column:          tokCol,
+		HasLeadingSpace: hasLeadingSpace,
+	}
 }

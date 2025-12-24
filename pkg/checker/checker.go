@@ -698,6 +698,8 @@ func (c *Checker) checkExpressionInternal(e parser.Expression) Type {
 	switch exp := e.(type) {
 	case *parser.IntegerLiteral:
 		return IntType
+	case *parser.CharLiteral:
+		return IntType
 	case *parser.FloatLiteral:
 		return FloatType
 	case *parser.StringLiteral:
