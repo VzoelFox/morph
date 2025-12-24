@@ -154,6 +154,7 @@ mph_bool mph_string_eq(MorphContext* ctx, MorphString* a, MorphString* b);
 // Arrays
 MorphArray* mph_array_new(MorphContext* ctx, size_t capacity, size_t element_size, mph_bool is_ptr);
 void* mph_array_at(MorphContext* ctx, MorphArray* arr, mph_int index);
+MorphArray* mph_array_concat(MorphContext* ctx, MorphArray* a, MorphArray* b);
 
 // Maps
 MorphMap* mph_map_new(MorphContext* ctx, MorphKeyKind kind, mph_bool val_is_ptr);
@@ -170,6 +171,10 @@ MorphClosure* mph_closure_new(MorphContext* ctx, void* fn, void* env, int env_si
 
 // Error
 MorphError* mph_error_new(MorphContext* ctx, MorphString* msg);
+
+// Time
+mph_int mph_time_Now(MorphContext* ctx);
+void mph_time_Sleep(MorphContext* ctx, mph_int ms);
 
 // Debug
 void mph_native_print_int(MorphContext* ctx, mph_int n);

@@ -692,6 +692,12 @@ func (c *Checker) checkVarStatement(s *parser.VarStatement) {
 				if !actual.AssignableTo(finalType) {
 					c.addError(s.Token.Line, s.Token.Column, "Type mismatch for '%s': expected %s, got %s", name.Value, finalType.String(), actual.String())
 				}
+                // Refine Array Literal type if needed (e.g. var x []Piece = [])
+                if at, ok := actual.(*ArrayType); ok && at.Element.Kind() == KindUnknown {
+                    if et, ok := expected.(*ArrayType); ok {
+                        c.Types[s.Values[i]] = et // Update literal type to expected type
+                    }
+                }
 			}
 		} else {
 			// Inference

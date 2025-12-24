@@ -935,7 +935,7 @@ func (c *Compiler) compileAssignment(s *parser.AssignmentStatement, buf *strings
 		} else if leftType != nil && leftType.Kind() == checker.KindArray {
 			at := leftType.(*checker.ArrayType)
 			elemCType := c.mapCheckerTypeToC(at.Element, prefix)
-			buf.WriteString(fmt.Sprintf("\t((%s*)_a->data)[%s] = %s;\n", elemCType, idxCode, valCode))
+			buf.WriteString(fmt.Sprintf("\t((%s*)((MorphArray*)%s)->data)[%s] = %s;\n", elemCType, objCode, idxCode, valCode))
 			return nil
 		}
 	}
@@ -1052,6 +1052,12 @@ func (c *Compiler) compileExpression(expr parser.Expression, prefix string, fn *
 	case *parser.IndexExpression:
 		return c.compileIndex(e, prefix, fn)
 	case *parser.MemberExpression:
+		// Check if Object is Module
+		objType := c.checker.Types[e.Object]
+		if objType != nil && objType.Kind() == checker.KindModule {
+			modType := objType.(*checker.ModuleType)
+			return mangle(modType.Name) + e.Member.Value, nil
+		}
 		obj, err := c.compileExpression(e.Object, prefix, fn)
 		if err != nil { return "", err }
 		return fmt.Sprintf("%s->%s", obj, e.Member.Value), nil
@@ -1212,8 +1218,13 @@ func (c *Compiler) compileInfix(ie *parser.InfixExpression, prefix string, fn *p
 	if err != nil { return "", err }
 
 	if ie.Operator == "+" {
-		if t := c.checker.Types[ie.Left]; t != nil && t.Kind() == checker.KindString {
-			return fmt.Sprintf("mph_string_concat(ctx, %s, %s)", left, right), nil
+		if t := c.checker.Types[ie.Left]; t != nil {
+            if t.Kind() == checker.KindString {
+			    return fmt.Sprintf("mph_string_concat(ctx, %s, %s)", left, right), nil
+            }
+            if t.Kind() == checker.KindArray {
+                return fmt.Sprintf("mph_array_concat(ctx, %s, %s)", left, right), nil
+            }
 		}
 	}
 	if ie.Operator == "==" {
@@ -1425,7 +1436,7 @@ func (c *Compiler) compileIndex(ie *parser.IndexExpression, prefix string, fn *p
 	} else if leftType.Kind() == checker.KindArray {
 		if at, ok := leftType.(*checker.ArrayType); ok {
 			elemCType := c.mapCheckerTypeToC(at.Element, prefix)
-			return fmt.Sprintf("*(%s*)mph_array_at(ctx, %s, %s)", elemCType, leftCode, indexCode), nil
+			return fmt.Sprintf("(*(%s*)mph_array_at(ctx, %s, %s))", elemCType, leftCode, indexCode), nil
 		}
 	} else if leftType.Kind() == checker.KindMap {
 		if mt, ok := leftType.(*checker.MapType); ok {

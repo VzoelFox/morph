@@ -1,0 +1,37 @@
+ambil "conv"
+
+struktur Command
+    Val int
+akhir
+
+fungsi main() void
+    var stack []Command = []
+
+    # Push 1000 items
+    var i = 0
+    selama i < 1000
+        stack = stack + [Command{Val: i}]
+        i = i + 1
+    akhir
+
+    native_print("Pushed 1000 items. Stack size: " + conv.Itoa(panjang(stack)))
+
+    # Pop 500 items (Undo)
+    i = 0
+    selama i < 500
+        var newStack []Command = []
+        var len = panjang(stack)
+        var k = 0
+        selama k < len - 1
+            newStack = newStack + [stack[k]]
+            k = k + 1
+        akhir
+        stack = newStack
+        i = i + 1
+    akhir
+
+    native_print("Popped 500 items. Stack size: " + conv.Itoa(panjang(stack)))
+    native_print("Top item: " + conv.Itoa(stack[panjang(stack) - 1].Val))
+akhir
+
+main()

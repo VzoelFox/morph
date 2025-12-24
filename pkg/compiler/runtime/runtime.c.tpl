@@ -24,6 +24,7 @@ typedef struct MphPage {
     uint64_t swap_id;
     // For Page Recycling
     size_t live_bytes;
+    size_t size; // Total size of page (usually 4096, but larger for Large Objects)
 } MphPage;
 
 // Global Page List (in Context)
@@ -89,6 +90,7 @@ MphPage* mph_page_new() {
     page->last_access = mph_time_ms();
     page->swap_id = 0;
     page->live_bytes = 0;
+    page->size = PAGE_SIZE;
 
     pthread_mutex_lock(&page_lock);
     page->next = global_page_head;
@@ -100,7 +102,7 @@ MphPage* mph_page_new() {
 
 void mph_page_free(MphPage* page) {
     if (page->start_addr && !(page->flags & FLAG_SWAPPED)) {
-        munmap(page->start_addr, PAGE_SIZE);
+        munmap(page->start_addr, page->size);
     }
     // Unlink from list? (Simplified: we don't unlink for now, just leak struct or sweep list later)
     free(page);
@@ -164,14 +166,11 @@ void mph_page_swap_out(MphPage* page) {
 
     FILE* f = fopen(path, "wb");
     if (f) {
-        fwrite(page->start_addr, PAGE_SIZE, 1, f);
+        fwrite(page->start_addr, page->size, 1, f);
         fclose(f);
 
         // Decommit memory but keep address reserved
-        // mmap over it with PROT_NONE? Or just munmap and hope?
-        // To keep pointers valid, we MUST keep the address range reserved.
-        // mmap MAP_FIXED with PROT_NONE does exactly that (replaces mapping with inaccessible one)
-        void* res = mmap(page->start_addr, PAGE_SIZE, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+        void* res = mmap(page->start_addr, page->size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
         if (res == MAP_FAILED) perror("swap out mmap failed");
 
         page->flags |= FLAG_SWAPPED;
@@ -182,7 +181,7 @@ void mph_page_swap_in(MphPage* page) {
     if (!(page->flags & FLAG_SWAPPED)) return;
 
     // Restore memory at fixed address
-    void* res = mmap(page->start_addr, PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+    void* res = mmap(page->start_addr, page->size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
     if (res == MAP_FAILED) {
         perror("swap in mmap failed");
         exit(1);
@@ -192,7 +191,7 @@ void mph_page_swap_in(MphPage* page) {
     sprintf(path, ".morph.vz/swap/page_%lu.bin", page->swap_id);
     FILE* f = fopen(path, "rb");
     if (f) {
-        fread(page->start_addr, PAGE_SIZE, 1, f);
+        fread(page->start_addr, page->size, 1, f);
         fclose(f);
         unlink(path);
     }
@@ -204,13 +203,13 @@ void mph_page_swap_in(MphPage* page) {
 // Find Page for Address
 MphPage* mph_find_page(void* addr) {
     uint64_t addr_val = (uint64_t)addr;
-    // Align down to page size
-    uint64_t page_start = addr_val & ~(PAGE_SIZE - 1);
 
     pthread_mutex_lock(&page_lock);
     MphPage* cur = global_page_head;
     while (cur) {
-        if ((uint64_t)cur->start_addr == page_start) {
+        uint64_t start = (uint64_t)cur->start_addr;
+        uint64_t end = start + cur->size;
+        if (addr_val >= start && addr_val < end) {
             pthread_mutex_unlock(&page_lock);
             return cur;
         }
@@ -433,6 +432,40 @@ void* mph_alloc(MorphContext* ctx, size_t size, MorphTypeInfo* type_info) {
 
     pthread_mutex_lock(&ctx->memory_lock);
 
+    // Large Object Handling
+    if (total_size > PAGE_SIZE) {
+        // Allocate standalone multi-page block
+        size_t required_pages = (total_size + PAGE_SIZE - 1) / PAGE_SIZE;
+        size_t alloc_size = required_pages * PAGE_SIZE;
+
+        MphPage* page = (MphPage*)malloc(sizeof(MphPage));
+        page->start_addr = mmap(NULL, alloc_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        if (page->start_addr == MAP_FAILED) { perror("mmap large failed"); exit(1); }
+        page->used_offset = total_size;
+        page->flags = 0;
+        page->last_access = mph_time_ms();
+        page->swap_id = 0;
+        page->live_bytes = 0;
+        page->size = alloc_size;
+
+        pthread_mutex_lock(&page_lock);
+        page->next = global_page_head;
+        global_page_head = page;
+        pthread_mutex_unlock(&page_lock);
+
+        ObjectHeader* header = (ObjectHeader*)page->start_addr;
+        memset(header, 0, total_size);
+        header->type = type_info;
+        header->flags = 0;
+
+        header->next = ctx->heap_head;
+        ctx->heap_head = header;
+        ctx->allocated_bytes += size;
+
+        pthread_mutex_unlock(&ctx->memory_lock);
+        return (void*)(header + 1);
+    }
+
     if (!current_alloc_page || (current_alloc_page->used_offset + total_size > PAGE_SIZE)) {
         // New Page
         current_alloc_page = mph_page_new();
@@ -472,7 +505,9 @@ MorphString* mph_string_new(MorphContext* ctx, const char* literal) {
 
 MorphString* mph_string_concat(MorphContext* ctx, MorphString* a, MorphString* b) {
     mph_swap_in(ctx, a);
+    mph_swap_in(ctx, a->data);
     mph_swap_in(ctx, b);
+    mph_swap_in(ctx, b->data);
     size_t len = a->length + b->length;
     MorphString* str = (MorphString*)mph_alloc(ctx, sizeof(MorphString), &mph_ti_string_real);
     str->length = len;
@@ -487,7 +522,9 @@ MorphString* mph_string_concat(MorphContext* ctx, MorphString* a, MorphString* b
 
 mph_bool mph_string_eq(MorphContext* ctx, MorphString* a, MorphString* b) {
     mph_swap_in(ctx, a);
+    mph_swap_in(ctx, a->data);
     mph_swap_in(ctx, b);
+    mph_swap_in(ctx, b->data);
     if (a->length != b->length) return 0;
     return memcmp(a->data, b->data, a->length) == 0;
 }
@@ -510,7 +547,27 @@ void* mph_array_at(MorphContext* ctx, MorphArray* arr, mph_int index) {
         printf("Panic: Array index out of bounds\n");
         exit(1);
     }
+    // Deep Swap
+    mph_swap_in(ctx, arr->data);
     return (uint8_t*)arr->data + (index * arr->element_size);
+}
+
+MorphArray* mph_array_concat(MorphContext* ctx, MorphArray* a, MorphArray* b) {
+    mph_swap_in(ctx, a);
+    mph_swap_in(ctx, b);
+    // Deep Swap
+    mph_swap_in(ctx, a->data);
+    mph_swap_in(ctx, b->data);
+
+    size_t new_len = a->length + b->length;
+    MorphArray* res = mph_array_new(ctx, new_len, a->element_size, a->elements_are_pointers);
+
+    // Copy a
+    memcpy(res->data, a->data, a->length * a->element_size);
+    // Copy b
+    memcpy((uint8_t*)res->data + (a->length * a->element_size), b->data, b->length * b->element_size);
+
+    return res;
 }
 
 // --- Maps ---
@@ -689,6 +746,7 @@ void mph_init_files() { mph_file_table[0] = stdin; mph_file_table[1] = stdout; m
 void mph_native_print_int(MorphContext* ctx, mph_int n) { printf("%ld\n", n); }
 void mph_native_print(MorphContext* ctx, MorphString* s) {
     mph_swap_in(ctx, s);
+    mph_swap_in(ctx, s->data);
     printf("%s\n", s->data);
 }
 
