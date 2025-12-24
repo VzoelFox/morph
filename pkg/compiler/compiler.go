@@ -12,6 +12,7 @@ import (
 type Compiler struct {
 	output    strings.Builder
 	typeDefs  strings.Builder
+    prototypes strings.Builder
 	funcDefs  strings.Builder
 	entryBody strings.Builder
 
@@ -21,6 +22,7 @@ type Compiler struct {
 
 	captures map[*parser.FunctionLiteral][]string
     globals  map[string]bool
+    tupleTypes map[string]string
 }
 
 func New(c *checker.Checker) *Compiler {
@@ -29,6 +31,7 @@ func New(c *checker.Checker) *Compiler {
 		StructIDs: make(map[string]int),
 		captures:  make(map[*parser.FunctionLiteral][]string),
         globals:   make(map[string]bool),
+        tupleTypes: make(map[string]string),
 	}
 }
 
@@ -109,6 +112,11 @@ func (c *Compiler) Compile(node parser.Node) (string, error) {
 	c.output.WriteString("// Struct Definitions (Env & Types)\n")
 	c.output.WriteString(c.typeDefs.String())
 	c.output.WriteString("\n")
+
+    c.output.WriteString("// Function Prototypes\n")
+    c.generatePrototypes(node)
+    c.output.WriteString(c.prototypes.String())
+    c.output.WriteString("\n")
 
 	c.output.WriteString("// Function Definitions\n")
 	c.output.WriteString(c.funcDefs.String())
@@ -304,6 +312,71 @@ func (c *Compiler) getFreeVars(fn *parser.FunctionLiteral) []string {
 
 // --- Compilation ---
 
+func (c *Compiler) generatePrototypes(node parser.Node) {
+    if prog, ok := node.(*parser.Program); ok {
+        c.generateModulePrototypes(prog, "mph_")
+    }
+    for path, mod := range c.checker.ModuleCache {
+		if mod.Program == nil { continue }
+		c.generateModulePrototypes(mod.Program, mangle(path))
+	}
+}
+
+func (c *Compiler) generateModulePrototypes(prog *parser.Program, prefix string) {
+    for _, stmt := range prog.Statements {
+        if s, ok := stmt.(*parser.ExpressionStatement); ok {
+			if fn, ok := s.Expression.(*parser.FunctionLiteral); ok {
+				if fn.Name != "" {
+                    c.generateFunctionPrototype(fn, prefix)
+				}
+			}
+		}
+    }
+}
+
+func (c *Compiler) generateFunctionPrototype(fn *parser.FunctionLiteral, prefix string) {
+    retType := "void"
+	if len(fn.ReturnTypes) == 1 {
+		retType, _ = c.mapTypeToC(fn.ReturnTypes[0], prefix)
+	} else if len(fn.ReturnTypes) > 1 {
+        // Resolve types
+        var types []checker.Type
+        for _, rt := range fn.ReturnTypes {
+             t := c.resolveTypeNode(rt)
+             types = append(types, t)
+        }
+        retType = c.getTupleCType(types, prefix)
+    }
+
+	funcName := c.getAnonFuncName(fn)
+    // Handle methods
+    if fn.Receiver != nil {
+		recvTypeName := ""
+		if st, ok := fn.Receiver.Type.(*parser.SimpleType); ok {
+			recvTypeName = st.Name
+		} else if qt, ok := fn.Receiver.Type.(*parser.QualifiedType); ok {
+			recvTypeName = qt.Package.Value + "_" + qt.Name.Value
+		}
+		if recvTypeName != "" {
+			funcName = recvTypeName + "_" + fn.Name
+		}
+	}
+
+    c.prototypes.WriteString(fmt.Sprintf("%s %s%s(MorphContext* ctx, void* _env_void", retType, prefix, funcName))
+
+    if fn.Receiver != nil {
+		cType, _ := c.mapTypeToC(fn.Receiver.Type, prefix)
+		c.prototypes.WriteString(fmt.Sprintf(", %s %s", cType, fn.Receiver.Name.Value))
+	}
+
+	for _, p := range fn.Parameters {
+		cType, _ := c.mapTypeToC(p.Type, prefix)
+		c.prototypes.WriteString(fmt.Sprintf(", %s %s", cType, p.Name.Value))
+	}
+
+    c.prototypes.WriteString(");\n")
+}
+
 func (c *Compiler) compileModule(prog *parser.Program, prefix string) error {
 	for _, stmt := range prog.Statements {
 		isFunc := false
@@ -332,12 +405,24 @@ func (c *Compiler) compileFunction(fn *parser.FunctionLiteral, prefix string) er
 		c.hasMain = true
 	}
 
+    // Determine Return Type (Tuple aware)
 	retType := "void"
-	if len(fn.ReturnTypes) > 0 {
+	if len(fn.ReturnTypes) == 1 {
 		var err error
 		retType, err = c.mapTypeToC(fn.ReturnTypes[0], prefix)
 		if err != nil { return err }
-	}
+	} else if len(fn.ReturnTypes) > 1 {
+        // Resolve types from checker to handle Tuples correctly
+        // We can't rely just on AST TypeNode mapping if we want to reuse getTupleCType logic which expects checker.Type
+        // But we can resolve TypeNode to checker.Type using c.checker.Types map?
+        // c.checker.Types maps Node -> Type.
+        var types []checker.Type
+        for _, rt := range fn.ReturnTypes {
+             t := c.resolveTypeNode(rt)
+             types = append(types, t)
+        }
+        retType = c.getTupleCType(types, prefix)
+    }
 
 	funcName := c.getAnonFuncName(fn)
 	if fn.Receiver != nil {
@@ -418,24 +503,6 @@ func (c *Compiler) compileFunction(fn *parser.FunctionLiteral, prefix string) er
 	for _, p := range fn.Parameters {
         if c.isPointerType(p.Type) {
 		    fnBuilder.WriteString(fmt.Sprintf("\tmph_gc_push_root(ctx, (void**)&%s);\n", p.Name.Value))
-            roots++
-        }
-	}
-
-	// 3. Register Pointer Parameters as Roots
-    // Receiver
-	if fn.Receiver != nil {
-        if c.isPointerType(fn.Receiver.Type) {
-            c.funcDefs.WriteString(fmt.Sprintf("\tmph_gc_push_root(ctx, (void**)&%s);\n", fn.Receiver.Name.Value))
-        }
-    }
-    // Params
-    var roots int
-    if fn.Receiver != nil && c.isPointerType(fn.Receiver.Type) { roots++ }
-
-	for _, p := range fn.Parameters {
-        if c.isPointerType(p.Type) {
-		    c.funcDefs.WriteString(fmt.Sprintf("\tmph_gc_push_root(ctx, (void**)&%s);\n", p.Name.Value))
             roots++
         }
 	}
@@ -531,6 +598,42 @@ func (c *Compiler) isPointerCheckerType(t checker.Type) bool {
     return false
 }
 
+func (c *Compiler) resolveTypeNode(t parser.TypeNode) checker.Type {
+    if t == nil { return nil }
+    // First check if checker cached it (best effort)
+    if ct := c.checker.Types[t]; ct != nil { return ct }
+
+    switch ty := t.(type) {
+    case *parser.SimpleType:
+        switch ty.Name {
+        case "int": return checker.IntType
+        case "float": return checker.FloatType
+        case "bool": return checker.BoolType
+        case "string": return checker.StringType
+        case "void": return checker.VoidType
+        case "error": return checker.UserErrorType
+        // Structs? We need to look up struct definition?
+        // Compiler has StructIDs but not Types map access?
+        // Checker has Structs map.
+        // We can look up in c.checker.Structs? No, scope logic is in checker.
+        // But for getTupleCType, we mostly need the Kind and Name for the struct key.
+        // We can create a dummy StructType with just name for C generation?
+        // Or better: mapCheckerTypeToC handles StructType.
+        default: return &checker.StructType{Name: ty.Name}
+        }
+    case *parser.QualifiedType:
+         return &checker.StructType{Name: ty.Name.Value, Module: ty.Package.Value}
+    case *parser.ArrayType:
+        return &checker.ArrayType{Element: c.resolveTypeNode(ty.Element)}
+    case *parser.MapType:
+        return &checker.MapType{Key: c.resolveTypeNode(ty.Key), Value: c.resolveTypeNode(ty.Value)}
+    case *parser.FunctionType:
+        // Simplified function type (we don't need full signature for C tuple name usually, just "Closure")
+        return &checker.FunctionType{}
+    }
+    return checker.UnknownType
+}
+
 func (c *Compiler) compileStatement(stmt parser.Statement, buf *strings.Builder, prefix string, currentFn *parser.FunctionLiteral) error {
 	switch s := stmt.(type) {
 	case *parser.VarStatement: return c.compileVar(s, buf, prefix, currentFn)
@@ -557,6 +660,58 @@ func (c *Compiler) compileStatement(stmt parser.Statement, buf *strings.Builder,
 }
 
 func (c *Compiler) compileVar(s *parser.VarStatement, buf *strings.Builder, prefix string, fn *parser.FunctionLiteral) error {
+    // Tuple Unpacking Declaration: var x, y = f()
+    if len(s.Names) > 1 && len(s.Values) == 1 {
+        valCode, err := c.compileExpression(s.Values[0], prefix, fn)
+        if err != nil { return err }
+
+        srcType := c.checker.Types[s.Values[0]]
+        if srcType == nil || srcType.Kind() != checker.KindMulti {
+            return fmt.Errorf("expected tuple return for multi-var")
+        }
+        mt := srcType.(*checker.MultiType)
+        tupleType := c.getTupleCType(mt.Types, prefix)
+
+        // Emit block to scope temp variable?
+        // No, var declarations need to be visible in current scope.
+        // We can't use a block if we want variables to persist.
+        // But we need a temp variable for the tuple.
+        // Generate unique name? "_t_PTR"
+        tmpName := fmt.Sprintf("_t_%p", s)
+        buf.WriteString(fmt.Sprintf("\t%s %s = %s;\n", tupleType, tmpName, valCode))
+
+        for i, nameIdent := range s.Names {
+            name := nameIdent.Value
+
+            // Determine type
+            var destType checker.Type
+            // If explicit type on VarStatement? currently VarStatement has single Type field?
+            // "var x, y int = ..." -> Both int.
+            // "var x, y = ..." -> Inferred.
+            if s.Type != nil {
+                destType = c.checker.Types[s.Type]
+            } else {
+                 destType = c.checker.Types[nameIdent]
+            }
+
+            cType := c.mapCheckerTypeToC(destType, prefix)
+            buf.WriteString(fmt.Sprintf("\t%s %s = %s.v%d;\n", cType, name, tmpName, i))
+
+            // Register Root if Pointer
+            isPtr := false
+            if s.Type != nil {
+                if c.isPointerType(s.Type) { isPtr = true }
+            } else if destType != nil {
+                if c.isPointerCheckerType(destType) { isPtr = true }
+            }
+
+            if isPtr {
+                buf.WriteString(fmt.Sprintf("\tmph_gc_push_root(ctx, (void**)&%s);\n", name))
+            }
+        }
+        return nil
+    }
+
 	if len(s.Names) != 1 || len(s.Values) != 1 { return fmt.Errorf("multi-var not supported") }
 	name := s.Names[0].Value
 	valCode, err := c.compileExpression(s.Values[0], prefix, fn)
@@ -600,6 +755,39 @@ func (c *Compiler) compileVar(s *parser.VarStatement, buf *strings.Builder, pref
 }
 
 func (c *Compiler) compileAssignment(s *parser.AssignmentStatement, buf *strings.Builder, prefix string, fn *parser.FunctionLiteral) error {
+    // Tuple Unpacking: x, y = f()
+    if len(s.Names) > 1 && len(s.Values) == 1 {
+        valCode, err := c.compileExpression(s.Values[0], prefix, fn)
+        if err != nil { return err }
+
+        srcType := c.checker.Types[s.Values[0]]
+        if srcType == nil || srcType.Kind() != checker.KindMulti {
+            return fmt.Errorf("expected tuple return")
+        }
+        mt := srcType.(*checker.MultiType)
+        tupleType := c.getTupleCType(mt.Types, prefix)
+
+        // Use temp variable for tuple result
+        // We use GCC statement expression if possible? No, assignment is statement.
+        // We can just emit block.
+        buf.WriteString("{\n")
+        buf.WriteString(fmt.Sprintf("\t%s _t = %s;\n", tupleType, valCode))
+
+        for i, nameExpr := range s.Names {
+            if ident, ok := nameExpr.(*parser.Identifier); ok {
+                target := ident.Value
+                if c.isCaptured(target, fn) {
+                    target = fmt.Sprintf("_env->%s", target)
+                }
+                buf.WriteString(fmt.Sprintf("\t%s = _t.v%d;\n", target, i))
+            } else {
+                return fmt.Errorf("only identifiers supported in tuple unpack")
+            }
+        }
+        buf.WriteString("}\n")
+        return nil
+    }
+
 	valCode, err := c.compileExpression(s.Values[0], prefix, fn)
 	if err != nil { return err }
 
@@ -667,9 +855,33 @@ func (c *Compiler) compileReturn(s *parser.ReturnStatement, buf *strings.Builder
 		buf.WriteString("\treturn;\n")
 		return nil
 	}
-	valCode, err := c.compileExpression(s.ReturnValues[0], prefix, fn)
-	if err != nil { return err }
-	buf.WriteString(fmt.Sprintf("\treturn %s;\n", valCode))
+    if len(s.ReturnValues) == 1 {
+	    valCode, err := c.compileExpression(s.ReturnValues[0], prefix, fn)
+	    if err != nil { return err }
+	    buf.WriteString(fmt.Sprintf("\treturn %s;\n", valCode))
+        return nil
+    }
+
+    // Multiple return values -> Tuple Struct
+    // We need to know the Tuple Type Name.
+    // We can infer it from the values? Or look up function signature?
+    // Using `c.checker.Types` on ReturnValues gives individual types.
+    // We can construct the tuple type on the fly and call `getTupleCType`.
+    var valTypes []checker.Type
+    var valCodes []string
+
+    for _, expr := range s.ReturnValues {
+        t := c.checker.Types[expr]
+        if t == nil { return fmt.Errorf("unknown type in return") }
+        valTypes = append(valTypes, t)
+
+        code, err := c.compileExpression(expr, prefix, fn)
+        if err != nil { return err }
+        valCodes = append(valCodes, code)
+    }
+
+    tupleName := c.getTupleCType(valTypes, prefix)
+    buf.WriteString(fmt.Sprintf("\treturn (%s){ %s };\n", tupleName, strings.Join(valCodes, ", ")))
 	return nil
 }
 
@@ -935,8 +1147,84 @@ func (c *Compiler) mapCheckerTypeToC(t checker.Type, prefix string) string {
 			return "mph_" + st.Name + "*"
 		}
 	case checker.KindInterface: return "MorphInterface"
+    case checker.KindMulti:
+        if mt, ok := t.(*checker.MultiType); ok {
+            return c.getTupleCType(mt.Types, prefix)
+        }
+    case checker.KindUserError:
+        // Assume error is Interface for now (or simple Int if primitive)
+        // Wait, UserErrorType is BasicType? Yes.
+        // It should map to MorphInterface or something?
+        // For simplicity, let's map it to MorphInterface as errors can be any value in Morph philosophy?
+        // Or if it's currently used as simple Int in runtime (stub), let's stick to mph_int?
+        // But in Tuple_Int_Error it should probably be MorphInterface or similar.
+        // Let's use MorphInterface to be safe and flexible.
+        return "MorphInterface"
 	}
 	return "mph_int"
+}
+
+func (c *Compiler) getTupleCType(types []checker.Type, prefix string) string {
+    // Generate signature key
+    var sigBuilder strings.Builder
+    for _, t := range types {
+        sigBuilder.WriteString(t.String())
+        sigBuilder.WriteString("_")
+    }
+    key := sigBuilder.String()
+
+    if name, ok := c.tupleTypes[key]; ok {
+        return name
+    }
+
+    // Generate new struct
+    // Naming convention: MorphTuple_<Hash> or similar.
+    // Simplified: MorphTuple_<Index>
+    name := fmt.Sprintf("MorphTuple_%d", len(c.tupleTypes))
+
+    // BUT we want stable names for Stdlib.
+    // If types are Int, UserError -> MorphTuple_Int_Error
+    // Let's try to make readable names if possible.
+    var nameBuilder strings.Builder
+    nameBuilder.WriteString("MorphTuple")
+    for _, t := range types {
+        nameBuilder.WriteString("_")
+        // Clean type name
+        clean := strings.ReplaceAll(t.String(), "[]", "Array")
+        clean = strings.ReplaceAll(clean, "*", "Ptr")
+        clean = strings.ReplaceAll(clean, "map[", "Map")
+        clean = strings.ReplaceAll(clean, "]", "")
+        clean = strings.ReplaceAll(clean, ".", "")
+        clean = strings.ReplaceAll(clean, " ", "")
+        // Handle error -> Error
+        if t.Kind() == checker.KindUserError { clean = "Error" }
+        if t.Kind() == checker.KindInt { clean = "Int" }
+        if t.Kind() == checker.KindString { clean = "String" }
+        nameBuilder.WriteString(clean)
+    }
+    name = nameBuilder.String()
+
+    // Check if name collision? (Unlikely with full types)
+    if _, exists := c.tupleTypes[name]; exists {
+       // Already registered? Return it.
+       // But key was signature. If name matches but sig doesn't? Collision.
+       // Assume types.String() is unique enough.
+       c.tupleTypes[key] = name // Map sig to existing name
+       return name
+    }
+
+    c.tupleTypes[key] = name
+    c.tupleTypes[name] = name // Also map name to itself for consistency?
+
+    // Generate definition
+    c.typeDefs.WriteString(fmt.Sprintf("typedef struct %s {\n", name))
+    for i, t := range types {
+        cType := c.mapCheckerTypeToC(t, prefix)
+        c.typeDefs.WriteString(fmt.Sprintf("\t%s v%d;\n", cType, i))
+    }
+    c.typeDefs.WriteString(fmt.Sprintf("} %s;\n\n", name))
+
+    return name
 }
 
 func (c *Compiler) compileStructLiteral(sl *parser.StructLiteral, prefix string, fn *parser.FunctionLiteral) (string, error) {

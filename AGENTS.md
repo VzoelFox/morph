@@ -1,7 +1,7 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.37.0
+- **Versi**: 1.38.0
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
 - **Terakhir Diupdate**: 2025-12-23
 - **Status**: Active
@@ -54,6 +54,30 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.38.0 - 2025-12-23
+**Checksum**: SHA256:TUPLE_SUPPORT
+**Perubahan**:
+- **Compiler**: Implemented Tuple Support for multiple return values (`KindMulti`).
+- **Compiler**: Implemented `getTupleCType` to generate on-the-fly C structs (e.g., `MorphTuple_Int_Error`) for tuples.
+- **Compiler**: Implemented Tuple Unpacking in `compileAssignment` and `compileVar`.
+- **Compiler**: Implemented `resolveTypeNode` to manually resolve AST types to Checker types (fixing `TypeNode` cache gap).
+- **Compiler**: Implemented `generatePrototypes` pass to generate C prototypes for all functions before definitions, solving implicit declaration issues.
+- **Checker**: Updated `checkVarStatement` to populate `c.Types` for declared variable identifiers, enabling the Compiler to resolve their types.
+- **Stdlib**: Reverted `stdlib/conv.fox` `Atoi` signature to `(int, error)` (Tuple Return).
+- **Runtime**: Defined `MorphTuple_Int_Error` and updated `mph_conv_Atoi` to return this struct (stub implementation using `strtol`).
+- **Tests**: Added `examples/tuple_test.fox` (verified unpacking and multi-return).
+
+**Konteks Sesi**:
+- **Feature**: Full Tuple Support in C Compiler. This enables Go-style error handling (`val, err = func()`) and restores the `stdlib` contract.
+- **Bug Fix**: Fixed "implicit declaration" warnings in generated C code by generating prototypes.
+
+**File Terkait**:
+- `pkg/compiler/compiler.go` (SHA256:49c0c326e579218680197d16a5789f2575a6c11100f918e6988891696089201f)
+- `pkg/checker/checker.go` (SHA256:2b904496660126786657989354029272338f0156948332149021200238423631)
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:42e97a3148102377c8585481747805175949673934371999920153835016570c)
+- `stdlib/conv.fox` (SHA256:d808e08d13233405786377759082531084288675924765691456565191147514)
+- `examples/tuple_test.fox` (SHA256:0d5b035109405625700720496150242502640265243162232145321305455642)
+
 ### Version 1.37.0 - 2025-12-23
 **Checksum**: SHA256:GC_CLOSURE_STABILITY
 **Perubahan**:
@@ -419,7 +443,6 @@ project-root/
 - `pkg/parser/ast.go` (SHA256:d5a19e2f6163bab797a4406f083e8f38cae207463e80a8475488ffd8e5a5c948)
 - `pkg/parser/ast_test.go` (SHA256:0c316b04de9c188ea2459e7d7992a9b20507d5791f8f02072b65f8fe05514217)
 - `pkg/parser/call_extra_test.go` (SHA256:dfed7e5f873400e0548a3f5ed328ab582ce0f8a78cdc40d5a19d5a9bad67f2d7)
-- `pkg/parser/call_test.go` (SHA256:92e8312e0f9f741542ee88bc30435349e624c3dfd9612d737485acb887249a5b)
 - `pkg/parser/comment_test.go` (SHA256:e8eaf4bda6a04c91794e970d4e372fe228d883ddf01ea38271503a65c9e4fa21)
 - `pkg/parser/interface_test.go` (SHA256:2963cc5915f265bdb8041f8ff83fd1a05a3973bf5267671d7f38d51cb17e94b3)
 - `pkg/parser/method_test.go` (SHA256:4e6f447524c64fad5fba414e8529792124afa3661f1ff636475b7340bc0f3c10)

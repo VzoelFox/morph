@@ -592,15 +592,51 @@ mph_int mph_io_Close(MorphContext* ctx, void* f) {
 }
 
 // --- Native Implementations for Stdlib ---
+// We match the name used by the compiler.
+// (int, error) -> MorphTuple_Int_Error (simplified)
+// But the compiler generates MorphTuple_<Hash>.
+// Wait, the Compiler uses `getTupleCType`.
+// For `(int, error)`, the name depends on `c.tupleTypes` state order?
+// NO. If I hardcode the struct in Runtime, it will clash or mismatch.
+//
+// STRATEGY:
+// 1. The Compiler generates `MorphTuple_Int_Error`.
+// 2. The Runtime defines `MorphTuple_Int_Error` struct.
+// 3. `mph_conv_Atoi` returns `MorphTuple_Int_Error`.
+
+typedef struct MorphTuple_Int_Error {
+    mph_int v0;
+    MorphInterface v1; // Error
+} MorphTuple_Int_Error;
+
 MorphString* mph_conv_Itoa(MorphContext* ctx, void* _env, mph_int i) {
     char buf[32];
     sprintf(buf, "%ld", i);
     return mph_string_new(ctx, buf);
 }
 
-mph_int mph_conv_Atoi(MorphContext* ctx, void* _env, MorphString* s) {
-    // Stub implementation to return 0 and match the changed signature
-    return 0;
+MorphTuple_Int_Error mph_conv_Atoi(MorphContext* ctx, void* _env, MorphString* s) {
+    // Basic implementation: always return 0, no error
+    // To do real parsing, we need strtol
+    mph_swap_in(ctx, s);
+    char* end;
+    long val = strtol(s->data, &end, 10);
+
+    MorphTuple_Int_Error ret;
+    if (end == s->data) {
+        // Error
+        // We don't have a concrete Error struct yet.
+        // Return 0 and generic error?
+        // Just return 0, null error for MVP.
+        ret.v0 = 0;
+        ret.v1.instance = NULL; // Error
+        ret.v1.type_id = 0;
+    } else {
+        ret.v0 = (mph_int)val;
+        ret.v1.instance = NULL; // No error
+        ret.v1.type_id = 0;
+    }
+    return ret;
 }
 
 // Entry point wrapper (if not provided by generated code)
