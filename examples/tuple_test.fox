@@ -1,0 +1,29 @@
+ambil "conv"
+
+fungsi main() void
+    native_print("Starting Tuple Test")
+
+    # Test Itoa
+    var s = conv.Itoa(123)
+    native_print("Itoa: " + s)
+
+    # Test Atoi (returning tuple)
+    var res, err = conv.Atoi("456")
+
+    # Currently err is interface, we can't easily check nil in Morph syntax without casting/check?
+    # Actually, Morph checking 'kosong' (null) is valid for interfaces?
+    # Let's try native_print_int(res)
+
+    native_print_int(res)
+
+    # Test Unpacking from custom function
+    var x, y = returnTuple()
+    native_print_int(x)
+    native_print(y)
+
+    native_print("Tuple Test Done")
+akhir
+
+fungsi returnTuple() (int, string)
+    kembalikan 99, "Returned Tuple"
+akhir

@@ -67,6 +67,13 @@ func New() *Checker {
 	}
 	c.scope.DefineVariable("native_print_int", nativePrintIntType, true, 0, 0)
 
+    // native_print_error(error) -> void
+    nativePrintErrorType := &FunctionType{
+        Parameters: []Type{UserErrorType},
+        ReturnTypes: []Type{VoidType},
+    }
+    c.scope.DefineVariable("native_print_error", nativePrintErrorType, true, 0, 0)
+
 	// Concurrency Primitives (int only for MVP)
 	// saluran_baru() -> channel
 	c.scope.DefineVariable("saluran_baru", &FunctionType{
@@ -676,6 +683,8 @@ func (c *Checker) checkVarStatement(s *parser.VarStatement) {
 			warning.Column = name.Token.Column
 			c.Warnings = append(c.Warnings, *warning)
 		}
+        // Register type for Compiler
+        c.Types[name] = finalType
 	}
 }
 
