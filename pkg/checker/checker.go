@@ -550,7 +550,35 @@ func (c *Checker) checkStatement(s parser.Statement) {
 		c.enterScope()
 		defer c.leaveScope()
 		c.checkNodes(stmt.Statements)
+	case *parser.SwitchStatement:
+		c.checkSwitchStatement(stmt)
 	}
+}
+
+func (c *Checker) checkSwitchStatement(s *parser.SwitchStatement) {
+	condType := c.checkExpression(s.Condition)
+
+	for _, cc := range s.Cases {
+		for _, val := range cc.Values {
+			valType := c.checkExpression(val)
+			if condType.Kind() != KindUnknown && valType.Kind() != KindUnknown {
+				if !valType.AssignableTo(condType) {
+					c.addError(cc.Token.Line, cc.Token.Column, "Case value type mismatch: expected %s, got %s", condType.String(), valType.String())
+				}
+			}
+		}
+		c.checkBlockStatement(cc.Body)
+	}
+
+	if s.Default != nil {
+		c.checkBlockStatement(s.Default)
+	}
+}
+
+func (c *Checker) checkBlockStatement(b *parser.BlockStatement) {
+	c.enterScope()
+	defer c.leaveScope()
+	c.checkNodes(b.Statements)
 }
 
 func (c *Checker) checkAssignment(s *parser.AssignmentStatement) {

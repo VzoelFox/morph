@@ -282,12 +282,62 @@ func (p *Parser) parseStatement() Statement {
 		if s := p.parseContinueStatement(); s != nil {
 			return s
 		}
+	case lexer.PILIH:
+		if s := p.parseSwitchStatement(); s != nil {
+			return s
+		}
 	default:
 		if s := p.parseExpressionOrAssignmentStatement(); s != nil {
 			return s
 		}
 	}
 	return nil
+}
+
+func (p *Parser) parseSwitchStatement() *SwitchStatement {
+	stmt := &SwitchStatement{Token: p.curToken}
+	p.nextToken() // eat pilih
+
+	stmt.Condition = p.parseExpression(LOWEST)
+
+	for !p.curTokenIs(lexer.AKHIR) && !p.curTokenIs(lexer.EOF) {
+		if p.curTokenIs(lexer.KASUS) {
+			caseClause := p.parseCaseClause()
+			if caseClause != nil {
+				stmt.Cases = append(stmt.Cases, caseClause)
+			}
+		} else if p.curTokenIs(lexer.LAINNYA) {
+			p.nextToken() // eat lainnya
+			if p.curTokenIs(lexer.COLON) {
+				p.nextToken()
+			}
+			stmt.Default = p.parseBlockStatement()
+		} else {
+			p.nextToken()
+		}
+	}
+
+	if !p.curTokenIs(lexer.AKHIR) {
+		p.peekError(lexer.AKHIR)
+		return nil
+	}
+
+	return stmt
+}
+
+func (p *Parser) parseCaseClause() *CaseClause {
+	cc := &CaseClause{Token: p.curToken}
+	p.nextToken() // eat kasus
+
+	cc.Values = p.parseExpressionList(lexer.COLON)
+
+	if p.curTokenIs(lexer.COLON) {
+		p.nextToken()
+	}
+
+	cc.Body = p.parseBlockStatement()
+
+	return cc
 }
 
 func (p *Parser) parseVarStatement() *VarStatement {
@@ -1276,7 +1326,7 @@ func (p *Parser) parseBlockStatement() *BlockStatement {
 	block := &BlockStatement{Token: p.curToken}
 	block.Statements = []Statement{}
 
-	for !p.curTokenIs(lexer.AKHIR) && !p.curTokenIs(lexer.LAINNYA) && !p.curTokenIs(lexer.ATAU_JIKA) && !p.curTokenIs(lexer.EOF) {
+	for !p.curTokenIs(lexer.AKHIR) && !p.curTokenIs(lexer.LAINNYA) && !p.curTokenIs(lexer.ATAU_JIKA) && !p.curTokenIs(lexer.KASUS) && !p.curTokenIs(lexer.EOF) {
 		stmt := p.parseStatement()
 		if stmt != nil {
 			block.Statements = append(block.Statements, stmt)

@@ -202,7 +202,18 @@ func (c *Compiler) analyzeCaptures(node parser.Node) error {
 		case *parser.IfExpression:
 			walker(t.Condition)
 			walker(t.Consequence)
-			walker(t.Alternative)
+			if t.Alternative != nil { walker(t.Alternative) }
+		case *parser.SwitchStatement:
+			walker(t.Condition)
+			for _, cc := range t.Cases {
+				for _, v := range cc.Values {
+					walker(v)
+				}
+				walker(cc.Body)
+			}
+			if t.Default != nil {
+				walker(t.Default)
+			}
 		case *parser.WhileExpression:
 			walker(t.Condition)
 			walker(t.Body)
@@ -293,7 +304,18 @@ func (c *Compiler) getFreeVars(fn *parser.FunctionLiteral) []string {
 		case *parser.InterpolatedString:
 			for _, p := range t.Parts { walkBody(p) }
 		case *parser.IfExpression:
-			walkBody(t.Condition); walkBody(t.Consequence); walkBody(t.Alternative)
+			walkBody(t.Condition); walkBody(t.Consequence); if t.Alternative != nil { walkBody(t.Alternative) }
+		case *parser.SwitchStatement:
+			walkBody(t.Condition)
+			for _, cc := range t.Cases {
+				for _, v := range cc.Values {
+					walkBody(v)
+				}
+				walkBody(cc.Body)
+			}
+			if t.Default != nil {
+				walkBody(t.Default)
+			}
 		case *parser.WhileExpression:
 			walkBody(t.Condition); walkBody(t.Body)
 		}
@@ -655,8 +677,83 @@ func (c *Compiler) compileStatement(stmt parser.Statement, buf *strings.Builder,
 		if err != nil { return err }
 		buf.WriteString(fmt.Sprintf("\t%s;\n", exprCode))
 		return nil
+	case *parser.SwitchStatement:
+		return c.compileSwitchStatement(s, buf, prefix, currentFn)
 	default: return nil
 	}
+}
+
+func (c *Compiler) compileSwitchStatement(s *parser.SwitchStatement, buf *strings.Builder, prefix string, fn *parser.FunctionLiteral) error {
+	condType := c.checker.Types[s.Condition]
+
+	// Evaluate Condition once
+	condCode, err := c.compileExpression(s.Condition, prefix, fn)
+	if err != nil {
+		return err
+	}
+
+	condVar := fmt.Sprintf("_sw_%p", s)
+	condCType := c.mapCheckerTypeToC(condType, prefix)
+	buf.WriteString(fmt.Sprintf("\t%s %s = %s;\n", condCType, condVar, condCode))
+
+	if c.isPrimitive(condType) {
+		// Use C switch
+		buf.WriteString(fmt.Sprintf("\tswitch (%s) {\n", condVar))
+		for _, cc := range s.Cases {
+			for _, val := range cc.Values {
+				valCode, _ := c.compileExpression(val, prefix, fn)
+				buf.WriteString(fmt.Sprintf("\tcase %s:\n", valCode))
+			}
+			// Case body with implicit break
+			buf.WriteString("\t{\n")
+			c.compileBlock(cc.Body, buf, prefix, fn)
+			buf.WriteString("\t\tbreak;\n")
+			buf.WriteString("\t}\n")
+		}
+		if s.Default != nil {
+			buf.WriteString("\tdefault: {\n")
+			c.compileBlock(s.Default, buf, prefix, fn)
+			buf.WriteString("\t}\n")
+		}
+		buf.WriteString("\t}\n")
+	} else if condType.Kind() == checker.KindString {
+		// Use if-else chain
+		firstCase := true
+		for _, cc := range s.Cases {
+			if !firstCase {
+				buf.WriteString(" else ")
+			}
+			buf.WriteString("if (")
+			for i, val := range cc.Values {
+				valCode, _ := c.compileExpression(val, prefix, fn)
+				if i > 0 {
+					buf.WriteString(" || ")
+				}
+				buf.WriteString(fmt.Sprintf("mph_string_eq(ctx, %s, %s)", condVar, valCode))
+			}
+			buf.WriteString(") {\n")
+			c.compileBlock(cc.Body, buf, prefix, fn)
+			buf.WriteString("\t}")
+			firstCase = false
+		}
+		if s.Default != nil {
+			if !firstCase {
+				buf.WriteString(" else {\n")
+			} else {
+				// No cases, just default? (Possible but weird)
+				buf.WriteString("{\n")
+			}
+			c.compileBlock(s.Default, buf, prefix, fn)
+			buf.WriteString("\t}\n")
+		} else {
+			if !firstCase {
+				buf.WriteString("\n")
+			}
+		}
+	} else {
+		return fmt.Errorf("switch on type %s not supported", condType.String())
+	}
+	return nil
 }
 
 func (c *Compiler) compileVar(s *parser.VarStatement, buf *strings.Builder, prefix string, fn *parser.FunctionLiteral) error {
@@ -1109,12 +1206,12 @@ func (c *Compiler) compileInfix(ie *parser.InfixExpression, prefix string, fn *p
 	if err != nil { return "", err }
 
 	if ie.Operator == "+" {
-		if c.checker.Types[ie.Left].Kind() == checker.KindString {
+		if t := c.checker.Types[ie.Left]; t != nil && t.Kind() == checker.KindString {
 			return fmt.Sprintf("mph_string_concat(ctx, %s, %s)", left, right), nil
 		}
 	}
 	if ie.Operator == "==" {
-		if c.checker.Types[ie.Left].Kind() == checker.KindString {
+		if t := c.checker.Types[ie.Left]; t != nil && t.Kind() == checker.KindString {
 			return fmt.Sprintf("mph_string_eq(ctx, %s, %s)", left, right), nil
 		}
 	}
