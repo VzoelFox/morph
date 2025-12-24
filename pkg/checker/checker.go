@@ -558,6 +558,16 @@ func (c *Checker) checkStatement(s parser.Statement) {
 func (c *Checker) checkSwitchStatement(s *parser.SwitchStatement) {
 	condType := c.checkExpression(s.Condition)
 
+	// Validate Condition Type
+	if condType.Kind() != KindUnknown {
+		switch condType.Kind() {
+		case KindInt, KindBool, KindString:
+			// Allowed
+		default:
+			c.addError(s.Token.Line, s.Token.Column, "Switch condition must be Int, Bool, or String, got %s", condType.String())
+		}
+	}
+
 	for _, cc := range s.Cases {
 		for _, val := range cc.Values {
 			valType := c.checkExpression(val)

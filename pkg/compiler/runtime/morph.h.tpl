@@ -6,7 +6,7 @@
 #include <pthread.h>
 
 // --- Constants ---
-#define GC_THRESHOLD (1024 * 1024) // 1MB
+#define GC_THRESHOLD (64 * 1024 * 1024) // 64MB
 #define DAEMON_SLEEP_MS 100
 #define SWAP_AGE_THRESHOLD_SEC 10
 
@@ -55,6 +55,7 @@ struct MorphContext {
     pthread_t daemon_thread;    // GC/Swap Daemon
     int daemon_running;
     pthread_mutex_t memory_lock; // Lock for heap access (Daemon vs Main)
+    uint64_t last_alloc_time;
 
     void* scheduler;            // Placeholder
 };
