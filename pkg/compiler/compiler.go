@@ -253,6 +253,10 @@ func (c *Compiler) getFreeVars(fn *parser.FunctionLiteral) []string {
 	for _, p := range fn.Parameters {
 		defined[p.Name.Value] = true
 	}
+	// Register Receiver as Defined
+	if fn.Receiver != nil {
+		defined[fn.Receiver.Name.Value] = true
+	}
 
 	var walkBody func(n parser.Node)
 	walkBody = func(n parser.Node) {
@@ -1031,6 +1035,8 @@ func (c *Compiler) compileExpression(expr parser.Expression, prefix string, fn *
 	case *parser.BooleanLiteral:
 		if e.Value { return "1", nil }
 		return "0", nil
+	case *parser.NullLiteral:
+		return "NULL", nil
 	case *parser.InfixExpression:
 		return c.compileInfix(e, prefix, fn)
 	case *parser.PrefixExpression:
@@ -1313,11 +1319,27 @@ func (c *Compiler) getTupleCType(types []checker.Type, prefix string) string {
 
     // Generate definition
     c.typeDefs.WriteString(fmt.Sprintf("typedef struct %s {\n", name))
+
+    // Collect pointer offsets for RTTI
+    var offsets []string
+
     for i, t := range types {
         cType := c.mapCheckerTypeToC(t, prefix)
         c.typeDefs.WriteString(fmt.Sprintf("\t%s v%d;\n", cType, i))
+
+        if c.isPointerCheckerType(t) {
+            offsets = append(offsets, fmt.Sprintf("offsetof(%s, v%d)", name, i))
+        }
     }
     c.typeDefs.WriteString(fmt.Sprintf("} %s;\n\n", name))
+
+    // Generate RTTI
+    numPtrs := len(offsets)
+    offsetsStr := "NULL"
+    if numPtrs > 0 {
+        offsetsStr = fmt.Sprintf("(size_t[]){%s}", strings.Join(offsets, ", "))
+    }
+    c.typeDefs.WriteString(fmt.Sprintf("MorphTypeInfo mph_ti_%s = { \"%s\", sizeof(%s), %d, %s };\n", name, name, name, numPtrs, offsetsStr))
 
     return name
 }

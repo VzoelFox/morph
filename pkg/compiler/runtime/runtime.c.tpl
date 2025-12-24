@@ -537,7 +537,7 @@ void* mph_assert_type(MorphContext* ctx, MorphInterface iface, mph_int expected_
          mph_swap_in(ctx, iface.instance);
          return iface.instance;
     }
-    exit(1); return NULL;
+    return NULL;
 }
 
 // --- IO (Minimal for Phase 1) ---
