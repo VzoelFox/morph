@@ -1,11 +1,22 @@
-fungsi main() void
-    var i int = 0
+ambil "conv"
 
-    selama i < 100000
-        var s string = "temp string " + "created"
-        var a []int = [i, i + 1, i + 2]
+fungsi main() void
+    # Loop to generate garbage
+    var i = 0
+    selama i < 500
+        var s = "Garbage " + conv.Itoa(i)
+        # Trigger allocation
+        var a = [i, i + 1, i + 2]
         i = i + 1
     akhir
-akhir
 
-main()
+    # Check if swap works (Daemon should swap this out if we sleep)
+    var retained = "I should be swapped"
+
+    native_print("Waiting for Daemon GC...")
+
+    # Access retained variable to trigger swap-in
+    native_print(retained)
+
+    native_print("Stress Test Done")
+akhir

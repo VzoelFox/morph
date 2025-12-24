@@ -348,6 +348,24 @@ func (c *Compiler) compileFunction(fn *parser.FunctionLiteral, prefix string) er
 
 	c.funcDefs.WriteString(" {\n")
 
+	// 3. Register Pointer Parameters as Roots
+    // Receiver
+	if fn.Receiver != nil {
+        if c.isPointerType(fn.Receiver.Type) {
+            c.funcDefs.WriteString(fmt.Sprintf("\tmph_gc_push_root(ctx, (void**)&%s);\n", fn.Receiver.Name.Value))
+        }
+    }
+    // Params
+    var roots int
+    if fn.Receiver != nil && c.isPointerType(fn.Receiver.Type) { roots++ }
+
+	for _, p := range fn.Parameters {
+        if c.isPointerType(p.Type) {
+		    c.funcDefs.WriteString(fmt.Sprintf("\tmph_gc_push_root(ctx, (void**)&%s);\n", p.Name.Value))
+            roots++
+        }
+	}
+
 	// 3. Cast Env
 	if len(captures) > 0 {
 		c.funcDefs.WriteString(fmt.Sprintf("\t%s* _env = (%s*)_env_void;\n", envTypeName, envTypeName))
@@ -358,6 +376,12 @@ func (c *Compiler) compileFunction(fn *parser.FunctionLiteral, prefix string) er
 		return err
 	}
 	c.funcDefs.WriteString(body.String())
+
+    // Pop Param Roots
+    if roots > 0 {
+        c.funcDefs.WriteString(fmt.Sprintf("\tmph_gc_pop_roots(ctx, %d);\n", roots))
+    }
+
 	c.funcDefs.WriteString("}\n\n")
 	return nil
 }
@@ -392,12 +416,42 @@ func (c *Compiler) findTypeForName(body parser.Statement, name string) checker.T
 }
 
 func (c *Compiler) compileBlock(block *parser.BlockStatement, buf *strings.Builder, prefix string, currentFn *parser.FunctionLiteral) error {
+    localRoots := 0
 	for _, stmt := range block.Statements {
 		if err := c.compileStatement(stmt, buf, prefix, currentFn); err != nil {
 			return err
 		}
+        // Count roots created by this statement (if VarStatement with pointer)
+        if vs, ok := stmt.(*parser.VarStatement); ok {
+             var typeNode parser.TypeNode = vs.Type
+             // If implicit, check checker type
+             if typeNode == nil {
+                 // Too hard to reconstruct parser.TypeNode from checker.Type here correctly for isPointerType check
+                 // So we fallback to checker type check
+                 typ := c.checker.Types[vs.Values[0]] // Type of value
+                 if typ != nil && c.isPointerCheckerType(typ) {
+                     localRoots++
+                 }
+             } else {
+                 if c.isPointerType(typeNode) {
+                    localRoots++
+                 }
+             }
+        }
 	}
+    // Pop local roots at end of block
+    if localRoots > 0 {
+        buf.WriteString(fmt.Sprintf("\tmph_gc_pop_roots(ctx, %d);\n", localRoots))
+    }
 	return nil
+}
+
+func (c *Compiler) isPointerCheckerType(t checker.Type) bool {
+    if t == nil { return false }
+    switch t.Kind() {
+    case checker.KindString, checker.KindArray, checker.KindMap, checker.KindStruct, checker.KindFunction, checker.KindInterface: return true
+    }
+    return false
 }
 
 func (c *Compiler) compileStatement(stmt parser.Statement, buf *strings.Builder, prefix string, currentFn *parser.FunctionLiteral) error {
@@ -452,6 +506,19 @@ func (c *Compiler) compileVar(s *parser.VarStatement, buf *strings.Builder, pref
 	}
 
 	buf.WriteString(fmt.Sprintf("\t%s %s = %s;\n", cType, name, valCode))
+
+    // Register Root if Pointer
+    isPtr := false
+    if s.Type != nil {
+        if c.isPointerType(s.Type) { isPtr = true }
+    } else if destType != nil {
+        if c.isPointerCheckerType(destType) { isPtr = true }
+    }
+
+    if isPtr {
+        buf.WriteString(fmt.Sprintf("\tmph_gc_push_root(ctx, (void**)&%s);\n", name))
+    }
+
 	return nil
 }
 
@@ -755,7 +822,7 @@ func (c *Compiler) compileInfix(ie *parser.InfixExpression, prefix string, fn *p
 	}
 	if ie.Operator == "==" {
 		if c.checker.Types[ie.Left].Kind() == checker.KindString {
-			return fmt.Sprintf("mph_string_eq(%s, %s)", left, right), nil
+			return fmt.Sprintf("mph_string_eq(ctx, %s, %s)", left, right), nil
 		}
 	}
 	return fmt.Sprintf("(%s %s %s)", left, ie.Operator, right), nil
