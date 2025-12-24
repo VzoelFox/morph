@@ -1,7 +1,7 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.36.0
+- **Versi**: 1.37.0
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
 - **Terakhir Diupdate**: 2025-12-23
 - **Status**: Active
@@ -54,6 +54,25 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.37.0 - 2025-12-23
+**Checksum**: SHA256:GC_CLOSURE_STABILITY
+**Perubahan**:
+- **Runtime**: Defined `mph_ti_closure` RTTI to trace the `env` pointer in closures.
+- **Runtime**: Updated `mph_closure_new` to use `&mph_ti_closure` for GC tracking.
+- **Compiler**: Refactored `compileFunction` to generate RTTI (`MorphTypeInfo`) for all Env structs, tracing captured pointers.
+- **Compiler**: Refactored `compileFunction` to prevent nested C function definitions by hoisting inner function definitions.
+- **Compiler**: Implemented `collectGlobals` to identify Global symbols (Functions, Imports) and exclude them from capture analysis, fixing NULL env dereferences.
+- **Tests**: Added `examples/gc_closure_test.fox` (verified and removed).
+
+**Konteks Sesi**:
+- **GC Completion**: Finalized GC support for Closures, ensuring captured variables are traced.
+- **Bug Fix**: Resolved critical C generation bug (nested functions) and runtime crash (capturing globals).
+
+**File Terkait**:
+- `pkg/compiler/runtime/morph.h.tpl` (SHA256:889447387cc649479633e72dc0664d622f960f89e4720937a0709f7a934444c9)
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:ec272fefde24c9c73703370f20967af03223067eb23049f7cf7e00e474ca0236)
+- `pkg/compiler/compiler.go` (SHA256:32f99723223c032064c23f2f099c2794c03493e9664da047af3240f90e6e7300)
+
 ### Version 1.36.0 - 2025-12-23
 **Checksum**: SHA256:GC_CONTAINER_TRACING
 **Perubahan**:
@@ -418,273 +437,6 @@ project-root/
 - `stdlib/math.fox` (SHA256:b109da33bb229f33a4a7a80e8707b9c3645de01c19e6cc6c6d88080e70b176a9)
 - `stdlib/string.fox` (SHA256:87d8f4db419659037af0ae5c5a3092343eea44bb413d6c46b2dc43baa2a3a988)
 - `stdlib/time.fox` (SHA256:ee2fa652c2ac49ce869d0045984649fbc34b5eb1a61b832c04d4bd5535432671)
-
-### Version 1.18.0 - 2025-12-22
-**Checksum**: SHA256:REVERSE_ENGINEER_DESIGN
-**Perubahan**:
-- **Documentation**: Updated `DESIGN.md` (Reverse Engineering) to accurately reflect current Codebase state (Syntax, Types, Stdlib).
-- **Documentation**: Added Technical Debt entry regarding `Int`/`int` capitalization.
-- **Spec**: Updated `DESIGN.md` syntax sections (Keywords, Entry Point, Types).
-- **Spec**: Standardized `DESIGN.md` language to Indonesian.
-- **Roadmap**: Moved Concurrency and Memory Management to Roadmap section.
-
-**Konteks Sesi**:
-- **Strategic Alignment**: Making documentation the source of truth for the *current* implementation, acknowledging gaps as technical debt.
-- **Clarification**: User confirmed "Reverse Engineering" means updating Design to match Code.
-
-**File Terkait**:
-- `DESIGN.md` (SHA256:aec9003fa1e5e788515eca9ad0f0aa21679c9e3e0e59ae70820c0625719417f2)
-- `.vzoel.jules/technical-debt.morph.vz` (SHA256:8f897ac1779f19ec381fc98bf3dc345de285694ac5006b1078f2247803e64942)
-
-### Version 1.17.0 - 2025-12-20
-**Checksum**: SHA256:STDLIB_CONV
-**Perubahan**:
-- **Evaluator**: Implemented complete expression evaluation (`Infix`, `Prefix`, `If`, `NullLiteral`).
-- **Evaluator**: Added `Tuple` support for multiple return values and assignment unpacking.
-- **Checker**: Updated `BinaryOp` to allow comparison between `Null` and nullable types (e.g. `Error`).
-- **Stdlib**: Added `stdlib/conv.fox` with `Atoi` (returning `(Int, Error)`) and `Itoa`.
-- **Runtime**: Implemented `pkg/evaluator/builtins_conv.go`.
-- **Driver**: Updated `cmd/morph/main.go` to register `conv`.
-- **Example**: Added `examples/conv_test.fox`.
-
-**Konteks Sesi**:
-- **Runtime Maturity**: Evaluator di-upgrade besar-besaran untuk mendukung operasi logika (`==`, `!=`, `+`) dan Tuple, memungkinkan kode yang lebih kompleks.
-- **Feature**: `stdlib/conv` memungkinkan konversi tipe string-int yang robust dengan error handling idiomatic.
-
-**File Terkait**:
-- `pkg/evaluator/evaluator.go`
-- `pkg/evaluator/object.go`
-- `pkg/checker/types.go`
-- `stdlib/conv.fox`
-- `pkg/evaluator/builtins_conv.go`
-- `cmd/morph/main.go`
-
-### Version 1.16.0 - 2025-12-20
-**Checksum**: SHA256:STDLIB_TIME
-**Perubahan**:
-- **Stdlib**: Added `stdlib/time.fox` with `Now` (Unix ms) and `Sleep` (ms).
-- **Runtime**: Implemented `pkg/evaluator/builtins_time.go` bridging to Go `time` package.
-- **Example**: Added `examples/clock.fox` to demonstrate `time.Sleep`.
-
-**Konteks Sesi**:
-- **Feature Expansion**: Menambahkan modul `time` sebagai langkah "realistis" berikutnya untuk interaktivitas dasar.
-- **Strategy**: Implementasi `Sleep` yang blocking dipilih untuk stabilitas API awal, dengan TODO untuk upgrade ke async saat Scheduler tersedia.
-
-**File Terkait**:
-- `stdlib/time.fox`
-- `pkg/evaluator/builtins_time.go`
-- `cmd/morph/main.go`
-- `examples/clock.fox`
-
-### Version 1.15.0 - 2025-12-20
-**Checksum**: SHA256:RUNTIME_IO
-**Perubahan**:
-- **Core**: Implemented `pkg/evaluator` (Tree-walking Interpreter).
-- **Core**: Added `native` keyword support in Lexer, Parser, and AST.
-- **Checker**: Updated to skip body checks for `native` functions.
-- **Stdlib**: Created `stdlib/io.fox` with native `Open`, `Read`, `Write`, `Close`.
-- **Runtime**: Implemented native IO bindings (`builtins_io.go`) wrapping Go's `os` package.
-- **Driver**: Updated `cmd/morph/main.go` to run the Evaluator after checking.
-- **Example**: Created `examples/hello_world.fox` demonstrating working "Hello World".
-
-**Konteks Sesi**:
-- **Major Milestone**: Memasuki Fase 3 (Runtime). Morph sekarang bisa mengeksekusi kode!
-- **Feature**: User meminta "Hello World" yang nyata (baca/tulis/buka).
-- **Resolution**: Implementasi Interpreter + Stdlib IO + Native Bridge.
-- **Learnings**: Parser ambiguity (Identifier as Return Type vs Body start) resolved by explicit return type `Void` in example.
-
-**File Terkait**:
-- `cmd/morph/main.go`
-- `pkg/evaluator/*`
-- `stdlib/io.fox`
-- `examples/hello_world.fox`
-- `pkg/parser/parser.go`
-- `pkg/checker/checker.go`
-
-### Version 1.14.1 - 2025-12-20
-**Checksum**: SHA256:STDLIB_INFRA
-**Perubahan**:
-- **Tooling**: Enhanced `cmd/morph/main.go` to support multiple search paths (`FileImporter.SearchPaths`).
-- **Stdlib**: Created `stdlib/` directory as the central location for standard libraries.
-- **Stdlib**: Added `stdlib/math.fox` (moved from examples) and `stdlib/string.fox`.
-- **Example**: Updated `examples/hello.fox` to use direct imports (`ambil "math"`, `ambil "string"`).
-
-**Konteks Sesi**:
-- **Infrastructure**: Membangun fondasi untuk "Standard Library Import" agar library standar bisa diakses tanpa relative path, sesuai strategi "Import Load" yang disepakati.
-
-**File Terkait**:
-- `cmd/morph/main.go` (SHA256:6f9e4c4f1813412724ba75e2cfed1e634db97bbdd47efc438ed0c62b9fffab28)
-- `stdlib/math.fox` (SHA256:b109da33bb229f33a4a7a80e8707b9c3645de01c19e6cc6c6d88080e70b176a9)
-- `stdlib/string.fox` (SHA256:87d8f4db419659037af0ae5c5a3092343eea44bb413d6c46b2dc43baa2a3a988)
-- `examples/hello.fox` (SHA256:c2a0f0ce680c71d0da04fa52e8b540f55d69a056640739be67282509dcb99f4f)
-
-### Version 1.14.0 - 2025-12-20
-**Checksum**: SHA256:CLI_DRIVER
-**Perubahan**:
-- **Tooling**: Created `cmd/morph/main.go` as the CLI Driver (Frontend Compiler).
-- **Tooling**: Implemented `FileImporter` in `main.go` to support importing modules from the file system.
-- **Example**: Created `examples/hello.fox` and `examples/std/math.fox` to demonstrate functionality.
-
-**Konteks Sesi**:
-- **Milestone**: Memasuki Fase 3 (awal) dengan menyediakan cara untuk menjalankan compiler (parsing & type checking) pada file `.fox` nyata.
-- **Verification**: User meminta "menjalankan compiler yang sudah ada".
-
-**File Terkait**:
-- `cmd/morph/main.go` (SHA256:ccbd734cf102c9a5bfbbc27cf7bb55d09c5780b74dce907c4de4622fe0f2b363)
-
-### Version 1.13.1 - 2025-12-20
-**Checksum**: SHA256:BITWISE_TESTS
-**Perubahan**:
-- **Tests**: Added `pkg/checker/bitwise_test.go` to confirm existence and correctness of bitwise operations (`&`, `|`, `^`, `<<`, `>>`, `~`).
-
-**Konteks Sesi**:
-- **Verification**: User requested update on bitwise operations. Investigation showed implementation was complete but lacked dedicated tests. Added test suite to close the gap.
-
-**File Terkait**:
-- `pkg/checker/bitwise_test.go` (SHA256:00268e7307bd5bf4130ff32b167ae064dc9644f2839e2e0ef7e56dc175d2bed3)
-
-### Version 1.13.0 - 2025-12-20
-**Checksum**: SHA256:STRUCT_IMPROVEMENTS
-**Perubahan**:
-- **Type System**: Added `FieldOrder` to `StructType` to support ordered fields.
-- **Type System**: Added `IsComparable` method to `Type` interface and implementations.
-- **Checker**: Implemented `StructType.Call` to support Struct Constructor syntax (e.g., `User(1, "Name")`).
-- **Checker**: Implemented strict Struct Equality logic in `StructType.BinaryOp` (structs with non-comparable fields like maps/arrays cannot be compared).
-- **Tests**: Added `pkg/checker/struct_extra_test.go` to verify constructors and comparability.
-
-**Konteks Sesi**:
-- **Feature**: Memenuhi request user untuk mendukung syntax constructor struct yang lebih ringkas dan memastikan keamanan tipe saat membandingkan struct (deep equality safety).
-
-**File Terkait**:
-- `pkg/checker/types.go` (SHA256:a511933792bfe3cff4c4292650bc4b4bccc3332f047f37cb62695e3874f8f9cc)
-- `pkg/checker/checker.go` (SHA256:60bfa7d8b70b908f865e007ae66314bc6f3eb51d1ec6c8f6a7dd12dd58993df8)
-- `pkg/checker/struct_extra_test.go` (SHA256:29e0a9a3ed7ac5d1424a0ca682c442209005fb3160e664bd221e14f177670de5)
-
-### Version 1.12.0 - 2025-12-20
-**Checksum**: SHA256:STRING_INDEXING
-**Perubahan**:
-- **Type System**: Updated `BasicType.Index` to allow indexing `KindString` with `KindInt`, returning `KindInt` (representing byte/char value).
-- **Checker**: Updated `checkAssignment` to strictly forbid assigning to string indices (String Immutability), ensuring `str[0] = x` is rejected.
-
-**Konteks Sesi**:
-- **Closing Gap**: Mengimplementasikan String Indexing (`s[i]`) yang merupakan fitur dasar, sekaligus menegakkan aturan immutability string pada level Checker.
-
-**File Terkait**:
-- `pkg/checker/checker.go` (SHA256:25a9f90997fb540fc39a688cc34d3723df6d25601f2d24d555af5300422d7197)
-- `pkg/checker/types.go` (SHA256:7a5dae8380e06102519cb557bab2c63a0c63f3281edaaac15b59611784ecabf7)
-### Version 1.11.0 - 2025-12-20
-**Checksum**: SHA256:MODULO_SUPPORT
-**Perubahan**:
-- **Lexer**: Added `PERCENT` (%) token support.
-- **Parser**: Added `MODULO` operator precedence (same as `PRODUCT`) and registered infix parser for `%`.
-- **Checker**: Implemented `BinaryOp` support for `%` (Modulo) on `Int` types.
-
-**Konteks Sesi**:
-- **Closing Gap**: Mengimplementasikan operator Modulo (`%`) yang sebelumnya hilang dari Type System, sesuai dengan standar bahasa pemrograman umum dan implikasi aritmatika.
-
-**File Terkait**:
-- `pkg/checker/types.go` (SHA256:6179aad042f344d7682ef0bd3dcc4d0d18da157afb0c1abd2c507c5a537ece5f)
-- `pkg/lexer/lexer.go` (SHA256:97d9e016d7438e81e15e1f60971309310d1992df1c1c97e69a9f453c8f289780)
-- `pkg/lexer/token.go` (SHA256:3cd2d8157be7c04e3d2ded1f3d96b8c505532d8954882b599555d98350d07df0)
-- `pkg/parser/parser.go` (SHA256:b9d9f683546fa2ead6f2eb267afb9dec176ee64de6d9c351bb4b00364f030e69)
-### Version 1.10.0 - 2025-12-20
-**Checksum**: SHA256:IMPORT_FIX
-**Perubahan**:
-- **Checker**: Fixed Import System to correctly distinguish between Exported Types (Structs/Interfaces) and Exported Values (Functions/Vars).
-- **Types**: Added `ExportInfo` struct to `ModuleType.Exports` to track `IsType` metadata.
-- **Parser**: Fixed critical panic in `ReturnStatement.String()` when expression is missing (nil pointer dereference).
-- **Parser**: Updated `parseReturnStatement` to correctly handle empty returns (e.g. `kembalikan;`).
-
-**Konteks Sesi**:
-- **Bug Fix**: Menyelesaikan isu di mana exported variable salah dikenali sebagai type definition, dan sebaliknya.
-- **Robustness**: Menangani edge case pada `ReturnStatement` yang menyebabkan crash pada compiler jika AST di-dump (debug).
-
-**File Terkait**:
-- `pkg/checker/checker.go` (SHA256:d316a9c683e2fe62892fbfc60a7047d4dc71df63e6d27279b3b93395981bd521)
-- `pkg/checker/types.go` (SHA256:770accfdab1cd5bcd76b01c59489cc639f98567079faa05bd0410dbd6325f138)
-- `pkg/parser/parser.go` (SHA256:8e23a7939ccb4bd9f112acd82675b046f07530f6fd0422aee13f318b554096ec)
-
-### Version 1.9.0 - 2025-12-20
-**Checksum**: SHA256:REMOVE_ANALYSIS
-**Perubahan**:
-- **Cleanup**: Removed `pkg/analysis` (Legacy Analyzer) to resolve architectural duplication.
-- **Docs**: Updated technical debt to reflect removal.
-
-**Konteks Sesi**:
-- **Architectural Cleanup**: Removing the "Zombie" analyzer that conflicted with the robust Checker.
-
-### Version 1.8.1 - 2025-12-20
-**Checksum**: SHA256:REFACTOR_TYPE_SYSTEM
-**Perubahan**:
-- **Type System**: Expanded `Type` interface with `GetMember` and `Index` methods. Implemented behavior in `StructType`, `ModuleType`, `ArrayType`, `MapType`.
-- **Checker**: Refactored `checker.go` to use `Type` interface methods instead of manual type casting for member access and indexing.
-- **Robustness**: Improved error handling for indexing operations in Type System.
-
-**Konteks Sesi**:
-- **Refactoring**: Addressing "Anemic Domain Model" in Type System. Moving logic from Controller (Checker) to Model (Types).
-
-**File Terkait**:
-- `pkg/checker/types.go` (SHA256:f886047e21bd3c6bc8444ac85749eb1cc5dd927b9a4716a489a3afdb8893af2d)
-- `pkg/checker/checker.go` (SHA256:83ca925d87949073eb64b6802c144b7104c29fa2b57c0f75ff457fb0a7f86958)
-
-### Version 1.8.0 - 2025-12-20
-**Checksum**: SHA256:BASELINE_RESET
-**Perubahan**:
-- **INTEGRITY RESET**: Melakukan "Baseline Validation" untuk seluruh file dalam project.
-- **Audit**: Verifikasi manual Lexer & Parser (Robustness confirmed).
-- **Cleanup**: Memastikan tidak ada sisa referensi `morphlang` dalam kode.
-- **Snapshot**: Mencatat ulang checksum seluruh file core untuk menghapus keraguan "untracked source of truth".
-
-**Konteks Sesi**:
-- **Total Reconciliation**: Mengoreksi kesalahan sejarah penamaan repo dengan menetapkan baseline baru yang bersih di bawah `github.com/VzoelFox/morph`.
-- Semua file di bawah ini telah diverifikasi eksistensi dan integritasnya.
-
-**File Terkait (Integrity Snapshot)**:
-- `go.mod` (SHA256:c7de783d9e3378d10d7865c5c05a3d05652403e1016f735455185a905f911340)
-- `pkg/checker/casting_test.go` (SHA256:c3d45c5384f975bc9ac059a19999797dc5ef385b11770e58ed7c1fd857badfc6)
-- `pkg/checker/checker.go` (SHA256:a838dd5e2b9b6bdfdebda2bce6c3124e25ed2ed98ba7730d8f7df85ffa5429fd)
-- `pkg/checker/checker_test.go` (SHA256:78f07e699921a3c0fea532e8b34779d51e758fdfaeeabb1f999ec27724dadfa1)
-- `pkg/checker/control_flow_test.go` (SHA256:09956aa267a1a7662723efae230b86f621839b49c2a8dcd3513bf43dc4235686)
-- `pkg/checker/cycle_test.go` (SHA256:4ab36e3ad47d9904bff3738fe7fc24542d903dbbab3697f4d3be61efa98578b2)
-- `pkg/checker/deadcode_test.go` (SHA256:fb440573764fad90c9a865184693010c4589802738621e5695715e9e4a8ab14b)
-- `pkg/checker/error_type_test.go` (SHA256:710dd5f54741e0dc9f24f59afc01d516d8b704bdc33935db38469da64aa50ce0)
-- `pkg/checker/errors.go` (SHA256:43107505cf0e76efd5474968506d004d0490eecda63b374e25f77c964ad491ca)
-- `pkg/checker/import_test.go` (SHA256:6af0dab28a04048c6ad7f84f75a4d6a4778babfd90372e2154d88326ea7c6a81)
-- `pkg/checker/import_type_test.go` (SHA256:d3e4e47f4952872b084fa8534cae971e07d2d2dd35ee777fb14cda471b6f14b5)
-- `pkg/checker/inference_test.go` (SHA256:770423524f01322d0e14bb8b8a73cd8a7117a113573160f0c4fe1b43604fe478)
-- `pkg/checker/interface_impl_test.go` (SHA256:daeab0b14dc212fe8a677dc56c08f6c93c25b8ef7f11497560df1777df7c9e70)
-- `pkg/checker/interface_test.go` (SHA256:3ee134f3302b24e9da721053e59f22918c4956b150a941dabaa497cea6d94d09)
-- `pkg/checker/interface_type_test.go` (SHA256:2273994f0a1894e7938603f126825052ef35f9b9065aadf72f5d51847fbd644f)
-- `pkg/checker/literal_strict_test.go` (SHA256:08b2d78e37c7909817e421afab1cd756fc958cba9087a77d5463943c685dbc29)
-- `pkg/checker/literal_test.go` (SHA256:10cee976311b9691e6c8e8e501338f919299c3e6e4c4e2eacfef871f7e36b6f6)
-- `pkg/checker/member_test.go` (SHA256:1522dc679f3a42c5dfdfe7191a0efbd4b33fca20489a8ef8883429c66f016b04)
-- `pkg/checker/method_test.go` (SHA256:6d4bfdb2e09de588b509e2c8248c9e3408dd36a02e66b2027cb4b493904e4fe3)
-- `pkg/checker/robustness_test.go` (SHA256:9a533733b7cee0b03650ff2106ca733b02a0090a99f783c1812ae05eb92b29e2)
-- `pkg/checker/scope.go` (SHA256:88e4cf157d74d0dc9bc7f5386bbcb001c85f41092c7329c071b2a29ee6182d48)
-- `pkg/checker/shadow_test.go` (SHA256:0d322aff551049f20f6dc9658b2745d6c0d45c9188d56568f0c996841634aff5)
-- `pkg/checker/struct_extra_test.go` (SHA256:ca0ac7bd0ed2a4a0e02cc0482293fc5e122f364fb60c9e504394c5cec4ef30cc)
-- `pkg/checker/types.go` (SHA256:9daab5997e83b86b48b9e5107325b14719da4afc6701a5f2ae36309091b578c1)
-- `pkg/checker/unused_test.go` (SHA256:391450fd74e3c68b1339ae52eadb21f3f2955ae089afa09411af08631f549879)
-- `pkg/lexer/lexer.go` (SHA256:67eecc541c9c62537d64a5a89c32cfafadd24fd8bd0e3925abe8f61d86f36168)
-- `pkg/lexer/lexer_extra_test.go` (SHA256:d01711a23bb91c9f31311f3fc110fd975bf45f0880a8ea67a4145c7cfe64b1c0)
-- `pkg/lexer/lexer_float_test.go` (SHA256:ff1cd427658b44afcfd6fa8f2d9cbf64178b3a23868c22d265dba88c510eb09c)
-- `pkg/lexer/lexer_test.go` (SHA256:11e08b90bee1f2d870b31ec032b1bdd9d7e2e37adea3c281751a8e9726584305)
-- `pkg/lexer/token.go` (SHA256:4aec196a9d797ffc2ce893f0390dc0df4abece2bd4999444d4f1684b905fe1fe)
-- `pkg/lexer/token_test.go` (SHA256:75e77d83a49979fe01699b5715da6f7e200d6ee55afdc7bed4f7f706040fa3ec)
-- `pkg/lexer/utils.go` (SHA256:9fa86f0fd053d13368bd946ca3d09b72e8d2835c510cb4179c2bf21885a1f233)
-- `pkg/parser/ast.go` (SHA256:db046bb39eddfe463415312ef30ae4bc687d54f0befffba084a8de06148a0d3f)
-- `pkg/parser/ast_test.go` (SHA256:0c316b04de9c188ea2459e7d7992a9b20507d5791f8f02072b65f8fe05514217)
-- `pkg/parser/comment_test.go` (SHA256:e8eaf4bda6a04c91794e970d4e372fe228d883ddf01ea38271503a65c9e4fa21)
-- `pkg/parser/interface_test.go` (SHA256:2963cc5915f265bdb8041f8ff83fd1a05a3973bf5267671d7f38d51cb17e94b3)
-- `pkg/parser/method_test.go` (SHA256:4e6f447524c64fad5fba414e8529792124afa3661f1ff636475b7340bc0f3c10)
-- `pkg/parser/multi_return_test.go` (SHA256:158778277a88e205ba3e4edc1d960e29240a595b949c1b2e6399f020445e4298)
-- `pkg/parser/parser.go` (SHA256:25bb8247ed272723f781a49eb31b97213b97f52266ccc315bce02af104e2c4ac)
-- `pkg/parser/parser_extra_test.go` (SHA256:34f4990d9c764a53b104542e8c7baa6f3c7f82288d1b4ee4cae3b04e478f868a)
-- `pkg/parser/parser_fixes_test.go` (SHA256:400c4ee9580a628eec4057bac2b2673c3c7844237c73d4053db07fd6796244ec)
-- `pkg/parser/parser_test.go` (SHA256:2272df775fdfbf6650c2c8c205dcb24e3dec8c091b95dd86d3b9bca8177f1a1e)
-- `pkg/parser/struct_literal_test.go` (SHA256:7e0f3c6b6c42eac6d7aa15ebcea9756825748cf11deebd8a5de54f78fe8c1bf5)
-- `pkg/parser/struct_test.go` (SHA256:e2b7ec62f1040c2f0f00ac201d3086a1db11ed51d6f0b8b5cc0999364a07afd8)
-- `pkg/parser/var_test.go` (SHA256:7a87f92a373259a0114d4964f3c9a17ee91c896465066761c3175d1eef8995de)
 
 ### Version 1.7.3 - 2025-12-20
 **Checksum**: SHA256:VARIOUS

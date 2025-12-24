@@ -26,6 +26,10 @@ MorphTypeInfo mph_ti_raw = { "raw", 0, 0, NULL, NULL };
 MorphTypeInfo mph_ti_array = { "array", sizeof(MorphArray), 0, NULL, mph_gc_mark_array };
 MorphTypeInfo mph_ti_map = { "map", sizeof(MorphMap), 0, NULL, mph_gc_mark_map };
 
+// Closure TypeInfo
+size_t closure_ptr_offsets[] = { offsetof(MorphClosure, env) };
+MorphTypeInfo mph_ti_closure = { "closure", sizeof(MorphClosure), 1, closure_ptr_offsets, NULL };
+
 // --- Utils ---
 uint64_t mph_time_ms() {
     struct timespec ts;
@@ -468,14 +472,9 @@ mph_int mph_map_len(MorphContext* ctx, MorphMap* map) {
 // --- Closures ---
 
 MorphClosure* mph_closure_new(MorphContext* ctx, void* fn, void* env, int env_size) {
-    MorphClosure* c = (MorphClosure*)mph_alloc(ctx, sizeof(MorphClosure), NULL);
+    MorphClosure* c = (MorphClosure*)mph_alloc(ctx, sizeof(MorphClosure), &mph_ti_closure);
     c->function = fn;
-    if (env_size > 0) {
-        c->env = mph_alloc(ctx, env_size, &mph_ti_raw);
-        memcpy(c->env, env, env_size);
-    } else {
-        c->env = NULL;
-    }
+    c->env = env; // Assume env is already heap-allocated with TypeInfo
     return c;
 }
 
