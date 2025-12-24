@@ -21,6 +21,7 @@ const (
 	INT    = "INT"    // 1343456
 	FLOAT  = "FLOAT"  // 123.45
 	STRING = "STRING" // "foobar"
+	CHAR   = "CHAR"   // 'a'
 
 	// Operators
 	ASSIGN   = "="

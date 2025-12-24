@@ -929,6 +929,8 @@ func (c *Compiler) compileExpression(expr parser.Expression, prefix string, fn *
 		return fmt.Sprintf("mph_string_new(ctx, \"%s\")", escaped), nil
 	case *parser.IntegerLiteral:
 		return fmt.Sprintf("%d", e.Value), nil
+	case *parser.CharLiteral:
+		return fmt.Sprintf("%d", e.Value), nil
 	case *parser.BooleanLiteral:
 		if e.Value { return "1", nil }
 		return "0", nil
