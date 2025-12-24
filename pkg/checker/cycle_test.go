@@ -1,7 +1,6 @@
 package checker
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -15,12 +14,8 @@ func TestCyclicStruct(t *testing.T) {
 	akhir
 	`
 	errors := check(input)
-	if len(errors) == 0 {
-		t.Error("Expected error for cyclic dependency")
-	} else {
-		if !strings.Contains(errors[0].Message, "Cyclic struct dependency") {
-			t.Errorf("Expected cyclic dependency error, got %s", errors[0].Message)
-		}
+	if len(errors) != 0 {
+		t.Errorf("Structs are reference types, should allow cycles. Got: %v", errors)
 	}
 }
 
@@ -31,8 +26,8 @@ func TestSelfCycle(t *testing.T) {
 	akhir
 	`
 	errors := check(input)
-	if len(errors) == 0 {
-		t.Error("Expected error for self cycle")
+	if len(errors) != 0 {
+		t.Errorf("Structs are reference types, should allow cycles. Got: %v", errors)
 	}
 }
 

@@ -45,12 +45,20 @@ typedef struct StackRoot {
     struct StackRoot* next;
 } StackRoot;
 
+// Iterative GC Mark Stack
+typedef struct MarkStack {
+    void** items;
+    size_t capacity;
+    size_t count;
+} MarkStack;
+
 struct MorphContext {
     ObjectHeader* heap_head;    // Linked list of all allocated objects
     size_t allocated_bytes;     // Total bytes currently allocated
     size_t next_gc_threshold;   // When to trigger next GC
 
     StackRoot* stack_top;       // Top of Shadow Stack
+    MarkStack mark_stack;       // Stack for iterative GC marking
 
     pthread_t daemon_thread;    // GC/Swap Daemon
     int daemon_running;

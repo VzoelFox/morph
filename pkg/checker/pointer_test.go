@@ -47,14 +47,14 @@ func TestPointers(t *testing.T) {
 	`
 	runPointerTest(t, input3, 0)
 
-	// 4. Struct Null assignment (Should Fail now)
+	// 4. Struct Null assignment (Should Pass now - Reference Types)
 	input4 := `
 	struktur User
 		id int
 	akhir
 	var u User = kosong
 	`
-	runPointerTest(t, input4, 1)
+	runPointerTest(t, input4, 0)
 
 	// 5. Pointer to Struct Null assignment (Should Pass)
 	input5 := `

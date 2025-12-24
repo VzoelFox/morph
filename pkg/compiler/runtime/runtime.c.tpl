@@ -116,6 +116,13 @@ void mph_init_memory(MorphContext* ctx) {
     ctx->next_gc_threshold = GC_THRESHOLD;
     ctx->stack_top = NULL;
     ctx->daemon_running = 0;
+
+    // Initialize Mark Stack (Iterative GC)
+    ctx->mark_stack.capacity = 1024; // Start small, realloc as needed
+    ctx->mark_stack.count = 0;
+    ctx->mark_stack.items = (void**)malloc(sizeof(void*) * ctx->mark_stack.capacity);
+    if (!ctx->mark_stack.items) { perror("malloc mark stack"); exit(1); }
+
     pthread_mutex_init(&ctx->memory_lock, NULL);
 
     // Create directories
@@ -130,6 +137,7 @@ void mph_init_memory(MorphContext* ctx) {
 
 void mph_destroy_memory(MorphContext* ctx) {
     mph_stop_daemon(ctx);
+    if (ctx->mark_stack.items) free(ctx->mark_stack.items);
     // Cleanup pages?
 }
 
@@ -232,12 +240,27 @@ void mph_swap_in(MorphContext* ctx, void* obj) {
     }
 }
 
+// Helper: Push to Mark Stack (Dynamic Growth)
+void mph_mark_stack_push(MorphContext* ctx, void* obj) {
+    if (!obj) return;
+    if (ctx->mark_stack.count >= ctx->mark_stack.capacity) {
+        ctx->mark_stack.capacity *= 2;
+        ctx->mark_stack.items = (void**)realloc(ctx->mark_stack.items, sizeof(void*) * ctx->mark_stack.capacity);
+        if (!ctx->mark_stack.items) { perror("realloc mark stack"); exit(1); }
+    }
+    ctx->mark_stack.items[ctx->mark_stack.count++] = obj;
+}
+
+// Iterative Mark Function: Just queues the object if not marked
 void mph_gc_mark(MorphContext* ctx, void* obj) {
     if (!obj) return;
+
+    // Check marking BEFORE pushing to stack to avoid duplicates
+    ObjectHeader* header = mph_get_header(obj);
+    if (header->flags & FLAG_MARKED) return; // Already marked
+
     mph_swap_in(ctx, obj);
 
-    ObjectHeader* header = mph_get_header(obj);
-    if (header->flags & FLAG_MARKED) return;
     header->flags |= FLAG_MARKED;
 
     // Track live bytes for Page Recycling
@@ -247,28 +270,16 @@ void mph_gc_mark(MorphContext* ctx, void* obj) {
         page->live_bytes += (size + sizeof(ObjectHeader));
     }
 
-    MorphTypeInfo* type = header->type;
-    if (!type) return;
-
-    if (type->mark_fn) {
-        type->mark_fn(ctx, obj);
-    } else {
-        char* payload = (char*)obj;
-        for (int i = 0; i < type->num_pointers; i++) {
-            size_t offset = type->pointer_offsets[i];
-            void** child_ptr = (void**)(payload + offset);
-            if (*child_ptr) {
-                mph_gc_mark(ctx, *child_ptr);
-            }
-        }
-    }
+    // Queue for processing children
+    mph_mark_stack_push(ctx, obj);
 }
 
+// Callback implementations (push children)
 void mph_gc_mark_array(MorphContext* ctx, void* obj) {
     MorphArray* arr = (MorphArray*)obj;
-    if (!arr->data) return;
-    mph_gc_mark(ctx, arr->data);
+    if (arr->data) mph_gc_mark(ctx, arr->data);
     if (arr->elements_are_pointers) {
+        mph_swap_in(ctx, arr->data); // Ensure data is in RAM
         void** elements = (void**)arr->data;
         for (size_t i = 0; i < arr->length; i++) {
             if (elements[i]) mph_gc_mark(ctx, elements[i]);
@@ -278,8 +289,9 @@ void mph_gc_mark_array(MorphContext* ctx, void* obj) {
 
 void mph_gc_mark_map(MorphContext* ctx, void* obj) {
     MorphMap* map = (MorphMap*)obj;
-    if (!map->entries) return;
-    mph_gc_mark(ctx, map->entries);
+    if (map->entries) mph_gc_mark(ctx, map->entries);
+
+    mph_swap_in(ctx, map->entries); // Ensure entries are in RAM
     for (size_t i = 0; i < map->capacity; i++) {
         MorphMapEntry* e = &map->entries[i];
         if (e->occupied) {
@@ -288,6 +300,30 @@ void mph_gc_mark_map(MorphContext* ctx, void* obj) {
             }
             if (map->values_are_pointers) {
                 if (e->value) mph_gc_mark(ctx, e->value);
+            }
+        }
+    }
+}
+
+// Process the Mark Stack (The Loop)
+void mph_gc_process_mark_stack(MorphContext* ctx) {
+    while (ctx->mark_stack.count > 0) {
+        void* obj = ctx->mark_stack.items[--ctx->mark_stack.count];
+
+        ObjectHeader* header = mph_get_header(obj);
+        MorphTypeInfo* type = header->type;
+        if (!type) continue;
+
+        if (type->mark_fn) {
+            type->mark_fn(ctx, obj);
+        } else {
+            char* payload = (char*)obj;
+            for (int i = 0; i < type->num_pointers; i++) {
+                size_t offset = type->pointer_offsets[i];
+                void** child_ptr = (void**)(payload + offset);
+                if (*child_ptr) {
+                    mph_gc_mark(ctx, *child_ptr);
+                }
             }
         }
     }
@@ -371,6 +407,10 @@ void mph_gc_collect(MorphContext* ctx) {
         if (root->ptr && *root->ptr) mph_gc_mark(ctx, *root->ptr);
         root = root->next;
     }
+
+    // Drain the mark stack
+    mph_gc_process_mark_stack(ctx);
+
     mph_gc_sweep(ctx);
     pthread_mutex_unlock(&ctx->memory_lock);
 }
@@ -527,6 +567,92 @@ mph_bool mph_string_eq(MorphContext* ctx, MorphString* a, MorphString* b) {
     mph_swap_in(ctx, b->data);
     if (a->length != b->length) return 0;
     return memcmp(a->data, b->data, a->length) == 0;
+}
+
+mph_int mph_string_index(MorphContext* ctx, MorphString* s, MorphString* sub) {
+    mph_swap_in(ctx, s); mph_swap_in(ctx, s->data);
+    mph_swap_in(ctx, sub); mph_swap_in(ctx, sub->data);
+
+    char* p = strstr(s->data, sub->data);
+    if (!p) return -1;
+    return (mph_int)(p - s->data);
+}
+
+MorphString* mph_string_trim(MorphContext* ctx, MorphString* s, MorphString* cut) {
+    mph_swap_in(ctx, s); mph_swap_in(ctx, s->data);
+    mph_swap_in(ctx, cut); mph_swap_in(ctx, cut->data);
+
+    char* start = s->data;
+    char* end = s->data + s->length - 1;
+
+    while (start <= end && strchr(cut->data, *start)) start++;
+    while (end > start && strchr(cut->data, *end)) end--;
+
+    size_t new_len = (start > end) ? 0 : (size_t)(end - start + 1);
+
+    MorphString* ret = (MorphString*)mph_alloc(ctx, sizeof(MorphString), &mph_ti_string_real);
+    ret->length = new_len;
+    char* data = (char*)mph_alloc(ctx, new_len + 1, &mph_ti_raw);
+    if (new_len > 0) memcpy(data, start, new_len);
+    data[new_len] = 0;
+    ret->data = data;
+    return ret;
+}
+
+MorphArray* mph_string_split(MorphContext* ctx, MorphString* s, MorphString* sep) {
+    mph_swap_in(ctx, s); mph_swap_in(ctx, s->data);
+    mph_swap_in(ctx, sep); mph_swap_in(ctx, sep->data);
+
+    // First pass: count parts
+    size_t count = 0;
+    char* p = s->data;
+    size_t sep_len = sep->length;
+    if (sep_len == 0) {
+        count = s->length;
+    } else {
+        count = 1;
+        while ((p = strstr(p, sep->data)) != NULL) {
+            count++;
+            p += sep_len;
+        }
+    }
+
+    MorphArray* arr = mph_array_new(ctx, count, sizeof(MorphString*), 1);
+    MorphString** elements = (MorphString**)arr->data;
+
+    // Second pass: fill
+    p = s->data;
+    size_t idx = 0;
+    if (sep_len == 0) {
+        for (size_t i = 0; i < s->length; i++) {
+            char buf[2] = { s->data[i], 0 };
+            elements[i] = mph_string_new(ctx, buf);
+        }
+    } else {
+        char* start = s->data;
+        char* found;
+        while ((found = strstr(start, sep->data)) != NULL) {
+             size_t len = found - start;
+             MorphString* item = (MorphString*)mph_alloc(ctx, sizeof(MorphString), &mph_ti_string_real);
+             item->length = len;
+             item->data = (char*)mph_alloc(ctx, len + 1, &mph_ti_raw);
+             memcpy(item->data, start, len);
+             item->data[len] = 0;
+
+             elements[idx++] = item;
+             start = found + sep_len;
+        }
+        // Last part
+        size_t len = strlen(start);
+        MorphString* item = (MorphString*)mph_alloc(ctx, sizeof(MorphString), &mph_ti_string_real);
+        item->length = len;
+        item->data = (char*)mph_alloc(ctx, len + 1, &mph_ti_raw);
+        memcpy(item->data, start, len);
+        item->data[len] = 0;
+        elements[idx++] = item;
+    }
+
+    return arr;
 }
 
 // --- Arrays ---

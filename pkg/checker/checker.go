@@ -74,6 +74,27 @@ func New() *Checker {
     }
     c.scope.DefineVariable("native_print_error", nativePrintErrorType, true, 0, 0)
 
+    // index(string, string) -> int
+    indexType := &FunctionType{
+        Parameters: []Type{StringType, StringType},
+        ReturnTypes: []Type{IntType},
+    }
+    c.scope.DefineVariable("index", indexType, true, 0, 0)
+
+    // trim(string, string) -> string
+    trimType := &FunctionType{
+        Parameters: []Type{StringType, StringType},
+        ReturnTypes: []Type{StringType},
+    }
+    c.scope.DefineVariable("trim", trimType, true, 0, 0)
+
+    // split(string, string) -> []string
+    splitType := &FunctionType{
+        Parameters: []Type{StringType, StringType},
+        ReturnTypes: []Type{&ArrayType{Element: StringType}},
+    }
+    c.scope.DefineVariable("split", splitType, true, 0, 0)
+
 	// Concurrency Primitives (int only for MVP)
 	// saluran_baru() -> channel
 	c.scope.DefineVariable("saluran_baru", &FunctionType{
@@ -141,7 +162,7 @@ func (c *Checker) Check(program *parser.Program) {
 	// Pass 1: Collect Definitions (Structs, Functions, Vars)
 	c.collectDefinitions(program)
 	c.resolveStructFields(program)
-	c.checkStructCycles(program)
+	// c.checkStructCycles(program) // Disabled: Structs are reference types, so cycles are allowed.
 
 	// Pass 2: Check Bodies
 	c.checkNodes(program.Statements)
@@ -1116,6 +1137,8 @@ func (c *Checker) checkLen(call *parser.CallExpression) Type {
 
 	argType := c.checkExpression(call.Arguments[0])
 	if argType.Kind() != KindArray && argType.Kind() != KindMap && argType.Kind() != KindString {
+		// Allow checking length of unknown type (runtime check?)
+        // No, strict type checking.
 		c.addError(call.Token.Line, call.Token.Column, "Argument must be Array, Map, or String, got %s", argType.String())
 	}
 
