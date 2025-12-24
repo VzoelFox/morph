@@ -1,7 +1,7 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.33.0
+- **Versi**: 1.38.0
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
 - **Terakhir Diupdate**: 2025-12-23
 - **Status**: Active
@@ -54,6 +54,92 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.38.0 - 2025-12-23
+**Checksum**: SHA256:TUPLE_SUPPORT
+**Perubahan**:
+- **Compiler**: Implemented Tuple Support for multiple return values (`KindMulti`).
+- **Compiler**: Implemented `getTupleCType` to generate on-the-fly C structs (e.g., `MorphTuple_Int_Error`) for tuples.
+- **Compiler**: Implemented Tuple Unpacking in `compileAssignment` and `compileVar`.
+- **Compiler**: Implemented `resolveTypeNode` to manually resolve AST types to Checker types (fixing `TypeNode` cache gap).
+- **Compiler**: Implemented `generatePrototypes` pass to generate C prototypes for all functions before definitions, solving implicit declaration issues.
+- **Checker**: Updated `checkVarStatement` to populate `c.Types` for declared variable identifiers, enabling the Compiler to resolve their types.
+- **Stdlib**: Reverted `stdlib/conv.fox` `Atoi` signature to `(int, error)` (Tuple Return).
+- **Runtime**: Defined `MorphTuple_Int_Error` and updated `mph_conv_Atoi` to return this struct (stub implementation using `strtol`).
+- **Tests**: Added `examples/tuple_test.fox` (verified unpacking and multi-return).
+
+**Konteks Sesi**:
+- **Feature**: Full Tuple Support in C Compiler. This enables Go-style error handling (`val, err = func()`) and restores the `stdlib` contract.
+- **Bug Fix**: Fixed "implicit declaration" warnings in generated C code by generating prototypes.
+
+**File Terkait**:
+- `pkg/compiler/compiler.go` (SHA256:49c0c326e579218680197d16a5789f2575a6c11100f918e6988891696089201f)
+- `pkg/checker/checker.go` (SHA256:2b904496660126786657989354029272338f0156948332149021200238423631)
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:42e97a3148102377c8585481747805175949673934371999920153835016570c)
+- `stdlib/conv.fox` (SHA256:d808e08d13233405786377759082531084288675924765691456565191147514)
+- `examples/tuple_test.fox` (SHA256:0d5b035109405625700720496150242502640265243162232145321305455642)
+
+### Version 1.37.0 - 2025-12-23
+**Checksum**: SHA256:GC_CLOSURE_STABILITY
+**Perubahan**:
+- **Runtime**: Defined `mph_ti_closure` RTTI to trace the `env` pointer in closures.
+- **Runtime**: Updated `mph_closure_new` to use `&mph_ti_closure` for GC tracking.
+- **Compiler**: Refactored `compileFunction` to generate RTTI (`MorphTypeInfo`) for all Env structs, tracing captured pointers.
+- **Compiler**: Refactored `compileFunction` to prevent nested C function definitions by hoisting inner function definitions.
+- **Compiler**: Implemented `collectGlobals` to identify Global symbols (Functions, Imports) and exclude them from capture analysis, fixing NULL env dereferences.
+- **Tests**: Added `examples/gc_closure_test.fox` (verified and removed).
+
+**Konteks Sesi**:
+- **GC Completion**: Finalized GC support for Closures, ensuring captured variables are traced.
+- **Bug Fix**: Resolved critical C generation bug (nested functions) and runtime crash (capturing globals).
+
+**File Terkait**:
+- `pkg/compiler/runtime/morph.h.tpl` (SHA256:889447387cc649479633e72dc0664d622f960f89e4720937a0709f7a934444c9)
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:ec272fefde24c9c73703370f20967af03223067eb23049f7cf7e00e474ca0236)
+- `pkg/compiler/compiler.go` (SHA256:32f99723223c032064c23f2f099c2794c03493e9664da047af3240f90e6e7300)
+
+### Version 1.36.0 - 2025-12-23
+**Checksum**: SHA256:GC_CONTAINER_TRACING
+**Perubahan**:
+- **Runtime**: Added `mark_fn` to `MorphTypeInfo` to support custom GC marking logic.
+- **Runtime**: Implemented `mph_gc_mark_array` and `mph_gc_mark_map` to recursively trace elements/values.
+- **Runtime**: Updated `MorphArray` and `MorphMap` to store pointer flags (`elements_are_pointers`, `values_are_pointers`).
+- **Compiler**: Updated `compileArrayLiteral` and `compileHashLiteral` to detect pointer types and pass flags to runtime constructors.
+- **Tests**: Added `examples/gc_container_test.fox` (verified and removed).
+
+**Konteks Sesi**:
+- **GC Robustness**: Resolved "Container Blindness" where GC failed to mark objects stored inside Maps and Arrays, leading to potential Use-After-Free or leaks.
+- **Feature**: Dynamic Marking for Generic Containers.
+
+**File Terkait**:
+- `pkg/compiler/runtime/morph.h.tpl` (SHA256:889447387cc649479633e72dc0664d622f960f89e4720937a0709f7a934444c9)
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:39f88463994324c4493392470724bf288090ceb494eb728079bc796e6229af07)
+- `pkg/compiler/compiler.go` (SHA256:22d7328bf2c3c9902324dc8c9038294723048de7ef6993933c940600d230bc77)
+
+### Version 1.35.0 - 2025-12-23
+**Checksum**: SHA256:TIERED_MEMORY_GC
+**Perubahan**:
+- **Runtime**: Implemented Tiered Memory (RAM <-> Disk Swap) with `ObjectHeader` flags (`FLAG_SWAPPED`, `last_access`).
+- **Runtime**: Implemented Garbage Collection (Mark-and-Sweep) with Shadow Stack root registration.
+- **Runtime**: Implemented `mph_gc_daemon` background thread for LRU eviction (Swap).
+- **Runtime**: Fixed deadlock in `mph_gc_collect` by using lockless helpers (`mph_swap_in_locked`).
+- **Compiler**: Injected `mph_gc_push_root` and `mph_gc_pop_roots` calls for pointer variables and parameters.
+- **Tooling**: Updated `.gitignore` and `checksum_gen.go` to ignore build artifacts (`.o`, `.c`, `.h` in examples) to resolve git conflicts.
+- **Stdlib**: Updated `stdlib/conv.fox` to match C Runtime ABI (stubbed `Atoi` return type).
+- **Tests**: Added `examples/stress_test.fox` to verify GC and Swap behavior.
+
+**Konteks Sesi**:
+- **Major Milestone**: Full GC implementation with experimental Tiered Memory support.
+- **Conflict Resolution**: Cleaned up repository artifacts that were causing issues in previous sessions.
+
+**File Terkait**:
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:59d87342797e88939b4f938d22dfb4282844d084022830f370890288828af7c3)
+- `pkg/compiler/runtime/morph.h.tpl` (SHA256:332d7870766442838340d02462bc6e32d348a27d23d907094073d32e920af30e)
+- `pkg/compiler/compiler.go` (SHA256:7f96023307204963666037a34692e0797304f323097e3a96707323f49372ef9e)
+- `.gitignore` (SHA256:94df2292f72e34e5684742a0494490f23730e663a7024776e03390097475d400)
+- `checksum_gen.go` (SHA256:0d944d67396009966bfb22923769934300e57202302760dc092003c2022d2630)
+- `stdlib/conv.fox` (SHA256:87747e9373976694e9f90240d423999990e633d42bc42709027220224424360e)
+- `examples/stress_test.fox` (SHA256:773ecb99839446f236f064f72740432247920409a6fc434444bc99f342724494)
+
 ### Version 1.34.0 - 2025-12-23
 **Checksum**: SHA256:FUNCTION_TYPE_SUPPORT
 **Perubahan**:
@@ -357,7 +443,6 @@ project-root/
 - `pkg/parser/ast.go` (SHA256:d5a19e2f6163bab797a4406f083e8f38cae207463e80a8475488ffd8e5a5c948)
 - `pkg/parser/ast_test.go` (SHA256:0c316b04de9c188ea2459e7d7992a9b20507d5791f8f02072b65f8fe05514217)
 - `pkg/parser/call_extra_test.go` (SHA256:dfed7e5f873400e0548a3f5ed328ab582ce0f8a78cdc40d5a19d5a9bad67f2d7)
-- `pkg/parser/call_test.go` (SHA256:92e8312e0f9f741542ee88bc30435349e624c3dfd9612d737485acb887249a5b)
 - `pkg/parser/comment_test.go` (SHA256:e8eaf4bda6a04c91794e970d4e372fe228d883ddf01ea38271503a65c9e4fa21)
 - `pkg/parser/interface_test.go` (SHA256:2963cc5915f265bdb8041f8ff83fd1a05a3973bf5267671d7f38d51cb17e94b3)
 - `pkg/parser/method_test.go` (SHA256:4e6f447524c64fad5fba414e8529792124afa3661f1ff636475b7340bc0f3c10)

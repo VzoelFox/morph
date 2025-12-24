@@ -1,0 +1,27 @@
+ambil "conv"
+
+fungsi makeClosure(prefix string) fungsi(int) string
+    kembalikan fungsi(x int) string
+        kembalikan prefix + conv.Itoa(x)
+    akhir
+akhir
+
+fungsi main() void
+    native_print("Starting GC Closure Test")
+
+    # Create closure capturing pointer (string)
+    var cl = makeClosure("Captured: ")
+
+    # Force allocation loop to trigger GC
+    var i = 0
+    selama i < 100
+        var s = "Garbage" + conv.Itoa(i)
+        i = i + 1
+    akhir
+
+    # Invoke closure. If 'prefix' was collected, this will crash/print garbage.
+    var res = cl(42)
+    native_print(res)
+
+    native_print("GC Closure Test Done")
+akhir

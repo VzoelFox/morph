@@ -676,6 +676,8 @@ func (c *Checker) checkVarStatement(s *parser.VarStatement) {
 			warning.Column = name.Token.Column
 			c.Warnings = append(c.Warnings, *warning)
 		}
+        // Register type for Compiler
+        c.Types[name] = finalType
 	}
 }
 
