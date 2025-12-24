@@ -552,6 +552,16 @@ void mph_native_print(MorphContext* ctx, MorphString* s) {
     printf("%s\n", s->data);
 }
 
+// Helper to check if MorphInterface holds an Error
+void mph_native_print_error(MorphContext* ctx, MorphError* err) {
+    if (err) {
+        mph_swap_in(ctx, err->message);
+        printf("Error: %s\n", err->message->data);
+    } else {
+        printf("Error: (nil)\n");
+    }
+}
+
 void* mph_io_Open(MorphContext* ctx, MorphString* path) {
     mph_swap_in(ctx, path);
     mph_init_files();
@@ -606,8 +616,14 @@ mph_int mph_io_Close(MorphContext* ctx, void* f) {
 
 typedef struct MorphTuple_Int_Error {
     mph_int v0;
-    MorphInterface v1; // Error
+    MorphError* v1; // Error
 } MorphTuple_Int_Error;
+
+MorphError* mph_error_new(MorphContext* ctx, MorphString* msg) {
+    MorphError* e = (MorphError*)mph_alloc(ctx, sizeof(MorphError), NULL); // Basic error
+    e->message = msg;
+    return e;
+}
 
 MorphString* mph_conv_Itoa(MorphContext* ctx, void* _env, mph_int i) {
     char buf[32];
@@ -616,25 +632,18 @@ MorphString* mph_conv_Itoa(MorphContext* ctx, void* _env, mph_int i) {
 }
 
 MorphTuple_Int_Error mph_conv_Atoi(MorphContext* ctx, void* _env, MorphString* s) {
-    // Basic implementation: always return 0, no error
-    // To do real parsing, we need strtol
+    // Basic implementation
     mph_swap_in(ctx, s);
     char* end;
     long val = strtol(s->data, &end, 10);
 
     MorphTuple_Int_Error ret;
     if (end == s->data) {
-        // Error
-        // We don't have a concrete Error struct yet.
-        // Return 0 and generic error?
-        // Just return 0, null error for MVP.
         ret.v0 = 0;
-        ret.v1.instance = NULL; // Error
-        ret.v1.type_id = 0;
+        ret.v1 = mph_error_new(ctx, mph_string_new(ctx, "Invalid integer"));
     } else {
         ret.v0 = (mph_int)val;
-        ret.v1.instance = NULL; // No error
-        ret.v1.type_id = 0;
+        ret.v1 = NULL;
     }
     return ret;
 }

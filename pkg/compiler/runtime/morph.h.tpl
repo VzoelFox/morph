@@ -122,6 +122,9 @@ typedef struct MorphClosure {
 
 typedef void* (*MorphClosureFunc)(MorphContext*, void*, ...);
 
+typedef struct MorphError {
+    MorphString* message;
+} MorphError;
 
 // --- API ---
 
@@ -164,8 +167,12 @@ void* mph_assert_type(MorphContext* ctx, MorphInterface iface, mph_int expected_
 // Closures
 MorphClosure* mph_closure_new(MorphContext* ctx, void* fn, void* env, int env_size);
 
+// Error
+MorphError* mph_error_new(MorphContext* ctx, MorphString* msg);
+
 // Debug
 void mph_native_print_int(MorphContext* ctx, mph_int n);
+void mph_native_print_error(MorphContext* ctx, MorphError* err);
 
 // Concurrency
 MorphChannel* mph_channel_new(MorphContext* ctx);

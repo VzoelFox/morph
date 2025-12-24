@@ -988,6 +988,7 @@ func (c *Compiler) compileCall(call *parser.CallExpression, prefix string, fn *p
 
 	if ident, ok := call.Function.(*parser.Identifier); ok {
 		if ident.Value == "native_print" { return c.compileBuiltin(call, "mph_native_print", prefix, fn) }
+        if ident.Value == "native_print_error" { return c.compileBuiltin(call, "mph_native_print_error", prefix, fn) }
 		if ident.Value == "native_print_int" { return c.compileBuiltin(call, "mph_native_print_int", prefix, fn) }
 		if ident.Value == "saluran_baru" { return c.compileBuiltin(call, "mph_channel_new", prefix, fn) }
 		if ident.Value == "kirim" { return c.compileBuiltin(call, "mph_channel_send", prefix, fn) }
@@ -995,6 +996,7 @@ func (c *Compiler) compileCall(call *parser.CallExpression, prefix string, fn *p
 		if ident.Value == "luncurkan" { return c.compileSpawn(call, prefix, fn) }
 		if ident.Value == "hapus" { return c.compileDelete(call, prefix, fn) }
 		if ident.Value == "panjang" { return c.compileLen(call, prefix, fn) }
+        if ident.Value == "error" { return c.compileBuiltin(call, "mph_error_new", prefix, fn) }
 
 		funcCode = ident.Value
 		if c.isCaptured(funcCode, fn) {
@@ -1084,7 +1086,7 @@ func (c *Compiler) isLocal(name string, fn *parser.FunctionLiteral) bool {
 }
 
 func isBuiltin(name string) bool {
-	return name == "native_print" || name == "native_print_int" || name == "len" || name == "hapus" || name == "panjang"
+	return name == "native_print" || name == "native_print_int" || name == "len" || name == "hapus" || name == "panjang" || name == "error" || name == "native_print_error"
 }
 
 func (c *Compiler) compileBuiltin(call *parser.CallExpression, cName string, prefix string, fn *parser.FunctionLiteral) (string, error) {
@@ -1152,14 +1154,8 @@ func (c *Compiler) mapCheckerTypeToC(t checker.Type, prefix string) string {
             return c.getTupleCType(mt.Types, prefix)
         }
     case checker.KindUserError:
-        // Assume error is Interface for now (or simple Int if primitive)
-        // Wait, UserErrorType is BasicType? Yes.
-        // It should map to MorphInterface or something?
-        // For simplicity, let's map it to MorphInterface as errors can be any value in Morph philosophy?
-        // Or if it's currently used as simple Int in runtime (stub), let's stick to mph_int?
-        // But in Tuple_Int_Error it should probably be MorphInterface or similar.
-        // Let's use MorphInterface to be safe and flexible.
-        return "MorphInterface"
+        // error type maps to MorphError*
+        return "MorphError*"
 	}
 	return "mph_int"
 }
