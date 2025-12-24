@@ -22,6 +22,8 @@ typedef struct MphPage {
     struct MphPage* next;
     // For disk swap
     uint64_t swap_id;
+    // For Page Recycling
+    size_t live_bytes;
 } MphPage;
 
 // Global Page List (in Context)
@@ -71,6 +73,8 @@ uint64_t mph_time_ms() {
 
 // --- Page Management ---
 
+static MphPage* current_alloc_page = NULL;
+
 MphPage* mph_page_new() {
     MphPage* page = (MphPage*)malloc(sizeof(MphPage));
     // Allocate 4KB aligned memory
@@ -84,6 +88,7 @@ MphPage* mph_page_new() {
     page->flags = 0;
     page->last_access = mph_time_ms();
     page->swap_id = 0;
+    page->live_bytes = 0;
 
     pthread_mutex_lock(&page_lock);
     page->next = global_page_head;
@@ -236,6 +241,13 @@ void mph_gc_mark(MorphContext* ctx, void* obj) {
     if (header->flags & FLAG_MARKED) return;
     header->flags |= FLAG_MARKED;
 
+    // Track live bytes for Page Recycling
+    MphPage* page = mph_find_page(obj);
+    if (page) {
+        size_t size = header->type ? header->type->size : 0;
+        page->live_bytes += (size + sizeof(ObjectHeader));
+    }
+
     MorphTypeInfo* type = header->type;
     if (!type) return;
 
@@ -308,27 +320,53 @@ void mph_gc_sweep(MorphContext* ctx) {
             // ZOMBIE LOGGING before free
             mph_log_zombie(curr);
 
-            // Check page usage?
-            // In this hybrid allocator (Malloc + Page Tracking), we rely on malloc's free.
-            // But wait, user wanted Arena.
-            // Implementing full Arena in one go is risky.
-            // We implemented "Paged Swap" but "Malloc Alloc" mixed?
-            // `mph_alloc` needs to use `mph_page_new`.
-
             if (curr->type) ctx->allocated_bytes -= curr->type->size;
-            // No free() here if we use Arena!
-            // BUT, for MVP Z-Alloc, we just Log.
-            // If we use malloc, we free.
-            // User requested Arena.
-            // Let's assume we implement `mph_alloc` to use pages below.
-            // If Arena, we DO NOT free individual objects. We leave them as "holes".
-            // So we remove from linked list (logical free) but physical memory stays in Page.
+            // Arena: We do NOT free individual objects.
         }
     }
+
+    // Page Recycling
+    pthread_mutex_lock(&page_lock);
+    MphPage** p_ptr = &global_page_head;
+    while (*p_ptr) {
+        MphPage* p = *p_ptr;
+        // Do not free if it's the current allocation page (even if empty/0 live bytes because it's filling up)
+        // Actually, current_alloc_page might be full and have 0 live bytes. Then we free it.
+        // But if it's the one we are WRITING to, we shouldn't unmap it under our feet.
+        // Simplified check: If p == current_alloc_page, keep it.
+
+        // Also skip pages that are swapped out? No, if swapped out and live_bytes=0, we can kill it?
+        // But mark requires swap in. So if it stayed swapped out, it wasn't marked.
+        // If it wasn't marked, live_bytes is 0.
+        // So we can free swapped out pages too!
+
+        if (p != current_alloc_page && p->live_bytes == 0) {
+            *p_ptr = p->next;
+            if (p->flags & FLAG_SWAPPED) {
+                 char path[256];
+                 sprintf(path, ".morph.vz/swap/page_%lu.bin", p->swap_id);
+                 unlink(path);
+            }
+            mph_page_free(p);
+        } else {
+            p_ptr = &p->next;
+        }
+    }
+    pthread_mutex_unlock(&page_lock);
 }
 
 void mph_gc_collect(MorphContext* ctx) {
     pthread_mutex_lock(&ctx->memory_lock);
+
+    // Reset Live Bytes counters on all pages
+    pthread_mutex_lock(&page_lock);
+    MphPage* p = global_page_head;
+    while (p) {
+        p->live_bytes = 0;
+        p = p->next;
+    }
+    pthread_mutex_unlock(&page_lock);
+
     StackRoot* root = ctx->stack_top;
     while (root) {
         if (root->ptr && *root->ptr) mph_gc_mark(ctx, *root->ptr);
@@ -341,8 +379,10 @@ void mph_gc_collect(MorphContext* ctx) {
 // Daemon
 void* mph_daemon_loop(void* arg) {
     MorphContext* ctx = (MorphContext*)arg;
+    int ticks = 0;
     while (ctx->daemon_running) {
         usleep(DAEMON_SLEEP_MS * 1000);
+        ticks++;
 
         pthread_mutex_lock(&page_lock);
         uint64_t now = mph_time_ms();
@@ -354,6 +394,14 @@ void* mph_daemon_loop(void* arg) {
             cur = cur->next;
         }
         pthread_mutex_unlock(&page_lock);
+
+        // Idle GC Trigger
+        // If no allocation for 2 seconds and we have > 1MB allocated, trigger GC
+        if (ctx->allocated_bytes > 1024 * 1024 && (now - ctx->last_alloc_time > 2000)) {
+             // Reset timer to avoid loop
+             ctx->last_alloc_time = now;
+             mph_gc_collect(ctx);
+        }
     }
     return NULL;
 }
@@ -369,13 +417,15 @@ void mph_stop_daemon(MorphContext* ctx) {
 }
 
 // Allocation (Arena Style)
-static MphPage* current_alloc_page = NULL;
 
 void* mph_alloc(MorphContext* ctx, size_t size, MorphTypeInfo* type_info) {
     if (ctx->allocated_bytes > ctx->next_gc_threshold) {
         mph_gc_collect(ctx);
         ctx->next_gc_threshold = ctx->allocated_bytes + GC_THRESHOLD;
     }
+
+    // Update last alloc time for Idle detection
+    ctx->last_alloc_time = mph_time_ms();
 
     size_t total_size = sizeof(ObjectHeader) + size;
     // Align to 8 bytes
@@ -620,6 +670,14 @@ void* mph_assert_type(MorphContext* ctx, MorphInterface iface, mph_int expected_
          return iface.instance;
     }
     return NULL;
+}
+
+// --- Time ---
+mph_int mph_time_Now(MorphContext* ctx) {
+    return (mph_int)mph_time_ms();
+}
+void mph_time_Sleep(MorphContext* ctx, mph_int ms) {
+    usleep(ms * 1000);
 }
 
 // --- IO (Minimal for Phase 1) ---
