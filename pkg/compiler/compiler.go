@@ -63,7 +63,10 @@ func (c *Compiler) Compile(node parser.Node) (string, error) {
 
 	c.output.WriteString("// Native bindings\n")
 	c.output.WriteString("void mph_native_print(MorphContext* ctx, MorphString* s);\n")
-	c.output.WriteString("void mph_native_print_int(MorphContext* ctx, mph_int n);\n\n")
+	c.output.WriteString("void mph_native_print_int(MorphContext* ctx, mph_int n);\n")
+    c.output.WriteString("mph_int mph_string_index(MorphContext* ctx, MorphString* s, MorphString* sub);\n")
+    c.output.WriteString("MorphString* mph_string_trim(MorphContext* ctx, MorphString* s, MorphString* cut);\n")
+    c.output.WriteString("MorphArray* mph_string_split(MorphContext* ctx, MorphString* s, MorphString* sep);\n\n")
 
     // 0. Collect Globals
     c.collectGlobals(node)
@@ -148,6 +151,9 @@ func (c *Compiler) collectGlobals(node parser.Node) {
     c.globals["hapus"] = true
     c.globals["panjang"] = true
     c.globals["assert"] = true
+    c.globals["index"] = true
+    c.globals["trim"] = true
+    c.globals["split"] = true
 
     if prog, ok := node.(*parser.Program); ok {
         for _, stmt := range prog.Statements {
@@ -1098,16 +1104,21 @@ func (c *Compiler) compileCall(call *parser.CallExpression, prefix string, fn *p
 	isDirect := false
 
 	if ident, ok := call.Function.(*parser.Identifier); ok {
-		if ident.Value == "native_print" { return c.compileBuiltin(call, "mph_native_print", prefix, fn) }
-        if ident.Value == "native_print_error" { return c.compileBuiltin(call, "mph_native_print_error", prefix, fn) }
-		if ident.Value == "native_print_int" { return c.compileBuiltin(call, "mph_native_print_int", prefix, fn) }
-		if ident.Value == "saluran_baru" { return c.compileBuiltin(call, "mph_channel_new", prefix, fn) }
-		if ident.Value == "kirim" { return c.compileBuiltin(call, "mph_channel_send", prefix, fn) }
-		if ident.Value == "terima" { return c.compileBuiltin(call, "mph_channel_recv", prefix, fn) }
-		if ident.Value == "luncurkan" { return c.compileSpawn(call, prefix, fn) }
-		if ident.Value == "hapus" { return c.compileDelete(call, prefix, fn) }
-		if ident.Value == "panjang" { return c.compileLen(call, prefix, fn) }
-        if ident.Value == "error" { return c.compileBuiltin(call, "mph_error_new", prefix, fn) }
+        switch ident.Value {
+        case "native_print": return c.compileBuiltin(call, "mph_native_print", prefix, fn)
+        case "native_print_error": return c.compileBuiltin(call, "mph_native_print_error", prefix, fn)
+        case "native_print_int": return c.compileBuiltin(call, "mph_native_print_int", prefix, fn)
+        case "saluran_baru": return c.compileBuiltin(call, "mph_channel_new", prefix, fn)
+        case "kirim": return c.compileBuiltin(call, "mph_channel_send", prefix, fn)
+        case "terima": return c.compileBuiltin(call, "mph_channel_recv", prefix, fn)
+        case "luncurkan": return c.compileSpawn(call, prefix, fn)
+        case "hapus": return c.compileDelete(call, prefix, fn)
+        case "panjang": return c.compileLen(call, prefix, fn)
+        case "error": return c.compileBuiltin(call, "mph_error_new", prefix, fn)
+        case "index": return c.compileBuiltin(call, "mph_string_index", prefix, fn)
+        case "trim": return c.compileBuiltin(call, "mph_string_trim", prefix, fn)
+        case "split": return c.compileBuiltin(call, "mph_string_split", prefix, fn)
+        }
 
 		funcCode = ident.Value
 		if c.isCaptured(funcCode, fn) {
@@ -1197,7 +1208,7 @@ func (c *Compiler) isLocal(name string, fn *parser.FunctionLiteral) bool {
 }
 
 func isBuiltin(name string) bool {
-	return name == "native_print" || name == "native_print_int" || name == "len" || name == "hapus" || name == "panjang" || name == "error" || name == "native_print_error"
+	return name == "native_print" || name == "native_print_int" || name == "len" || name == "hapus" || name == "panjang" || name == "error" || name == "native_print_error" || name == "index" || name == "trim" || name == "split"
 }
 
 func (c *Compiler) compileBuiltin(call *parser.CallExpression, cName string, prefix string, fn *parser.FunctionLiteral) (string, error) {
