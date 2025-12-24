@@ -1,0 +1,58 @@
+struktur Node
+  val int
+  next Node
+akhir
+
+fungsi create_list(n int) Node
+  var head Node = kosong
+  var i = 0
+  selama i < n
+    head = Node{ val: i, next: head }
+    i = i + 1
+  akhir
+  kembalikan head
+akhir
+
+fungsi main() void
+  native_print("Starting Stress Test...")
+
+  native_print("Creating deep list 100k nodes...")
+  var list = create_list(100000)
+
+  native_print("List created. Triggering GC...")
+
+  var j = 0
+  selama j < 100
+     var junk = Node{ val: j, next: kosong }
+     j = j + 1
+  akhir
+
+  native_print("GC Survives?")
+
+  jika list.val != 99999
+     native_print("Error: List head corrupted")
+  lainnya
+     native_print("List head OK")
+  akhir
+
+  native_print("Testing String Utils...")
+  var s = "hello world"
+  var idx = index(s, "world")
+  native_print_int(idx)
+
+  var trimmed = trim("  morph  ", " ")
+  jika trimmed == "morph"
+      native_print("Trim OK")
+  lainnya
+      native_print("Trim Failed")
+  akhir
+
+  var parts = split("a,b,c", ",")
+  jika panjang(parts) == 3
+      native_print("Split Count OK")
+  lainnya
+      native_print("Split Count Failed")
+  akhir
+
+  native_print("Stress Test Completed.")
+akhir

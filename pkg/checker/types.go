@@ -66,7 +66,7 @@ func (t *BasicType) AssignableTo(target Type) bool {
 	}
 	if t.K == KindNull {
 		k := target.Kind()
-		return k == KindArray || k == KindMap || k == KindPointer || k == KindInterface || k == KindFunction || k == KindString || k == KindNull || k == KindUserError
+		return k == KindArray || k == KindMap || k == KindPointer || k == KindInterface || k == KindFunction || k == KindString || k == KindNull || k == KindUserError || k == KindStruct
 	}
 	return t.Equals(target)
 }
