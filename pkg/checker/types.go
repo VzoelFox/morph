@@ -312,6 +312,12 @@ func (t *ArrayType) BinaryOp(op string, right Type) (Type, error) {
 		}
 		return nil, fmt.Errorf("Type mismatch")
 	}
+	if op == "+" {
+		if t.Equals(right) {
+			return t, nil
+		}
+		return nil, fmt.Errorf("Cannot concatenate arrays of different types %s and %s", t.String(), right.String())
+	}
 	return nil, fmt.Errorf("Operator %s not supported on array", op)
 }
 func (t *ArrayType) PrefixOp(op string) (Type, error) {

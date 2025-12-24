@@ -253,6 +253,10 @@ func (c *Compiler) getFreeVars(fn *parser.FunctionLiteral) []string {
 	for _, p := range fn.Parameters {
 		defined[p.Name.Value] = true
 	}
+	// Register Receiver as Defined
+	if fn.Receiver != nil {
+		defined[fn.Receiver.Name.Value] = true
+	}
 
 	var walkBody func(n parser.Node)
 	walkBody = func(n parser.Node) {
@@ -931,7 +935,7 @@ func (c *Compiler) compileAssignment(s *parser.AssignmentStatement, buf *strings
 		} else if leftType != nil && leftType.Kind() == checker.KindArray {
 			at := leftType.(*checker.ArrayType)
 			elemCType := c.mapCheckerTypeToC(at.Element, prefix)
-			buf.WriteString(fmt.Sprintf("\t((%s*)_a->data)[%s] = %s;\n", elemCType, idxCode, valCode))
+			buf.WriteString(fmt.Sprintf("\t((%s*)((MorphArray*)%s)->data)[%s] = %s;\n", elemCType, objCode, idxCode, valCode))
 			return nil
 		}
 	}
@@ -1031,6 +1035,8 @@ func (c *Compiler) compileExpression(expr parser.Expression, prefix string, fn *
 	case *parser.BooleanLiteral:
 		if e.Value { return "1", nil }
 		return "0", nil
+	case *parser.NullLiteral:
+		return "NULL", nil
 	case *parser.InfixExpression:
 		return c.compileInfix(e, prefix, fn)
 	case *parser.PrefixExpression:
@@ -1046,6 +1052,12 @@ func (c *Compiler) compileExpression(expr parser.Expression, prefix string, fn *
 	case *parser.IndexExpression:
 		return c.compileIndex(e, prefix, fn)
 	case *parser.MemberExpression:
+		// Check if Object is Module
+		objType := c.checker.Types[e.Object]
+		if objType != nil && objType.Kind() == checker.KindModule {
+			modType := objType.(*checker.ModuleType)
+			return mangle(modType.Name) + e.Member.Value, nil
+		}
 		obj, err := c.compileExpression(e.Object, prefix, fn)
 		if err != nil { return "", err }
 		return fmt.Sprintf("%s->%s", obj, e.Member.Value), nil
@@ -1206,8 +1218,13 @@ func (c *Compiler) compileInfix(ie *parser.InfixExpression, prefix string, fn *p
 	if err != nil { return "", err }
 
 	if ie.Operator == "+" {
-		if t := c.checker.Types[ie.Left]; t != nil && t.Kind() == checker.KindString {
-			return fmt.Sprintf("mph_string_concat(ctx, %s, %s)", left, right), nil
+		if t := c.checker.Types[ie.Left]; t != nil {
+            if t.Kind() == checker.KindString {
+			    return fmt.Sprintf("mph_string_concat(ctx, %s, %s)", left, right), nil
+            }
+            if t.Kind() == checker.KindArray {
+                return fmt.Sprintf("mph_array_concat(ctx, %s, %s)", left, right), nil
+            }
 		}
 	}
 	if ie.Operator == "==" {
@@ -1313,11 +1330,27 @@ func (c *Compiler) getTupleCType(types []checker.Type, prefix string) string {
 
     // Generate definition
     c.typeDefs.WriteString(fmt.Sprintf("typedef struct %s {\n", name))
+
+    // Collect pointer offsets for RTTI
+    var offsets []string
+
     for i, t := range types {
         cType := c.mapCheckerTypeToC(t, prefix)
         c.typeDefs.WriteString(fmt.Sprintf("\t%s v%d;\n", cType, i))
+
+        if c.isPointerCheckerType(t) {
+            offsets = append(offsets, fmt.Sprintf("offsetof(%s, v%d)", name, i))
+        }
     }
     c.typeDefs.WriteString(fmt.Sprintf("} %s;\n\n", name))
+
+    // Generate RTTI
+    numPtrs := len(offsets)
+    offsetsStr := "NULL"
+    if numPtrs > 0 {
+        offsetsStr = fmt.Sprintf("(size_t[]){%s}", strings.Join(offsets, ", "))
+    }
+    c.typeDefs.WriteString(fmt.Sprintf("MorphTypeInfo mph_ti_%s = { \"%s\", sizeof(%s), %d, %s };\n", name, name, name, numPtrs, offsetsStr))
 
     return name
 }
@@ -1403,7 +1436,7 @@ func (c *Compiler) compileIndex(ie *parser.IndexExpression, prefix string, fn *p
 	} else if leftType.Kind() == checker.KindArray {
 		if at, ok := leftType.(*checker.ArrayType); ok {
 			elemCType := c.mapCheckerTypeToC(at.Element, prefix)
-			return fmt.Sprintf("*(%s*)mph_array_at(ctx, %s, %s)", elemCType, leftCode, indexCode), nil
+			return fmt.Sprintf("(*(%s*)mph_array_at(ctx, %s, %s))", elemCType, leftCode, indexCode), nil
 		}
 	} else if leftType.Kind() == checker.KindMap {
 		if mt, ok := leftType.(*checker.MapType); ok {
