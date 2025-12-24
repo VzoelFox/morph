@@ -11,11 +11,20 @@
 #define FLAG_MARKED 0x01
 #define FLAG_SWAPPED 0x02
 
+// Forward Declarations for Mark Fns
+void mph_gc_mark(MorphContext* ctx, void* obj);
+void mph_gc_mark_array(MorphContext* ctx, void* obj);
+void mph_gc_mark_map(MorphContext* ctx, void* obj);
+
 // Simple TypeInfos for built-ins
-MorphTypeInfo mph_ti_string = { "string", sizeof(MorphString), 0, NULL };
+MorphTypeInfo mph_ti_string = { "string", sizeof(MorphString), 0, NULL, NULL };
 size_t string_ptr_offsets[] = { offsetof(MorphString, data) };
-MorphTypeInfo mph_ti_string_real = { "string", sizeof(MorphString), 1, string_ptr_offsets };
-MorphTypeInfo mph_ti_raw = { "raw", 0, 0, NULL };
+MorphTypeInfo mph_ti_string_real = { "string", sizeof(MorphString), 1, string_ptr_offsets, NULL };
+MorphTypeInfo mph_ti_raw = { "raw", 0, 0, NULL, NULL };
+
+// Container TypeInfos (with Mark Functions)
+MorphTypeInfo mph_ti_array = { "array", sizeof(MorphArray), 0, NULL, mph_gc_mark_array };
+MorphTypeInfo mph_ti_map = { "map", sizeof(MorphMap), 0, NULL, mph_gc_mark_map };
 
 // --- Utils ---
 uint64_t mph_time_ms() {
@@ -49,7 +58,6 @@ void mph_destroy_memory(MorphContext* ctx) {
     while (current != NULL) {
         ObjectHeader* next = current->next;
         // Free payload if not swapped
-        // (If swapped, payload pointer might be invalid or NULL)
         free(current);
         current = next;
     }
@@ -150,12 +158,67 @@ void mph_gc_mark(MorphContext* ctx, void* obj) {
     MorphTypeInfo* type = header->type;
     if (!type) return;
 
-    char* payload = (char*)obj;
-    for (int i = 0; i < type->num_pointers; i++) {
-        size_t offset = type->pointer_offsets[i];
-        void** child_ptr = (void**)(payload + offset);
-        if (*child_ptr) {
-            mph_gc_mark(ctx, *child_ptr);
+    // Use Custom Mark Function if available
+    if (type->mark_fn) {
+        type->mark_fn(ctx, obj);
+    } else {
+        // Default Marking: Trace pointers based on offsets
+        char* payload = (char*)obj;
+        for (int i = 0; i < type->num_pointers; i++) {
+            size_t offset = type->pointer_offsets[i];
+            void** child_ptr = (void**)(payload + offset);
+            if (*child_ptr) {
+                mph_gc_mark(ctx, *child_ptr);
+            }
+        }
+    }
+}
+
+// Custom Marking for Arrays
+void mph_gc_mark_array(MorphContext* ctx, void* obj) {
+    MorphArray* arr = (MorphArray*)obj;
+    if (!arr->data) return;
+
+    // Mark the data block (raw)
+    // Note: mph_alloc for data uses mph_ti_raw, so it has a header.
+    mph_gc_mark(ctx, arr->data);
+
+    if (arr->elements_are_pointers) {
+        // We must know if elements are pointers.
+        // If they are, iterate and mark.
+        // Warning: arr->data is void*. We cast to void**.
+        // We rely on arr->data being swapped in by `mph_gc_mark(ctx, arr->data)` call above?
+        // Yes, marking arr->data swaps it in.
+
+        void** elements = (void**)arr->data;
+        for (size_t i = 0; i < arr->length; i++) {
+            if (elements[i]) {
+                mph_gc_mark(ctx, elements[i]);
+            }
+        }
+    }
+}
+
+// Custom Marking for Maps
+void mph_gc_mark_map(MorphContext* ctx, void* obj) {
+    MorphMap* map = (MorphMap*)obj;
+    if (!map->entries) return;
+
+    // Mark entries block
+    mph_gc_mark(ctx, map->entries);
+
+    // Iterate entries
+    for (size_t i = 0; i < map->capacity; i++) {
+        MorphMapEntry* e = &map->entries[i];
+        if (e->occupied) {
+            // Mark Key if String/Ptr
+            if (map->key_kind == MPH_KEY_STRING || map->key_kind == MPH_KEY_PTR) {
+                if (e->key) mph_gc_mark(ctx, e->key);
+            }
+            // Mark Value if Pointer
+            if (map->values_are_pointers) {
+                if (e->value) mph_gc_mark(ctx, e->value);
+            }
         }
     }
 }
@@ -295,11 +358,12 @@ mph_bool mph_string_eq(MorphContext* ctx, MorphString* a, MorphString* b) {
 
 // --- Arrays ---
 
-MorphArray* mph_array_new(MorphContext* ctx, size_t capacity, size_t element_size) {
-    MorphArray* arr = (MorphArray*)mph_alloc(ctx, sizeof(MorphArray), NULL);
+MorphArray* mph_array_new(MorphContext* ctx, size_t capacity, size_t element_size, mph_bool is_ptr) {
+    MorphArray* arr = (MorphArray*)mph_alloc(ctx, sizeof(MorphArray), &mph_ti_array);
     arr->length = capacity;
     arr->capacity = capacity;
     arr->element_size = element_size;
+    arr->elements_are_pointers = is_ptr;
     arr->data = mph_alloc(ctx, capacity * element_size, &mph_ti_raw);
     return arr;
 }
@@ -315,11 +379,12 @@ void* mph_array_at(MorphContext* ctx, MorphArray* arr, mph_int index) {
 
 // --- Maps ---
 
-MorphMap* mph_map_new(MorphContext* ctx, MorphKeyKind kind) {
-    MorphMap* map = (MorphMap*)mph_alloc(ctx, sizeof(MorphMap), NULL);
+MorphMap* mph_map_new(MorphContext* ctx, MorphKeyKind kind, mph_bool val_is_ptr) {
+    MorphMap* map = (MorphMap*)mph_alloc(ctx, sizeof(MorphMap), &mph_ti_map);
     map->capacity = 16;
     map->count = 0;
     map->key_kind = kind;
+    map->values_are_pointers = val_is_ptr;
     map->entries = (MorphMapEntry*)mph_alloc(ctx, sizeof(MorphMapEntry) * map->capacity, &mph_ti_raw);
     memset(map->entries, 0, sizeof(MorphMapEntry) * map->capacity);
     return map;
