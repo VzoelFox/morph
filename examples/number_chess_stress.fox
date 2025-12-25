@@ -1,9 +1,9 @@
 ambil "conv"
 
 struktur Move
-    Dari int
-    Ke int
-    Ditangkap int
+    from_pos int
+    to_pos int
+    captured int
 akhir
 
 fungsi abs(x int) int
@@ -60,7 +60,7 @@ fungsi apply_move(board []int, from int, to int, moves []Move) (int, []Move)
     var captured = board[to]
     board[to] = board[from]
     board[from] = 0
-    moves = moves + [Move{Dari: from, Ke: to, Ditangkap: captured}]
+    moves = moves + [Move{from_pos: from, to_pos: to, captured: captured}]
     kembali captured, moves
 akhir
 
@@ -71,8 +71,8 @@ fungsi undo_move(board []int, moves []Move) []Move
     akhir
 
     var last = moves[len - 1]
-    board[last.Dari] = board[last.Ke]
-    board[last.Ke] = last.Ditangkap
+    board[last.from_pos] = board[last.to_pos]
+    board[last.to_pos] = last.captured
 
     var newMoves []Move = []
     var i = 0
@@ -88,43 +88,43 @@ fungsi main() void
     var initialSum = board_sum(board)
 
     var script []Move = [
-        Move{Dari: 12, Ke: 20, Ditangkap: 0},
-        Move{Dari: 52, Ke: 44, Ditangkap: 0},
-        Move{Dari: 11, Ke: 19, Ditangkap: 0},
-        Move{Dari: 51, Ke: 43, Ditangkap: 0},
-        Move{Dari: 1, Ke: 18, Ditangkap: 0},
-        Move{Dari: 57, Ke: 42, Ditangkap: 0},
-        Move{Dari: 2, Ke: 11, Ditangkap: 0},
-        Move{Dari: 58, Ke: 41, Ditangkap: 0},
-        Move{Dari: 3, Ke: 27, Ditangkap: 0},
-        Move{Dari: 59, Ke: 35, Ditangkap: 0},
-        Move{Dari: 0, Ke: 16, Ditangkap: 0},
-        Move{Dari: 56, Ke: 40, Ditangkap: 0},
-        Move{Dari: 4, Ke: 12, Ditangkap: 0},
-        Move{Dari: 60, Ke: 52, Ditangkap: 0},
-        Move{Dari: 5, Ke: 26, Ditangkap: 0},
-        Move{Dari: 61, Ke: 34, Ditangkap: 0},
-        Move{Dari: 6, Ke: 21, Ditangkap: 0},
-        Move{Dari: 62, Ke: 45, Ditangkap: 0},
-        Move{Dari: 15, Ke: 23, Ditangkap: 0},
-        Move{Dari: 55, Ke: 47, Ditangkap: 0},
-        Move{Dari: 9, Ke: 17, Ditangkap: 0},
-        Move{Dari: 49, Ke: 41, Ditangkap: 0},
-        Move{Dari: 18, Ke: 33, Ditangkap: 0},
-        Move{Dari: 42, Ke: 25, Ditangkap: 0},
-        Move{Dari: 27, Ke: 43, Ditangkap: 0},
-        Move{Dari: 35, Ke: 19, Ditangkap: 0},
-        Move{Dari: 16, Ke: 24, Ditangkap: 0},
-        Move{Dari: 40, Ke: 32, Ditangkap: 0},
-        Move{Dari: 21, Ke: 36, Ditangkap: 0},
-        Move{Dari: 45, Ke: 29, Ditangkap: 0}
+        Move{from_pos: 12, to_pos: 20, captured: 0},
+        Move{from_pos: 52, to_pos: 44, captured: 0},
+        Move{from_pos: 11, to_pos: 19, captured: 0},
+        Move{from_pos: 51, to_pos: 43, captured: 0},
+        Move{from_pos: 1, to_pos: 18, captured: 0},
+        Move{from_pos: 57, to_pos: 42, captured: 0},
+        Move{from_pos: 2, to_pos: 11, captured: 0},
+        Move{from_pos: 58, to_pos: 41, captured: 0},
+        Move{from_pos: 3, to_pos: 27, captured: 0},
+        Move{from_pos: 59, to_pos: 35, captured: 0},
+        Move{from_pos: 0, to_pos: 16, captured: 0},
+        Move{from_pos: 56, to_pos: 40, captured: 0},
+        Move{from_pos: 4, to_pos: 12, captured: 0},
+        Move{from_pos: 60, to_pos: 52, captured: 0},
+        Move{from_pos: 5, to_pos: 26, captured: 0},
+        Move{from_pos: 61, to_pos: 34, captured: 0},
+        Move{from_pos: 6, to_pos: 21, captured: 0},
+        Move{from_pos: 62, to_pos: 45, captured: 0},
+        Move{from_pos: 15, to_pos: 23, captured: 0},
+        Move{from_pos: 55, to_pos: 47, captured: 0},
+        Move{from_pos: 9, to_pos: 17, captured: 0},
+        Move{from_pos: 49, to_pos: 41, captured: 0},
+        Move{from_pos: 18, to_pos: 33, captured: 0},
+        Move{from_pos: 42, to_pos: 25, captured: 0},
+        Move{from_pos: 27, to_pos: 43, captured: 0},
+        Move{from_pos: 35, to_pos: 19, captured: 0},
+        Move{from_pos: 16, to_pos: 24, captured: 0},
+        Move{from_pos: 40, to_pos: 32, captured: 0},
+        Move{from_pos: 21, to_pos: 36, captured: 0},
+        Move{from_pos: 45, to_pos: 29, captured: 0}
     ]
 
     var moves []Move = []
     var score = 0
     var i = 0
     selama i < panjang(script)
-        var captured, updated = apply_move(board, script[i].Dari, script[i].Ke, moves)
+        var captured, updated = apply_move(board, script[i].from_pos, script[i].to_pos, moves)
         moves = updated
         jika captured != 0
             score = score + abs(captured)

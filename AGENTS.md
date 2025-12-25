@@ -1,7 +1,7 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.57.0
+- **Versi**: 1.57.1
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
 - **Terakhir Diupdate**: 2025-12-25
 - **Status**: Active
@@ -54,6 +54,17 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.57.1 - 2025-12-25
+**Checksum**: SHA256:NUMBER_CHESS_STRESS_FIX
+**Perubahan**:
+- **Examples**: Mengganti nama field `Move` agar tidak bentrok keyword (`dari/ke`) dan memperbaiki akses field pada move/undo.
+
+**Konteks Sesi**:
+- **Testing**: Memastikan parser menerima literal struct dan akses field pada stress test catur angka.
+
+**File Terkait**:
+- `examples/number_chess_stress.fox` (SHA256:bb670672297f37b389487d57863b845c656688360a872fa9b271bbcbb2c07af7)
+
 ### Version 1.57.0 - 2025-12-25
 **Checksum**: SHA256:NUMBER_CHESS_STRESS_TEST
 **Perubahan**:
