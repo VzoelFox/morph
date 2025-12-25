@@ -1,7 +1,7 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.47.0
+- **Versi**: 1.48.0
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
 - **Terakhir Diupdate**: 2025-12-25
 - **Status**: Active
@@ -54,6 +54,17 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.48.0 - 2025-12-25
+**Checksum**: SHA256:MAP_ENTRIES_SWAPIN
+**Perubahan**:
+- **Runtime/Map**: Menambahkan swap-in pada `map->entries` untuk operasi set/get/delete agar akses aman saat page terswap.
+
+**Konteks Sesi**:
+- **Latency & Correctness**: Menghindari access ke entries yang masih terswap dan mengurangi risiko crash pada operasi map.
+
+**File Terkait**:
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:3c1c4fe283b233218a3f74b29a0d0a02ad9fbe7259dbf964d46f167f7bd2d1fe)
+
 ### Version 1.47.0 - 2025-12-25
 **Checksum**: SHA256:GC_PAGE_POINTER_AND_MAP_RESIZE
 **Perubahan**:

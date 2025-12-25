@@ -809,6 +809,7 @@ void mph_map_resize(MorphContext* ctx, MorphMap* map, size_t new_capacity) {
 
 void mph_map_set(MorphContext* ctx, MorphMap* map, void* key, void* value) {
     mph_swap_in(ctx, map);
+    mph_swap_in(ctx, map->entries);
     if (map->count >= map->capacity * 0.75) {
         size_t new_capacity = map->capacity * 2;
         if (new_capacity < 16) {
@@ -833,6 +834,7 @@ void mph_map_set(MorphContext* ctx, MorphMap* map, void* key, void* value) {
 }
 void* mph_map_get(MorphContext* ctx, MorphMap* map, void* key) {
     mph_swap_in(ctx, map);
+    mph_swap_in(ctx, map->entries);
     uint64_t hash = mph_hash_key(ctx, key, map->key_kind);
     size_t idx = hash % map->capacity;
     size_t start = idx;
@@ -846,6 +848,7 @@ void* mph_map_get(MorphContext* ctx, MorphMap* map, void* key) {
 }
 void mph_map_delete(MorphContext* ctx, MorphMap* map, void* key) {
      mph_swap_in(ctx, map);
+     mph_swap_in(ctx, map->entries);
      uint64_t hash = mph_hash_key(ctx, key, map->key_kind);
     size_t idx = hash % map->capacity;
     size_t start = idx;
