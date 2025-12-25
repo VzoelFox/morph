@@ -30,6 +30,7 @@ type Compiler struct {
 
 	moduleGlobals  map[*parser.Program]map[string]bool
 	currentGlobals map[string]bool
+	tempIndex      int
 }
 
 func New(c *checker.Checker) *Compiler {
@@ -42,6 +43,7 @@ func New(c *checker.Checker) *Compiler {
 		freeVarCache:   make(map[*parser.FunctionLiteral][]string),
 		moduleGlobals:  make(map[*parser.Program]map[string]bool),
 		currentGlobals: make(map[string]bool),
+		tempIndex:      0,
 	}
 }
 
@@ -71,6 +73,7 @@ func (c *Compiler) Compile(node parser.Node) (string, error) {
 	c.entryBody.Reset()
 	c.captures = make(map[*parser.FunctionLiteral][]string)
 	c.moduleGlobals = make(map[*parser.Program]map[string]bool)
+	c.tempIndex = 0
 
 	c.output.WriteString("#include \"morph.h\"\n\n")
 
@@ -154,6 +157,11 @@ func (c *Compiler) Compile(node parser.Node) (string, error) {
 	c.output.WriteString("}\n")
 
 	return c.output.String(), nil
+}
+
+func (c *Compiler) nextTemp(prefix string) string {
+	c.tempIndex++
+	return fmt.Sprintf("_%s_%d", prefix, c.tempIndex)
 }
 
 // --- Analysis Phase ---
@@ -1454,6 +1462,9 @@ func (c *Compiler) compileFunctionLiteral(fn *parser.FunctionLiteral, prefix str
 func (c *Compiler) compileCall(call *parser.CallExpression, prefix string, fn *parser.FunctionLiteral) (string, error) {
 	var funcCode string
 	isDirect := false
+	funcTemp := ""
+	funcTempType := ""
+	funcNeedsRoot := false
 
 	if ident, ok := call.Function.(*parser.Identifier); ok {
 		if st, ok := c.checker.Types[call.Function].(*checker.StructType); ok {
@@ -1556,26 +1567,73 @@ func (c *Compiler) compileCall(call *parser.CallExpression, prefix string, fn *p
 		}
 	}
 
-	var args []string
-	args = append(args, "ctx")
-
-	if isDirect {
-		args = append(args, "NULL") // Env
-	} else {
-		// Closure Call: ((MorphClosureFunc)c->function)(ctx, c->env, ...)
-		args = append(args, fmt.Sprintf("%s->env", funcCode))
+	if !isDirect {
+		if _, ok := call.Function.(*parser.Identifier); !ok {
+			if _, ok := call.Function.(*parser.MemberExpression); !ok {
+				if funcType := c.checker.Types[call.Function]; funcType != nil && c.isPointerCheckerType(funcType) {
+					funcTemp = c.nextTemp("fn")
+					funcTempType = c.mapCheckerTypeToC(funcType, prefix)
+					funcNeedsRoot = true
+				}
+			}
+		}
 	}
 
+	type argInfo struct {
+		code      string
+		cType     string
+		temp      string
+		needsRoot bool
+	}
+
+	var argInfos []argInfo
+	rootCount := 0
 	for _, arg := range call.Arguments {
 		ac, err := c.compileExpression(arg, prefix, fn)
 		if err != nil {
 			return "", err
 		}
-		args = append(args, ac)
+		argType := c.checker.Types[arg]
+		info := argInfo{code: ac}
+		if argType != nil && c.isPointerCheckerType(argType) {
+			info.needsRoot = true
+			info.cType = c.mapCheckerTypeToC(argType, prefix)
+			info.temp = c.nextTemp("arg")
+			rootCount++
+		}
+		argInfos = append(argInfos, info)
+	}
+
+	if funcNeedsRoot {
+		rootCount++
+	}
+
+	var args []string
+	args = append(args, "ctx")
+
+	funcRef := funcCode
+	if funcNeedsRoot {
+		funcRef = funcTemp
 	}
 
 	if isDirect {
-		return fmt.Sprintf("%s(%s)", funcCode, strings.Join(args, ", ")), nil
+		args = append(args, "NULL") // Env
+	} else {
+		// Closure Call: ((MorphClosureFunc)c->function)(ctx, c->env, ...)
+		args = append(args, fmt.Sprintf("%s->env", funcRef))
+	}
+
+	for _, info := range argInfos {
+		if info.needsRoot {
+			args = append(args, info.temp)
+		} else {
+			args = append(args, info.code)
+		}
+	}
+
+	callExpr := ""
+	if isDirect {
+		callExpr = fmt.Sprintf("%s(%s)", funcRef, strings.Join(args, ", "))
 	} else {
 		// Generic cast
 		cast := "MorphClosureFunc"
@@ -1599,8 +1657,45 @@ func (c *Compiler) compileCall(call *parser.CallExpression, prefix string, fn *p
 			cast = fmt.Sprintf("%s (*)(%s)", retType, strings.Join(paramTypes, ", "))
 		}
 
-		return fmt.Sprintf("((%s)%s->function)(%s)", cast, funcCode, strings.Join(args, ", ")), nil
+		callExpr = fmt.Sprintf("((%s)%s->function)(%s)", cast, funcRef, strings.Join(args, ", "))
 	}
+
+	if rootCount == 0 {
+		return callExpr, nil
+	}
+
+	var sb strings.Builder
+	sb.WriteString("({ ")
+	if funcNeedsRoot {
+		sb.WriteString(fmt.Sprintf("%s %s = %s; ", funcTempType, funcTemp, funcCode))
+		sb.WriteString(fmt.Sprintf("mph_gc_push_root(ctx, (void**)&%s); ", funcTemp))
+	}
+	for _, info := range argInfos {
+		if !info.needsRoot {
+			continue
+		}
+		sb.WriteString(fmt.Sprintf("%s %s = %s; ", info.cType, info.temp, info.code))
+		sb.WriteString(fmt.Sprintf("mph_gc_push_root(ctx, (void**)&%s); ", info.temp))
+	}
+
+	callType := c.checker.Types[call]
+	retType := "void"
+	if callType != nil {
+		retType = c.mapCheckerTypeToC(callType, prefix)
+	}
+
+	if retType == "void" {
+		sb.WriteString(fmt.Sprintf("%s; ", callExpr))
+		sb.WriteString(fmt.Sprintf("mph_gc_pop_roots(ctx, %d); ", rootCount))
+		sb.WriteString("})")
+		return sb.String(), nil
+	}
+
+	resTemp := c.nextTemp("ret")
+	sb.WriteString(fmt.Sprintf("%s %s = %s; ", retType, resTemp, callExpr))
+	sb.WriteString(fmt.Sprintf("mph_gc_pop_roots(ctx, %d); ", rootCount))
+	sb.WriteString(fmt.Sprintf("%s; })", resTemp))
+	return sb.String(), nil
 }
 
 func (c *Compiler) compileStructConstructor(call *parser.CallExpression, st *checker.StructType, prefix string, fn *parser.FunctionLiteral) (string, error) {
@@ -1609,6 +1704,7 @@ func (c *Compiler) compileStructConstructor(call *parser.CallExpression, st *che
 	var sb strings.Builder
 	sb.WriteString("({ ")
 	sb.WriteString(fmt.Sprintf("%s* _t = (%s*)mph_alloc(ctx, sizeof(%s), &mph_ti_%s); ", cTypeName, cTypeName, cTypeName, cTypeName))
+	sb.WriteString("mph_gc_push_root(ctx, (void**)&_t); ")
 	for i, fieldName := range st.FieldOrder {
 		if i >= len(call.Arguments) {
 			break
@@ -1619,7 +1715,7 @@ func (c *Compiler) compileStructConstructor(call *parser.CallExpression, st *che
 		}
 		sb.WriteString(fmt.Sprintf("_t->%s = %s; ", fieldName, valCode))
 	}
-	sb.WriteString("_t; })")
+	sb.WriteString("mph_gc_pop_roots(ctx, 1); _t; })")
 	return sb.String(), nil
 }
 
@@ -1684,10 +1780,44 @@ func (c *Compiler) compileInfix(ie *parser.InfixExpression, prefix string, fn *p
 	if ie.Operator == "+" {
 		if t := c.checker.Types[ie.Left]; t != nil {
 			if t.Kind() == checker.KindString {
-				return fmt.Sprintf("mph_string_concat(ctx, %s, %s)", left, right), nil
+				leftType := c.mapCheckerTypeToC(t, prefix)
+				rightType := leftType
+				if rt := c.checker.Types[ie.Right]; rt != nil {
+					rightType = c.mapCheckerTypeToC(rt, prefix)
+				}
+				leftTemp := c.nextTemp("lhs")
+				rightTemp := c.nextTemp("rhs")
+				var sb strings.Builder
+				sb.WriteString("({ ")
+				sb.WriteString(fmt.Sprintf("%s %s = %s; ", leftType, leftTemp, left))
+				sb.WriteString(fmt.Sprintf("%s %s = %s; ", rightType, rightTemp, right))
+				sb.WriteString(fmt.Sprintf("mph_gc_push_root(ctx, (void**)&%s); ", leftTemp))
+				sb.WriteString(fmt.Sprintf("mph_gc_push_root(ctx, (void**)&%s); ", rightTemp))
+				resTemp := c.nextTemp("ret")
+				sb.WriteString(fmt.Sprintf("%s %s = mph_string_concat(ctx, %s, %s); ", leftType, resTemp, leftTemp, rightTemp))
+				sb.WriteString("mph_gc_pop_roots(ctx, 2); ")
+				sb.WriteString(fmt.Sprintf("%s; })", resTemp))
+				return sb.String(), nil
 			}
 			if t.Kind() == checker.KindArray {
-				return fmt.Sprintf("mph_array_concat(ctx, %s, %s)", left, right), nil
+				leftType := c.mapCheckerTypeToC(t, prefix)
+				rightType := leftType
+				if rt := c.checker.Types[ie.Right]; rt != nil {
+					rightType = c.mapCheckerTypeToC(rt, prefix)
+				}
+				leftTemp := c.nextTemp("lhs")
+				rightTemp := c.nextTemp("rhs")
+				var sb strings.Builder
+				sb.WriteString("({ ")
+				sb.WriteString(fmt.Sprintf("%s %s = %s; ", leftType, leftTemp, left))
+				sb.WriteString(fmt.Sprintf("%s %s = %s; ", rightType, rightTemp, right))
+				sb.WriteString(fmt.Sprintf("mph_gc_push_root(ctx, (void**)&%s); ", leftTemp))
+				sb.WriteString(fmt.Sprintf("mph_gc_push_root(ctx, (void**)&%s); ", rightTemp))
+				resTemp := c.nextTemp("ret")
+				sb.WriteString(fmt.Sprintf("%s %s = mph_array_concat(ctx, %s, %s); ", leftType, resTemp, leftTemp, rightTemp))
+				sb.WriteString("mph_gc_pop_roots(ctx, 2); ")
+				sb.WriteString(fmt.Sprintf("%s; })", resTemp))
+				return sb.String(), nil
 			}
 		}
 	}
@@ -1855,6 +1985,7 @@ func (c *Compiler) compileStructLiteral(sl *parser.StructLiteral, prefix string,
 	sb.WriteString("({ ")
 	// Pass pointer to global RTTI variable: &mph_ti_TypeName
 	sb.WriteString(fmt.Sprintf("%s* _t = (%s*)mph_alloc(ctx, sizeof(%s), &mph_ti_%s); ", cTypeName, cTypeName, cTypeName, cTypeName))
+	sb.WriteString("mph_gc_push_root(ctx, (void**)&_t); ")
 	for fieldName, valExpr := range sl.Fields {
 		valCode, err := c.compileExpression(valExpr, prefix, fn)
 		if err != nil {
@@ -1862,7 +1993,7 @@ func (c *Compiler) compileStructLiteral(sl *parser.StructLiteral, prefix string,
 		}
 		sb.WriteString(fmt.Sprintf("_t->%s = %s; ", fieldName, valCode))
 	}
-	sb.WriteString("_t; })")
+	sb.WriteString("mph_gc_pop_roots(ctx, 1); _t; })")
 	return sb.String(), nil
 }
 
@@ -1881,6 +2012,7 @@ func (c *Compiler) compileArrayLiteral(al *parser.ArrayLiteral, prefix string, f
 	var sb strings.Builder
 	sb.WriteString("({ ")
 	sb.WriteString(fmt.Sprintf("MorphArray* _a = mph_array_new(ctx, %d, sizeof(%s), %d); ", len(al.Elements), elemCType, isPtr))
+	sb.WriteString("mph_gc_push_root(ctx, (void**)&_a); ")
 	for i, el := range al.Elements {
 		valCode, err := c.compileExpression(el, prefix, fn)
 		if err != nil {
@@ -1888,7 +2020,7 @@ func (c *Compiler) compileArrayLiteral(al *parser.ArrayLiteral, prefix string, f
 		}
 		sb.WriteString(fmt.Sprintf("((%s*)_a->data)[%d] = %s; ", elemCType, i, valCode))
 	}
-	sb.WriteString("_a; })")
+	sb.WriteString("mph_gc_pop_roots(ctx, 1); _a; })")
 	return sb.String(), nil
 }
 
@@ -1911,6 +2043,7 @@ func (c *Compiler) compileHashLiteral(hl *parser.HashLiteral, prefix string, fn 
 	var sb strings.Builder
 	sb.WriteString("({ ")
 	sb.WriteString(fmt.Sprintf("MorphMap* _m = mph_map_new(ctx, %s, %d); ", kindEnum, valIsPtr))
+	sb.WriteString("mph_gc_push_root(ctx, (void**)&_m); ")
 	for key, val := range hl.Pairs {
 		keyCode, err := c.compileExpression(key, prefix, fn)
 		if err != nil {
@@ -1926,7 +2059,7 @@ func (c *Compiler) compileHashLiteral(hl *parser.HashLiteral, prefix string, fn 
 		}
 		sb.WriteString(fmt.Sprintf("mph_map_set(ctx, _m, %s, (void*)%s); ", keyCast, valCode))
 	}
-	sb.WriteString("_m; })")
+	sb.WriteString("mph_gc_pop_roots(ctx, 1); _m; })")
 	return sb.String(), nil
 }
 
