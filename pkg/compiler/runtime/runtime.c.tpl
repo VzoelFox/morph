@@ -253,8 +253,7 @@ void mph_gc_mark(MorphContext* ctx, void* obj) {
     // Track live bytes for Page Recycling
     MphPage* page = mph_find_page(ctx, obj);
     if (page) {
-        size_t size = header->type ? header->type->size : 0;
-        page->live_bytes += (size + sizeof(ObjectHeader));
+        page->live_bytes += (header->size + sizeof(ObjectHeader));
     }
 
     // Queue for processing children
@@ -324,7 +323,7 @@ void mph_log_zombie(ObjectHeader* obj) {
     // Log Format: [Time] [Addr] [Type] [Size]
     uint64_t now = mph_time_ms();
     const char* type_name = obj->type ? obj->type->name : "raw";
-    size_t size = obj->type ? obj->type->size : 0; // Approx
+    size_t size = obj->size;
 
     fprintf(f, "[%lu] DEAD: %p Type=%s Size=%lu\n", now, (void*)(obj+1), type_name, size);
     fclose(f);
@@ -342,7 +341,7 @@ void mph_gc_sweep(MorphContext* ctx) {
             // ZOMBIE LOGGING before free
             mph_log_zombie(curr);
 
-            if (curr->type) ctx->allocated_bytes -= curr->type->size;
+            ctx->allocated_bytes -= curr->size;
             curr->flags = 0;
             curr->next = ctx->free_list;
             ctx->free_list = curr;
@@ -485,6 +484,7 @@ void* mph_alloc(MorphContext* ctx, size_t size, MorphTypeInfo* type_info) {
             *free_ptr = free_hdr->next;
             free_hdr->type = type_info;
             free_hdr->flags = 0;
+            free_hdr->size = size;
             free_hdr->next = ctx->heap_head;
             ctx->heap_head = free_hdr;
             ctx->allocated_bytes += size;

@@ -54,6 +54,18 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.46.0 - 2025-12-25
+**Checksum**: SHA256:GC_SIZE_ACCOUNTING_FIX
+**Perubahan**:
+- **Runtime**: Memakai `ObjectHeader.size` untuk menghitung `live_bytes`, logging zombie, dan pengurangan `allocated_bytes` agar akurat untuk alokasi raw/buffer.
+- **Runtime**: Menyetel ulang `size` saat reuse free list agar konsisten pada alokasi ulang.
+
+**Konteks Sesi**:
+- **Stabilization**: Memastikan akurasi accounting memori GC sehingga threshold dan statistik tidak meleset.
+
+**File Terkait**:
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:0c31422086ae36f96f4af84ff7741d93e31483d91a0a5719173535f9f57b3190)
+
 ### Version 1.45.0 - 2025-12-25
 **Checksum**: SHA256:GC_FREELIST_REUSE
 **Perubahan**:
