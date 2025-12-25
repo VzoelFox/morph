@@ -2,6 +2,7 @@ package checker
 
 import (
 	"testing"
+
 	"github.com/VzoelFox/morph/pkg/lexer"
 	"github.com/VzoelFox/morph/pkg/parser"
 )

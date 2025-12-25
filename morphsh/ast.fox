@@ -89,6 +89,29 @@ akhir
 fungsi (i IntegerLiteral) VisitChildren(visitor Visitor) void
 akhir
 
+struktur BooleanLiteral
+    token Token
+    value bool
+akhir
+
+fungsi (b BooleanLiteral) TokenLiteral() string
+    kembali b.token.Literal
+akhir
+
+fungsi (b BooleanLiteral) VisitChildren(visitor Visitor) void
+akhir
+
+struktur NullLiteral
+    token Token
+akhir
+
+fungsi (n NullLiteral) TokenLiteral() string
+    kembali n.token.Literal
+akhir
+
+fungsi (n NullLiteral) VisitChildren(visitor Visitor) void
+akhir
+
 struktur FloatLiteral
     token Token
     value string
@@ -126,6 +149,51 @@ fungsi (e ExpressionStatement) VisitChildren(visitor Visitor) void
     Walk(e.expression, visitor)
 akhir
 
+struktur PrefixExpression
+    token Token
+    operator string
+    right Node
+akhir
+
+fungsi (p PrefixExpression) TokenLiteral() string
+    kembali p.token.Literal
+akhir
+
+fungsi (p PrefixExpression) VisitChildren(visitor Visitor) void
+    Walk(p.right, visitor)
+akhir
+
+struktur InfixExpression
+    token Token
+    left Node
+    operator string
+    right Node
+akhir
+
+fungsi (i InfixExpression) TokenLiteral() string
+    kembali i.token.Literal
+akhir
+
+fungsi (i InfixExpression) VisitChildren(visitor Visitor) void
+    Walk(i.left, visitor)
+    Walk(i.right, visitor)
+akhir
+
+struktur CallExpression
+    token Token
+    function Node
+    arguments NodeList
+akhir
+
+fungsi (c CallExpression) TokenLiteral() string
+    kembali c.token.Literal
+akhir
+
+fungsi (c CallExpression) VisitChildren(visitor Visitor) void
+    Walk(c.function, visitor)
+    WalkList(c.arguments, visitor)
+akhir
+
 struktur VarStatement
     token Token
     name Identifier
@@ -153,4 +221,52 @@ akhir
 
 fungsi (b BlockStatement) VisitChildren(visitor Visitor) void
     WalkList(b.statements, visitor)
+akhir
+
+struktur ReturnStatement
+    token Token
+    value Node
+akhir
+
+fungsi (r ReturnStatement) TokenLiteral() string
+    kembali r.token.Literal
+akhir
+
+fungsi (r ReturnStatement) VisitChildren(visitor Visitor) void
+    Walk(r.value, visitor)
+akhir
+
+struktur IfExpression
+    token Token
+    condition Node
+    consequence BlockStatement
+    alternative BlockStatement
+    hasAlternative bool
+akhir
+
+fungsi (i IfExpression) TokenLiteral() string
+    kembali i.token.Literal
+akhir
+
+fungsi (i IfExpression) VisitChildren(visitor Visitor) void
+    Walk(i.condition, visitor)
+    Walk(i.consequence, visitor)
+    jika i.hasAlternative
+        Walk(i.alternative, visitor)
+    akhir
+akhir
+
+struktur WhileExpression
+    token Token
+    condition Node
+    body BlockStatement
+akhir
+
+fungsi (w WhileExpression) TokenLiteral() string
+    kembali w.token.Literal
+akhir
+
+fungsi (w WhileExpression) VisitChildren(visitor Visitor) void
+    Walk(w.condition, visitor)
+    Walk(w.body, visitor)
 akhir
