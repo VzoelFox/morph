@@ -1,7 +1,7 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.57.5
+- **Versi**: 1.57.6
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
 - **Terakhir Diupdate**: 2025-12-25
 - **Status**: Active
@@ -54,6 +54,18 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.57.6 - 2025-12-25
+**Checksum**: SHA256:PARSER_IF_EXPRESSION_RETURN_FIX
+**Perubahan**:
+- **Parser**: Memperbaiki `parseIfExpression` agar mengembalikan `expression` sehingga build tidak gagal (undefined `root`).
+
+**Konteks Sesi**:
+- **Build Fix**: Menghapus referensi variabel yang tidak ada untuk memulihkan kompilasi parser.
+
+**File Terkait**:
+- `pkg/parser/parser.go` (SHA256:aa74a65faa9fd98f4ec6509569275f95dab7815cf3fdb28c1ed3416a7f120b47)
+- `AGENTS.md` (SHA256:1f7eba1b9aae8c66750006d5f6b6395ed2596fd811cd65f4280cd24ac2018278)
+
 ### Version 1.57.5 - 2025-12-25
 **Checksum**: SHA256:PARSER_ELSEIF_AST_CLARITY
 **Perubahan**:
