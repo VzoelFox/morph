@@ -1,0 +1,12 @@
+struktur Box
+  val int
+akhir
+
+fungsi main() void
+  var b = Box{val: 1}
+  pilih b.val
+  kasus 1:
+     native_print("Satu")
+  akhir
+akhir
+main()
