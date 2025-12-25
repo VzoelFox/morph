@@ -1,7 +1,7 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.58.0
+- **Versi**: 1.58.1
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
 - **Terakhir Diupdate**: 2025-12-25
 - **Status**: Active
@@ -54,6 +54,19 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.58.1 - 2025-12-25
+**Checksum**: SHA256:COMPILER_TEMP_ROOT_COVERAGE
+**Perubahan**:
+- **Compiler**: Menambahkan rooting sementara untuk index access, map set/delete, panjang(), spawn arg, type assertion, dan interface call agar temporaries pointer tetap hidup selama evaluasi.
+- **Compiler**: Menambahkan helper `wrapWithRoots` untuk menyatukan pola push/pop root pada temporary expressions.
+
+**Konteks Sesi**:
+- **GC Safety**: Memperluas coverage rooting temporaries pada jalur evaluasi yang sebelumnya belum terproteksi.
+
+**File Terkait**:
+- `pkg/compiler/compiler.go` (SHA256:f933c3bdb3c7c91998bcd6e762ab231143f097f5c5183a9126c0a9531f563d8e)
+- `AGENTS.md` (SHA256:0b4d361289b71f7c4d50e35decd920ab5e7f5ab06aefd2f076bb1b3cca309ecf)
+
 ### Version 1.58.0 - 2025-12-25
 **Checksum**: SHA256:GC_TEMP_ROOTING_SAFETY
 **Perubahan**:

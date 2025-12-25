@@ -33,6 +33,12 @@ type Compiler struct {
 	tempIndex      int
 }
 
+type rootTemp struct {
+	cType string
+	name  string
+	value string
+}
+
 func New(c *checker.Checker) *Compiler {
 	return &Compiler{
 		checker:        c,
@@ -162,6 +168,30 @@ func (c *Compiler) Compile(node parser.Node) (string, error) {
 func (c *Compiler) nextTemp(prefix string) string {
 	c.tempIndex++
 	return fmt.Sprintf("_%s_%d", prefix, c.tempIndex)
+}
+
+func (c *Compiler) wrapWithRoots(roots []rootTemp, expr string, retType string) string {
+	if len(roots) == 0 {
+		return expr
+	}
+	var sb strings.Builder
+	sb.WriteString("({ ")
+	for _, root := range roots {
+		sb.WriteString(fmt.Sprintf("%s %s = %s; ", root.cType, root.name, root.value))
+		sb.WriteString(fmt.Sprintf("mph_gc_push_root(ctx, (void**)&%s); ", root.name))
+	}
+	if retType == "void" {
+		sb.WriteString(fmt.Sprintf("%s; ", expr))
+		sb.WriteString(fmt.Sprintf("mph_gc_pop_roots(ctx, %d); ", len(roots)))
+		sb.WriteString("})")
+		return sb.String()
+	}
+
+	retTemp := c.nextTemp("ret")
+	sb.WriteString(fmt.Sprintf("%s %s = %s; ", retType, retTemp, expr))
+	sb.WriteString(fmt.Sprintf("mph_gc_pop_roots(ctx, %d); ", len(roots)))
+	sb.WriteString(fmt.Sprintf("%s; })", retTemp))
+	return sb.String()
 }
 
 // --- Analysis Phase ---
@@ -1233,15 +1263,47 @@ func (c *Compiler) compileAssignment(s *parser.AssignmentStatement, buf *strings
 		leftType := c.checker.Types[idx.Left]
 		if leftType != nil && leftType.Kind() == checker.KindMap {
 			mt := leftType.(*checker.MapType)
-			keyCast := fmt.Sprintf("(void*)%s", idxCode)
+			objRef := objCode
+			keyRef := idxCode
+			valRef := valCode
+			var roots []rootTemp
+			if c.isPointerCheckerType(leftType) {
+				objTemp := c.nextTemp("map")
+				roots = append(roots, rootTemp{
+					cType: c.mapCheckerTypeToC(leftType, prefix),
+					name:  objTemp,
+					value: objCode,
+				})
+				objRef = objTemp
+			}
+			if c.isPointerCheckerType(mt.Key) {
+				keyTemp := c.nextTemp("key")
+				roots = append(roots, rootTemp{
+					cType: c.mapCheckerTypeToC(mt.Key, prefix),
+					name:  keyTemp,
+					value: idxCode,
+				})
+				keyRef = keyTemp
+			}
+			if c.isPointerCheckerType(mt.Value) {
+				valTemp := c.nextTemp("val")
+				roots = append(roots, rootTemp{
+					cType: c.mapCheckerTypeToC(mt.Value, prefix),
+					name:  valTemp,
+					value: valCode,
+				})
+				valRef = valTemp
+			}
+			keyCast := fmt.Sprintf("(void*)%s", keyRef)
 			if mt.Key.Kind() == checker.KindInt {
-				keyCast = fmt.Sprintf("(void*)(int64_t)%s", idxCode)
+				keyCast = fmt.Sprintf("(void*)(int64_t)%s", keyRef)
 			}
-			valCast := fmt.Sprintf("(void*)%s", valCode)
+			valCast := fmt.Sprintf("(void*)%s", valRef)
 			if c.isPrimitive(mt.Value) {
-				valCast = fmt.Sprintf("(void*)(int64_t)%s", valCode)
+				valCast = fmt.Sprintf("(void*)(int64_t)%s", valRef)
 			}
-			buf.WriteString(fmt.Sprintf("\tmph_map_set(ctx, %s, %s, %s);\n", objCode, keyCast, valCast))
+			expr := fmt.Sprintf("mph_map_set(ctx, %s, %s, %s)", objRef, keyCast, valCast)
+			buf.WriteString(fmt.Sprintf("\t%s;\n", c.wrapWithRoots(roots, expr, "void")))
 			return nil
 		} else if leftType != nil && leftType.Kind() == checker.KindArray {
 			at := leftType.(*checker.ArrayType)
@@ -2079,25 +2141,72 @@ func (c *Compiler) compileIndex(ie *parser.IndexExpression, prefix string, fn *p
 	}
 
 	if leftType.Kind() == checker.KindString {
-		return fmt.Sprintf("((MorphString*)%s)->data[%s]", leftCode, indexCode), nil
+		leftRef := leftCode
+		var roots []rootTemp
+		if c.isPointerCheckerType(leftType) {
+			leftTemp := c.nextTemp("str")
+			roots = append(roots, rootTemp{
+				cType: c.mapCheckerTypeToC(leftType, prefix),
+				name:  leftTemp,
+				value: leftCode,
+			})
+			leftRef = leftTemp
+		}
+		expr := fmt.Sprintf("((MorphString*)%s)->data[%s]", leftRef, indexCode)
+		return c.wrapWithRoots(roots, expr, "mph_int"), nil
 	} else if leftType.Kind() == checker.KindArray {
 		if at, ok := leftType.(*checker.ArrayType); ok {
 			elemCType := c.mapCheckerTypeToC(at.Element, prefix)
-			return fmt.Sprintf("(*(%s*)mph_array_at(ctx, %s, %s))", elemCType, leftCode, indexCode), nil
+			leftRef := leftCode
+			var roots []rootTemp
+			if c.isPointerCheckerType(leftType) {
+				leftTemp := c.nextTemp("lhs")
+				roots = append(roots, rootTemp{
+					cType: c.mapCheckerTypeToC(leftType, prefix),
+					name:  leftTemp,
+					value: leftCode,
+				})
+				leftRef = leftTemp
+			}
+			expr := fmt.Sprintf("(*(%s*)mph_array_at(ctx, %s, %s))", elemCType, leftRef, indexCode)
+			retType := elemCType
+			return c.wrapWithRoots(roots, expr, retType), nil
 		}
 	} else if leftType.Kind() == checker.KindMap {
 		if mt, ok := leftType.(*checker.MapType); ok {
 			valCType := c.mapCheckerTypeToC(mt.Value, prefix)
-			keyCast := fmt.Sprintf("(void*)%s", indexCode)
+			leftRef := leftCode
+			indexRef := indexCode
+			var roots []rootTemp
+			if c.isPointerCheckerType(leftType) {
+				leftTemp := c.nextTemp("map")
+				roots = append(roots, rootTemp{
+					cType: c.mapCheckerTypeToC(leftType, prefix),
+					name:  leftTemp,
+					value: leftCode,
+				})
+				leftRef = leftTemp
+			}
+			if c.isPointerCheckerType(mt.Key) {
+				keyTemp := c.nextTemp("key")
+				roots = append(roots, rootTemp{
+					cType: c.mapCheckerTypeToC(mt.Key, prefix),
+					name:  keyTemp,
+					value: indexCode,
+				})
+				indexRef = keyTemp
+			}
+			keyCast := fmt.Sprintf("(void*)%s", indexRef)
 			if mt.Key.Kind() == checker.KindInt {
-				keyCast = fmt.Sprintf("(void*)(int64_t)%s", indexCode)
+				keyCast = fmt.Sprintf("(void*)(int64_t)%s", indexRef)
 			}
 
 			if c.isPrimitive(mt.Value) {
-				return fmt.Sprintf("(%s)(int64_t)mph_map_get(ctx, %s, %s)", valCType, leftCode, keyCast), nil
-			} else {
-				return fmt.Sprintf("(%s)mph_map_get(ctx, %s, %s)", valCType, leftCode, keyCast), nil
+				expr := fmt.Sprintf("(%s)(int64_t)mph_map_get(ctx, %s, %s)", valCType, leftRef, keyCast)
+				return c.wrapWithRoots(roots, expr, valCType), nil
 			}
+			expr := fmt.Sprintf("(%s)mph_map_get(ctx, %s, %s)", valCType, leftRef, keyCast)
+			return c.wrapWithRoots(roots, expr, valCType), nil
 		}
 	}
 	return "", fmt.Errorf("index op not supported for %s", leftType.String())
@@ -2114,7 +2223,19 @@ func (c *Compiler) compileSpawn(call *parser.CallExpression, prefix string, fn *
 			if err != nil {
 				return "", err
 			}
-			return fmt.Sprintf("mph_thread_spawn((MorphEntryFunction)mph_%s, (void*)%s)", ident.Value, arg), nil
+			var roots []rootTemp
+			argRef := arg
+			if argType := c.checker.Types[call.Arguments[1]]; argType != nil && c.isPointerCheckerType(argType) {
+				temp := c.nextTemp("spawn_arg")
+				roots = append(roots, rootTemp{
+					cType: c.mapCheckerTypeToC(argType, prefix),
+					name:  temp,
+					value: arg,
+				})
+				argRef = temp
+			}
+			expr := fmt.Sprintf("mph_thread_spawn((MorphEntryFunction)mph_%s, (void*)%s)", ident.Value, argRef)
+			return c.wrapWithRoots(roots, expr, "void"), nil
 		}
 	}
 	return "", fmt.Errorf("luncurkan expects named function")
@@ -2137,11 +2258,33 @@ func (c *Compiler) compileDelete(call *parser.CallExpression, prefix string, fn 
 		return "", fmt.Errorf("hapus arg 1 must be map")
 	}
 	mt := mapType.(*checker.MapType)
-	keyCast := fmt.Sprintf("(void*)%s", keyCode)
-	if mt.Key.Kind() == checker.KindInt {
-		keyCast = fmt.Sprintf("(void*)(int64_t)%s", keyCode)
+	mapRef := mapCode
+	keyRef := keyCode
+	var roots []rootTemp
+	if c.isPointerCheckerType(mapType) {
+		temp := c.nextTemp("map")
+		roots = append(roots, rootTemp{
+			cType: c.mapCheckerTypeToC(mapType, prefix),
+			name:  temp,
+			value: mapCode,
+		})
+		mapRef = temp
 	}
-	return fmt.Sprintf("mph_map_delete(ctx, %s, %s)", mapCode, keyCast), nil
+	if c.isPointerCheckerType(mt.Key) {
+		temp := c.nextTemp("key")
+		roots = append(roots, rootTemp{
+			cType: c.mapCheckerTypeToC(mt.Key, prefix),
+			name:  temp,
+			value: keyCode,
+		})
+		keyRef = temp
+	}
+	keyCast := fmt.Sprintf("(void*)%s", keyRef)
+	if mt.Key.Kind() == checker.KindInt {
+		keyCast = fmt.Sprintf("(void*)(int64_t)%s", keyRef)
+	}
+	expr := fmt.Sprintf("mph_map_delete(ctx, %s, %s)", mapRef, keyCast)
+	return c.wrapWithRoots(roots, expr, "void"), nil
 }
 
 func (c *Compiler) compileLen(call *parser.CallExpression, prefix string, fn *parser.FunctionLiteral) (string, error) {
@@ -2157,11 +2300,47 @@ func (c *Compiler) compileLen(call *parser.CallExpression, prefix string, fn *pa
 		return "", fmt.Errorf("unknown type for panjang")
 	}
 	if argType.Kind() == checker.KindMap {
-		return fmt.Sprintf("mph_map_len(ctx, %s)", argCode), nil
+		var roots []rootTemp
+		argRef := argCode
+		if c.isPointerCheckerType(argType) {
+			temp := c.nextTemp("len_arg")
+			roots = append(roots, rootTemp{
+				cType: c.mapCheckerTypeToC(argType, prefix),
+				name:  temp,
+				value: argCode,
+			})
+			argRef = temp
+		}
+		expr := fmt.Sprintf("mph_map_len(ctx, %s)", argRef)
+		return c.wrapWithRoots(roots, expr, "mph_int"), nil
 	} else if argType.Kind() == checker.KindArray {
-		return fmt.Sprintf("((MorphArray*)%s)->length", argCode), nil
+		var roots []rootTemp
+		argRef := argCode
+		if c.isPointerCheckerType(argType) {
+			temp := c.nextTemp("len_arg")
+			roots = append(roots, rootTemp{
+				cType: c.mapCheckerTypeToC(argType, prefix),
+				name:  temp,
+				value: argCode,
+			})
+			argRef = temp
+		}
+		expr := fmt.Sprintf("((MorphArray*)%s)->length", argRef)
+		return c.wrapWithRoots(roots, expr, "mph_int"), nil
 	} else if argType.Kind() == checker.KindString {
-		return fmt.Sprintf("((MorphString*)%s)->length", argCode), nil
+		var roots []rootTemp
+		argRef := argCode
+		if c.isPointerCheckerType(argType) {
+			temp := c.nextTemp("len_arg")
+			roots = append(roots, rootTemp{
+				cType: c.mapCheckerTypeToC(argType, prefix),
+				name:  temp,
+				value: argCode,
+			})
+			argRef = temp
+		}
+		expr := fmt.Sprintf("((MorphString*)%s)->length", argRef)
+		return c.wrapWithRoots(roots, expr, "mph_int"), nil
 	}
 	return "", fmt.Errorf("panjang not supported for type %s", argType.String())
 }
@@ -2181,7 +2360,15 @@ func (c *Compiler) compileTypeAssertion(call *parser.CallExpression, prefix stri
 	st := targetType.(*checker.StructType)
 	targetID := c.getStructID(st.Name)
 	targetCType := c.mapCheckerTypeToC(st, prefix)
-	return fmt.Sprintf("(%s)mph_assert_type(ctx, %s, %d)", targetCType, ifaceCode, targetID), nil
+	ifaceTemp := c.nextTemp("iface")
+	var sb strings.Builder
+	sb.WriteString("({ ")
+	sb.WriteString(fmt.Sprintf("MorphInterface %s = %s; ", ifaceTemp, ifaceCode))
+	sb.WriteString(fmt.Sprintf("mph_gc_push_root(ctx, (void**)&%s.instance); ", ifaceTemp))
+	sb.WriteString(fmt.Sprintf("%s _ret = (%s)mph_assert_type(ctx, %s, %d); ", targetCType, targetCType, ifaceTemp, targetID))
+	sb.WriteString("mph_gc_pop_roots(ctx, 1); ")
+	sb.WriteString("_ret; })")
+	return sb.String(), nil
 }
 
 func (c *Compiler) compileInterfaceConversion(iface *checker.InterfaceType, st *checker.StructType, srcCode string, prefix string) (string, error) {
@@ -2232,9 +2419,10 @@ func (c *Compiler) compileInterfaceCall(call *parser.CallExpression, mem *parser
 		return "", err
 	}
 
+	objTemp := c.nextTemp("iface")
 	var args []string
 	args = append(args, "ctx")
-	args = append(args, fmt.Sprintf("(%s).instance", objCode))
+	args = append(args, fmt.Sprintf("%s.instance", objTemp))
 	for _, arg := range call.Arguments {
 		code, err := c.compileExpression(arg, prefix, fn)
 		if err != nil {
@@ -2255,8 +2443,21 @@ func (c *Compiler) compileInterfaceCall(call *parser.CallExpression, mem *parser
 		paramTypes = append(paramTypes, c.mapCheckerTypeToC(p, prefix))
 	}
 	fnPtrType := fmt.Sprintf("%s (*)(%s)", retType, strings.Join(paramTypes, ", "))
-
-	return fmt.Sprintf("((%s)(%s).vtable[%d])(%s)", fnPtrType, objCode, methodIndex, strings.Join(args, ", ")), nil
+	callExpr := fmt.Sprintf("((%s)(%s.vtable[%d]))(%s)", fnPtrType, objTemp, methodIndex, strings.Join(args, ", "))
+	var sb strings.Builder
+	sb.WriteString("({ ")
+	sb.WriteString(fmt.Sprintf("MorphInterface %s = %s; ", objTemp, objCode))
+	sb.WriteString(fmt.Sprintf("mph_gc_push_root(ctx, (void**)&%s.instance); ", objTemp))
+	if retType == "void" {
+		sb.WriteString(fmt.Sprintf("%s; ", callExpr))
+		sb.WriteString("mph_gc_pop_roots(ctx, 1); ")
+		sb.WriteString("})")
+		return sb.String(), nil
+	}
+	sb.WriteString(fmt.Sprintf("%s _ret = %s; ", retType, callExpr))
+	sb.WriteString("mph_gc_pop_roots(ctx, 1); ")
+	sb.WriteString("_ret; })")
+	return sb.String(), nil
 }
 
 func (c *Compiler) isPrimitive(t checker.Type) bool {
