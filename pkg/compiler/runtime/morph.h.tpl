@@ -216,8 +216,8 @@ MorphClosure* mph_closure_new(MorphContext* ctx, void* fn, void* env, int env_si
 MorphError* mph_error_new(MorphContext* ctx, MorphString* msg);
 
 // Time
-mph_int mph_time_Now(MorphContext* ctx);
-void mph_time_Sleep(MorphContext* ctx, mph_int ms);
+mph_int mph_time_Now(MorphContext* ctx, void* _env);
+void mph_time_Sleep(MorphContext* ctx, void* _env, mph_int ms);
 
 // Debug
 void mph_native_print_int(MorphContext* ctx, mph_int n);

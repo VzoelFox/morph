@@ -1044,10 +1044,10 @@ void* mph_assert_type(MorphContext* ctx, MorphInterface iface, mph_int expected_
 }
 
 // --- Time ---
-mph_int mph_time_Now(MorphContext* ctx) {
+mph_int mph_time_Now(MorphContext* ctx, void* _env) {
     return (mph_int)mph_time_ms();
 }
-void mph_time_Sleep(MorphContext* ctx, mph_int ms) {
+void mph_time_Sleep(MorphContext* ctx, void* _env, mph_int ms) {
     usleep(ms * 1000);
 }
 
@@ -1074,21 +1074,28 @@ void mph_native_print_error(MorphContext* ctx, MorphError* err) {
     }
 }
 
-void* mph_io_Open(MorphContext* ctx, MorphString* path) {
+void* mph_io_make_file(MorphContext* ctx, void* _env, mph_int fd) {
+    mph_init_files();
+    InternalFile* f = (InternalFile*)mph_alloc(ctx, sizeof(InternalFile), NULL);
+    f->fd = fd;
+    return f;
+}
+
+void* mph_io_Open(MorphContext* ctx, void* _env, MorphString* path) {
     mph_swap_in(ctx, path);
     mph_init_files();
     FILE* h = fopen(path->data, "r"); if(!h) return NULL;
     int fd = mph_file_count++; mph_file_table[fd] = h;
     InternalFile* f = (InternalFile*)mph_alloc(ctx, sizeof(InternalFile), NULL); f->fd = fd; return f;
 }
-void* mph_io_Create(MorphContext* ctx, MorphString* path) {
+void* mph_io_Create(MorphContext* ctx, void* _env, MorphString* path) {
     mph_swap_in(ctx, path);
     mph_init_files();
     FILE* h = fopen(path->data, "w+"); if(!h) return NULL;
     int fd = mph_file_count++; mph_file_table[fd] = h;
     InternalFile* f = (InternalFile*)mph_alloc(ctx, sizeof(InternalFile), NULL); f->fd = fd; return f;
 }
-MorphString* mph_io_Read(MorphContext* ctx, void* f, mph_int size) {
+MorphString* mph_io_Read(MorphContext* ctx, void* _env, void* f, mph_int size) {
     mph_init_files();
     if (!f) return mph_string_new(ctx, "");
     int fd = ((InternalFile*)f)->fd;
@@ -1098,14 +1105,14 @@ MorphString* mph_io_Read(MorphContext* ctx, void* f, mph_int size) {
     MorphString* s = (MorphString*)mph_alloc(ctx, sizeof(MorphString), &mph_ti_string_real);
     s->data = buf; s->length = r; return s;
 }
-mph_int mph_io_Write(MorphContext* ctx, void* f, MorphString* s) {
+mph_int mph_io_Write(MorphContext* ctx, void* _env, void* f, MorphString* s) {
     mph_swap_in(ctx, s);
     mph_init_files();
     if (!f) return -1;
     int fd = ((InternalFile*)f)->fd;
     return fwrite(s->data, 1, s->length, mph_file_table[fd]);
 }
-mph_int mph_io_Close(MorphContext* ctx, void* f) {
+mph_int mph_io_Close(MorphContext* ctx, void* _env, void* f) {
     mph_init_files();
     if (!f) return -1;
     int fd = ((InternalFile*)f)->fd;
