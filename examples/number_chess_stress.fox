@@ -1,0 +1,152 @@
+ambil "conv"
+
+struktur Move
+    from_pos int
+    to_pos int
+    captured int
+akhir
+
+fungsi abs(x int) int
+    jika x < 0
+        kembali 0 - x
+    akhir
+    kembali x
+akhir
+
+fungsi set_major(board []int, row int, sign int) void
+    var base = row * 8
+    board[base + 0] = sign * 5
+    board[base + 1] = sign * 3
+    board[base + 2] = sign * 3
+    board[base + 3] = sign * 9
+    board[base + 4] = sign * 10
+    board[base + 5] = sign * 3
+    board[base + 6] = sign * 3
+    board[base + 7] = sign * 5
+akhir
+
+fungsi buat_papan() []int
+    var board []int = []
+    var i = 0
+    selama i < 64
+        board = board + [0]
+        i = i + 1
+    akhir
+
+    i = 0
+    selama i < 8
+        board[8 + i] = 1
+        board[48 + i] = -1
+        i = i + 1
+    akhir
+
+    set_major(board, 0, 1)
+    set_major(board, 7, -1)
+
+    kembali board
+akhir
+
+fungsi board_sum(board []int) int
+    var i = 0
+    var total = 0
+    selama i < panjang(board)
+        total = total + board[i]
+        i = i + 1
+    akhir
+    kembali total
+akhir
+
+fungsi apply_move(board []int, from int, to int, moves []Move) (int, []Move)
+    var captured = board[to]
+    board[to] = board[from]
+    board[from] = 0
+    moves = moves + [Move{from_pos: from, to_pos: to, captured: captured}]
+    kembali captured, moves
+akhir
+
+fungsi undo_move(board []int, moves []Move) []Move
+    var len = panjang(moves)
+    jika len == 0
+        kembali moves
+    akhir
+
+    var last = moves[len - 1]
+    board[last.from_pos] = board[last.to_pos]
+    board[last.to_pos] = last.captured
+
+    var newMoves []Move = []
+    var i = 0
+    selama i < len - 1
+        newMoves = newMoves + [moves[i]]
+        i = i + 1
+    akhir
+    kembali newMoves
+akhir
+
+fungsi main() void
+    var board = buat_papan()
+    var initialSum = board_sum(board)
+
+    var script []Move = [
+        Move{from_pos: 12, to_pos: 20, captured: 0},
+        Move{from_pos: 52, to_pos: 44, captured: 0},
+        Move{from_pos: 11, to_pos: 19, captured: 0},
+        Move{from_pos: 51, to_pos: 43, captured: 0},
+        Move{from_pos: 1, to_pos: 18, captured: 0},
+        Move{from_pos: 57, to_pos: 42, captured: 0},
+        Move{from_pos: 2, to_pos: 11, captured: 0},
+        Move{from_pos: 58, to_pos: 41, captured: 0},
+        Move{from_pos: 3, to_pos: 27, captured: 0},
+        Move{from_pos: 59, to_pos: 35, captured: 0},
+        Move{from_pos: 0, to_pos: 16, captured: 0},
+        Move{from_pos: 56, to_pos: 40, captured: 0},
+        Move{from_pos: 4, to_pos: 12, captured: 0},
+        Move{from_pos: 60, to_pos: 52, captured: 0},
+        Move{from_pos: 5, to_pos: 26, captured: 0},
+        Move{from_pos: 61, to_pos: 34, captured: 0},
+        Move{from_pos: 6, to_pos: 21, captured: 0},
+        Move{from_pos: 62, to_pos: 45, captured: 0},
+        Move{from_pos: 15, to_pos: 23, captured: 0},
+        Move{from_pos: 55, to_pos: 47, captured: 0},
+        Move{from_pos: 9, to_pos: 17, captured: 0},
+        Move{from_pos: 49, to_pos: 41, captured: 0},
+        Move{from_pos: 18, to_pos: 33, captured: 0},
+        Move{from_pos: 42, to_pos: 25, captured: 0},
+        Move{from_pos: 27, to_pos: 43, captured: 0},
+        Move{from_pos: 35, to_pos: 19, captured: 0},
+        Move{from_pos: 16, to_pos: 24, captured: 0},
+        Move{from_pos: 40, to_pos: 32, captured: 0},
+        Move{from_pos: 21, to_pos: 36, captured: 0},
+        Move{from_pos: 45, to_pos: 29, captured: 0}
+    ]
+
+    var moves []Move = []
+    var score = 0
+    var i = 0
+    selama i < panjang(script)
+        var captured, updated = apply_move(board, script[i].from_pos, script[i].to_pos, moves)
+        moves = updated
+        jika captured != 0
+            score = score + abs(captured)
+        akhir
+        i = i + 1
+    akhir
+
+    native_print("Catur angka: 30 langkah dieksekusi")
+    native_print("Captured score: " + conv.Itoa(score))
+    native_print("Undo stack size: " + conv.Itoa(panjang(moves)))
+
+    i = 0
+    selama i < 30
+        moves = undo_move(board, moves)
+        i = i + 1
+    akhir
+
+    var finalSum = board_sum(board)
+    jika finalSum != initialSum
+        native_print("Mismatch board sum setelah undo!")
+        native_print("Awal: " + conv.Itoa(initialSum) + " | Akhir: " + conv.Itoa(finalSum))
+    akhir
+
+    native_print("Catur angka stress test selesai")
+akhir
