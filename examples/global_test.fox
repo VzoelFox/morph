@@ -1,0 +1,16 @@
+var G = 100
+tetapan KONSTAN = "Hello Global"
+
+fungsi main() void
+    native_print_int(G)
+    native_print(KONSTAN)
+
+    G = G + 1
+    native_print_int(G)
+
+    var f = fungsi() int
+        kembali G
+    akhir
+
+    native_print_int(f())
+akhir

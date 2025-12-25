@@ -1,9 +1,9 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.39.0
+- **Versi**: 1.42.0
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
-- **Terakhir Diupdate**: 2025-12-23
+- **Terakhir Diupdate**: 2025-12-25
 - **Status**: Active
 
 ---
@@ -54,6 +54,54 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.42.0 - 2025-12-25
+**Checksum**: SHA256:METHOD_CALLS_AND_SELF_HOST_WIP
+**Perubahan**:
+- **Compiler**: Implemented Method Call support (`obj.Method(args)`) for Structs. It generates a direct C call to `mph_Struct_Method` with the object instance injected as the first argument (receiver).
+- **Compiler**: Added handling for Pointer Receivers in Method Calls (auto-dereference/address-of logic).
+- **Self-Hosting**: Established `morphsh/` structure with `token.fox` and `lexer.fox` (Morph implementation of Lexer).
+- **Known Issue**: Self-hosted Lexer build fails due to a Checker/Compiler state synchronization issue where `MemberExpression` object type resolves to `nil` in Compiler despite being checked. This blocks `morphsh/main.fox` compilation.
+
+**Konteks Sesi**:
+- **Feature**: Enabling Object-Oriented style programming (Method Calls) required for the Lexer implementation.
+- **Blocker**: Self-hosting halted by compiler internal state issue.
+
+**File Terkait**:
+- `pkg/compiler/compiler.go`
+- `morphsh/token.fox`
+- `morphsh/lexer.fox`
+- `morphsh/main.fox`
+
+### Version 1.41.0 - 2025-12-25
+**Checksum**: SHA256:COMPILER_STABILIZATION
+**Perubahan**:
+- **Compiler**: Implemented Global Variable and Constant support (`var`/`tetapan` at top-level). These are now compiled as global C variables initialized in `morph_entry_point`.
+- **Compiler**: Fixed Tuple Return bug where generated struct name did not match target type (e.g. `(Int, Null)` vs `(Int, Error)`).
+- **Compiler**: Fixed Capture Analysis (`analyzeCaptures`) to correctly identify global variables across modules and exclude them from closures.
+- **Compiler**: Updated `entryBody` execution order to run *before* `main` function call to ensure global variables are initialized.
+- **Checker**: Added `substring(str, start, end)` built-in function type.
+- **Checker**: Updated `Type.Call` to allow casting `String` to `UserError` (`error("msg")`).
+- **Runtime**: Implemented `mph_string_substring` in C Runtime.
+- **Self-Hosting**: Created `morphsh/` directory with `token.fox` and `lexer.fox` as proof-of-concept (Work In Progress).
+- **Tests**: Added `examples/gc_torture_test.fox` verifying complex GC scenarios (cycles, struct arrays/maps).
+- **Tests**: Added `examples/global_test.fox` verifying global variable access and modification.
+
+**Konteks Sesi**:
+- **Stabilization**: Critical fixes for GC, Compiler, and Type System enabling robust application development.
+- **Self-Hosting**: Laying the groundwork for the Morph Lexer written in Morph.
+
+**File Terkait**:
+- `pkg/compiler/compiler.go`
+- `pkg/checker/types.go`
+- `pkg/checker/checker.go`
+- `pkg/compiler/runtime/runtime.c.tpl`
+- `pkg/lexer/token.go` (Added `kembali` alias)
+- `examples/gc_torture_test.fox`
+- `examples/global_test.fox`
+- `morphsh/token.fox`
+- `morphsh/lexer.fox`
+- `morphsh/main.fox`
+
 ### Version 1.40.0 - 2025-12-23
 **Checksum**: SHA256:CHAR_LITERALS_AND_ERROR_CHECKS
 **Perubahan**:

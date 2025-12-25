@@ -95,6 +95,13 @@ func New() *Checker {
     }
     c.scope.DefineVariable("split", splitType, true, 0, 0)
 
+    // substring(string, int, int) -> string
+    substringType := &FunctionType{
+        Parameters: []Type{StringType, IntType, IntType},
+        ReturnTypes: []Type{StringType},
+    }
+    c.scope.DefineVariable("substring", substringType, true, 0, 0)
+
 	// Concurrency Primitives (int only for MVP)
 	// saluran_baru() -> channel
 	c.scope.DefineVariable("saluran_baru", &FunctionType{

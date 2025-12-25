@@ -655,6 +655,21 @@ MorphArray* mph_string_split(MorphContext* ctx, MorphString* s, MorphString* sep
     return arr;
 }
 
+MorphString* mph_string_substring(MorphContext* ctx, MorphString* s, mph_int start, mph_int end) {
+    mph_swap_in(ctx, s); mph_swap_in(ctx, s->data);
+    if (start < 0) start = 0;
+    if (end > s->length) end = s->length;
+    if (start >= end) return mph_string_new(ctx, "");
+
+    size_t len = end - start;
+    MorphString* ret = (MorphString*)mph_alloc(ctx, sizeof(MorphString), &mph_ti_string_real);
+    ret->length = len;
+    ret->data = (char*)mph_alloc(ctx, len + 1, &mph_ti_raw);
+    memcpy(ret->data, s->data + start, len);
+    ret->data[len] = 0;
+    return ret;
+}
+
 // --- Arrays ---
 
 MorphArray* mph_array_new(MorphContext* ctx, size_t capacity, size_t element_size, mph_bool is_ptr) {

@@ -106,6 +106,7 @@ var keywords = map[string]TokenType{
 	"atau_jika":  ATAU_JIKA,
 	"lainnya":    LAINNYA,
 	"kembalikan": KEMBALIKAN,
+	"kembali":    KEMBALIKAN,
 	"benar":      BENAR,
 	"salah":      SALAH,
 	"kosong":     KOSONG,
