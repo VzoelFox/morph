@@ -1,7 +1,7 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.57.7
+- **Versi**: 1.57.8
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
 - **Terakhir Diupdate**: 2025-12-25
 - **Status**: Active
@@ -54,6 +54,20 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.57.8 - 2025-12-25
+**Checksum**: SHA256:MORPHSH_PARSER_PRECEDENCE_FOUNDATION
+**Perubahan**:
+- **MorphSH/AST**: Menambahkan node `PrefixExpression`, `InfixExpression`, dan `CallExpression` untuk ekspresi dasar.
+- **MorphSH/Parser**: Menambahkan precedence parser (prefix/infix/call/grouping) untuk ekspresi dasar.
+
+**Konteks Sesi**:
+- **Bootstrap Parser**: Memperkuat parsing ekspresi awal agar fondasi MorphSH siap diperluas.
+
+**File Terkait**:
+- `morphsh/ast.fox` (SHA256:ad26ce23df1f505ac5a1de7aceb863a0a8e57ecccebcf9e8f06b34b4f4309e22)
+- `morphsh/parser.fox` (SHA256:203e088a687a7116d2db3678ac01ff3dc213b0a931a8f9d455b36e5c21655894)
+- `AGENTS.md` (SHA256:cba334c862975e04a45b7eec155bb33b6b83734038c3822eac2cf679d7dd54ef)
+
 ### Version 1.57.7 - 2025-12-25
 **Checksum**: SHA256:TYPE_SYSTEM_PACKAGE_SPLIT
 **Perubahan**:

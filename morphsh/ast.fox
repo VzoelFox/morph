@@ -126,6 +126,51 @@ fungsi (e ExpressionStatement) VisitChildren(visitor Visitor) void
     Walk(e.expression, visitor)
 akhir
 
+struktur PrefixExpression
+    token Token
+    operator string
+    right Node
+akhir
+
+fungsi (p PrefixExpression) TokenLiteral() string
+    kembali p.token.Literal
+akhir
+
+fungsi (p PrefixExpression) VisitChildren(visitor Visitor) void
+    Walk(p.right, visitor)
+akhir
+
+struktur InfixExpression
+    token Token
+    left Node
+    operator string
+    right Node
+akhir
+
+fungsi (i InfixExpression) TokenLiteral() string
+    kembali i.token.Literal
+akhir
+
+fungsi (i InfixExpression) VisitChildren(visitor Visitor) void
+    Walk(i.left, visitor)
+    Walk(i.right, visitor)
+akhir
+
+struktur CallExpression
+    token Token
+    function Node
+    arguments NodeList
+akhir
+
+fungsi (c CallExpression) TokenLiteral() string
+    kembali c.token.Literal
+akhir
+
+fungsi (c CallExpression) VisitChildren(visitor Visitor) void
+    Walk(c.function, visitor)
+    WalkList(c.arguments, visitor)
+akhir
+
 struktur VarStatement
     token Token
     name Identifier
