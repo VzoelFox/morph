@@ -54,6 +54,19 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.54.0 - 2025-12-25
+**Checksum**: SHA256:CAPTURE_ANALYSIS_CACHE
+**Perubahan**:
+- **Compiler**: Menambahkan cache hasil `getFreeVars` untuk menghindari re-traversal AST pada fungsi bersarang.
+- **Compiler/Tests**: Menambahkan regresi test untuk memastikan cache free vars terpakai.
+
+**Konteks Sesi**:
+- **Latency**: Mengurangi potensi O(n²) pada analisis capture dengan memoisasi.
+
+**File Terkait**:
+- `pkg/compiler/compiler.go` (SHA256:dd9e0372eb2f2033f4afe6997864ac8ea9af5f0496aa45bc68a094416310fd80)
+- `pkg/compiler/capture_cache_test.go` (SHA256:cf27634ac65c29e50af4321b4c5bcefcd4550ac68b95cba73d773a6a07a480dd)
+
 ### Version 1.53.0 - 2025-12-25
 **Checksum**: SHA256:PARSER_ERROR_LINE_CACHE
 **Perubahan**:

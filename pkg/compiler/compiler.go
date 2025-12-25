@@ -24,6 +24,7 @@ type Compiler struct {
 	captures       map[*parser.FunctionLiteral][]string
 	globals        map[string]bool
 	tupleTypes     map[string]string
+	freeVarCache   map[*parser.FunctionLiteral][]string
 
 	moduleGlobals map[*parser.Program]map[string]bool
 	currentGlobals map[string]bool
@@ -36,6 +37,7 @@ func New(c *checker.Checker) *Compiler {
 		captures:       make(map[*parser.FunctionLiteral][]string),
 		globals:        make(map[string]bool),
 		tupleTypes:     make(map[string]string),
+		freeVarCache:   make(map[*parser.FunctionLiteral][]string),
 		moduleGlobals:  make(map[*parser.Program]map[string]bool),
 		currentGlobals: make(map[string]bool),
 	}
@@ -285,6 +287,10 @@ func (c *Compiler) analyzeCaptures(node parser.Node) error {
 }
 
 func (c *Compiler) getFreeVars(fn *parser.FunctionLiteral) []string {
+	if cached, ok := c.freeVarCache[fn]; ok {
+		return cached
+	}
+
 	used := make(map[string]bool)
 	defined := make(map[string]bool)
 
@@ -373,6 +379,7 @@ func (c *Compiler) getFreeVars(fn *parser.FunctionLiteral) []string {
 			free = append(free, v)
 		}
 	}
+	c.freeVarCache[fn] = free
 	return free
 }
 
