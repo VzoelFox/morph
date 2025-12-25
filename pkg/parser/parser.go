@@ -1113,42 +1113,33 @@ func (p *Parser) parseGroupedExpression() Expression {
 
 func (p *Parser) parseIfExpression() Expression {
 	expression := &IfExpression{Token: p.curToken}
-	// curToken is JIKA or ATAU_JIKA
-	p.nextToken() // eat jika/atau_jika
 
+	// curToken is JIKA
+	p.nextToken() // eat jika
 	expression.Condition = p.parseExpression(LOWEST)
 
 	// Advance to start of block
 	p.nextToken()
-
 	expression.Consequence = p.parseBlockStatement()
+
+	for p.curTokenIs(lexer.ATAU_JIKA) {
+		clause := ElseIfClause{Token: p.curToken}
+		p.nextToken() // eat atau_jika
+		clause.Condition = p.parseExpression(LOWEST)
+		p.nextToken()
+		clause.Consequence = p.parseBlockStatement()
+		expression.ElseIfs = append(expression.ElseIfs, clause)
+	}
 
 	if p.curTokenIs(lexer.LAINNYA) {
 		p.nextToken() // eat lainnya
 		expression.Alternative = p.parseBlockStatement()
+	}
 
-		// Expect AKHIR after lainnya block
-		if p.curTokenIs(lexer.AKHIR) {
-			// Do not consume
-		} else {
-			p.curError(lexer.AKHIR)
-		}
-	} else if p.curTokenIs(lexer.ATAU_JIKA) {
-		// chain
-		child := p.parseIfExpression()
-		expression.Alternative = &BlockStatement{
-			Statements: []Statement{
-				&ExpressionStatement{Expression: child},
-			},
-		}
-		// child parseIfExpression finishes at AKHIR.
+	if p.curTokenIs(lexer.AKHIR) {
+		// Do not consume
 	} else {
-		// Expect AKHIR
-		if p.curTokenIs(lexer.AKHIR) {
-			// Do not consume
-		} else {
-			p.curError(lexer.AKHIR)
-		}
+		p.curError(lexer.AKHIR)
 	}
 
 	return expression

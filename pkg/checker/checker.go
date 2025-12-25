@@ -67,40 +67,40 @@ func New() *Checker {
 	}
 	c.scope.DefineVariable("native_print_int", nativePrintIntType, true, 0, 0)
 
-    // native_print_error(error) -> void
-    nativePrintErrorType := &FunctionType{
-        Parameters: []Type{UserErrorType},
-        ReturnTypes: []Type{VoidType},
-    }
-    c.scope.DefineVariable("native_print_error", nativePrintErrorType, true, 0, 0)
+	// native_print_error(error) -> void
+	nativePrintErrorType := &FunctionType{
+		Parameters:  []Type{UserErrorType},
+		ReturnTypes: []Type{VoidType},
+	}
+	c.scope.DefineVariable("native_print_error", nativePrintErrorType, true, 0, 0)
 
-    // index(string, string) -> int
-    indexType := &FunctionType{
-        Parameters: []Type{StringType, StringType},
-        ReturnTypes: []Type{IntType},
-    }
-    c.scope.DefineVariable("index", indexType, true, 0, 0)
+	// index(string, string) -> int
+	indexType := &FunctionType{
+		Parameters:  []Type{StringType, StringType},
+		ReturnTypes: []Type{IntType},
+	}
+	c.scope.DefineVariable("index", indexType, true, 0, 0)
 
-    // trim(string, string) -> string
-    trimType := &FunctionType{
-        Parameters: []Type{StringType, StringType},
-        ReturnTypes: []Type{StringType},
-    }
-    c.scope.DefineVariable("trim", trimType, true, 0, 0)
+	// trim(string, string) -> string
+	trimType := &FunctionType{
+		Parameters:  []Type{StringType, StringType},
+		ReturnTypes: []Type{StringType},
+	}
+	c.scope.DefineVariable("trim", trimType, true, 0, 0)
 
-    // split(string, string) -> []string
-    splitType := &FunctionType{
-        Parameters: []Type{StringType, StringType},
-        ReturnTypes: []Type{&ArrayType{Element: StringType}},
-    }
-    c.scope.DefineVariable("split", splitType, true, 0, 0)
+	// split(string, string) -> []string
+	splitType := &FunctionType{
+		Parameters:  []Type{StringType, StringType},
+		ReturnTypes: []Type{&ArrayType{Element: StringType}},
+	}
+	c.scope.DefineVariable("split", splitType, true, 0, 0)
 
-    // substring(string, int, int) -> string
-    substringType := &FunctionType{
-        Parameters: []Type{StringType, IntType, IntType},
-        ReturnTypes: []Type{StringType},
-    }
-    c.scope.DefineVariable("substring", substringType, true, 0, 0)
+	// substring(string, int, int) -> string
+	substringType := &FunctionType{
+		Parameters:  []Type{StringType, IntType, IntType},
+		ReturnTypes: []Type{StringType},
+	}
+	c.scope.DefineVariable("substring", substringType, true, 0, 0)
 
 	// Concurrency Primitives (int only for MVP)
 	// saluran_baru() -> channel
@@ -249,8 +249,8 @@ func (c *Checker) checkImport(imp *parser.ImportStatement) {
 
 	// Check imported module (recursively)
 	subChecker := New()
-	subChecker.importer = c.importer // Share importer
-	subChecker.ModuleCache = c.ModuleCache // Share cache
+	subChecker.importer = c.importer             // Share importer
+	subChecker.ModuleCache = c.ModuleCache       // Share cache
 	subChecker.loadingModules = c.loadingModules // Share loading state (for cycle detection)
 
 	subChecker.CurrentModule = path
@@ -322,7 +322,9 @@ func (c *Checker) registerModule(imp *parser.ImportStatement, mod *ModuleType) {
 }
 
 func isExported(name string) bool {
-	if len(name) == 0 { return false }
+	if len(name) == 0 {
+		return false
+	}
 	return name[0] >= 'A' && name[0] <= 'Z'
 }
 
@@ -540,8 +542,15 @@ func (c *Checker) allPathsReturn(node interface{}) bool {
 		if n.Alternative == nil {
 			return false
 		}
-		return c.allPathsReturn(n.Consequence) &&
-			c.allPathsReturn(n.Alternative)
+		if !c.allPathsReturn(n.Consequence) {
+			return false
+		}
+		for _, clause := range n.ElseIfs {
+			if !c.allPathsReturn(clause.Consequence) {
+				return false
+			}
+		}
+		return c.allPathsReturn(n.Alternative)
 
 	case *parser.WhileExpression:
 		return false
@@ -725,12 +734,12 @@ func (c *Checker) checkVarStatement(s *parser.VarStatement) {
 				if !actual.AssignableTo(finalType) {
 					c.addError(s.Token.Line, s.Token.Column, "Type mismatch for '%s': expected %s, got %s", name.Value, finalType.String(), actual.String())
 				}
-                // Refine Array Literal type if needed (e.g. var x []Piece = [])
-                if at, ok := actual.(*ArrayType); ok && at.Element.Kind() == KindUnknown {
-                    if et, ok := expected.(*ArrayType); ok {
-                        c.Types[s.Values[i]] = et // Update literal type to expected type
-                    }
-                }
+				// Refine Array Literal type if needed (e.g. var x []Piece = [])
+				if at, ok := actual.(*ArrayType); ok && at.Element.Kind() == KindUnknown {
+					if et, ok := expected.(*ArrayType); ok {
+						c.Types[s.Values[i]] = et // Update literal type to expected type
+					}
+				}
 			}
 		} else {
 			// Inference
@@ -760,8 +769,8 @@ func (c *Checker) checkVarStatement(s *parser.VarStatement) {
 			warning.Column = name.Token.Column
 			c.Warnings = append(c.Warnings, *warning)
 		}
-        // Register type for Compiler
-        c.Types[name] = finalType
+		// Register type for Compiler
+		c.Types[name] = finalType
 	}
 }
 
@@ -1030,6 +1039,13 @@ func (c *Checker) checkExpressionInternal(e parser.Expression) Type {
 			c.addError(exp.Token.Line, exp.Token.Column, "If condition must be Bool, got %s", condType.String())
 		}
 		c.checkStatement(exp.Consequence)
+		for _, clause := range exp.ElseIfs {
+			clauseType := c.checkExpression(clause.Condition)
+			if clauseType.Kind() != KindBool && clauseType.Kind() != KindUnknown {
+				c.addError(clause.Token.Line, clause.Token.Column, "If condition must be Bool, got %s", clauseType.String())
+			}
+			c.checkStatement(clause.Consequence)
+		}
 		if exp.Alternative != nil {
 			c.checkStatement(exp.Alternative)
 		}
@@ -1150,7 +1166,7 @@ func (c *Checker) checkLen(call *parser.CallExpression) Type {
 	argType := c.checkExpression(call.Arguments[0])
 	if argType.Kind() != KindArray && argType.Kind() != KindMap && argType.Kind() != KindString {
 		// Allow checking length of unknown type (runtime check?)
-        // No, strict type checking.
+		// No, strict type checking.
 		c.addError(call.Token.Line, call.Token.Column, "Argument must be Array, Map, or String, got %s", argType.String())
 	}
 
