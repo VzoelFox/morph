@@ -1,4 +1,4 @@
-package checker
+package types
 
 import (
 	"fmt"
@@ -23,7 +23,7 @@ const (
 	KindPointer
 	KindMulti // For multiple return values
 	KindUnknown
-	KindError     // Internal Compiler Error
+	KindError // Internal Compiler Error
 	KindNull
 	KindUserError // User-facing 'Error' type
 	KindModule    // Module namespace
