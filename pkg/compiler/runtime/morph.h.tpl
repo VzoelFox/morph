@@ -7,6 +7,7 @@
 
 // --- Constants ---
 #define GC_THRESHOLD (64 * 1024 * 1024) // 64MB
+#define GC_MIN_THRESHOLD (8 * 1024 * 1024) // 8MB
 #define DAEMON_SLEEP_MS 100
 #define SWAP_AGE_THRESHOLD_SEC 10
 

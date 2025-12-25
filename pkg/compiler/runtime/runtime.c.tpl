@@ -79,7 +79,7 @@ void mph_page_free(MphPage* page) {
 void mph_init_memory(MorphContext* ctx) {
     ctx->heap_head = NULL;
     ctx->allocated_bytes = 0;
-    ctx->next_gc_threshold = GC_THRESHOLD;
+    ctx->next_gc_threshold = GC_MIN_THRESHOLD;
     ctx->stack_top = NULL;
     ctx->daemon_running = 0;
     ctx->page_head = NULL;
@@ -445,7 +445,11 @@ void mph_stop_daemon(MorphContext* ctx) {
 void* mph_alloc(MorphContext* ctx, size_t size, MorphTypeInfo* type_info) {
     if (ctx->allocated_bytes > ctx->next_gc_threshold) {
         mph_gc_collect(ctx);
-        ctx->next_gc_threshold = ctx->allocated_bytes + GC_THRESHOLD;
+        size_t base_threshold = GC_THRESHOLD;
+        if (ctx->allocated_bytes < GC_THRESHOLD) {
+            base_threshold = GC_MIN_THRESHOLD;
+        }
+        ctx->next_gc_threshold = ctx->allocated_bytes + base_threshold;
     }
 
     // Update last alloc time for Idle detection

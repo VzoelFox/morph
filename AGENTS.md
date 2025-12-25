@@ -54,6 +54,19 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.44.0 - 2025-12-25
+**Checksum**: SHA256:GC_THRESHOLD_ADAPTIVE
+**Perubahan**:
+- **Runtime**: Menambahkan `GC_MIN_THRESHOLD` untuk memicu GC lebih cepat pada heap kecil.
+- **Runtime**: Menyesuaikan `next_gc_threshold` agar adaptif berdasarkan ukuran heap saat ini.
+
+**Konteks Sesi**:
+- **Stabilization**: Mengurangi risiko GC terlambat saat alokasi masih kecil namun churn tinggi.
+
+**File Terkait**:
+- `pkg/compiler/runtime/morph.h.tpl` (SHA256:20fadecd3d19f7d084d365f40f6e9780c963bd09f88d6cc4904d305f62d54b9c)
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:25b00e56472606c00fb25fd5172a4e277c4d1bc47a7542eba373d0c0b535db06)
+
 ### Version 1.43.0 - 2025-12-25
 **Checksum**: SHA256:GC_CONTEXT_PAGE_ISOLATION
 **Perubahan**:
