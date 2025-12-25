@@ -22,6 +22,7 @@ typedef void    mph_void;
 // Forward declarations
 struct MorphTypeInfo;
 struct ObjectHeader;
+struct MphPage;
 typedef struct MorphContext MorphContext; // Pre-declare context
 
 typedef struct MorphTypeInfo {
@@ -39,6 +40,7 @@ typedef struct ObjectHeader {
     uint64_t last_access;       // Timestamp (ms) for LRU Eviction
     uint64_t swap_id;           // ID for swap file
     size_t size;                // Payload size
+    struct MphPage* page;       // Owning page (fast lookup)
 } ObjectHeader;
 
 typedef struct MphPage {

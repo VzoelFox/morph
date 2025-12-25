@@ -1,7 +1,7 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.42.0
+- **Versi**: 1.47.0
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
 - **Terakhir Diupdate**: 2025-12-25
 - **Status**: Active
@@ -54,6 +54,19 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.47.0 - 2025-12-25
+**Checksum**: SHA256:GC_PAGE_POINTER_AND_MAP_RESIZE
+**Perubahan**:
+- **Runtime/GC**: Menambahkan pointer page pada `ObjectHeader` untuk mempercepat lookup page saat GC mark dan swap-in.
+- **Runtime/Map**: Menambahkan `mph_map_resize` dan auto-resize saat load factor >= 0.75 untuk mengurangi latency operasi map.
+
+**Konteks Sesi**:
+- **Latency**: Mengurangi overhead GC (page lookup) dan menghindari probing berlebih saat map penuh.
+
+**File Terkait**:
+- `pkg/compiler/runtime/morph.h.tpl` (SHA256:44f2215cb0967590132756b8ab8b10a6a93fce36d4e9836897b7fac2c59294a2)
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:031dd553c1598d6c85aadefc18655c0dd2fc8b42210157cb37d325bea14e9567)
+
 ### Version 1.46.0 - 2025-12-25
 **Checksum**: SHA256:GC_SIZE_ACCOUNTING_FIX
 **Perubahan**:
