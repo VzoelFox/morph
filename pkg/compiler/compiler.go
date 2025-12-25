@@ -1273,6 +1273,42 @@ func (c *Compiler) compileCall(call *parser.CallExpression, prefix string, fn *p
 			isDirect = true
 		} else if objType != nil && objType.Kind() == checker.KindInterface {
 			return c.compileInterfaceCall(call, mem, objType.(*checker.InterfaceType), prefix, fn)
+		} else if objType != nil && (objType.Kind() == checker.KindStruct || (objType.Kind() == checker.KindPointer && objType.(*checker.PointerType).Element.Kind() == checker.KindStruct)) {
+			var st *checker.StructType
+			isPtr := false
+			if objType.Kind() == checker.KindPointer {
+				st = objType.(*checker.PointerType).Element.(*checker.StructType)
+				isPtr = true
+			} else {
+				st = objType.(*checker.StructType)
+			}
+
+			funcCode := ""
+			if st.Module != "" {
+				funcCode = mangle(st.Module) + st.Name + "_" + mem.Member.Value
+			} else {
+				funcCode = "mph_" + st.Name + "_" + mem.Member.Value
+			}
+			isDirect = true
+
+			objCode, err := c.compileExpression(mem.Object, prefix, fn)
+			if err != nil { return "", err }
+
+			if isPtr {
+				objCode = fmt.Sprintf("(*%s)", objCode)
+			}
+
+			var args []string
+			args = append(args, "ctx")
+			args = append(args, "NULL")
+			args = append(args, objCode)
+
+			for _, arg := range call.Arguments {
+				ac, err := c.compileExpression(arg, prefix, fn)
+				if err != nil { return "", err }
+				args = append(args, ac)
+			}
+			return fmt.Sprintf("%s(%s)", funcCode, strings.Join(args, ", ")), nil
 		} else {
 			return "", fmt.Errorf("method calls not supported yet")
 		}
