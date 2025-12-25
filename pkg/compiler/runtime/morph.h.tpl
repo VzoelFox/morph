@@ -7,6 +7,7 @@
 
 // --- Constants ---
 #define GC_THRESHOLD (64 * 1024 * 1024) // 64MB
+#define GC_MIN_THRESHOLD (8 * 1024 * 1024) // 8MB
 #define DAEMON_SLEEP_MS 100
 #define SWAP_AGE_THRESHOLD_SEC 10
 
@@ -39,6 +40,17 @@ typedef struct ObjectHeader {
     uint64_t swap_id;           // ID for swap file
 } ObjectHeader;
 
+typedef struct MphPage {
+    void* start_addr;
+    size_t used_offset;
+    int flags; // 0=RAM, 1=DISK
+    uint64_t last_access;
+    struct MphPage* next;
+    uint64_t swap_id;
+    size_t live_bytes;
+    size_t size;
+} MphPage;
+
 // Shadow Stack for Roots
 typedef struct StackRoot {
     void** ptr; // Pointer to the local variable (which is a pointer to object)
@@ -59,6 +71,10 @@ struct MorphContext {
 
     StackRoot* stack_top;       // Top of Shadow Stack
     MarkStack mark_stack;       // Stack for iterative GC marking
+
+    MphPage* page_head;         // Head of page list (per-context)
+    MphPage* current_alloc_page; // Current page used for allocations
+    pthread_mutex_t page_lock;  // Lock for page list/swap operations
 
     pthread_t daemon_thread;    // GC/Swap Daemon
     int daemon_running;

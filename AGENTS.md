@@ -54,6 +54,34 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.44.0 - 2025-12-25
+**Checksum**: SHA256:GC_THRESHOLD_ADAPTIVE
+**Perubahan**:
+- **Runtime**: Menambahkan `GC_MIN_THRESHOLD` untuk memicu GC lebih cepat pada heap kecil.
+- **Runtime**: Menyesuaikan `next_gc_threshold` agar adaptif berdasarkan ukuran heap saat ini.
+
+**Konteks Sesi**:
+- **Stabilization**: Mengurangi risiko GC terlambat saat alokasi masih kecil namun churn tinggi.
+
+**File Terkait**:
+- `pkg/compiler/runtime/morph.h.tpl` (SHA256:20fadecd3d19f7d084d365f40f6e9780c963bd09f88d6cc4904d305f62d54b9c)
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:25b00e56472606c00fb25fd5172a4e277c4d1bc47a7542eba373d0c0b535db06)
+
+### Version 1.43.0 - 2025-12-25
+**Checksum**: SHA256:GC_CONTEXT_PAGE_ISOLATION
+**Perubahan**:
+- **Runtime**: Memindahkan daftar page dan lock swap dari global menjadi per-`MorphContext` untuk isolasi multi-context.
+- **Runtime**: Menyimpan `current_alloc_page` di context agar alokasi per-context tidak saling bertabrakan.
+- **Runtime**: Menambahkan cleanup page dan swap file saat `mph_destroy_memory` untuk mengurangi risiko leak.
+- **Runtime**: Mendefinisikan `MphPage` di `morph.h.tpl` agar layout konsisten di seluruh runtime template.
+
+**Konteks Sesi**:
+- **Stabilization**: Mengurangi risiko kebocoran memori dan race antar context dengan page list per-context dan cleanup eksplisit.
+
+**File Terkait**:
+- `pkg/compiler/runtime/morph.h.tpl` (SHA256:bac17fa06f31d1af0154eed99017943b1297c2c9d3c93bb88b73fe0cc3ae7a32)
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:ed4650114d48eab0ca04747bb8e9410c2a07b70dc1c964786cbcc1c498ef566b)
+
 ### Version 1.42.0 - 2025-12-25
 **Checksum**: SHA256:METHOD_CALLS_AND_SELF_HOST_COMPLETE_CODE
 **Perubahan**:
