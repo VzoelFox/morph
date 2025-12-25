@@ -1,0 +1,112 @@
+ambil "morphsh/ast"
+ambil "morphsh/lexer"
+ambil "morphsh/token"
+
+struktur Parser
+    lexer Lexer
+    current Token
+    peek Token
+    errors []string
+akhir
+
+fungsi NewParser(l Lexer) Parser
+    var p = Parser{lexer: l, current: Token{Type: ILLEGAL}, peek: Token{Type: ILLEGAL}, errors: []}
+    p.nextToken()
+    p.nextToken()
+    kembali p
+akhir
+
+fungsi (p *Parser) Errors() []string
+    kembali p.errors
+akhir
+
+fungsi (p *Parser) addError(msg string) void
+    p.errors = p.errors + [msg]
+akhir
+
+fungsi (p *Parser) nextToken() void
+    p.current = p.peek
+    p.peek = p.lexer.NextToken()
+akhir
+
+fungsi (p *Parser) ParseProgram() Program
+    var program = Program{token: p.current, statements: NewNodeList()}
+
+    selama p.current.Type != EOF
+        var stmt = p.parseStatement()
+        jika stmt != kosong
+            program.statements = AddNode(program.statements, stmt)
+        akhir
+        p.nextToken()
+    akhir
+
+    kembali program
+akhir
+
+fungsi (p *Parser) parseStatement() Node
+    jika p.current.Type == VAR atau p.current.Type == TETAPAN
+        kembali p.parseVarStatement()
+    akhir
+
+    kembali p.parseExpressionStatement()
+akhir
+
+fungsi (p *Parser) parseVarStatement() Node
+    var stmt = VarStatement{token: p.current, name: Identifier{token: Token{}, value: ""}, value: kosong, isConst: p.current.Type == TETAPAN}
+
+    jika !p.expectPeek(IDENT)
+        kembali stmt
+    akhir
+
+    stmt.name = Identifier{token: p.current, value: p.current.Literal}
+
+    jika p.peek.Type == ASSIGN
+        p.nextToken()
+        p.nextToken()
+        stmt.value = p.parseExpression()
+    akhir
+
+    jika p.peek.Type == SEMICOLON
+        p.nextToken()
+    akhir
+
+    kembali stmt
+akhir
+
+fungsi (p *Parser) parseExpressionStatement() Node
+    var stmt = ExpressionStatement{token: p.current, expression: p.parseExpression()}
+
+    jika p.peek.Type == SEMICOLON
+        p.nextToken()
+    akhir
+
+    kembali stmt
+akhir
+
+fungsi (p *Parser) parseExpression() Node
+    jika p.current.Type == IDENT
+        kembali Identifier{token: p.current, value: p.current.Literal}
+    akhir
+    jika p.current.Type == INT
+        kembali IntegerLiteral{token: p.current, value: p.current.Literal}
+    akhir
+    jika p.current.Type == FLOAT
+        kembali FloatLiteral{token: p.current, value: p.current.Literal}
+    akhir
+    jika p.current.Type == STRING
+        kembali StringLiteral{token: p.current, value: p.current.Literal}
+    akhir
+
+    p.addError("parser: expression belum diimplementasi untuk token " + p.current.Type)
+    kembali kosong
+akhir
+
+fungsi (p *Parser) expectPeek(t string) bool
+    jika p.peek.Type == t
+        p.nextToken()
+        kembali benar
+    akhir
+
+    p.addError("parser: expected next token " + t + ", got " + p.peek.Type)
+    kembali salah
+akhir

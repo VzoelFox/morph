@@ -64,3 +64,53 @@ func TestUsedInExpression(t *testing.T) {
 		t.Error("Variable 'x' should be used")
 	}
 }
+
+func TestUnusedInLoop(t *testing.T) {
+	input := `
+	fungsi test()
+		var i = 0;
+		selama i < 2
+			var s = "loop";
+			i = i + 1;
+		akhir
+	akhir
+	`
+	_, warnings := checkWarn(input)
+	foundS := false
+	for _, w := range warnings {
+		if strings.Contains(w.Message, "Unused variable 's'") {
+			foundS = true
+		}
+	}
+	if !foundS {
+		t.Error("Expected unused variable warning for 's'")
+	}
+}
+
+func TestUnusedTupleValue(t *testing.T) {
+	input := `
+	fungsi may_fail(fail bool) (int, error)
+		jika fail
+			kembali 0, error("gagal");
+		akhir
+		kembali 1, kosong;
+	akhir
+
+	fungsi test()
+		var val, err = may_fail(benar);
+		jika err != kosong
+			native_print_error(err);
+		akhir
+	akhir
+	`
+	_, warnings := checkWarn(input)
+	foundVal := false
+	for _, w := range warnings {
+		if strings.Contains(w.Message, "Unused variable 'val'") {
+			foundVal = true
+		}
+	}
+	if !foundVal {
+		t.Error("Expected unused variable warning for 'val'")
+	}
+}

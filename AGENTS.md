@@ -1,7 +1,7 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.57.1
+- **Versi**: 1.57.3
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
 - **Terakhir Diupdate**: 2025-12-25
 - **Status**: Active
@@ -54,6 +54,36 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.57.3 - 2025-12-25
+**Checksum**: SHA256:MORPHSH_AST_LEXER_PARSER_BOOTSTRAP
+**Perubahan**:
+- **MorphSH**: Menambahkan struktur AST dasar dan tree-walk visitor untuk fondasi traversal.
+- **MorphSH**: Memulai lexer berbasis Morph (tokenisasi dasar, posisi baris/kolom).
+- **MorphSH**: Memulai parser berbasis Morph (scaffold parse var/ekspresi sederhana).
+
+**Konteks Sesi**:
+- **Self-hosting**: Menyediakan kerangka awal AST, lexer, parser agar bootstrap self-host dapat dilanjutkan.
+
+**File Terkait**:
+- `morphsh/ast.fox` (SHA256:07473952a5135be47d19427284f8ea65605389111cd176dae7dc0c2236dc511a)
+- `morphsh/token.fox` (SHA256:8f5cffb1a596629782f3c7c90a5175a9869daa4f38125a19ab7c9aa8094bde03)
+- `morphsh/lexer.fox` (SHA256:79c9f087c8b2e916ed491caed902c858fac5014e41e74bbcfabf5b025a8a1f1d)
+- `morphsh/parser.fox` (SHA256:58d6bc0c9028a253865873bca314794fdf736065af1275c4dfc6fade66df9e8c)
+- `.gitignore` (SHA256:3ba297a09deac4d6d0b0848b90e79e9064a15105a694b60c99eea56a5680cfa2)
+- `AGENTS.md` (SHA256:202e73d71622c332c7ee341997753bc17e4b512b06e262030342e65358e5ed3b)
+
+### Version 1.57.2 - 2025-12-25
+**Checksum**: SHA256:UNUSED_WARNING_TESTS
+**Perubahan**:
+- **Checker/Tests**: Menambahkan coverage warning unused variable untuk kasus loop dan tuple return agar selaras dengan perilaku checker.
+
+**Konteks Sesi**:
+- **Testing**: Memvalidasi warning unused variable pada variable loop dan tuple (mirip kasus di stress tests).
+
+**File Terkait**:
+- `pkg/checker/unused_test.go` (SHA256:79e95f91a7372b1977e6b5d455a813d062428d4b43804adfe243bd2f553c79fd)
+- `AGENTS.md` (SHA256:79cd48fa90d26815f91103e0454c81b3d93e8d47139a48fec791ae9ad651d670)
+
 ### Version 1.57.1 - 2025-12-25
 **Checksum**: SHA256:NUMBER_CHESS_STRESS_FIX
 **Perubahan**:
