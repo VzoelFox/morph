@@ -1,7 +1,7 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.42.0
+- **Versi**: 1.48.0
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
 - **Terakhir Diupdate**: 2025-12-25
 - **Status**: Active
@@ -54,6 +54,99 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.53.0 - 2025-12-25
+**Checksum**: SHA256:PARSER_ERROR_LINE_CACHE
+**Perubahan**:
+- **Parser**: Cache hasil split baris input untuk error context agar tidak split ulang di setiap error.
+- **Parser/Tests**: Menambahkan regresi test untuk memastikan cache line digunakan.
+
+**Konteks Sesi**:
+- **Latency**: Mengurangi overhead O(n × errors) saat parsing file besar dengan banyak error.
+
+**File Terkait**:
+- `pkg/parser/parser.go` (SHA256:14229dc85c93f23a2024fba736b17690eb0937d74fa4474082b9c625252ac119)
+- `pkg/parser/parser_linecache_test.go` (SHA256:045d23148a42f3e9ec792510111179d2c666ed4a40c6f3ed46ed7d57b4c40014)
+
+### Version 1.52.0 - 2025-12-25
+**Checksum**: SHA256:GC_MARK_STACK_BLOCKS
+**Perubahan**:
+- **Runtime/GC**: Mengganti mark stack jadi block-based untuk menghindari realloc besar dan menurunkan spike latency saat GC.
+- **Runtime/GC**: Menambahkan helper push/pop mark stack berbasis block agar pertumbuhan stack hanya alokasi block baru.
+- **Runtime/Tests**: Menambahkan regresi test untuk struktur mark stack block.
+
+**Konteks Sesi**:
+- **Latency**: Mengurangi spike saat mark stack membesar karena tidak lagi realloc seluruh buffer.
+
+**File Terkait**:
+- `pkg/compiler/runtime/morph.h.tpl` (SHA256:ba44b8fdd73fb5cee9aa3b0bc2105f15769ef72efd8f89f1655d3985d513ce0e)
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:535e0ca5f7738edc5cb1758148eb751c83164a0eaf8a850704503493ecacd445)
+- `pkg/compiler/runtime/runtime_test.go` (SHA256:08623f14dcfbff3b3fcb8be7aba9ad157a53ec11985f7c7aff881e4638df9b32)
+
+### Version 1.51.0 - 2025-12-25
+**Checksum**: SHA256:GC_FREE_LIST_PAGE_INDEX
+**Perubahan**:
+- **Runtime/GC**: Menambahkan free list per page dan pointer bebas ganda agar pembersihan free list saat recycle page tidak lagi scan global.
+- **Runtime/GC**: Update allocator untuk melepas free entry dari daftar global dan per-page secara O(1).
+- **Runtime/Tests**: Menambahkan regresi test untuk field free list per page di header runtime.
+
+**Konteks Sesi**:
+- **Latency**: Menghilangkan O(pages × free_list) scan pada GC sweep saat recycle page.
+
+**File Terkait**:
+- `pkg/compiler/runtime/morph.h.tpl` (SHA256:b3590d3460cde7cfbbfb1939ecc37d69b6bf229e25f16c2527059022a5dd6220)
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:5da99f8c1c3b4c7a497227e621b3de2baf7df80dcf4495304156095b493bc605)
+- `pkg/compiler/runtime/runtime_test.go` (SHA256:358b22efdc1342badc3444ee777dd2a881cc264b4cd3ded868c421c7483835c4)
+
+### Version 1.50.0 - 2025-12-25
+**Checksum**: SHA256:MAP_TOMBSTONE_REHASH
+**Perubahan**:
+- **Runtime/Map**: Menambahkan `deleted_count` dan rehash saat tombstone tinggi untuk menekan latensi probing.
+- **Runtime/Map**: Reuse slot deleted saat insert dan reset `deleted_count` saat resize.
+- **Runtime/Tests**: Menambahkan regresi test untuk tombstone cleanup dan field header map.
+
+**Konteks Sesi**:
+- **Latency**: Mengurangi latency map akibat akumulasi tombstone pada operasi delete.
+
+**File Terkait**:
+- `pkg/compiler/runtime/morph.h.tpl` (SHA256:464b52d020fc4cd8ca29f152af7f6c8a6925ea412e3b2239d942f8667be2b310)
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:ee936f271b5a3fcdad9470496a753efdf9be94d6c165900eb182f6d824a400e5)
+- `pkg/compiler/runtime/runtime_test.go` (SHA256:4e7270543e5e653e9ca5267508523884d784e144db0ed6d3f2ab4f9c5c8b9f9b)
+
+### Version 1.49.0 - 2025-12-25
+**Checksum**: SHA256:MAP_RUNTIME_TESTS
+**Perubahan**:
+- **Runtime/Tests**: Menambahkan regression test untuk memastikan `map->entries` selalu di-swap-in saat operasi set/get/delete dan `mph_map_resize` tetap tersedia serta dipanggil.
+
+**Konteks Sesi**:
+- **Testing**: Mengunci perilaku map swap-in/resize agar perubahan runtime berikutnya tidak menyebabkan regresi.
+
+**File Terkait**:
+- `pkg/compiler/runtime/runtime_test.go` (SHA256:6456f94906c5a97a422ede27efb2f6d4455479bcc2e8bf537c07a4e3228e93c8)
+
+### Version 1.48.0 - 2025-12-25
+**Checksum**: SHA256:MAP_ENTRIES_SWAPIN
+**Perubahan**:
+- **Runtime/Map**: Menambahkan swap-in pada `map->entries` untuk operasi set/get/delete agar akses aman saat page terswap.
+
+**Konteks Sesi**:
+- **Latency & Correctness**: Menghindari access ke entries yang masih terswap dan mengurangi risiko crash pada operasi map.
+
+**File Terkait**:
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:3c1c4fe283b233218a3f74b29a0d0a02ad9fbe7259dbf964d46f167f7bd2d1fe)
+
+### Version 1.47.0 - 2025-12-25
+**Checksum**: SHA256:GC_PAGE_POINTER_AND_MAP_RESIZE
+**Perubahan**:
+- **Runtime/GC**: Menambahkan pointer page pada `ObjectHeader` untuk mempercepat lookup page saat GC mark dan swap-in.
+- **Runtime/Map**: Menambahkan `mph_map_resize` dan auto-resize saat load factor >= 0.75 untuk mengurangi latency operasi map.
+
+**Konteks Sesi**:
+- **Latency**: Mengurangi overhead GC (page lookup) dan menghindari probing berlebih saat map penuh.
+
+**File Terkait**:
+- `pkg/compiler/runtime/morph.h.tpl` (SHA256:44f2215cb0967590132756b8ab8b10a6a93fce36d4e9836897b7fac2c59294a2)
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:031dd553c1598d6c85aadefc18655c0dd2fc8b42210157cb37d325bea14e9567)
+
 ### Version 1.46.0 - 2025-12-25
 **Checksum**: SHA256:GC_SIZE_ACCOUNTING_FIX
 **Perubahan**:
