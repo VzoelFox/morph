@@ -22,6 +22,7 @@ typedef void    mph_void;
 // Forward declarations
 struct MorphTypeInfo;
 struct ObjectHeader;
+struct MphPage;
 typedef struct MorphContext MorphContext; // Pre-declare context
 
 typedef struct MorphTypeInfo {
@@ -39,6 +40,11 @@ typedef struct ObjectHeader {
     uint64_t last_access;       // Timestamp (ms) for LRU Eviction
     uint64_t swap_id;           // ID for swap file
     size_t size;                // Payload size
+    struct MphPage* page;       // Owning page (fast lookup)
+    struct ObjectHeader* free_next;
+    struct ObjectHeader* free_prev;
+    struct ObjectHeader* page_free_next;
+    struct ObjectHeader* page_free_prev;
 } ObjectHeader;
 
 typedef struct MphPage {
@@ -50,6 +56,7 @@ typedef struct MphPage {
     uint64_t swap_id;
     size_t live_bytes;
     size_t size;
+    ObjectHeader* free_list;
 } MphPage;
 
 // Shadow Stack for Roots
@@ -132,6 +139,7 @@ typedef struct MorphMap {
     MorphMapEntry* entries;
     size_t capacity;
     size_t count;
+    size_t deleted_count;
     MorphKeyKind key_kind;
     mph_bool values_are_pointers; // Flag for GC
 } MorphMap;

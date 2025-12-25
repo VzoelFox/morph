@@ -57,6 +57,7 @@ MphPage* mph_page_new(MorphContext* ctx) {
     page->swap_id = 0;
     page->live_bytes = 0;
     page->size = PAGE_SIZE;
+    page->free_list = NULL;
 
     pthread_mutex_lock(&ctx->page_lock);
     page->next = ctx->page_head;
@@ -216,8 +217,11 @@ MphPage* mph_find_page(MorphContext* ctx, void* addr) {
 
 void mph_swap_in(MorphContext* ctx, void* obj) {
     if (!obj) return;
-    // Find page
-    MphPage* page = mph_find_page(ctx, obj);
+    ObjectHeader* header = mph_get_header(obj);
+    MphPage* page = header ? header->page : NULL;
+    if (!page) {
+        page = mph_find_page(ctx, obj);
+    }
     if (page) {
         if (page->flags & FLAG_SWAPPED) {
             mph_page_swap_in(page);
@@ -251,7 +255,7 @@ void mph_gc_mark(MorphContext* ctx, void* obj) {
     header->flags |= FLAG_MARKED;
 
     // Track live bytes for Page Recycling
-    MphPage* page = mph_find_page(ctx, obj);
+    MphPage* page = header->page ? header->page : mph_find_page(ctx, obj);
     if (page) {
         page->live_bytes += (header->size + sizeof(ObjectHeader));
     }
@@ -343,8 +347,18 @@ void mph_gc_sweep(MorphContext* ctx) {
 
             ctx->allocated_bytes -= curr->size;
             curr->flags = 0;
-            curr->next = ctx->free_list;
+            curr->free_prev = NULL;
+            curr->free_next = ctx->free_list;
+            if (ctx->free_list) {
+                ctx->free_list->free_prev = curr;
+            }
             ctx->free_list = curr;
+            curr->page_free_prev = NULL;
+            curr->page_free_next = curr->page->free_list;
+            if (curr->page->free_list) {
+                curr->page->free_list->page_free_prev = curr;
+            }
+            curr->page->free_list = curr;
         }
     }
 
@@ -364,18 +378,20 @@ void mph_gc_sweep(MorphContext* ctx) {
         // So we can free swapped out pages too!
 
         if (p != ctx->current_alloc_page && p->live_bytes == 0) {
-            uint64_t start = (uint64_t)p->start_addr;
-            uint64_t end = start + p->size;
-            ObjectHeader** free_ptr = &ctx->free_list;
-            while (*free_ptr) {
-                ObjectHeader* free_hdr = *free_ptr;
-                uint64_t addr = (uint64_t)free_hdr;
-                if (addr >= start && addr < end) {
-                    *free_ptr = free_hdr->next;
-                    continue;
+            ObjectHeader* free_hdr = p->free_list;
+            while (free_hdr) {
+                ObjectHeader* next_free = free_hdr->page_free_next;
+                if (free_hdr->free_prev) {
+                    free_hdr->free_prev->free_next = free_hdr->free_next;
+                } else if (ctx->free_list == free_hdr) {
+                    ctx->free_list = free_hdr->free_next;
                 }
-                free_ptr = &free_hdr->next;
+                if (free_hdr->free_next) {
+                    free_hdr->free_next->free_prev = free_hdr->free_prev;
+                }
+                free_hdr = next_free;
             }
+            p->free_list = NULL;
             *p_ptr = p->next;
             if (p->flags & FLAG_SWAPPED) {
                  char path[256];
@@ -477,11 +493,25 @@ void* mph_alloc(MorphContext* ctx, size_t size, MorphTypeInfo* type_info) {
     pthread_mutex_lock(&ctx->memory_lock);
 
     // Reuse freed objects (exact size match)
-    ObjectHeader** free_ptr = &ctx->free_list;
-    while (*free_ptr) {
-        ObjectHeader* free_hdr = *free_ptr;
+    ObjectHeader* free_hdr = ctx->free_list;
+    while (free_hdr) {
         if (free_hdr->size == size) {
-            *free_ptr = free_hdr->next;
+            if (free_hdr->free_prev) {
+                free_hdr->free_prev->free_next = free_hdr->free_next;
+            } else {
+                ctx->free_list = free_hdr->free_next;
+            }
+            if (free_hdr->free_next) {
+                free_hdr->free_next->free_prev = free_hdr->free_prev;
+            }
+            if (free_hdr->page_free_prev) {
+                free_hdr->page_free_prev->page_free_next = free_hdr->page_free_next;
+            } else if (free_hdr->page && free_hdr->page->free_list == free_hdr) {
+                free_hdr->page->free_list = free_hdr->page_free_next;
+            }
+            if (free_hdr->page_free_next) {
+                free_hdr->page_free_next->page_free_prev = free_hdr->page_free_prev;
+            }
             free_hdr->type = type_info;
             free_hdr->flags = 0;
             free_hdr->size = size;
@@ -491,7 +521,7 @@ void* mph_alloc(MorphContext* ctx, size_t size, MorphTypeInfo* type_info) {
             pthread_mutex_unlock(&ctx->memory_lock);
             return (void*)(free_hdr + 1);
         }
-        free_ptr = &free_hdr->next;
+        free_hdr = free_hdr->free_next;
     }
 
     // Large Object Handling
@@ -509,6 +539,7 @@ void* mph_alloc(MorphContext* ctx, size_t size, MorphTypeInfo* type_info) {
         page->swap_id = 0;
         page->live_bytes = 0;
         page->size = alloc_size;
+        page->free_list = NULL;
 
         pthread_mutex_lock(&ctx->page_lock);
         page->next = ctx->page_head;
@@ -520,6 +551,7 @@ void* mph_alloc(MorphContext* ctx, size_t size, MorphTypeInfo* type_info) {
         header->type = type_info;
         header->flags = 0;
         header->size = size;
+        header->page = page;
 
         header->next = ctx->heap_head;
         ctx->heap_head = header;
@@ -542,6 +574,7 @@ void* mph_alloc(MorphContext* ctx, size_t size, MorphTypeInfo* type_info) {
     header->type = type_info;
     header->flags = 0;
     header->size = size;
+    header->page = ctx->current_alloc_page;
 
     // Link to heap list for GC sweeping
     header->next = ctx->heap_head;
@@ -741,6 +774,7 @@ MorphMap* mph_map_new(MorphContext* ctx, MorphKeyKind kind, mph_bool val_is_ptr)
     MorphMap* map = (MorphMap*)mph_alloc(ctx, sizeof(MorphMap), &mph_ti_map);
     map->capacity = 16;
     map->count = 0;
+    map->deleted_count = 0;
     map->key_kind = kind;
     map->values_are_pointers = val_is_ptr;
     map->entries = (MorphMapEntry*)mph_alloc(ctx, sizeof(MorphMapEntry) * map->capacity, &mph_ti_raw);
@@ -772,28 +806,87 @@ mph_bool mph_key_eq(MorphContext* ctx, void* k1, void* k2, MorphKeyKind kind) {
     return k1 == k2;
 }
 
+void mph_map_resize(MorphContext* ctx, MorphMap* map, size_t new_capacity) {
+    MorphMapEntry* old_entries = map->entries;
+    size_t old_capacity = map->capacity;
+
+    map->entries = (MorphMapEntry*)mph_alloc(ctx, sizeof(MorphMapEntry) * new_capacity, &mph_ti_raw);
+    memset(map->entries, 0, sizeof(MorphMapEntry) * new_capacity);
+    map->capacity = new_capacity;
+    map->count = 0;
+    map->deleted_count = 0;
+
+    mph_swap_in(ctx, old_entries);
+    for (size_t i = 0; i < old_capacity; i++) {
+        MorphMapEntry* e = &old_entries[i];
+        if (e->occupied && !e->deleted) {
+            uint64_t hash = mph_hash_key(ctx, e->key, map->key_kind);
+            size_t idx = hash % map->capacity;
+            while (1) {
+                MorphMapEntry* slot = &map->entries[idx];
+                if (!slot->occupied) {
+                    slot->key = e->key;
+                    slot->value = e->value;
+                    slot->occupied = 1;
+                    map->count++;
+                    break;
+                }
+                idx = (idx + 1) % map->capacity;
+            }
+        }
+    }
+}
+
 void mph_map_set(MorphContext* ctx, MorphMap* map, void* key, void* value) {
     mph_swap_in(ctx, map);
+    mph_swap_in(ctx, map->entries);
+    if (map->deleted_count >= map->capacity / 4) {
+        mph_map_resize(ctx, map, map->capacity);
+    }
     if (map->count >= map->capacity * 0.75) {
-        // Resize logic omitted
+        size_t new_capacity = map->capacity * 2;
+        if (new_capacity < 16) {
+            new_capacity = 16;
+        }
+        mph_map_resize(ctx, map, new_capacity);
     }
     uint64_t hash = mph_hash_key(ctx, key, map->key_kind);
     size_t idx = hash % map->capacity;
     size_t start = idx;
+    size_t first_deleted = map->capacity;
     while (1) {
         MorphMapEntry* e = &map->entries[idx];
         if (!e->occupied) {
-            e->key = key; e->value = value; e->occupied = 1; map->count++; return;
+            if (first_deleted < map->capacity) {
+                e = &map->entries[first_deleted];
+                map->deleted_count--;
+            }
+            e->key = key; e->value = value; e->occupied = 1; e->deleted = 0; map->count++; return;
         }
         if (!e->deleted && mph_key_eq(ctx, e->key, key, map->key_kind)) {
             e->value = value; return;
         }
+        if (e->deleted && first_deleted == map->capacity) {
+            first_deleted = idx;
+        }
         idx = (idx + 1) % map->capacity;
-        if (idx == start) return;
+        if (idx == start) {
+            if (first_deleted < map->capacity) {
+                MorphMapEntry* slot = &map->entries[first_deleted];
+                slot->key = key;
+                slot->value = value;
+                slot->occupied = 1;
+                slot->deleted = 0;
+                map->count++;
+                map->deleted_count--;
+            }
+            return;
+        }
     }
 }
 void* mph_map_get(MorphContext* ctx, MorphMap* map, void* key) {
     mph_swap_in(ctx, map);
+    mph_swap_in(ctx, map->entries);
     uint64_t hash = mph_hash_key(ctx, key, map->key_kind);
     size_t idx = hash % map->capacity;
     size_t start = idx;
@@ -807,13 +900,22 @@ void* mph_map_get(MorphContext* ctx, MorphMap* map, void* key) {
 }
 void mph_map_delete(MorphContext* ctx, MorphMap* map, void* key) {
      mph_swap_in(ctx, map);
+     mph_swap_in(ctx, map->entries);
      uint64_t hash = mph_hash_key(ctx, key, map->key_kind);
     size_t idx = hash % map->capacity;
     size_t start = idx;
     while (1) {
         MorphMapEntry* e = &map->entries[idx];
         if (!e->occupied) return;
-        if (!e->deleted && mph_key_eq(ctx, e->key, key, map->key_kind)) { e->deleted = 1; map->count--; return; }
+        if (!e->deleted && mph_key_eq(ctx, e->key, key, map->key_kind)) {
+            e->deleted = 1;
+            map->count--;
+            map->deleted_count++;
+            if (map->deleted_count >= map->capacity / 4) {
+                mph_map_resize(ctx, map, map->capacity);
+            }
+            return;
+        }
         idx = (idx + 1) % map->capacity;
         if (idx == start) return;
     }
