@@ -54,6 +54,36 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.51.0 - 2025-12-25
+**Checksum**: SHA256:GC_FREE_LIST_PAGE_INDEX
+**Perubahan**:
+- **Runtime/GC**: Menambahkan free list per page dan pointer bebas ganda agar pembersihan free list saat recycle page tidak lagi scan global.
+- **Runtime/GC**: Update allocator untuk melepas free entry dari daftar global dan per-page secara O(1).
+- **Runtime/Tests**: Menambahkan regresi test untuk field free list per page di header runtime.
+
+**Konteks Sesi**:
+- **Latency**: Menghilangkan O(pages × free_list) scan pada GC sweep saat recycle page.
+
+**File Terkait**:
+- `pkg/compiler/runtime/morph.h.tpl` (SHA256:b3590d3460cde7cfbbfb1939ecc37d69b6bf229e25f16c2527059022a5dd6220)
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:5da99f8c1c3b4c7a497227e621b3de2baf7df80dcf4495304156095b493bc605)
+- `pkg/compiler/runtime/runtime_test.go` (SHA256:358b22efdc1342badc3444ee777dd2a881cc264b4cd3ded868c421c7483835c4)
+
+### Version 1.50.0 - 2025-12-25
+**Checksum**: SHA256:MAP_TOMBSTONE_REHASH
+**Perubahan**:
+- **Runtime/Map**: Menambahkan `deleted_count` dan rehash saat tombstone tinggi untuk menekan latensi probing.
+- **Runtime/Map**: Reuse slot deleted saat insert dan reset `deleted_count` saat resize.
+- **Runtime/Tests**: Menambahkan regresi test untuk tombstone cleanup dan field header map.
+
+**Konteks Sesi**:
+- **Latency**: Mengurangi latency map akibat akumulasi tombstone pada operasi delete.
+
+**File Terkait**:
+- `pkg/compiler/runtime/morph.h.tpl` (SHA256:464b52d020fc4cd8ca29f152af7f6c8a6925ea412e3b2239d942f8667be2b310)
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:ee936f271b5a3fcdad9470496a753efdf9be94d6c165900eb182f6d824a400e5)
+- `pkg/compiler/runtime/runtime_test.go` (SHA256:4e7270543e5e653e9ca5267508523884d784e144db0ed6d3f2ab4f9c5c8b9f9b)
+
 ### Version 1.49.0 - 2025-12-25
 **Checksum**: SHA256:MAP_RUNTIME_TESTS
 **Perubahan**:

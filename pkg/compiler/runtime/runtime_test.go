@@ -34,3 +34,36 @@ func TestRuntimeMapResize(t *testing.T) {
 		t.Fatalf("expected mph_map_resize invocation in mph_map_set")
 	}
 }
+
+func TestRuntimeMapTombstoneCleanup(t *testing.T) {
+	source := RuntimeSource
+
+	if !strings.Contains(source, "deleted_count") {
+		t.Fatalf("expected deleted_count tracking in runtime source")
+	}
+	if !strings.Contains(source, "mph_map_resize(ctx, map, map->capacity)") {
+		t.Fatalf("expected tombstone cleanup to rehash map at current capacity")
+	}
+}
+
+func TestRuntimeMapHeaderFields(t *testing.T) {
+	header := MorphHeader
+
+	if !strings.Contains(header, "size_t deleted_count;") {
+		t.Fatalf("expected deleted_count field in MorphMap header")
+	}
+}
+
+func TestRuntimePageFreeListFields(t *testing.T) {
+	header := MorphHeader
+
+	if !strings.Contains(header, "ObjectHeader* free_list;") {
+		t.Fatalf("expected per-page free_list field")
+	}
+	if !strings.Contains(header, "struct ObjectHeader* free_next;") {
+		t.Fatalf("expected free_next field on ObjectHeader")
+	}
+	if !strings.Contains(header, "struct ObjectHeader* page_free_next;") {
+		t.Fatalf("expected page_free_next field on ObjectHeader")
+	}
+}
