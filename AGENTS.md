@@ -1,7 +1,7 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.57.6
+- **Versi**: 1.57.7
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
 - **Terakhir Diupdate**: 2025-12-25
 - **Status**: Active
@@ -54,6 +54,28 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.57.7 - 2025-12-25
+**Checksum**: SHA256:TYPE_SYSTEM_PACKAGE_SPLIT
+**Perubahan**:
+- **Types**: Memindahkan definisi type system ke package baru `pkg/types` agar checker menggunakannya sebagai consumer.
+- **Checker**: Menambahkan alias type/konstanta agar modul lain tetap bisa memakai `checker.*` sambil mengonsumsi `pkg/types`.
+- **Checker/Tests**: Menyesuaikan penggunaan type alias dan pesan error pada unit test.
+
+**Konteks Sesi**:
+- **Arsitektur**: Memisahkan type system dari checker untuk memperjelas batas peran checker sebagai penegas semantik.
+
+**File Terkait**:
+- `pkg/types/types.go` (SHA256:e319c420379560a80e8323221eae2eaf6838830377a50c9775c6bdb7c787d484)
+- `pkg/checker/types_alias.go` (SHA256:e3619efe4e8d00ee76788bbb1485c04ccd975a67f2584de1897abaafa46d6690)
+- `pkg/checker/checker.go` (SHA256:9b25b0cdc2792de95b0e4eb14d070796bb34944f9a5b4f6117469c676252a94b)
+- `pkg/checker/scope.go` (SHA256:a5bca3140144a65b04d37b3807752ea3255e290bc796653263745f039739debf)
+- `pkg/checker/errors.go` (SHA256:43107505cf0e76efd5474968506d004d0490eecda63b374e25f77c964ad491ca)
+- `pkg/checker/interface_test.go` (SHA256:2960c62159f7f09819534605c81a2354c674d0032ec508acd797d92481c0db3d)
+- `pkg/checker/interface_type_test.go` (SHA256:0d97005530afff9280dfa95d6ab363a070df7648bc02de98526bd8f3e0d7745b)
+- `pkg/checker/struct_extra_test.go` (SHA256:28da9ae8241f08d942243d6e10bdcfb8dbe31f379cb0fe63e8da02525a49f2d4)
+- `pkg/checker/checker_test.go` (SHA256:7af63c1117401d3be95fc9509cb7bafc9037edf36923b83190f9ed12a8703970)
+- `AGENTS.md` (SHA256:62b7158358a3068489f20b75ac9808386cb0d5cd21a92ab841282d0cc9fcda94)
+
 ### Version 1.57.6 - 2025-12-25
 **Checksum**: SHA256:PARSER_IF_EXPRESSION_RETURN_FIX
 **Perubahan**:
