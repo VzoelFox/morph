@@ -2472,6 +2472,17 @@ func (c *Compiler) compileTypeAssertion(call *parser.CallExpression, prefix stri
 }
 
 func (c *Compiler) compileInterfaceConversion(iface *checker.InterfaceType, st *checker.StructType, srcCode string, prefix string) (string, error) {
+	var roots []rootTemp
+	srcRef := srcCode
+	if c.isPointerCheckerType(st) {
+		temp := c.nextTemp("iface_src")
+		roots = append(roots, rootTemp{
+			cType: c.mapCheckerTypeToC(st, prefix),
+			name:  temp,
+			value: srcCode,
+		})
+		srcRef = temp
+	}
 	var sb strings.Builder
 	sb.WriteString("({ ")
 	sb.WriteString("static void* _vt[] = { ")
@@ -2492,9 +2503,13 @@ func (c *Compiler) compileInterfaceConversion(iface *checker.InterfaceType, st *
 	}
 	sb.WriteString(" }; ")
 	structID := c.getStructID(st.Name)
-	sb.WriteString(fmt.Sprintf("(MorphInterface){ .instance = (void*)%s, .vtable = _vt, .type_id = %d };", srcCode, structID))
+	sb.WriteString(fmt.Sprintf("(MorphInterface){ .instance = (void*)%s, .vtable = _vt, .type_id = %d };", srcRef, structID))
 	sb.WriteString(" })")
-	return sb.String(), nil
+	expr := sb.String()
+	if len(roots) > 0 {
+		expr = c.wrapWithRoots(roots, expr, "MorphInterface")
+	}
+	return expr, nil
 }
 
 func (c *Compiler) compileInterfaceCall(call *parser.CallExpression, mem *parser.MemberExpression, iface *checker.InterfaceType, prefix string, fn *parser.FunctionLiteral) (string, error) {

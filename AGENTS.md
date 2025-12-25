@@ -1,7 +1,7 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.58.3
+- **Versi**: 1.58.4
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
 - **Terakhir Diupdate**: 2025-12-25
 - **Status**: Active
@@ -54,6 +54,18 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.58.4 - 2025-12-25
+**Checksum**: SHA256:COMPILER_INTERFACE_CONVERSION_ROOT
+**Perubahan**:
+- **Compiler**: Menambahkan rooting temporaries pada interface conversion agar instance sementara tetap hidup saat membuat `MorphInterface`.
+
+**Konteks Sesi**:
+- **GC Safety**: Menjaga hasil konversi interface dari temporaries agar tidak ter-collect saat evaluasi.
+
+**File Terkait**:
+- `pkg/compiler/compiler.go` (SHA256:898079905158782c2dc5b82e6293f9b65b3b463f3ccc5bbcb309d218a2496090)
+- `AGENTS.md` (SHA256:2aa0465c2fc986c66b50545d567145b4ffeaca42578df5ad8b49d920dc2a1503)
+
 ### Version 1.58.3 - 2025-12-25
 **Checksum**: SHA256:COMPILER_RETURN_SINGLE_ROOT
 **Perubahan**:
