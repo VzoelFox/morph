@@ -54,6 +54,21 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.52.0 - 2025-12-25
+**Checksum**: SHA256:GC_MARK_STACK_BLOCKS
+**Perubahan**:
+- **Runtime/GC**: Mengganti mark stack jadi block-based untuk menghindari realloc besar dan menurunkan spike latency saat GC.
+- **Runtime/GC**: Menambahkan helper push/pop mark stack berbasis block agar pertumbuhan stack hanya alokasi block baru.
+- **Runtime/Tests**: Menambahkan regresi test untuk struktur mark stack block.
+
+**Konteks Sesi**:
+- **Latency**: Mengurangi spike saat mark stack membesar karena tidak lagi realloc seluruh buffer.
+
+**File Terkait**:
+- `pkg/compiler/runtime/morph.h.tpl` (SHA256:ba44b8fdd73fb5cee9aa3b0bc2105f15769ef72efd8f89f1655d3985d513ce0e)
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:535e0ca5f7738edc5cb1758148eb751c83164a0eaf8a850704503493ecacd445)
+- `pkg/compiler/runtime/runtime_test.go` (SHA256:08623f14dcfbff3b3fcb8be7aba9ad157a53ec11985f7c7aff881e4638df9b32)
+
 ### Version 1.51.0 - 2025-12-25
 **Checksum**: SHA256:GC_FREE_LIST_PAGE_INDEX
 **Perubahan**:

@@ -67,3 +67,21 @@ func TestRuntimePageFreeListFields(t *testing.T) {
 		t.Fatalf("expected page_free_next field on ObjectHeader")
 	}
 }
+
+func TestRuntimeMarkStackBlockLayout(t *testing.T) {
+	header := MorphHeader
+	source := RuntimeSource
+
+	if !strings.Contains(header, "MARK_STACK_BLOCK_SIZE") {
+		t.Fatalf("expected MARK_STACK_BLOCK_SIZE definition")
+	}
+	if !strings.Contains(header, "typedef struct MarkStackBlock") {
+		t.Fatalf("expected MarkStackBlock definition")
+	}
+	if !strings.Contains(header, "MarkStackBlock* head;") {
+		t.Fatalf("expected MarkStack head pointer")
+	}
+	if !strings.Contains(source, "mph_mark_stack_pop") {
+		t.Fatalf("expected mark stack pop helper")
+	}
+}

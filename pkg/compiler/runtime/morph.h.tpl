@@ -66,9 +66,18 @@ typedef struct StackRoot {
 } StackRoot;
 
 // Iterative GC Mark Stack
+#define MARK_STACK_BLOCK_SIZE 1024
+
+typedef struct MarkStackBlock {
+    void* items[MARK_STACK_BLOCK_SIZE];
+    size_t count;
+    struct MarkStackBlock* next;
+    struct MarkStackBlock* prev;
+} MarkStackBlock;
+
 typedef struct MarkStack {
-    void** items;
-    size_t capacity;
+    MarkStackBlock* head;
+    MarkStackBlock* current;
     size_t count;
 } MarkStack;
 

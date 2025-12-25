@@ -88,10 +88,9 @@ void mph_init_memory(MorphContext* ctx) {
     ctx->free_list = NULL;
 
     // Initialize Mark Stack (Iterative GC)
-    ctx->mark_stack.capacity = 1024; // Start small, realloc as needed
+    ctx->mark_stack.head = NULL;
+    ctx->mark_stack.current = NULL;
     ctx->mark_stack.count = 0;
-    ctx->mark_stack.items = (void**)malloc(sizeof(void*) * ctx->mark_stack.capacity);
-    if (!ctx->mark_stack.items) { perror("malloc mark stack"); exit(1); }
 
     pthread_mutex_init(&ctx->memory_lock, NULL);
     pthread_mutex_init(&ctx->page_lock, NULL);
@@ -108,7 +107,15 @@ void mph_init_memory(MorphContext* ctx) {
 
 void mph_destroy_memory(MorphContext* ctx) {
     mph_stop_daemon(ctx);
-    if (ctx->mark_stack.items) free(ctx->mark_stack.items);
+    MarkStackBlock* block = ctx->mark_stack.head;
+    while (block) {
+        MarkStackBlock* next = block->next;
+        free(block);
+        block = next;
+    }
+    ctx->mark_stack.head = NULL;
+    ctx->mark_stack.current = NULL;
+    ctx->mark_stack.count = 0;
     ctx->free_list = NULL;
     pthread_mutex_lock(&ctx->page_lock);
     MphPage* page = ctx->page_head;
@@ -231,15 +238,54 @@ void mph_swap_in(MorphContext* ctx, void* obj) {
     }
 }
 
-// Helper: Push to Mark Stack (Dynamic Growth)
+static MarkStackBlock* mph_mark_stack_block_new(void) {
+    MarkStackBlock* block = (MarkStackBlock*)malloc(sizeof(MarkStackBlock));
+    if (!block) { perror("malloc mark stack block"); exit(1); }
+    block->count = 0;
+    block->next = NULL;
+    block->prev = NULL;
+    return block;
+}
+
+// Helper: Push to Mark Stack (Block Growth)
 void mph_mark_stack_push(MorphContext* ctx, void* obj) {
     if (!obj) return;
-    if (ctx->mark_stack.count >= ctx->mark_stack.capacity) {
-        ctx->mark_stack.capacity *= 2;
-        ctx->mark_stack.items = (void**)realloc(ctx->mark_stack.items, sizeof(void*) * ctx->mark_stack.capacity);
-        if (!ctx->mark_stack.items) { perror("realloc mark stack"); exit(1); }
+    MarkStack* stack = &ctx->mark_stack;
+    if (!stack->current) {
+        if (!stack->head) {
+            stack->head = mph_mark_stack_block_new();
+        }
+        stack->current = stack->head;
+        stack->current->count = 0;
     }
-    ctx->mark_stack.items[ctx->mark_stack.count++] = obj;
+
+    if (stack->current->count >= MARK_STACK_BLOCK_SIZE) {
+        if (stack->current->next) {
+            stack->current = stack->current->next;
+            stack->current->count = 0;
+        } else {
+            MarkStackBlock* block = mph_mark_stack_block_new();
+            block->prev = stack->current;
+            stack->current->next = block;
+            stack->current = block;
+        }
+    }
+
+    stack->current->items[stack->current->count++] = obj;
+    stack->count++;
+}
+
+static void* mph_mark_stack_pop(MorphContext* ctx) {
+    MarkStack* stack = &ctx->mark_stack;
+    if (stack->count == 0) return NULL;
+    MarkStackBlock* current = stack->current;
+    while (current && current->count == 0) {
+        current = current->prev;
+    }
+    stack->current = current;
+    if (!current) return NULL;
+    stack->count--;
+    return current->items[--current->count];
 }
 
 // Iterative Mark Function: Just queues the object if not marked
@@ -298,7 +344,8 @@ void mph_gc_mark_map(MorphContext* ctx, void* obj) {
 // Process the Mark Stack (The Loop)
 void mph_gc_process_mark_stack(MorphContext* ctx) {
     while (ctx->mark_stack.count > 0) {
-        void* obj = ctx->mark_stack.items[--ctx->mark_stack.count];
+        void* obj = mph_mark_stack_pop(ctx);
+        if (!obj) continue;
 
         ObjectHeader* header = mph_get_header(obj);
         MorphTypeInfo* type = header->type;
