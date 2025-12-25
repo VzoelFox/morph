@@ -1,7 +1,7 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.58.2
+- **Versi**: 1.58.3
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
 - **Terakhir Diupdate**: 2025-12-25
 - **Status**: Active
@@ -54,6 +54,18 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.58.3 - 2025-12-25
+**Checksum**: SHA256:COMPILER_RETURN_SINGLE_ROOT
+**Perubahan**:
+- **Compiler**: Menambahkan rooting temporaries pada return single-value bertipe pointer agar nilai tetap hidup selama evaluasi return.
+
+**Konteks Sesi**:
+- **GC Safety**: Menutup celah rooting pada return single-value pointer.
+
+**File Terkait**:
+- `pkg/compiler/compiler.go` (SHA256:02180a39081ed34257d2e8b6334d49ed2885a0b2747772a12c5d36fce9502b6d)
+- `AGENTS.md` (SHA256:9cfdc48b44cc02f1914e85fa4b124ef9a3d2b5b5b7e7d949bab384324ba79b94)
+
 ### Version 1.58.2 - 2025-12-25
 **Checksum**: SHA256:COMPILER_MEMBER_RETURN_ROOTS
 **Perubahan**:

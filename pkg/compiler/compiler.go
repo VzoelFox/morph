@@ -1361,6 +1361,20 @@ func (c *Compiler) compileReturn(s *parser.ReturnStatement, buf *strings.Builder
 		if err != nil {
 			return err
 		}
+		returnType := c.checker.Types[s.ReturnValues[0]]
+		if returnType != nil && c.isPointerCheckerType(returnType) {
+			temp := c.nextTemp("ret")
+			roots := []rootTemp{
+				{
+					cType: c.mapCheckerTypeToC(returnType, prefix),
+					name:  temp,
+					value: valCode,
+				},
+			}
+			expr := c.wrapWithRoots(roots, temp, c.mapCheckerTypeToC(returnType, prefix))
+			buf.WriteString(fmt.Sprintf("\treturn %s;\n", expr))
+			return nil
+		}
 		buf.WriteString(fmt.Sprintf("\treturn %s;\n", valCode))
 		return nil
 	}
