@@ -98,6 +98,7 @@ type Parser struct {
 
 	prefixParseFns map[lexer.TokenType]prefixParseFn
 	infixParseFns  map[lexer.TokenType]infixParseFn
+	lineCache      []string
 }
 
 func New(l *lexer.Lexer) *Parser {
@@ -210,9 +211,11 @@ func (p *Parser) addDetailedError(tok lexer.Token, format string, args ...interf
 }
 
 func (p *Parser) getLineContent(line int) string {
-	lines := strings.Split(p.l.Input(), "\n")
-	if line >= 1 && line <= len(lines) {
-		return lines[line-1]
+	if p.lineCache == nil {
+		p.lineCache = strings.Split(p.l.Input(), "\n")
+	}
+	if line >= 1 && line <= len(p.lineCache) {
+		return p.lineCache[line-1]
 	}
 	return ""
 }

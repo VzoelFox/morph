@@ -54,6 +54,19 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.53.0 - 2025-12-25
+**Checksum**: SHA256:PARSER_ERROR_LINE_CACHE
+**Perubahan**:
+- **Parser**: Cache hasil split baris input untuk error context agar tidak split ulang di setiap error.
+- **Parser/Tests**: Menambahkan regresi test untuk memastikan cache line digunakan.
+
+**Konteks Sesi**:
+- **Latency**: Mengurangi overhead O(n × errors) saat parsing file besar dengan banyak error.
+
+**File Terkait**:
+- `pkg/parser/parser.go` (SHA256:14229dc85c93f23a2024fba736b17690eb0937d74fa4474082b9c625252ac119)
+- `pkg/parser/parser_linecache_test.go` (SHA256:045d23148a42f3e9ec792510111179d2c666ed4a40c6f3ed46ed7d57b4c40014)
+
 ### Version 1.52.0 - 2025-12-25
 **Checksum**: SHA256:GC_MARK_STACK_BLOCKS
 **Perubahan**:
