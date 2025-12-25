@@ -10,28 +10,34 @@ import (
 )
 
 type Compiler struct {
-	output    strings.Builder
-	typeDefs  strings.Builder
-    prototypes strings.Builder
-	funcDefs  strings.Builder
-	entryBody strings.Builder
+	output      strings.Builder
+	typeDefs    strings.Builder
+	globalsDef  strings.Builder
+	prototypes  strings.Builder
+	funcDefs    strings.Builder
+	entryBody   strings.Builder
 
 	checker   *checker.Checker
 	hasMain   bool
 	StructIDs map[string]int
 
-	captures map[*parser.FunctionLiteral][]string
-    globals  map[string]bool
-    tupleTypes map[string]string
+	captures       map[*parser.FunctionLiteral][]string
+	globals        map[string]bool
+	tupleTypes     map[string]string
+
+	moduleGlobals map[*parser.Program]map[string]bool
+	currentGlobals map[string]bool
 }
 
 func New(c *checker.Checker) *Compiler {
 	return &Compiler{
-		checker:   c,
-		StructIDs: make(map[string]int),
-		captures:  make(map[*parser.FunctionLiteral][]string),
-        globals:   make(map[string]bool),
-        tupleTypes: make(map[string]string),
+		checker:        c,
+		StructIDs:      make(map[string]int),
+		captures:       make(map[*parser.FunctionLiteral][]string),
+		globals:        make(map[string]bool),
+		tupleTypes:     make(map[string]string),
+		moduleGlobals:  make(map[*parser.Program]map[string]bool),
+		currentGlobals: make(map[string]bool),
 	}
 }
 
@@ -55,24 +61,29 @@ func (c *Compiler) getAnonFuncName(fn *parser.FunctionLiteral) string {
 func (c *Compiler) Compile(node parser.Node) (string, error) {
 	c.output.Reset()
 	c.typeDefs.Reset()
+	c.globalsDef.Reset()
+	c.prototypes.Reset()
 	c.funcDefs.Reset()
 	c.entryBody.Reset()
 	c.captures = make(map[*parser.FunctionLiteral][]string)
+	c.moduleGlobals = make(map[*parser.Program]map[string]bool)
 
 	c.output.WriteString("#include \"morph.h\"\n\n")
 
 	c.output.WriteString("// Native bindings\n")
 	c.output.WriteString("void mph_native_print(MorphContext* ctx, MorphString* s);\n")
 	c.output.WriteString("void mph_native_print_int(MorphContext* ctx, mph_int n);\n")
-    c.output.WriteString("mph_int mph_string_index(MorphContext* ctx, MorphString* s, MorphString* sub);\n")
-    c.output.WriteString("MorphString* mph_string_trim(MorphContext* ctx, MorphString* s, MorphString* cut);\n")
-    c.output.WriteString("MorphArray* mph_string_split(MorphContext* ctx, MorphString* s, MorphString* sep);\n\n")
+	c.output.WriteString("mph_int mph_string_index(MorphContext* ctx, MorphString* s, MorphString* sub);\n")
+	c.output.WriteString("MorphString* mph_string_trim(MorphContext* ctx, MorphString* s, MorphString* cut);\n")
+	c.output.WriteString("MorphArray* mph_string_split(MorphContext* ctx, MorphString* s, MorphString* sep);\n\n")
 
-    // 0. Collect Globals
-    c.collectGlobals(node)
+	// 0. Collect Globals (Pass 1)
+	if err := c.collectAllGlobals(node); err != nil {
+		return "", err
+	}
 
-	// 0. Pre-Pass: Analyze Captures
-	if err := c.analyzeCaptures(node); err != nil {
+	// 0. Pre-Pass: Analyze Captures (Pass 2)
+	if err := c.analyzeAllCaptures(node); err != nil {
 		return "", err
 	}
 
@@ -81,10 +92,10 @@ func (c *Compiler) Compile(node parser.Node) (string, error) {
 		return "", err
 	}
 
-    // 1.1 Generate RTTI for Structs
-    if err := c.compileStructRTTI(node); err != nil {
-        return "", err
-    }
+	// 1.1 Generate RTTI for Structs
+	if err := c.compileStructRTTI(node); err != nil {
+		return "", err
+	}
 
 	c.output.WriteString("// Type IDs\n")
 	for name, id := range c.StructIDs {
@@ -116,10 +127,14 @@ func (c *Compiler) Compile(node parser.Node) (string, error) {
 	c.output.WriteString(c.typeDefs.String())
 	c.output.WriteString("\n")
 
-    c.output.WriteString("// Function Prototypes\n")
-    c.generatePrototypes(node)
-    c.output.WriteString(c.prototypes.String())
-    c.output.WriteString("\n")
+	c.output.WriteString("// Global Variables\n")
+	c.output.WriteString(c.globalsDef.String())
+	c.output.WriteString("\n")
+
+	c.output.WriteString("// Function Prototypes\n")
+	c.generatePrototypes(node)
+	c.output.WriteString(c.prototypes.String())
+	c.output.WriteString("\n")
 
 	c.output.WriteString("// Function Definitions\n")
 	c.output.WriteString(c.funcDefs.String())
@@ -127,11 +142,11 @@ func (c *Compiler) Compile(node parser.Node) (string, error) {
 
 	c.output.WriteString("// Entry Point\n")
 	c.output.WriteString("void morph_entry_point(MorphContext* ctx) {\n")
+	c.output.WriteString(c.entryBody.String())
 	if c.hasMain {
 		// Call main with NULL env
 		c.output.WriteString("\tmph_main(ctx, NULL);\n")
 	}
-	c.output.WriteString(c.entryBody.String())
 	c.output.WriteString("}\n")
 
 	return c.output.String(), nil
@@ -139,44 +154,62 @@ func (c *Compiler) Compile(node parser.Node) (string, error) {
 
 // --- Analysis Phase ---
 
-func (c *Compiler) collectGlobals(node parser.Node) {
-    c.globals = make(map[string]bool)
-    // Add builtins/natives
-    c.globals["native_print"] = true
-    c.globals["native_print_int"] = true
-    c.globals["saluran_baru"] = true
-    c.globals["kirim"] = true
-    c.globals["terima"] = true
-    c.globals["luncurkan"] = true
-    c.globals["hapus"] = true
-    c.globals["panjang"] = true
-    c.globals["assert"] = true
-    c.globals["index"] = true
-    c.globals["trim"] = true
-    c.globals["split"] = true
+func (c *Compiler) collectAllGlobals(node parser.Node) error {
+	// Main
+	if prog, ok := node.(*parser.Program); ok {
+		c.collectModuleGlobals(prog)
+	}
+	// Modules
+	for _, mod := range c.checker.ModuleCache {
+		if mod.Program == nil { continue }
+		c.collectModuleGlobals(mod.Program)
+	}
+	return nil
+}
 
-    if prog, ok := node.(*parser.Program); ok {
-        for _, stmt := range prog.Statements {
-            // Collect imports
-            if imp, ok := stmt.(*parser.ImportStatement); ok {
-                 // Basic support: extract name from path "lib/math" -> "math"
-                 parts := strings.Split(imp.Path, "/")
-                 name := parts[len(parts)-1]
-                 c.globals[name] = true
-            }
-            // Collect top-level functions and vars
-            if s, ok := stmt.(*parser.ExpressionStatement); ok {
-                if fn, ok := s.Expression.(*parser.FunctionLiteral); ok && fn.Name != "" {
-                    c.globals[fn.Name] = true
-                }
-            }
-            if vs, ok := stmt.(*parser.VarStatement); ok {
-                for _, n := range vs.Names {
-                    c.globals[n.Value] = true
-                }
-            }
-        }
-    }
+func (c *Compiler) collectModuleGlobals(prog *parser.Program) {
+	globals := make(map[string]bool)
+	// Add builtins/natives (Always considered global)
+    // We don't add them to 'globals' map to avoid mangling, but check them in isBuiltin
+	// globals["native_print"] = true
+    // ...
+
+	for _, stmt := range prog.Statements {
+		// Collect imports
+		if imp, ok := stmt.(*parser.ImportStatement); ok {
+			// Basic support: extract name from path "lib/math" -> "math"
+			parts := strings.Split(imp.Path, "/")
+			name := parts[len(parts)-1]
+			globals[name] = true
+		}
+		// Collect top-level functions and vars
+		if s, ok := stmt.(*parser.ExpressionStatement); ok {
+			if fn, ok := s.Expression.(*parser.FunctionLiteral); ok && fn.Name != "" {
+				globals[fn.Name] = true
+			}
+		}
+		if vs, ok := stmt.(*parser.VarStatement); ok {
+			for _, n := range vs.Names {
+				globals[n.Value] = true
+			}
+		}
+	}
+	c.moduleGlobals[prog] = globals
+}
+
+func (c *Compiler) analyzeAllCaptures(node parser.Node) error {
+	// Main
+	if prog, ok := node.(*parser.Program); ok {
+		c.currentGlobals = c.moduleGlobals[prog]
+		if err := c.analyzeCaptures(prog); err != nil { return err }
+	}
+	// Modules
+	for _, mod := range c.checker.ModuleCache {
+		if mod.Program == nil { continue }
+		c.currentGlobals = c.moduleGlobals[mod.Program]
+		if err := c.analyzeCaptures(mod.Program); err != nil { return err }
+	}
+	return nil
 }
 
 func (c *Compiler) analyzeCaptures(node parser.Node) error {
@@ -335,7 +368,8 @@ func (c *Compiler) getFreeVars(fn *parser.FunctionLiteral) []string {
 
 	var free []string
 	for v := range used {
-		if !defined[v] && !c.globals[v] {
+		// Only capture if not defined locally, not global in THIS module, and not builtin
+		if !defined[v] && !c.currentGlobals[v] && !isBuiltin(v) {
 			free = append(free, v)
 		}
 	}
@@ -410,23 +444,111 @@ func (c *Compiler) generateFunctionPrototype(fn *parser.FunctionLiteral, prefix 
 }
 
 func (c *Compiler) compileModule(prog *parser.Program, prefix string) error {
+	// Set current globals context
+	c.currentGlobals = c.moduleGlobals[prog]
+
 	for _, stmt := range prog.Statements {
-		isFunc := false
+		if vs, ok := stmt.(*parser.VarStatement); ok {
+			// Global Variable
+			if err := c.compileGlobalVar(vs, prefix); err != nil {
+				return err
+			}
+			continue
+		}
+
 		if s, ok := stmt.(*parser.ExpressionStatement); ok {
 			if fn, ok := s.Expression.(*parser.FunctionLiteral); ok {
 				if fn.Name != "" {
 					if err := c.compileFunction(fn, prefix); err != nil {
 						return err
 					}
-					isFunc = true
+					continue
 				}
 			}
 		}
 
-		if !isFunc && prefix == "mph_" {
+		if prefix == "mph_" {
+			// Main module top-level statements
 			if err := c.compileStatement(stmt, &c.entryBody, prefix, nil); err != nil {
 				return err
 			}
+		}
+	}
+	return nil
+}
+
+func (c *Compiler) compileGlobalVar(s *parser.VarStatement, prefix string) error {
+	// Generate Global C Variable Definitions
+	// and Init code in entryBody
+
+	for i, nameIdent := range s.Names {
+		name := nameIdent.Value
+		var destType checker.Type
+		if s.Type != nil {
+			destType = c.checker.Types[s.Type]
+		} else {
+			destType = c.checker.Types[nameIdent]
+			if destType == nil { destType = c.checker.Types[s.Values[0]] }
+		}
+
+		cType := "mph_int"
+		if destType != nil {
+			cType = c.mapCheckerTypeToC(destType, prefix)
+		}
+
+		// Definition
+		c.globalsDef.WriteString(fmt.Sprintf("%s %s%s;\n", cType, prefix, name))
+
+		// Initialization logic
+		var valCode string
+		if i < len(s.Values) {
+			var err error
+			valCode, err = c.compileExpression(s.Values[i], prefix, nil)
+			if err != nil { return err }
+		} else {
+			// Zero value or error?
+			// Checker handles "requires value". If here, valid.
+			// But multi-var assign? "var x, y = 1, 2".
+			// If single value and multiple names -> Tuple unpacking?
+			// But global tuple unpacking not easily supported with simple loop.
+			// Handled below.
+		}
+
+		// Tuple Unpacking Global: var x, y = f()
+		if len(s.Names) > 1 && len(s.Values) == 1 {
+			// This case handles ALL names at once.
+			// Generate init code only ONCE.
+			if i == 0 {
+				valCode, err := c.compileExpression(s.Values[0], prefix, nil)
+				if err != nil { return err }
+
+				srcType := c.checker.Types[s.Values[0]]
+				mt := srcType.(*checker.MultiType)
+				tupleType := c.getTupleCType(mt.Types, prefix)
+
+				// Generate Temp in entryBody
+				tmpName := fmt.Sprintf("_t_%p", s)
+				c.entryBody.WriteString(fmt.Sprintf("\t%s %s = %s;\n", tupleType, tmpName, valCode))
+
+				// Assign all globals
+				for j, n := range s.Names {
+					c.entryBody.WriteString(fmt.Sprintf("\t%s%s = %s.v%d;\n", prefix, n.Value, tmpName, j))
+					// Register root if pointer
+					t := c.checker.Types[n]
+					if c.isPointerCheckerType(t) {
+						c.entryBody.WriteString(fmt.Sprintf("\tmph_gc_push_root(ctx, (void**)&%s%s);\n", prefix, n.Value))
+					}
+				}
+			}
+			return nil
+		}
+
+		// Standard Assignment
+		c.entryBody.WriteString(fmt.Sprintf("\t%s%s = %s;\n", prefix, name, valCode))
+
+		// Register Root if Pointer
+		if c.isPointerCheckerType(destType) {
+			c.entryBody.WriteString(fmt.Sprintf("\tmph_gc_push_root(ctx, (void**)&%s%s);\n", prefix, name))
 		}
 	}
 	return nil
@@ -625,7 +747,7 @@ func (c *Compiler) compileBlock(block *parser.BlockStatement, buf *strings.Build
 func (c *Compiler) isPointerCheckerType(t checker.Type) bool {
     if t == nil { return false }
     switch t.Kind() {
-    case checker.KindString, checker.KindArray, checker.KindMap, checker.KindStruct, checker.KindFunction, checker.KindInterface: return true
+    case checker.KindString, checker.KindArray, checker.KindMap, checker.KindStruct, checker.KindFunction, checker.KindInterface, checker.KindUserError: return true
     }
     return false
 }
@@ -910,7 +1032,9 @@ func (c *Compiler) compileAssignment(s *parser.AssignmentStatement, buf *strings
 		target := ident.Value
 		if c.isCaptured(target, fn) {
 			target = fmt.Sprintf("_env->%s", target)
-		}
+		} else if c.currentGlobals[target] && !isBuiltin(target) {
+            target = prefix + target
+        }
 		buf.WriteString(fmt.Sprintf("\t%s = %s;\n", target, valCode))
 		return nil
 	} else if mem, ok := s.Names[0].(*parser.MemberExpression); ok {
@@ -971,23 +1095,28 @@ func (c *Compiler) compileReturn(s *parser.ReturnStatement, buf *strings.Builder
 
     // Multiple return values -> Tuple Struct
     // We need to know the Tuple Type Name.
-    // We can infer it from the values? Or look up function signature?
-    // Using `c.checker.Types` on ReturnValues gives individual types.
-    // We can construct the tuple type on the fly and call `getTupleCType`.
-    var valTypes []checker.Type
+    // Use Target Return Types from Function Signature to ensure correct C Struct (e.g. MorphTuple_Int_Error vs MorphTuple_Int_Null)
+
     var valCodes []string
-
     for _, expr := range s.ReturnValues {
-        t := c.checker.Types[expr]
-        if t == nil { return fmt.Errorf("unknown type in return") }
-        valTypes = append(valTypes, t)
-
         code, err := c.compileExpression(expr, prefix, fn)
         if err != nil { return err }
         valCodes = append(valCodes, code)
     }
 
-    tupleName := c.getTupleCType(valTypes, prefix)
+    // Determine target types from function signature
+    var targetTypes []checker.Type
+    fnType := c.checker.Types[fn]
+    if ft, ok := fnType.(*checker.FunctionType); ok {
+        targetTypes = ft.ReturnTypes
+    } else {
+        // Fallback (should not happen if fn is valid)
+        for _, expr := range s.ReturnValues {
+             targetTypes = append(targetTypes, c.checker.Types[expr])
+        }
+    }
+
+    tupleName := c.getTupleCType(targetTypes, prefix)
     buf.WriteString(fmt.Sprintf("\treturn (%s){ %s };\n", tupleName, strings.Join(valCodes, ", ")))
 	return nil
 }
@@ -1021,6 +1150,13 @@ func (c *Compiler) compileExpression(expr parser.Expression, prefix string, fn *
 		name := e.Value
 		if c.isCaptured(name, fn) {
 			return fmt.Sprintf("_env->%s", name), nil
+		}
+		if c.isLocal(name, fn) {
+			return name, nil
+		}
+		// Global in THIS module?
+		if c.currentGlobals[name] && !isBuiltin(name) {
+			return prefix + name, nil
 		}
 		return name, nil
 	case *parser.FunctionLiteral:
@@ -1124,8 +1260,10 @@ func (c *Compiler) compileCall(call *parser.CallExpression, prefix string, fn *p
 		if c.isCaptured(funcCode, fn) {
 			funcCode = fmt.Sprintf("_env->%s", funcCode)
 		} else if !c.isLocal(funcCode, fn) && !isBuiltin(funcCode) {
-			funcCode = "mph_" + ident.Value
-			isDirect = true
+			if c.currentGlobals[funcCode] {
+				funcCode = prefix + funcCode
+				isDirect = true
+			}
 		}
 	} else if mem, ok := call.Function.(*parser.MemberExpression); ok {
 		objType := c.checker.Types[mem.Object]
