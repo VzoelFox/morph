@@ -54,6 +54,17 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.49.0 - 2025-12-25
+**Checksum**: SHA256:MAP_RUNTIME_TESTS
+**Perubahan**:
+- **Runtime/Tests**: Menambahkan regression test untuk memastikan `map->entries` selalu di-swap-in saat operasi set/get/delete dan `mph_map_resize` tetap tersedia serta dipanggil.
+
+**Konteks Sesi**:
+- **Testing**: Mengunci perilaku map swap-in/resize agar perubahan runtime berikutnya tidak menyebabkan regresi.
+
+**File Terkait**:
+- `pkg/compiler/runtime/runtime_test.go` (SHA256:6456f94906c5a97a422ede27efb2f6d4455479bcc2e8bf537c07a4e3228e93c8)
+
 ### Version 1.48.0 - 2025-12-25
 **Checksum**: SHA256:MAP_ENTRIES_SWAPIN
 **Perubahan**:
