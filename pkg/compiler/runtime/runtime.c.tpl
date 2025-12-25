@@ -673,6 +673,11 @@ mph_bool mph_string_eq(MorphContext* ctx, MorphString* a, MorphString* b) {
     return memcmp(a->data, b->data, a->length) == 0;
 }
 
+mph_int mph_string_len(MorphContext* ctx, MorphString* s) {
+    mph_swap_in(ctx, s);
+    return (mph_int)s->length;
+}
+
 mph_int mph_string_index(MorphContext* ctx, MorphString* s, MorphString* sub) {
     mph_swap_in(ctx, s); mph_swap_in(ctx, s->data);
     mph_swap_in(ctx, sub); mph_swap_in(ctx, sub->data);
@@ -772,6 +777,14 @@ MorphString* mph_string_substring(MorphContext* ctx, MorphString* s, mph_int sta
     memcpy(ret->data, s->data + start, len);
     ret->data[len] = 0;
     return ret;
+}
+
+mph_int mph_string_Length(MorphContext* ctx, void* _env, MorphString* s) {
+    return mph_string_len(ctx, s);
+}
+
+MorphString* mph_string_Concat(MorphContext* ctx, void* _env, MorphString* a, MorphString* b) {
+    return mph_string_concat(ctx, a, b);
 }
 
 // --- Arrays ---
