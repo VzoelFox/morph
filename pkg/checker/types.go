@@ -193,6 +193,9 @@ func (t *BasicType) Call(args []Type) (Type, string, error) {
 	if t.K == KindInt && arg.Kind() == KindFloat {
 		return IntType, "Lossy conversion from Float to Int", nil
 	}
+	if t.K == KindUserError && arg.Kind() == KindString {
+		return t, "", nil
+	}
 	if arg.AssignableTo(t) {
 		return t, "", nil
 	}

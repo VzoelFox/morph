@@ -1,0 +1,77 @@
+struktur Node
+    val int
+    next Node
+akhir
+
+struktur Container
+    data []Node
+akhir
+
+struktur MapContainer
+    items map[string]Node
+akhir
+
+fungsi buat_cycle(n int) Node
+    var head = Node{val: 0, next: kosong}
+    var curr = head
+    var i = 1
+    selama i < n
+        var next = Node{val: i, next: kosong}
+        curr.next = next
+        curr = next
+        i = i + 1
+    akhir
+    curr.next = head
+    kembali head
+akhir
+
+fungsi test_array_struct() void
+    var arr []Node = []
+    var i = 0
+    selama i < 100
+        var n = Node{val: i, next: kosong}
+        arr = arr + [n]
+        i = i + 1
+    akhir
+akhir
+
+fungsi test_map_struct() void
+    var m = { "a": Node{val: 1, next: kosong} }
+    var n = m["a"]
+    jika n.val != 1
+        native_print_int(666)
+    akhir
+akhir
+
+fungsi may_fail(fail bool) (int, error)
+    jika fail
+        kembali 0, error("gagal")
+    akhir
+    kembali 1, kosong
+akhir
+
+fungsi test_tuple_error() void
+    var val, err = may_fail(benar)
+    jika err != kosong
+        native_print_error(err)
+    akhir
+akhir
+
+fungsi main() void
+    native_print("Mulai Torture Test...")
+
+    var i = 0
+    selama i < 1000
+        buat_cycle(10)
+        test_array_struct()
+        test_map_struct()
+        test_map_struct()
+        test_tuple_error()
+        i = i + 1
+        jika i == 500
+            native_print("Halfway...")
+        akhir
+    akhir
+
+    native_print("Selesai Torture Test.")
+akhir
