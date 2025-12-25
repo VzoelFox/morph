@@ -1,7 +1,7 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.57.3
+- **Versi**: 1.57.4
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
 - **Terakhir Diupdate**: 2025-12-25
 - **Status**: Active
@@ -54,6 +54,20 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.57.4 - 2025-12-25
+**Checksum**: SHA256:PARSER_IF_ELSEIF_ITERATIVE_CHAIN
+**Perubahan**:
+- **Parser**: Mengubah parsing `atau_jika` menjadi iteratif agar chain `jika/atau_jika/lainnya` hanya mengonsumsi satu `AKHIR`.
+- **Parser/Tests**: Menambah tes `if/else if/else` serta coverage missing `AKHIR` untuk chain.
+
+**Konteks Sesi**:
+- **Parser**: Menjaga struktur AST `if` tetap valid sambil menghindari rekursi di `atau_jika`.
+
+**File Terkait**:
+- `pkg/parser/parser.go` (SHA256:d7aacd1d6df1455de7de40417ca2114adfebf74096c76210f01c9b3ce773729d)
+- `pkg/parser/parser_test.go` (SHA256:cfe1b68a528670de8bc2d625c74bbf4df1e068643151ef17b0980c951e57679f)
+- `AGENTS.md` (SHA256:10d058d61a57cdeb0451a941f0ea2e6a552d37b28eda75dfad206eb5361b16bc)
+
 ### Version 1.57.3 - 2025-12-25
 **Checksum**: SHA256:MORPHSH_AST_LEXER_PARSER_BOOTSTRAP
 **Perubahan**:
