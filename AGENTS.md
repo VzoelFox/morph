@@ -1,7 +1,7 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.57.1
+- **Versi**: 1.57.2
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
 - **Terakhir Diupdate**: 2025-12-25
 - **Status**: Active
@@ -54,6 +54,18 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.57.2 - 2025-12-25
+**Checksum**: SHA256:UNUSED_WARNING_TESTS
+**Perubahan**:
+- **Checker/Tests**: Menambahkan coverage warning unused variable untuk kasus loop dan tuple return agar selaras dengan perilaku checker.
+
+**Konteks Sesi**:
+- **Testing**: Memvalidasi warning unused variable pada variable loop dan tuple (mirip kasus di stress tests).
+
+**File Terkait**:
+- `pkg/checker/unused_test.go` (SHA256:79e95f91a7372b1977e6b5d455a813d062428d4b43804adfe243bd2f553c79fd)
+- `AGENTS.md` (SHA256:79cd48fa90d26815f91103e0454c81b3d93e8d47139a48fec791ae9ad651d670)
+
 ### Version 1.57.1 - 2025-12-25
 **Checksum**: SHA256:NUMBER_CHESS_STRESS_FIX
 **Perubahan**:
