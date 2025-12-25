@@ -70,8 +70,29 @@ fungsi (p *Parser) parseStatement() Node
     jika p.current.Type == VAR atau p.current.Type == TETAPAN
         kembali p.parseVarStatement()
     akhir
+    jika p.current.Type == KEMBALIKAN
+        kembali p.parseReturnStatement()
+    akhir
 
     kembali p.parseExpressionStatement()
+akhir
+
+fungsi (p *Parser) parseReturnStatement() Node
+    var stmt = ReturnStatement{token: p.current, value: kosong}
+
+    jika p.peek.Type == SEMICOLON
+        p.nextToken()
+        kembali stmt
+    akhir
+
+    p.nextToken()
+    stmt.value = p.parseExpression()
+
+    jika p.peek.Type == SEMICOLON
+        p.nextToken()
+    akhir
+
+    kembali stmt
 akhir
 
 fungsi (p *Parser) parseVarStatement() Node
@@ -139,6 +160,21 @@ fungsi (p *Parser) parsePrefixExpression() Node
     akhir
     jika p.current.Type == STRING
         kembali StringLiteral{token: p.current, value: p.current.Literal}
+    akhir
+    jika p.current.Type == BENAR
+        kembali BooleanLiteral{token: p.current, value: benar}
+    akhir
+    jika p.current.Type == SALAH
+        kembali BooleanLiteral{token: p.current, value: salah}
+    akhir
+    jika p.current.Type == KOSONG
+        kembali NullLiteral{token: p.current}
+    akhir
+    jika p.current.Type == JIKA
+        kembali p.parseIfExpression()
+    akhir
+    jika p.current.Type == SELAMA
+        kembali p.parseWhileExpression()
     akhir
     jika p.current.Type == BANG atau p.current.Type == MINUS
         var token = p.current
@@ -210,6 +246,68 @@ fungsi (p *Parser) parseExpressionList(end string) NodeList
     akhir
 
     kembali list
+akhir
+
+fungsi (p *Parser) parseIfExpression() Node
+    var exp = IfExpression{
+        token: p.current,
+        condition: kosong,
+        consequence: BlockStatement{token: Token{}, statements: NewNodeList()},
+        alternative: BlockStatement{token: Token{}, statements: NewNodeList()},
+        hasAlternative: salah,
+    }
+
+    p.nextToken()
+    exp.condition = p.parseExpressionWithPrecedence(PREC_LOWEST)
+
+    p.nextToken()
+    exp.consequence = p.parseBlockStatement()
+
+    jika p.current.Type == LAINNYA
+        exp.hasAlternative = benar
+        p.nextToken()
+        exp.alternative = p.parseBlockStatement()
+    akhir
+
+    jika p.current.Type != AKHIR
+        p.addError("parser: expected 'akhir' after if expression")
+    akhir
+
+    kembali exp
+akhir
+
+fungsi (p *Parser) parseWhileExpression() Node
+    var exp = WhileExpression{
+        token: p.current,
+        condition: kosong,
+        body: BlockStatement{token: Token{}, statements: NewNodeList()},
+    }
+
+    p.nextToken()
+    exp.condition = p.parseExpressionWithPrecedence(PREC_LOWEST)
+
+    p.nextToken()
+    exp.body = p.parseBlockStatement()
+
+    jika p.current.Type != AKHIR
+        p.addError("parser: expected 'akhir' after while expression")
+    akhir
+
+    kembali exp
+akhir
+
+fungsi (p *Parser) parseBlockStatement() BlockStatement
+    var block = BlockStatement{token: p.current, statements: NewNodeList()}
+
+    selama p.current.Type != AKHIR dan p.current.Type != LAINNYA dan p.current.Type != EOF
+        var stmt = p.parseStatement()
+        jika stmt != kosong
+            block.statements = AddNode(block.statements, stmt)
+        akhir
+        p.nextToken()
+    akhir
+
+    kembali block
 akhir
 
 fungsi (p *Parser) peekPrecedence() int

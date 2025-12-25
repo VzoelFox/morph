@@ -1,7 +1,7 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.57.8
+- **Versi**: 1.57.9
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
 - **Terakhir Diupdate**: 2025-12-25
 - **Status**: Active
@@ -54,6 +54,20 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.57.9 - 2025-12-25
+**Checksum**: SHA256:MORPHSH_CONTROL_FLOW_BOOTSTRAP
+**Perubahan**:
+- **MorphSH/AST**: Menambahkan node boolean/null literal, return statement, if, dan while untuk fase bootstrap.
+- **MorphSH/Parser**: Menambah parsing return, boolean/null literal, if/while, serta block statement berbasis `akhir`.
+
+**Konteks Sesi**:
+- **Bootstrap Parser**: Memperluas cakupan parsing statement inti agar lebih realistis untuk tahap awal.
+
+**File Terkait**:
+- `morphsh/ast.fox` (SHA256:843f76904fed6ca2f13211597c8cbbaef1bdb22e8f0f1e8b8914dc3967c0de31)
+- `morphsh/parser.fox` (SHA256:3cc419998436dcc999d04286b8aa5c96a3dd76f437b0c87ef9b704c27d28d747)
+- `AGENTS.md` (SHA256:037e93a5abc89e21bbb9ed7d0ded82e1c3f5b57c0e3164f98996cb4dbf76139b)
+
 ### Version 1.57.8 - 2025-12-25
 **Checksum**: SHA256:MORPHSH_PARSER_PRECEDENCE_FOUNDATION
 **Perubahan**:
