@@ -1310,6 +1310,17 @@ func (c *Compiler) compileIf(ie *parser.IfExpression, buf *strings.Builder, pref
 	buf.WriteString(fmt.Sprintf("\tif (%s) {\n", cond))
 	c.compileStatement(ie.Consequence, buf, prefix, fn)
 	buf.WriteString("\t}")
+
+	for _, clause := range ie.ElseIfs {
+		condCode, err := c.compileExpression(clause.Condition, prefix, fn)
+		if err != nil {
+			return err
+		}
+		buf.WriteString(fmt.Sprintf(" else if (%s) {\n", condCode))
+		c.compileStatement(clause.Consequence, buf, prefix, fn)
+		buf.WriteString("\t}")
+	}
+
 	if ie.Alternative != nil {
 		buf.WriteString(" else {\n")
 		c.compileStatement(ie.Alternative, buf, prefix, fn)

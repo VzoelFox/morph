@@ -376,11 +376,20 @@ func (e *Evaluator) evalIfExpression(ie *parser.IfExpression, env *Environment) 
 
 	if isTruthy(condition) {
 		return e.Eval(ie.Consequence, env)
-	} else if ie.Alternative != nil {
-		return e.Eval(ie.Alternative, env)
-	} else {
-		return NULL
 	}
+	for _, clause := range ie.ElseIfs {
+		cond := e.Eval(clause.Condition, env)
+		if isError(cond) {
+			return cond
+		}
+		if isTruthy(cond) {
+			return e.Eval(clause.Consequence, env)
+		}
+	}
+	if ie.Alternative != nil {
+		return e.Eval(ie.Alternative, env)
+	}
+	return NULL
 }
 
 func isTruthy(obj Object) bool {

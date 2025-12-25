@@ -1112,34 +1112,28 @@ func (p *Parser) parseGroupedExpression() Expression {
 }
 
 func (p *Parser) parseIfExpression() Expression {
-	root := &IfExpression{Token: p.curToken}
-	current := root
+	expression := &IfExpression{Token: p.curToken}
 
-	for {
-		// curToken is JIKA or ATAU_JIKA
-		p.nextToken() // eat jika/atau_jika
-		current.Condition = p.parseExpression(LOWEST)
+	// curToken is JIKA
+	p.nextToken() // eat jika
+	expression.Condition = p.parseExpression(LOWEST)
 
-		// Advance to start of block
+	// Advance to start of block
+	p.nextToken()
+	expression.Consequence = p.parseBlockStatement()
+
+	for p.curTokenIs(lexer.ATAU_JIKA) {
+		clause := ElseIfClause{Token: p.curToken}
+		p.nextToken() // eat atau_jika
+		clause.Condition = p.parseExpression(LOWEST)
 		p.nextToken()
-		current.Consequence = p.parseBlockStatement()
+		clause.Consequence = p.parseBlockStatement()
+		expression.ElseIfs = append(expression.ElseIfs, clause)
+	}
 
-		if p.curTokenIs(lexer.ATAU_JIKA) {
-			next := &IfExpression{Token: p.curToken}
-			current.Alternative = &BlockStatement{
-				Statements: []Statement{
-					&ExpressionStatement{Expression: next},
-				},
-			}
-			current = next
-			continue
-		}
-
-		if p.curTokenIs(lexer.LAINNYA) {
-			p.nextToken() // eat lainnya
-			current.Alternative = p.parseBlockStatement()
-		}
-		break
+	if p.curTokenIs(lexer.LAINNYA) {
+		p.nextToken() // eat lainnya
+		expression.Alternative = p.parseBlockStatement()
 	}
 
 	if p.curTokenIs(lexer.AKHIR) {

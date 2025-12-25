@@ -387,7 +387,14 @@ type IfExpression struct {
 	Token       lexer.Token
 	Condition   Expression
 	Consequence *BlockStatement
+	ElseIfs     []ElseIfClause
 	Alternative *BlockStatement
+}
+
+type ElseIfClause struct {
+	Token       lexer.Token
+	Condition   Expression
+	Consequence *BlockStatement
 }
 
 func (ie *IfExpression) expressionNode()      {}
@@ -398,6 +405,12 @@ func (ie *IfExpression) String() string {
 	out.WriteString(ie.Condition.String())
 	out.WriteString(" ")
 	out.WriteString(ie.Consequence.String())
+	for _, clause := range ie.ElseIfs {
+		out.WriteString(" atau_jika ")
+		out.WriteString(clause.Condition.String())
+		out.WriteString(" ")
+		out.WriteString(clause.Consequence.String())
+	}
 	if ie.Alternative != nil {
 		out.WriteString(" lainnya ")
 		out.WriteString(ie.Alternative.String())

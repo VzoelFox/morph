@@ -1,7 +1,7 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.57.4
+- **Versi**: 1.57.5
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
 - **Terakhir Diupdate**: 2025-12-25
 - **Status**: Active
@@ -54,6 +54,26 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.57.5 - 2025-12-25
+**Checksum**: SHA256:PARSER_ELSEIF_AST_CLARITY
+**Perubahan**:
+- **Parser/AST**: Menambahkan `ElseIfClause` dan menyimpan `atau_jika` sebagai list terstruktur di `IfExpression`.
+- **Parser**: Memperbarui parsing `jika/atau_jika/lainnya` untuk mengisi `ElseIfs` secara eksplisit.
+- **Checker/Compiler/Evaluator**: Menyesuaikan traversal `if` agar memproses chain `ElseIfs`.
+- **Parser/Tests**: Memperbarui tes `if` agar memverifikasi struktur `ElseIfs`.
+
+**Konteks Sesi**:
+- **AST Clarity**: Memperjelas representasi else-if agar tidak lagi dibungkus sebagai statement tersembunyi.
+
+**File Terkait**:
+- `pkg/parser/ast.go` (SHA256:cd4b6b07ab5bfd3af18ebfe055bbb02c572fe34835e87f45d99ad397e1dbd349)
+- `pkg/parser/parser.go` (SHA256:aa74a65faa9fd98f4ec6509569275f95dab7815cf3fdb28c1ed3416a7f120b47)
+- `pkg/parser/parser_test.go` (SHA256:541af953117e33dba67912a0b256142101ceb3c9082c5b538a99b043f72c9ff8)
+- `pkg/checker/checker.go` (SHA256:a70397505e7b0ced3a2bd812e1940a38a49d0246e4a638b2119b773b994e7d0b)
+- `pkg/compiler/compiler.go` (SHA256:ddfd8b9c5a5fe11c1ddc87ff2017caedd19500a58c8b97750a5c080016672e41)
+- `pkg/evaluator/evaluator.go` (SHA256:ac58338d507ed2d6e8ea8c150cc5f373efbfeaba7dac89a288f0b04f42ecaf8d)
+- `AGENTS.md` (SHA256:8d1ebd8321f63cfdc4ff03635bbf91005935d43d5fcd982904a421ba48cf074c)
+
 ### Version 1.57.4 - 2025-12-25
 **Checksum**: SHA256:PARSER_IF_ELSEIF_ITERATIVE_CHAIN
 **Perubahan**:

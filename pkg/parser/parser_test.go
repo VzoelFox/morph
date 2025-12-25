@@ -361,6 +361,9 @@ func TestIfExpression(t *testing.T) {
 	if exp.Alternative != nil {
 		t.Errorf("exp.Alternative.Statements was not nil. got=%+v", exp.Alternative)
 	}
+	if len(exp.ElseIfs) != 0 {
+		t.Errorf("exp.ElseIfs was not empty. got=%d", len(exp.ElseIfs))
+	}
 }
 
 func TestIfElseExpression(t *testing.T) {
@@ -408,6 +411,9 @@ func TestIfElseExpression(t *testing.T) {
 
 	if exp.Alternative == nil {
 		t.Errorf("exp.Alternative was nil")
+	}
+	if len(exp.ElseIfs) != 0 {
+		t.Errorf("exp.ElseIfs was not empty. got=%d", len(exp.ElseIfs))
 	}
 
 	if len(exp.Alternative.Statements) != 1 {
@@ -469,22 +475,12 @@ func TestIfElseIfElseExpression(t *testing.T) {
 		return
 	}
 
-	if exp.Alternative == nil || len(exp.Alternative.Statements) != 1 {
-		t.Fatalf("exp.Alternative.Statements does not contain 1 statement. got=%v",
-			exp.Alternative)
+	if len(exp.ElseIfs) != 1 {
+		t.Fatalf("exp.ElseIfs does not contain 1 clause. got=%d",
+			len(exp.ElseIfs))
 	}
 
-	elseIfStmt, ok := exp.Alternative.Statements[0].(*ExpressionStatement)
-	if !ok {
-		t.Fatalf("Statements[0] is not ExpressionStatement. got=%T",
-			exp.Alternative.Statements[0])
-	}
-
-	elseIf, ok := elseIfStmt.Expression.(*IfExpression)
-	if !ok {
-		t.Fatalf("else-if expression is not IfExpression. got=%T",
-			elseIfStmt.Expression)
-	}
+	elseIf := exp.ElseIfs[0]
 
 	if !testInfixExpression(t, elseIf.Condition, "x", ">", "y") {
 		return
@@ -505,19 +501,19 @@ func TestIfElseIfElseExpression(t *testing.T) {
 		return
 	}
 
-	if elseIf.Alternative == nil {
-		t.Fatalf("else-if alternative was nil")
+	if exp.Alternative == nil {
+		t.Fatalf("alternative was nil")
 	}
 
-	if len(elseIf.Alternative.Statements) != 1 {
-		t.Errorf("else-if alternative does not contain 1 statement. got=%d",
-			len(elseIf.Alternative.Statements))
+	if len(exp.Alternative.Statements) != 1 {
+		t.Errorf("alternative does not contain 1 statement. got=%d",
+			len(exp.Alternative.Statements))
 	}
 
-	elseIfAlternative, ok := elseIf.Alternative.Statements[0].(*ExpressionStatement)
+	elseIfAlternative, ok := exp.Alternative.Statements[0].(*ExpressionStatement)
 	if !ok {
 		t.Fatalf("Statements[0] is not ExpressionStatement. got=%T",
-			elseIf.Alternative.Statements[0])
+			exp.Alternative.Statements[0])
 	}
 
 	if !testIdentifier(t, elseIfAlternative.Expression, "z") {
