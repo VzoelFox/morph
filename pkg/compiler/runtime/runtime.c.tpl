@@ -638,29 +638,38 @@ void* mph_alloc(MorphContext* ctx, size_t size, MorphTypeInfo* type_info) {
 MorphString* mph_string_new(MorphContext* ctx, const char* literal) {
     size_t len = strlen(literal);
     MorphString* str = (MorphString*)mph_alloc(ctx, sizeof(MorphString), &mph_ti_string_real);
+    mph_gc_push_root(ctx, (void**)&str);
     str->length = len;
 
     char* data = (char*)mph_alloc(ctx, len + 1, &mph_ti_raw);
+    mph_gc_push_root(ctx, (void**)&data);
     memcpy(data, literal, len);
     data[len] = '\0';
     str->data = data;
+    mph_gc_pop_roots(ctx, 2);
     return str;
 }
 
 MorphString* mph_string_concat(MorphContext* ctx, MorphString* a, MorphString* b) {
+    int roots = 0;
+    if (a) { mph_gc_push_root(ctx, (void**)&a); roots++; }
+    if (b) { mph_gc_push_root(ctx, (void**)&b); roots++; }
     mph_swap_in(ctx, a);
     mph_swap_in(ctx, a->data);
     mph_swap_in(ctx, b);
     mph_swap_in(ctx, b->data);
     size_t len = a->length + b->length;
     MorphString* str = (MorphString*)mph_alloc(ctx, sizeof(MorphString), &mph_ti_string_real);
+    mph_gc_push_root(ctx, (void**)&str);
     str->length = len;
 
     char* data = (char*)mph_alloc(ctx, len + 1, &mph_ti_raw);
+    mph_gc_push_root(ctx, (void**)&data);
     memcpy(data, a->data, a->length);
     memcpy(data + a->length, b->data, b->length);
     data[len] = '\0';
     str->data = data;
+    mph_gc_pop_roots(ctx, roots + 2);
     return str;
 }
 
@@ -688,6 +697,9 @@ mph_int mph_string_index(MorphContext* ctx, MorphString* s, MorphString* sub) {
 }
 
 MorphString* mph_string_trim(MorphContext* ctx, MorphString* s, MorphString* cut) {
+    int roots = 0;
+    if (s) { mph_gc_push_root(ctx, (void**)&s); roots++; }
+    if (cut) { mph_gc_push_root(ctx, (void**)&cut); roots++; }
     mph_swap_in(ctx, s); mph_swap_in(ctx, s->data);
     mph_swap_in(ctx, cut); mph_swap_in(ctx, cut->data);
 
@@ -700,15 +712,21 @@ MorphString* mph_string_trim(MorphContext* ctx, MorphString* s, MorphString* cut
     size_t new_len = (start > end) ? 0 : (size_t)(end - start + 1);
 
     MorphString* ret = (MorphString*)mph_alloc(ctx, sizeof(MorphString), &mph_ti_string_real);
+    mph_gc_push_root(ctx, (void**)&ret);
     ret->length = new_len;
     char* data = (char*)mph_alloc(ctx, new_len + 1, &mph_ti_raw);
+    mph_gc_push_root(ctx, (void**)&data);
     if (new_len > 0) memcpy(data, start, new_len);
     data[new_len] = 0;
     ret->data = data;
+    mph_gc_pop_roots(ctx, roots + 2);
     return ret;
 }
 
 MorphArray* mph_string_split(MorphContext* ctx, MorphString* s, MorphString* sep) {
+    int roots = 0;
+    if (s) { mph_gc_push_root(ctx, (void**)&s); roots++; }
+    if (sep) { mph_gc_push_root(ctx, (void**)&sep); roots++; }
     mph_swap_in(ctx, s); mph_swap_in(ctx, s->data);
     mph_swap_in(ctx, sep); mph_swap_in(ctx, sep->data);
 
@@ -727,6 +745,7 @@ MorphArray* mph_string_split(MorphContext* ctx, MorphString* s, MorphString* sep
     }
 
     MorphArray* arr = mph_array_new(ctx, count, sizeof(MorphString*), 1);
+    mph_gc_push_root(ctx, (void**)&arr);
     MorphString** elements = (MorphString**)arr->data;
 
     // Second pass: fill
@@ -743,39 +762,54 @@ MorphArray* mph_string_split(MorphContext* ctx, MorphString* s, MorphString* sep
         while ((found = strstr(start, sep->data)) != NULL) {
              size_t len = found - start;
              MorphString* item = (MorphString*)mph_alloc(ctx, sizeof(MorphString), &mph_ti_string_real);
+             mph_gc_push_root(ctx, (void**)&item);
              item->length = len;
              item->data = (char*)mph_alloc(ctx, len + 1, &mph_ti_raw);
+             mph_gc_push_root(ctx, (void**)&item->data);
              memcpy(item->data, start, len);
              item->data[len] = 0;
 
              elements[idx++] = item;
+             mph_gc_pop_roots(ctx, 2);
              start = found + sep_len;
         }
         // Last part
         size_t len = strlen(start);
         MorphString* item = (MorphString*)mph_alloc(ctx, sizeof(MorphString), &mph_ti_string_real);
+        mph_gc_push_root(ctx, (void**)&item);
         item->length = len;
         item->data = (char*)mph_alloc(ctx, len + 1, &mph_ti_raw);
+        mph_gc_push_root(ctx, (void**)&item->data);
         memcpy(item->data, start, len);
         item->data[len] = 0;
         elements[idx++] = item;
+        mph_gc_pop_roots(ctx, 2);
     }
-
+    mph_gc_pop_roots(ctx, roots + 1);
     return arr;
 }
 
 MorphString* mph_string_substring(MorphContext* ctx, MorphString* s, mph_int start, mph_int end) {
+    int roots = 0;
+    if (s) { mph_gc_push_root(ctx, (void**)&s); roots++; }
     mph_swap_in(ctx, s); mph_swap_in(ctx, s->data);
     if (start < 0) start = 0;
     if (end > s->length) end = s->length;
-    if (start >= end) return mph_string_new(ctx, "");
+    if (start >= end) {
+        MorphString* empty = mph_string_new(ctx, "");
+        mph_gc_pop_roots(ctx, roots);
+        return empty;
+    }
 
     size_t len = end - start;
     MorphString* ret = (MorphString*)mph_alloc(ctx, sizeof(MorphString), &mph_ti_string_real);
+    mph_gc_push_root(ctx, (void**)&ret);
     ret->length = len;
     ret->data = (char*)mph_alloc(ctx, len + 1, &mph_ti_raw);
+    mph_gc_push_root(ctx, (void**)&ret->data);
     memcpy(ret->data, s->data + start, len);
     ret->data[len] = 0;
+    mph_gc_pop_roots(ctx, roots + 2);
     return ret;
 }
 
@@ -791,11 +825,14 @@ MorphString* mph_string_Concat(MorphContext* ctx, void* _env, MorphString* a, Mo
 
 MorphArray* mph_array_new(MorphContext* ctx, size_t capacity, size_t element_size, mph_bool is_ptr) {
     MorphArray* arr = (MorphArray*)mph_alloc(ctx, sizeof(MorphArray), &mph_ti_array);
+    mph_gc_push_root(ctx, (void**)&arr);
     arr->length = capacity;
     arr->capacity = capacity;
     arr->element_size = element_size;
     arr->elements_are_pointers = is_ptr;
     arr->data = mph_alloc(ctx, capacity * element_size, &mph_ti_raw);
+    mph_gc_push_root(ctx, (void**)&arr->data);
+    mph_gc_pop_roots(ctx, 2);
     return arr;
 }
 
@@ -832,13 +869,16 @@ MorphArray* mph_array_concat(MorphContext* ctx, MorphArray* a, MorphArray* b) {
 
 MorphMap* mph_map_new(MorphContext* ctx, MorphKeyKind kind, mph_bool val_is_ptr) {
     MorphMap* map = (MorphMap*)mph_alloc(ctx, sizeof(MorphMap), &mph_ti_map);
+    mph_gc_push_root(ctx, (void**)&map);
     map->capacity = 16;
     map->count = 0;
     map->deleted_count = 0;
     map->key_kind = kind;
     map->values_are_pointers = val_is_ptr;
     map->entries = (MorphMapEntry*)mph_alloc(ctx, sizeof(MorphMapEntry) * map->capacity, &mph_ti_raw);
+    mph_gc_push_root(ctx, (void**)&map->entries);
     memset(map->entries, 0, sizeof(MorphMapEntry) * map->capacity);
+    mph_gc_pop_roots(ctx, 2);
     return map;
 }
 
@@ -1152,8 +1192,12 @@ typedef struct MorphTuple_Int_Error {
 } MorphTuple_Int_Error;
 
 MorphError* mph_error_new(MorphContext* ctx, MorphString* msg) {
+    int roots = 0;
+    if (msg) { mph_gc_push_root(ctx, (void**)&msg); roots++; }
     MorphError* e = (MorphError*)mph_alloc(ctx, sizeof(MorphError), NULL); // Basic error
+    mph_gc_push_root(ctx, (void**)&e);
     e->message = msg;
+    mph_gc_pop_roots(ctx, roots + 1);
     return e;
 }
 
