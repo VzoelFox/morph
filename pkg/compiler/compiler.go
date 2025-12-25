@@ -1450,6 +1450,7 @@ func (c *Compiler) mapCheckerTypeToC(t checker.Type, prefix string) string {
 			return "mph_" + st.Name + "*"
 		}
 	case checker.KindInterface: return "MorphInterface"
+	case checker.KindVoid: return "void"
     case checker.KindMulti:
         if mt, ok := t.(*checker.MultiType); ok {
             return c.getTupleCType(mt.Types, prefix)
