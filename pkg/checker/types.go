@@ -134,7 +134,7 @@ func (t *BasicType) BinaryOp(op string, right Type) (Type, error) {
 			}
 		}
 		return nil, fmt.Errorf("Cannot compare different types %s and %s", t.String(), right.String())
-	case "&&", "||":
+	case "&&", "||", "dan", "atau":
 		if t.K == KindBool && right.Kind() == KindBool {
 			return BoolType, nil
 		}

@@ -1826,6 +1826,12 @@ func (c *Compiler) compileStructDef(s *parser.StructStatement, prefix string) er
 }
 
 func (c *Compiler) mapTypeToC(t parser.TypeNode, prefix string) (string, error) {
+    // Resolve to Checker Type to handle imports/mangling correctly
+    ct := c.resolveTypeNode(t)
+    if ct != nil && ct.Kind() != checker.KindUnknown {
+        return c.mapCheckerTypeToC(ct, prefix), nil
+    }
+
 	switch ty := t.(type) {
 	case *parser.SimpleType:
 		switch ty.Name {
@@ -1845,13 +1851,13 @@ func (c *Compiler) mapTypeToC(t parser.TypeNode, prefix string) (string, error) 
 			return prefix + ty.Name + "*", nil
 		}
 	case *parser.QualifiedType:
+        // Fallback (should be handled by resolveTypeNode if imports are correct)
 		return "mph_" + ty.Package.Value + "_" + ty.Name.Value + "*", nil
 	case *parser.ArrayType:
 		return "MorphArray*", nil
 	case *parser.MapType:
 		return "MorphMap*", nil
 	case *parser.FunctionType:
-		// Function types mapped to Closure*
 		return "MorphClosure*", nil
 	}
 	return "", fmt.Errorf("unknown type node: %T", t)

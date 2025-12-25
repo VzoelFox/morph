@@ -263,6 +263,11 @@ func (c *Checker) checkImport(imp *parser.ImportStatement) {
 		c.Errors = append(c.Errors, subChecker.Errors...)
 	}
 
+	// Merge types from sub-checker to main checker so Compiler can access them
+	for node, typ := range subChecker.Types {
+		c.Types[node] = typ
+	}
+
 	// Harvest Exports (Uppercase)
 	exports := make(map[string]ExportInfo)
 
