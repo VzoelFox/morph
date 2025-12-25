@@ -38,6 +38,7 @@ typedef struct ObjectHeader {
     uint8_t flags;              // 0x1: Marked, 0x2: Swapped
     uint64_t last_access;       // Timestamp (ms) for LRU Eviction
     uint64_t swap_id;           // ID for swap file
+    size_t size;                // Payload size
 } ObjectHeader;
 
 typedef struct MphPage {
@@ -75,6 +76,7 @@ struct MorphContext {
     MphPage* page_head;         // Head of page list (per-context)
     MphPage* current_alloc_page; // Current page used for allocations
     pthread_mutex_t page_lock;  // Lock for page list/swap operations
+    ObjectHeader* free_list;    // Reusable freed objects (exact size)
 
     pthread_t daemon_thread;    // GC/Swap Daemon
     int daemon_running;

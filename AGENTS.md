@@ -54,6 +54,19 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.45.0 - 2025-12-25
+**Checksum**: SHA256:GC_FREELIST_REUSE
+**Perubahan**:
+- **Runtime**: Menambahkan `size` pada `ObjectHeader` dan `free_list` per-context untuk reuse objek yang sudah mati (exact size match).
+- **Runtime**: Menambahkan pembersihan free list saat page direcycle agar pointer tidak menggantung.
+
+**Konteks Sesi**:
+- **Stabilization**: Mengurangi fragmentasi dengan reuse slot objek yang sudah tidak hidup.
+
+**File Terkait**:
+- `pkg/compiler/runtime/morph.h.tpl` (SHA256:dadced1a1692a72803780afdf0551262b38c5fd2027015fa1af90eb67c1a7a10)
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:3798a2aa886f28dd4a97d0379e066049b0dbcaa3763efb823f0576e693a773cf)
+
 ### Version 1.44.0 - 2025-12-25
 **Checksum**: SHA256:GC_THRESHOLD_ADAPTIVE
 **Perubahan**:

@@ -84,6 +84,7 @@ void mph_init_memory(MorphContext* ctx) {
     ctx->daemon_running = 0;
     ctx->page_head = NULL;
     ctx->current_alloc_page = NULL;
+    ctx->free_list = NULL;
 
     // Initialize Mark Stack (Iterative GC)
     ctx->mark_stack.capacity = 1024; // Start small, realloc as needed
@@ -107,6 +108,7 @@ void mph_init_memory(MorphContext* ctx) {
 void mph_destroy_memory(MorphContext* ctx) {
     mph_stop_daemon(ctx);
     if (ctx->mark_stack.items) free(ctx->mark_stack.items);
+    ctx->free_list = NULL;
     pthread_mutex_lock(&ctx->page_lock);
     MphPage* page = ctx->page_head;
     while (page) {
@@ -341,7 +343,9 @@ void mph_gc_sweep(MorphContext* ctx) {
             mph_log_zombie(curr);
 
             if (curr->type) ctx->allocated_bytes -= curr->type->size;
-            // Arena: We do NOT free individual objects.
+            curr->flags = 0;
+            curr->next = ctx->free_list;
+            ctx->free_list = curr;
         }
     }
 
@@ -361,6 +365,18 @@ void mph_gc_sweep(MorphContext* ctx) {
         // So we can free swapped out pages too!
 
         if (p != ctx->current_alloc_page && p->live_bytes == 0) {
+            uint64_t start = (uint64_t)p->start_addr;
+            uint64_t end = start + p->size;
+            ObjectHeader** free_ptr = &ctx->free_list;
+            while (*free_ptr) {
+                ObjectHeader* free_hdr = *free_ptr;
+                uint64_t addr = (uint64_t)free_hdr;
+                if (addr >= start && addr < end) {
+                    *free_ptr = free_hdr->next;
+                    continue;
+                }
+                free_ptr = &free_hdr->next;
+            }
             *p_ptr = p->next;
             if (p->flags & FLAG_SWAPPED) {
                  char path[256];
@@ -461,6 +477,23 @@ void* mph_alloc(MorphContext* ctx, size_t size, MorphTypeInfo* type_info) {
 
     pthread_mutex_lock(&ctx->memory_lock);
 
+    // Reuse freed objects (exact size match)
+    ObjectHeader** free_ptr = &ctx->free_list;
+    while (*free_ptr) {
+        ObjectHeader* free_hdr = *free_ptr;
+        if (free_hdr->size == size) {
+            *free_ptr = free_hdr->next;
+            free_hdr->type = type_info;
+            free_hdr->flags = 0;
+            free_hdr->next = ctx->heap_head;
+            ctx->heap_head = free_hdr;
+            ctx->allocated_bytes += size;
+            pthread_mutex_unlock(&ctx->memory_lock);
+            return (void*)(free_hdr + 1);
+        }
+        free_ptr = &free_hdr->next;
+    }
+
     // Large Object Handling
     if (total_size > PAGE_SIZE) {
         // Allocate standalone multi-page block
@@ -486,6 +519,7 @@ void* mph_alloc(MorphContext* ctx, size_t size, MorphTypeInfo* type_info) {
         memset(header, 0, total_size);
         header->type = type_info;
         header->flags = 0;
+        header->size = size;
 
         header->next = ctx->heap_head;
         ctx->heap_head = header;
@@ -507,6 +541,7 @@ void* mph_alloc(MorphContext* ctx, size_t size, MorphTypeInfo* type_info) {
     memset(header, 0, total_size);
     header->type = type_info;
     header->flags = 0;
+    header->size = size;
 
     // Link to heap list for GC sweeping
     header->next = ctx->heap_head;
