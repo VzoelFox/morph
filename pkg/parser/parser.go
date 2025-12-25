@@ -1112,46 +1112,43 @@ func (p *Parser) parseGroupedExpression() Expression {
 }
 
 func (p *Parser) parseIfExpression() Expression {
-	expression := &IfExpression{Token: p.curToken}
-	// curToken is JIKA or ATAU_JIKA
-	p.nextToken() // eat jika/atau_jika
+	root := &IfExpression{Token: p.curToken}
+	current := root
 
-	expression.Condition = p.parseExpression(LOWEST)
+	for {
+		// curToken is JIKA or ATAU_JIKA
+		p.nextToken() // eat jika/atau_jika
+		current.Condition = p.parseExpression(LOWEST)
 
-	// Advance to start of block
-	p.nextToken()
+		// Advance to start of block
+		p.nextToken()
+		current.Consequence = p.parseBlockStatement()
 
-	expression.Consequence = p.parseBlockStatement()
-
-	if p.curTokenIs(lexer.LAINNYA) {
-		p.nextToken() // eat lainnya
-		expression.Alternative = p.parseBlockStatement()
-
-		// Expect AKHIR after lainnya block
-		if p.curTokenIs(lexer.AKHIR) {
-			// Do not consume
-		} else {
-			p.curError(lexer.AKHIR)
+		if p.curTokenIs(lexer.ATAU_JIKA) {
+			next := &IfExpression{Token: p.curToken}
+			current.Alternative = &BlockStatement{
+				Statements: []Statement{
+					&ExpressionStatement{Expression: next},
+				},
+			}
+			current = next
+			continue
 		}
-	} else if p.curTokenIs(lexer.ATAU_JIKA) {
-		// chain
-		child := p.parseIfExpression()
-		expression.Alternative = &BlockStatement{
-			Statements: []Statement{
-				&ExpressionStatement{Expression: child},
-			},
+
+		if p.curTokenIs(lexer.LAINNYA) {
+			p.nextToken() // eat lainnya
+			current.Alternative = p.parseBlockStatement()
 		}
-		// child parseIfExpression finishes at AKHIR.
-	} else {
-		// Expect AKHIR
-		if p.curTokenIs(lexer.AKHIR) {
-			// Do not consume
-		} else {
-			p.curError(lexer.AKHIR)
-		}
+		break
 	}
 
-	return expression
+	if p.curTokenIs(lexer.AKHIR) {
+		// Do not consume
+	} else {
+		p.curError(lexer.AKHIR)
+	}
+
+	return root
 }
 
 func (p *Parser) peekIsType() bool {
