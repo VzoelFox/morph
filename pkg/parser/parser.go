@@ -1142,7 +1142,7 @@ func (p *Parser) parseIfExpression() Expression {
 		p.curError(lexer.AKHIR)
 	}
 
-	return root
+	return expression
 }
 
 func (p *Parser) peekIsType() bool {
