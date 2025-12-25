@@ -2,7 +2,9 @@ package compiler
 
 import (
 	"fmt"
+	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/VzoelFox/morph/pkg/checker"
@@ -10,23 +12,23 @@ import (
 )
 
 type Compiler struct {
-	output      strings.Builder
-	typeDefs    strings.Builder
-	globalsDef  strings.Builder
-	prototypes  strings.Builder
-	funcDefs    strings.Builder
-	entryBody   strings.Builder
+	output     strings.Builder
+	typeDefs   strings.Builder
+	globalsDef strings.Builder
+	prototypes strings.Builder
+	funcDefs   strings.Builder
+	entryBody  strings.Builder
 
 	checker   *checker.Checker
 	hasMain   bool
 	StructIDs map[string]int
 
-	captures       map[*parser.FunctionLiteral][]string
-	globals        map[string]bool
-	tupleTypes     map[string]string
-	freeVarCache   map[*parser.FunctionLiteral][]string
+	captures     map[*parser.FunctionLiteral][]string
+	globals      map[string]bool
+	tupleTypes   map[string]string
+	freeVarCache map[*parser.FunctionLiteral][]string
 
-	moduleGlobals map[*parser.Program]map[string]bool
+	moduleGlobals  map[*parser.Program]map[string]bool
 	currentGlobals map[string]bool
 }
 
@@ -163,7 +165,9 @@ func (c *Compiler) collectAllGlobals(node parser.Node) error {
 	}
 	// Modules
 	for _, mod := range c.checker.ModuleCache {
-		if mod.Program == nil { continue }
+		if mod.Program == nil {
+			continue
+		}
 		c.collectModuleGlobals(mod.Program)
 	}
 	return nil
@@ -172,9 +176,9 @@ func (c *Compiler) collectAllGlobals(node parser.Node) error {
 func (c *Compiler) collectModuleGlobals(prog *parser.Program) {
 	globals := make(map[string]bool)
 	// Add builtins/natives (Always considered global)
-    // We don't add them to 'globals' map to avoid mangling, but check them in isBuiltin
+	// We don't add them to 'globals' map to avoid mangling, but check them in isBuiltin
 	// globals["native_print"] = true
-    // ...
+	// ...
 
 	for _, stmt := range prog.Statements {
 		// Collect imports
@@ -203,13 +207,19 @@ func (c *Compiler) analyzeAllCaptures(node parser.Node) error {
 	// Main
 	if prog, ok := node.(*parser.Program); ok {
 		c.currentGlobals = c.moduleGlobals[prog]
-		if err := c.analyzeCaptures(prog); err != nil { return err }
+		if err := c.analyzeCaptures(prog); err != nil {
+			return err
+		}
 	}
 	// Modules
 	for _, mod := range c.checker.ModuleCache {
-		if mod.Program == nil { continue }
+		if mod.Program == nil {
+			continue
+		}
 		c.currentGlobals = c.moduleGlobals[mod.Program]
-		if err := c.analyzeCaptures(mod.Program); err != nil { return err }
+		if err := c.analyzeCaptures(mod.Program); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -217,7 +227,9 @@ func (c *Compiler) analyzeAllCaptures(node parser.Node) error {
 func (c *Compiler) analyzeCaptures(node parser.Node) error {
 	var walker func(n parser.Node)
 	walker = func(n parser.Node) {
-		if n == nil { return }
+		if isNilNode(n) {
+			return
+		}
 
 		if fn, ok := n.(*parser.FunctionLiteral); ok {
 			free := c.getFreeVars(fn)
@@ -229,21 +241,33 @@ func (c *Compiler) analyzeCaptures(node parser.Node) error {
 
 		switch t := n.(type) {
 		case *parser.Program:
-			for _, s := range t.Statements { walker(s) }
+			for _, s := range t.Statements {
+				walker(s)
+			}
 		case *parser.BlockStatement:
-			for _, s := range t.Statements { walker(s) }
+			for _, s := range t.Statements {
+				walker(s)
+			}
 		case *parser.ExpressionStatement:
 			walker(t.Expression)
 		case *parser.VarStatement:
-			for _, v := range t.Values { walker(v) }
+			for _, v := range t.Values {
+				walker(v)
+			}
 		case *parser.ReturnStatement:
-			for _, v := range t.ReturnValues { walker(v) }
+			for _, v := range t.ReturnValues {
+				walker(v)
+			}
 		case *parser.AssignmentStatement:
-			for _, v := range t.Values { walker(v) }
+			for _, v := range t.Values {
+				walker(v)
+			}
 		case *parser.IfExpression:
 			walker(t.Condition)
 			walker(t.Consequence)
-			if t.Alternative != nil { walker(t.Alternative) }
+			if t.Alternative != nil {
+				walker(t.Alternative)
+			}
 		case *parser.SwitchStatement:
 			walker(t.Condition)
 			for _, cc := range t.Cases {
@@ -262,23 +286,36 @@ func (c *Compiler) analyzeCaptures(node parser.Node) error {
 			walker(t.Body)
 		case *parser.CallExpression:
 			walker(t.Function)
-			for _, a := range t.Arguments { walker(a) }
+			for _, a := range t.Arguments {
+				walker(a)
+			}
 		case *parser.InfixExpression:
-			walker(t.Left); walker(t.Right)
+			walker(t.Left)
+			walker(t.Right)
 		case *parser.PrefixExpression:
 			walker(t.Right)
 		case *parser.IndexExpression:
-			walker(t.Left); walker(t.Index)
+			walker(t.Left)
+			walker(t.Index)
 		case *parser.MemberExpression:
 			walker(t.Object)
 		case *parser.StructLiteral:
-			for _, v := range t.Fields { walker(v) }
+			for _, v := range t.Fields {
+				walker(v)
+			}
 		case *parser.ArrayLiteral:
-			for _, v := range t.Elements { walker(v) }
+			for _, v := range t.Elements {
+				walker(v)
+			}
 		case *parser.HashLiteral:
-			for k, v := range t.Pairs { walker(k); walker(v) }
+			for k, v := range t.Pairs {
+				walker(k)
+				walker(v)
+			}
 		case *parser.InterpolatedString:
-			for _, p := range t.Parts { walker(p) }
+			for _, p := range t.Parts {
+				walker(p)
+			}
 		}
 	}
 
@@ -305,7 +342,9 @@ func (c *Compiler) getFreeVars(fn *parser.FunctionLiteral) []string {
 
 	var walkBody func(n parser.Node)
 	walkBody = func(n parser.Node) {
-		if n == nil { return }
+		if isNilNode(n) {
+			return
+		}
 		switch t := n.(type) {
 		case *parser.Identifier:
 			used[t.Value] = true
@@ -313,7 +352,9 @@ func (c *Compiler) getFreeVars(fn *parser.FunctionLiteral) []string {
 			for _, name := range t.Names {
 				defined[name.Value] = true
 			}
-			for _, val := range t.Values { walkBody(val) }
+			for _, val := range t.Values {
+				walkBody(val)
+			}
 		case *parser.FunctionLiteral:
 			// Recurse to find free vars in nested function
 			nestedFree := c.getFreeVars(t)
@@ -323,9 +364,15 @@ func (c *Compiler) getFreeVars(fn *parser.FunctionLiteral) []string {
 		case *parser.MemberExpression:
 			walkBody(t.Object)
 		case *parser.BlockStatement:
-			for _, s := range t.Statements { walkBody(s) }
-		case *parser.ExpressionStatement: walkBody(t.Expression)
-		case *parser.ReturnStatement: for _, v := range t.ReturnValues { walkBody(v) }
+			for _, s := range t.Statements {
+				walkBody(s)
+			}
+		case *parser.ExpressionStatement:
+			walkBody(t.Expression)
+		case *parser.ReturnStatement:
+			for _, v := range t.ReturnValues {
+				walkBody(v)
+			}
 		case *parser.AssignmentStatement:
 			for _, name := range t.Names {
 				if ident, ok := name.(*parser.Identifier); ok {
@@ -334,26 +381,45 @@ func (c *Compiler) getFreeVars(fn *parser.FunctionLiteral) []string {
 					walkBody(name)
 				}
 			}
-			for _, val := range t.Values { walkBody(val) }
+			for _, val := range t.Values {
+				walkBody(val)
+			}
 		case *parser.CallExpression:
 			walkBody(t.Function)
-			for _, a := range t.Arguments { walkBody(a) }
+			for _, a := range t.Arguments {
+				walkBody(a)
+			}
 		case *parser.InfixExpression:
-			walkBody(t.Left); walkBody(t.Right)
+			walkBody(t.Left)
+			walkBody(t.Right)
 		case *parser.PrefixExpression:
 			walkBody(t.Right)
 		case *parser.IndexExpression:
-			walkBody(t.Left); walkBody(t.Index)
+			walkBody(t.Left)
+			walkBody(t.Index)
 		case *parser.StructLiteral:
-			for _, v := range t.Fields { walkBody(v) }
+			for _, v := range t.Fields {
+				walkBody(v)
+			}
 		case *parser.ArrayLiteral:
-			for _, v := range t.Elements { walkBody(v) }
+			for _, v := range t.Elements {
+				walkBody(v)
+			}
 		case *parser.HashLiteral:
-			for k, v := range t.Pairs { walkBody(k); walkBody(v) }
+			for k, v := range t.Pairs {
+				walkBody(k)
+				walkBody(v)
+			}
 		case *parser.InterpolatedString:
-			for _, p := range t.Parts { walkBody(p) }
+			for _, p := range t.Parts {
+				walkBody(p)
+			}
 		case *parser.IfExpression:
-			walkBody(t.Condition); walkBody(t.Consequence); if t.Alternative != nil { walkBody(t.Alternative) }
+			walkBody(t.Condition)
+			walkBody(t.Consequence)
+			if t.Alternative != nil {
+				walkBody(t.Alternative)
+			}
 		case *parser.SwitchStatement:
 			walkBody(t.Condition)
 			for _, cc := range t.Cases {
@@ -366,7 +432,8 @@ func (c *Compiler) getFreeVars(fn *parser.FunctionLiteral) []string {
 				walkBody(t.Default)
 			}
 		case *parser.WhileExpression:
-			walkBody(t.Condition); walkBody(t.Body)
+			walkBody(t.Condition)
+			walkBody(t.Body)
 		}
 	}
 
@@ -386,44 +453,46 @@ func (c *Compiler) getFreeVars(fn *parser.FunctionLiteral) []string {
 // --- Compilation ---
 
 func (c *Compiler) generatePrototypes(node parser.Node) {
-    if prog, ok := node.(*parser.Program); ok {
-        c.generateModulePrototypes(prog, "mph_")
-    }
-    for path, mod := range c.checker.ModuleCache {
-		if mod.Program == nil { continue }
+	if prog, ok := node.(*parser.Program); ok {
+		c.generateModulePrototypes(prog, "mph_")
+	}
+	for path, mod := range c.checker.ModuleCache {
+		if mod.Program == nil {
+			continue
+		}
 		c.generateModulePrototypes(mod.Program, mangle(path))
 	}
 }
 
 func (c *Compiler) generateModulePrototypes(prog *parser.Program, prefix string) {
-    for _, stmt := range prog.Statements {
-        if s, ok := stmt.(*parser.ExpressionStatement); ok {
+	for _, stmt := range prog.Statements {
+		if s, ok := stmt.(*parser.ExpressionStatement); ok {
 			if fn, ok := s.Expression.(*parser.FunctionLiteral); ok {
 				if fn.Name != "" {
-                    c.generateFunctionPrototype(fn, prefix)
+					c.generateFunctionPrototype(fn, prefix)
 				}
 			}
 		}
-    }
+	}
 }
 
 func (c *Compiler) generateFunctionPrototype(fn *parser.FunctionLiteral, prefix string) {
-    retType := "void"
+	retType := "void"
 	if len(fn.ReturnTypes) == 1 {
 		retType, _ = c.mapTypeToC(fn.ReturnTypes[0], prefix)
 	} else if len(fn.ReturnTypes) > 1 {
-        // Resolve types
-        var types []checker.Type
-        for _, rt := range fn.ReturnTypes {
-             t := c.resolveTypeNode(rt)
-             types = append(types, t)
-        }
-        retType = c.getTupleCType(types, prefix)
-    }
+		// Resolve types
+		var types []checker.Type
+		for _, rt := range fn.ReturnTypes {
+			t := c.resolveTypeNode(rt)
+			types = append(types, t)
+		}
+		retType = c.getTupleCType(types, prefix)
+	}
 
 	funcName := c.getAnonFuncName(fn)
-    // Handle methods
-    if fn.Receiver != nil {
+	// Handle methods
+	if fn.Receiver != nil {
 		recvTypeName := ""
 		if st, ok := fn.Receiver.Type.(*parser.SimpleType); ok {
 			recvTypeName = st.Name
@@ -435,9 +504,9 @@ func (c *Compiler) generateFunctionPrototype(fn *parser.FunctionLiteral, prefix 
 		}
 	}
 
-    c.prototypes.WriteString(fmt.Sprintf("%s %s%s(MorphContext* ctx, void* _env_void", retType, prefix, funcName))
+	c.prototypes.WriteString(fmt.Sprintf("%s %s%s(MorphContext* ctx, void* _env_void", retType, prefix, funcName))
 
-    if fn.Receiver != nil {
+	if fn.Receiver != nil {
 		cType, _ := c.mapTypeToC(fn.Receiver.Type, prefix)
 		c.prototypes.WriteString(fmt.Sprintf(", %s %s", cType, fn.Receiver.Name.Value))
 	}
@@ -447,7 +516,7 @@ func (c *Compiler) generateFunctionPrototype(fn *parser.FunctionLiteral, prefix 
 		c.prototypes.WriteString(fmt.Sprintf(", %s %s", cType, p.Name.Value))
 	}
 
-    c.prototypes.WriteString(");\n")
+	c.prototypes.WriteString(");\n")
 }
 
 func (c *Compiler) compileModule(prog *parser.Program, prefix string) error {
@@ -495,7 +564,9 @@ func (c *Compiler) compileGlobalVar(s *parser.VarStatement, prefix string) error
 			destType = c.checker.Types[s.Type]
 		} else {
 			destType = c.checker.Types[nameIdent]
-			if destType == nil { destType = c.checker.Types[s.Values[0]] }
+			if destType == nil {
+				destType = c.checker.Types[s.Values[0]]
+			}
 		}
 
 		cType := "mph_int"
@@ -511,7 +582,9 @@ func (c *Compiler) compileGlobalVar(s *parser.VarStatement, prefix string) error
 		if i < len(s.Values) {
 			var err error
 			valCode, err = c.compileExpression(s.Values[i], prefix, nil)
-			if err != nil { return err }
+			if err != nil {
+				return err
+			}
 		} else {
 			// Zero value or error?
 			// Checker handles "requires value". If here, valid.
@@ -527,7 +600,9 @@ func (c *Compiler) compileGlobalVar(s *parser.VarStatement, prefix string) error
 			// Generate init code only ONCE.
 			if i == 0 {
 				valCode, err := c.compileExpression(s.Values[0], prefix, nil)
-				if err != nil { return err }
+				if err != nil {
+					return err
+				}
 
 				srcType := c.checker.Types[s.Values[0]]
 				mt := srcType.(*checker.MultiType)
@@ -566,24 +641,26 @@ func (c *Compiler) compileFunction(fn *parser.FunctionLiteral, prefix string) er
 		c.hasMain = true
 	}
 
-    // Determine Return Type (Tuple aware)
+	// Determine Return Type (Tuple aware)
 	retType := "void"
 	if len(fn.ReturnTypes) == 1 {
 		var err error
 		retType, err = c.mapTypeToC(fn.ReturnTypes[0], prefix)
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 	} else if len(fn.ReturnTypes) > 1 {
-        // Resolve types from checker to handle Tuples correctly
-        // We can't rely just on AST TypeNode mapping if we want to reuse getTupleCType logic which expects checker.Type
-        // But we can resolve TypeNode to checker.Type using c.checker.Types map?
-        // c.checker.Types maps Node -> Type.
-        var types []checker.Type
-        for _, rt := range fn.ReturnTypes {
-             t := c.resolveTypeNode(rt)
-             types = append(types, t)
-        }
-        retType = c.getTupleCType(types, prefix)
-    }
+		// Resolve types from checker to handle Tuples correctly
+		// We can't rely just on AST TypeNode mapping if we want to reuse getTupleCType logic which expects checker.Type
+		// But we can resolve TypeNode to checker.Type using c.checker.Types map?
+		// c.checker.Types maps Node -> Type.
+		var types []checker.Type
+		for _, rt := range fn.ReturnTypes {
+			t := c.resolveTypeNode(rt)
+			types = append(types, t)
+		}
+		retType = c.getTupleCType(types, prefix)
+	}
 
 	funcName := c.getAnonFuncName(fn)
 	if fn.Receiver != nil {
@@ -604,39 +681,43 @@ func (c *Compiler) compileFunction(fn *parser.FunctionLiteral, prefix string) er
 
 	if len(captures) > 0 {
 		c.typeDefs.WriteString(fmt.Sprintf("typedef struct %s {\n", envTypeName))
-        var pointerOffsets []string
+		var pointerOffsets []string
 		for _, name := range captures {
 			typ := c.findTypeForName(fn.Body, name)
 			cType := c.mapCheckerTypeToC(typ, prefix)
 			c.typeDefs.WriteString(fmt.Sprintf("\t%s %s;\n", cType, name))
 
-            if c.isPointerCheckerType(typ) {
-                pointerOffsets = append(pointerOffsets, fmt.Sprintf("offsetof(%s, %s)", envTypeName, name))
-            }
+			if c.isPointerCheckerType(typ) {
+				pointerOffsets = append(pointerOffsets, fmt.Sprintf("offsetof(%s, %s)", envTypeName, name))
+			}
 		}
 		c.typeDefs.WriteString(fmt.Sprintf("} %s;\n\n", envTypeName))
 
-        // Generate RTTI for Env
-        offsetsStr := "NULL"
-        if len(pointerOffsets) > 0 {
-            offsetsStr = fmt.Sprintf("(size_t[]){%s}", strings.Join(pointerOffsets, ", "))
-        }
-        c.typeDefs.WriteString(fmt.Sprintf("MorphTypeInfo mph_ti_%s = { \"%s\", sizeof(%s), %d, %s, NULL };\n", envTypeName, envTypeName, envTypeName, len(pointerOffsets), offsetsStr))
+		// Generate RTTI for Env
+		offsetsStr := "NULL"
+		if len(pointerOffsets) > 0 {
+			offsetsStr = fmt.Sprintf("(size_t[]){%s}", strings.Join(pointerOffsets, ", "))
+		}
+		c.typeDefs.WriteString(fmt.Sprintf("MorphTypeInfo mph_ti_%s = { \"%s\", sizeof(%s), %d, %s, NULL };\n", envTypeName, envTypeName, envTypeName, len(pointerOffsets), offsetsStr))
 	}
 
 	// 2. Generate Function Definition into Local Builder
-    var fnBuilder strings.Builder
+	var fnBuilder strings.Builder
 	fnBuilder.WriteString(fmt.Sprintf("%s %s%s(MorphContext* ctx, void* _env_void", retType, prefix, funcName))
 
 	if fn.Receiver != nil {
 		cType, err := c.mapTypeToC(fn.Receiver.Type, prefix)
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 		fnBuilder.WriteString(fmt.Sprintf(", %s %s", cType, fn.Receiver.Name.Value))
 	}
 
 	for _, p := range fn.Parameters {
 		cType, err := c.mapTypeToC(p.Type, prefix)
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 		fnBuilder.WriteString(fmt.Sprintf(", %s %s", cType, p.Name.Value))
 	}
 
@@ -644,28 +725,30 @@ func (c *Compiler) compileFunction(fn *parser.FunctionLiteral, prefix string) er
 
 	if fn.IsNative {
 		fnBuilder.WriteString(";\n\n")
-        c.funcDefs.WriteString(fnBuilder.String())
+		c.funcDefs.WriteString(fnBuilder.String())
 		return nil
 	}
 
 	fnBuilder.WriteString(" {\n")
 
 	// 3. Register Pointer Parameters as Roots
-    // Receiver
+	// Receiver
 	if fn.Receiver != nil {
-        if c.isPointerType(fn.Receiver.Type) {
-            fnBuilder.WriteString(fmt.Sprintf("\tmph_gc_push_root(ctx, (void**)&%s);\n", fn.Receiver.Name.Value))
-        }
-    }
-    // Params
-    var roots int
-    if fn.Receiver != nil && c.isPointerType(fn.Receiver.Type) { roots++ }
+		if c.isPointerType(fn.Receiver.Type) {
+			fnBuilder.WriteString(fmt.Sprintf("\tmph_gc_push_root(ctx, (void**)&%s);\n", fn.Receiver.Name.Value))
+		}
+	}
+	// Params
+	var roots int
+	if fn.Receiver != nil && c.isPointerType(fn.Receiver.Type) {
+		roots++
+	}
 
 	for _, p := range fn.Parameters {
-        if c.isPointerType(p.Type) {
-		    fnBuilder.WriteString(fmt.Sprintf("\tmph_gc_push_root(ctx, (void**)&%s);\n", p.Name.Value))
-            roots++
-        }
+		if c.isPointerType(p.Type) {
+			fnBuilder.WriteString(fmt.Sprintf("\tmph_gc_push_root(ctx, (void**)&%s);\n", p.Name.Value))
+			roots++
+		}
 	}
 
 	// 3. Cast Env
@@ -679,15 +762,15 @@ func (c *Compiler) compileFunction(fn *parser.FunctionLiteral, prefix string) er
 	}
 	fnBuilder.WriteString(body.String())
 
-    // Pop Param Roots
-    if roots > 0 {
-        fnBuilder.WriteString(fmt.Sprintf("\tmph_gc_pop_roots(ctx, %d);\n", roots))
-    }
+	// Pop Param Roots
+	if roots > 0 {
+		fnBuilder.WriteString(fmt.Sprintf("\tmph_gc_pop_roots(ctx, %d);\n", roots))
+	}
 
 	fnBuilder.WriteString("}\n\n")
 
-    // Append to global funcDefs AFTER body compilation is done (handling nested functions)
-    c.funcDefs.WriteString(fnBuilder.String())
+	// Append to global funcDefs AFTER body compilation is done (handling nested functions)
+	c.funcDefs.WriteString(fnBuilder.String())
 	return nil
 }
 
@@ -695,114 +778,164 @@ func (c *Compiler) findTypeForName(body parser.Statement, name string) checker.T
 	var found checker.Type
 	var finder func(n parser.Node)
 	finder = func(n parser.Node) {
-		if found != nil || n == nil { return }
+		if found != nil || n == nil {
+			return
+		}
 		if ident, ok := n.(*parser.Identifier); ok {
 			if ident.Value == name {
 				found = c.checker.Types[ident]
 			}
 		}
 		switch t := n.(type) {
-		case *parser.BlockStatement: for _, s := range t.Statements { finder(s) }
-		case *parser.ExpressionStatement: finder(t.Expression)
-		case *parser.VarStatement: for _, v := range t.Values { finder(v) }
-		case *parser.ReturnStatement: for _, v := range t.ReturnValues { finder(v) }
-		case *parser.AssignmentStatement: for _, v := range t.Values { finder(v) }
-		case *parser.IfExpression: finder(t.Condition); finder(t.Consequence); finder(t.Alternative)
-		case *parser.WhileExpression: finder(t.Condition); finder(t.Body)
-		case *parser.CallExpression: finder(t.Function); for _, a := range t.Arguments { finder(a) }
-		case *parser.InfixExpression: finder(t.Left); finder(t.Right)
-		case *parser.PrefixExpression: finder(t.Right)
-		case *parser.IndexExpression: finder(t.Left); finder(t.Index)
+		case *parser.BlockStatement:
+			for _, s := range t.Statements {
+				finder(s)
+			}
+		case *parser.ExpressionStatement:
+			finder(t.Expression)
+		case *parser.VarStatement:
+			for _, v := range t.Values {
+				finder(v)
+			}
+		case *parser.ReturnStatement:
+			for _, v := range t.ReturnValues {
+				finder(v)
+			}
+		case *parser.AssignmentStatement:
+			for _, v := range t.Values {
+				finder(v)
+			}
+		case *parser.IfExpression:
+			finder(t.Condition)
+			finder(t.Consequence)
+			finder(t.Alternative)
+		case *parser.WhileExpression:
+			finder(t.Condition)
+			finder(t.Body)
+		case *parser.CallExpression:
+			finder(t.Function)
+			for _, a := range t.Arguments {
+				finder(a)
+			}
+		case *parser.InfixExpression:
+			finder(t.Left)
+			finder(t.Right)
+		case *parser.PrefixExpression:
+			finder(t.Right)
+		case *parser.IndexExpression:
+			finder(t.Left)
+			finder(t.Index)
 		}
 	}
 	finder(body)
-	if found == nil { return checker.IntType }
+	if found == nil {
+		return checker.IntType
+	}
 	return found
 }
 
 func (c *Compiler) compileBlock(block *parser.BlockStatement, buf *strings.Builder, prefix string, currentFn *parser.FunctionLiteral) error {
-    localRoots := 0
+	localRoots := 0
 	for _, stmt := range block.Statements {
 		if err := c.compileStatement(stmt, buf, prefix, currentFn); err != nil {
 			return err
 		}
-        // Count roots created by this statement (if VarStatement with pointer)
-        if vs, ok := stmt.(*parser.VarStatement); ok {
-             var typeNode parser.TypeNode = vs.Type
-             // If implicit, check checker type
-             if typeNode == nil {
-                 // Too hard to reconstruct parser.TypeNode from checker.Type here correctly for isPointerType check
-                 // So we fallback to checker type check
-                 typ := c.checker.Types[vs.Values[0]] // Type of value
-                 if typ != nil && c.isPointerCheckerType(typ) {
-                     localRoots++
-                 }
-             } else {
-                 if c.isPointerType(typeNode) {
-                    localRoots++
-                 }
-             }
-        }
+		// Count roots created by this statement (if VarStatement with pointer)
+		if vs, ok := stmt.(*parser.VarStatement); ok {
+			var typeNode parser.TypeNode = vs.Type
+			// If implicit, check checker type
+			if typeNode == nil {
+				// Too hard to reconstruct parser.TypeNode from checker.Type here correctly for isPointerType check
+				// So we fallback to checker type check
+				typ := c.checker.Types[vs.Values[0]] // Type of value
+				if typ != nil && c.isPointerCheckerType(typ) {
+					localRoots++
+				}
+			} else {
+				if c.isPointerType(typeNode) {
+					localRoots++
+				}
+			}
+		}
 	}
-    // Pop local roots at end of block
-    if localRoots > 0 {
-        buf.WriteString(fmt.Sprintf("\tmph_gc_pop_roots(ctx, %d);\n", localRoots))
-    }
+	// Pop local roots at end of block
+	if localRoots > 0 {
+		buf.WriteString(fmt.Sprintf("\tmph_gc_pop_roots(ctx, %d);\n", localRoots))
+	}
 	return nil
 }
 
 func (c *Compiler) isPointerCheckerType(t checker.Type) bool {
-    if t == nil { return false }
-    switch t.Kind() {
-    case checker.KindString, checker.KindArray, checker.KindMap, checker.KindStruct, checker.KindFunction, checker.KindInterface, checker.KindUserError: return true
-    }
-    return false
+	if t == nil {
+		return false
+	}
+	switch t.Kind() {
+	case checker.KindString, checker.KindArray, checker.KindMap, checker.KindStruct, checker.KindFunction, checker.KindInterface, checker.KindUserError:
+		return true
+	}
+	return false
 }
 
 func (c *Compiler) resolveTypeNode(t parser.TypeNode) checker.Type {
-    if t == nil { return nil }
-    // First check if checker cached it (best effort)
-    if ct := c.checker.Types[t]; ct != nil { return ct }
+	if t == nil {
+		return nil
+	}
+	// First check if checker cached it (best effort)
+	if ct := c.checker.Types[t]; ct != nil {
+		return ct
+	}
 
-    switch ty := t.(type) {
-    case *parser.SimpleType:
-        switch ty.Name {
-        case "int": return checker.IntType
-        case "float": return checker.FloatType
-        case "bool": return checker.BoolType
-        case "string": return checker.StringType
-        case "void": return checker.VoidType
-        case "error": return checker.UserErrorType
-        // Structs? We need to look up struct definition?
-        // Compiler has StructIDs but not Types map access?
-        // Checker has Structs map.
-        // We can look up in c.checker.Structs? No, scope logic is in checker.
-        // But for getTupleCType, we mostly need the Kind and Name for the struct key.
-        // We can create a dummy StructType with just name for C generation?
-        // Or better: mapCheckerTypeToC handles StructType.
-        default: return &checker.StructType{Name: ty.Name}
-        }
-    case *parser.QualifiedType:
-         return &checker.StructType{Name: ty.Name.Value, Module: ty.Package.Value}
-    case *parser.ArrayType:
-        return &checker.ArrayType{Element: c.resolveTypeNode(ty.Element)}
-    case *parser.MapType:
-        return &checker.MapType{Key: c.resolveTypeNode(ty.Key), Value: c.resolveTypeNode(ty.Value)}
-    case *parser.FunctionType:
-        // Simplified function type (we don't need full signature for C tuple name usually, just "Closure")
-        return &checker.FunctionType{}
-    }
-    return checker.UnknownType
+	switch ty := t.(type) {
+	case *parser.SimpleType:
+		switch ty.Name {
+		case "int":
+			return checker.IntType
+		case "float":
+			return checker.FloatType
+		case "bool":
+			return checker.BoolType
+		case "string":
+			return checker.StringType
+		case "void":
+			return checker.VoidType
+		case "error":
+			return checker.UserErrorType
+		// Structs? We need to look up struct definition?
+		// Compiler has StructIDs but not Types map access?
+		// Checker has Structs map.
+		// We can look up in c.checker.Structs? No, scope logic is in checker.
+		// But for getTupleCType, we mostly need the Kind and Name for the struct key.
+		// We can create a dummy StructType with just name for C generation?
+		// Or better: mapCheckerTypeToC handles StructType.
+		default:
+			return &checker.StructType{Name: ty.Name}
+		}
+	case *parser.QualifiedType:
+		return &checker.StructType{Name: ty.Name.Value, Module: ty.Package.Value}
+	case *parser.ArrayType:
+		return &checker.ArrayType{Element: c.resolveTypeNode(ty.Element)}
+	case *parser.MapType:
+		return &checker.MapType{Key: c.resolveTypeNode(ty.Key), Value: c.resolveTypeNode(ty.Value)}
+	case *parser.FunctionType:
+		// Simplified function type (we don't need full signature for C tuple name usually, just "Closure")
+		return &checker.FunctionType{}
+	}
+	return checker.UnknownType
 }
 
 func (c *Compiler) compileStatement(stmt parser.Statement, buf *strings.Builder, prefix string, currentFn *parser.FunctionLiteral) error {
 	switch s := stmt.(type) {
-	case *parser.VarStatement: return c.compileVar(s, buf, prefix, currentFn)
-	case *parser.ReturnStatement: return c.compileReturn(s, buf, prefix, currentFn)
-	case *parser.AssignmentStatement: return c.compileAssignment(s, buf, prefix, currentFn)
+	case *parser.VarStatement:
+		return c.compileVar(s, buf, prefix, currentFn)
+	case *parser.ReturnStatement:
+		return c.compileReturn(s, buf, prefix, currentFn)
+	case *parser.AssignmentStatement:
+		return c.compileAssignment(s, buf, prefix, currentFn)
 	case *parser.BlockStatement:
 		buf.WriteString("{\n")
-		if err := c.compileBlock(s, buf, prefix, currentFn); err != nil { return err }
+		if err := c.compileBlock(s, buf, prefix, currentFn); err != nil {
+			return err
+		}
 		buf.WriteString("}\n")
 		return nil
 	case *parser.ExpressionStatement:
@@ -813,12 +946,15 @@ func (c *Compiler) compileStatement(stmt parser.Statement, buf *strings.Builder,
 			return c.compileWhile(whileExpr, buf, prefix, currentFn)
 		}
 		exprCode, err := c.compileExpression(s.Expression, prefix, currentFn)
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 		buf.WriteString(fmt.Sprintf("\t%s;\n", exprCode))
 		return nil
 	case *parser.SwitchStatement:
 		return c.compileSwitchStatement(s, buf, prefix, currentFn)
-	default: return nil
+	default:
+		return nil
 	}
 }
 
@@ -896,76 +1032,90 @@ func (c *Compiler) compileSwitchStatement(s *parser.SwitchStatement, buf *string
 }
 
 func (c *Compiler) compileVar(s *parser.VarStatement, buf *strings.Builder, prefix string, fn *parser.FunctionLiteral) error {
-    // Tuple Unpacking Declaration: var x, y = f()
-    if len(s.Names) > 1 && len(s.Values) == 1 {
-        valCode, err := c.compileExpression(s.Values[0], prefix, fn)
-        if err != nil { return err }
+	// Tuple Unpacking Declaration: var x, y = f()
+	if len(s.Names) > 1 && len(s.Values) == 1 {
+		valCode, err := c.compileExpression(s.Values[0], prefix, fn)
+		if err != nil {
+			return err
+		}
 
-        srcType := c.checker.Types[s.Values[0]]
-        if srcType == nil || srcType.Kind() != checker.KindMulti {
-            return fmt.Errorf("expected tuple return for multi-var")
-        }
-        mt := srcType.(*checker.MultiType)
-        tupleType := c.getTupleCType(mt.Types, prefix)
+		srcType := c.checker.Types[s.Values[0]]
+		if srcType == nil || srcType.Kind() != checker.KindMulti {
+			return fmt.Errorf("expected tuple return for multi-var")
+		}
+		mt := srcType.(*checker.MultiType)
+		tupleType := c.getTupleCType(mt.Types, prefix)
 
-        // Emit block to scope temp variable?
-        // No, var declarations need to be visible in current scope.
-        // We can't use a block if we want variables to persist.
-        // But we need a temp variable for the tuple.
-        // Generate unique name? "_t_PTR"
-        tmpName := fmt.Sprintf("_t_%p", s)
-        buf.WriteString(fmt.Sprintf("\t%s %s = %s;\n", tupleType, tmpName, valCode))
+		// Emit block to scope temp variable?
+		// No, var declarations need to be visible in current scope.
+		// We can't use a block if we want variables to persist.
+		// But we need a temp variable for the tuple.
+		// Generate unique name? "_t_PTR"
+		tmpName := fmt.Sprintf("_t_%p", s)
+		buf.WriteString(fmt.Sprintf("\t%s %s = %s;\n", tupleType, tmpName, valCode))
 
-        for i, nameIdent := range s.Names {
-            name := nameIdent.Value
+		for i, nameIdent := range s.Names {
+			name := nameIdent.Value
 
-            // Determine type
-            var destType checker.Type
-            // If explicit type on VarStatement? currently VarStatement has single Type field?
-            // "var x, y int = ..." -> Both int.
-            // "var x, y = ..." -> Inferred.
-            if s.Type != nil {
-                destType = c.checker.Types[s.Type]
-            } else {
-                 destType = c.checker.Types[nameIdent]
-            }
+			// Determine type
+			var destType checker.Type
+			// If explicit type on VarStatement? currently VarStatement has single Type field?
+			// "var x, y int = ..." -> Both int.
+			// "var x, y = ..." -> Inferred.
+			if s.Type != nil {
+				destType = c.checker.Types[s.Type]
+			} else {
+				destType = c.checker.Types[nameIdent]
+			}
 
-            cType := c.mapCheckerTypeToC(destType, prefix)
-            buf.WriteString(fmt.Sprintf("\t%s %s = %s.v%d;\n", cType, name, tmpName, i))
+			cType := c.mapCheckerTypeToC(destType, prefix)
+			buf.WriteString(fmt.Sprintf("\t%s %s = %s.v%d;\n", cType, name, tmpName, i))
 
-            // Register Root if Pointer
-            isPtr := false
-            if s.Type != nil {
-                if c.isPointerType(s.Type) { isPtr = true }
-            } else if destType != nil {
-                if c.isPointerCheckerType(destType) { isPtr = true }
-            }
+			// Register Root if Pointer
+			isPtr := false
+			if s.Type != nil {
+				if c.isPointerType(s.Type) {
+					isPtr = true
+				}
+			} else if destType != nil {
+				if c.isPointerCheckerType(destType) {
+					isPtr = true
+				}
+			}
 
-            if isPtr {
-                buf.WriteString(fmt.Sprintf("\tmph_gc_push_root(ctx, (void**)&%s);\n", name))
-            }
-        }
-        return nil
-    }
+			if isPtr {
+				buf.WriteString(fmt.Sprintf("\tmph_gc_push_root(ctx, (void**)&%s);\n", name))
+			}
+		}
+		return nil
+	}
 
-	if len(s.Names) != 1 || len(s.Values) != 1 { return fmt.Errorf("multi-var not supported") }
+	if len(s.Names) != 1 || len(s.Values) != 1 {
+		return fmt.Errorf("multi-var not supported")
+	}
 	name := s.Names[0].Value
 	valCode, err := c.compileExpression(s.Values[0], prefix, fn)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
 	var destType checker.Type
 	if s.Type != nil {
 		destType = c.checker.Types[s.Type]
 	} else {
 		destType = c.checker.Types[s.Names[0]]
-		if destType == nil { destType = c.checker.Types[s.Values[0]] }
+		if destType == nil {
+			destType = c.checker.Types[s.Values[0]]
+		}
 	}
 
 	// Interface Conversion check
 	srcType := c.checker.Types[s.Values[0]]
 	if destType != nil && destType.Kind() == checker.KindInterface && srcType != nil && srcType.Kind() == checker.KindStruct {
 		valCode, err = c.compileInterfaceConversion(destType.(*checker.InterfaceType), srcType.(*checker.StructType), valCode, prefix)
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 	}
 
 	cType := "mph_int"
@@ -975,64 +1125,74 @@ func (c *Compiler) compileVar(s *parser.VarStatement, buf *strings.Builder, pref
 
 	buf.WriteString(fmt.Sprintf("\t%s %s = %s;\n", cType, name, valCode))
 
-    // Register Root if Pointer
-    isPtr := false
-    if s.Type != nil {
-        if c.isPointerType(s.Type) { isPtr = true }
-    } else if destType != nil {
-        if c.isPointerCheckerType(destType) { isPtr = true }
-    }
+	// Register Root if Pointer
+	isPtr := false
+	if s.Type != nil {
+		if c.isPointerType(s.Type) {
+			isPtr = true
+		}
+	} else if destType != nil {
+		if c.isPointerCheckerType(destType) {
+			isPtr = true
+		}
+	}
 
-    if isPtr {
-        buf.WriteString(fmt.Sprintf("\tmph_gc_push_root(ctx, (void**)&%s);\n", name))
-    }
+	if isPtr {
+		buf.WriteString(fmt.Sprintf("\tmph_gc_push_root(ctx, (void**)&%s);\n", name))
+	}
 
 	return nil
 }
 
 func (c *Compiler) compileAssignment(s *parser.AssignmentStatement, buf *strings.Builder, prefix string, fn *parser.FunctionLiteral) error {
-    // Tuple Unpacking: x, y = f()
-    if len(s.Names) > 1 && len(s.Values) == 1 {
-        valCode, err := c.compileExpression(s.Values[0], prefix, fn)
-        if err != nil { return err }
+	// Tuple Unpacking: x, y = f()
+	if len(s.Names) > 1 && len(s.Values) == 1 {
+		valCode, err := c.compileExpression(s.Values[0], prefix, fn)
+		if err != nil {
+			return err
+		}
 
-        srcType := c.checker.Types[s.Values[0]]
-        if srcType == nil || srcType.Kind() != checker.KindMulti {
-            return fmt.Errorf("expected tuple return")
-        }
-        mt := srcType.(*checker.MultiType)
-        tupleType := c.getTupleCType(mt.Types, prefix)
+		srcType := c.checker.Types[s.Values[0]]
+		if srcType == nil || srcType.Kind() != checker.KindMulti {
+			return fmt.Errorf("expected tuple return")
+		}
+		mt := srcType.(*checker.MultiType)
+		tupleType := c.getTupleCType(mt.Types, prefix)
 
-        // Use temp variable for tuple result
-        // We use GCC statement expression if possible? No, assignment is statement.
-        // We can just emit block.
-        buf.WriteString("{\n")
-        buf.WriteString(fmt.Sprintf("\t%s _t = %s;\n", tupleType, valCode))
+		// Use temp variable for tuple result
+		// We use GCC statement expression if possible? No, assignment is statement.
+		// We can just emit block.
+		buf.WriteString("{\n")
+		buf.WriteString(fmt.Sprintf("\t%s _t = %s;\n", tupleType, valCode))
 
-        for i, nameExpr := range s.Names {
-            if ident, ok := nameExpr.(*parser.Identifier); ok {
-                target := ident.Value
-                if c.isCaptured(target, fn) {
-                    target = fmt.Sprintf("_env->%s", target)
-                }
-                buf.WriteString(fmt.Sprintf("\t%s = _t.v%d;\n", target, i))
-            } else {
-                return fmt.Errorf("only identifiers supported in tuple unpack")
-            }
-        }
-        buf.WriteString("}\n")
-        return nil
-    }
+		for i, nameExpr := range s.Names {
+			if ident, ok := nameExpr.(*parser.Identifier); ok {
+				target := ident.Value
+				if c.isCaptured(target, fn) {
+					target = fmt.Sprintf("_env->%s", target)
+				}
+				buf.WriteString(fmt.Sprintf("\t%s = _t.v%d;\n", target, i))
+			} else {
+				return fmt.Errorf("only identifiers supported in tuple unpack")
+			}
+		}
+		buf.WriteString("}\n")
+		return nil
+	}
 
 	valCode, err := c.compileExpression(s.Values[0], prefix, fn)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 
 	// Interface Conversion
 	srcType := c.checker.Types[s.Values[0]]
 	destType := c.checker.Types[s.Names[0]]
 	if destType != nil && destType.Kind() == checker.KindInterface && srcType != nil && srcType.Kind() == checker.KindStruct {
 		valCode, err = c.compileInterfaceConversion(destType.(*checker.InterfaceType), srcType.(*checker.StructType), valCode, prefix)
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 	}
 
 	if ident, ok := s.Names[0].(*parser.Identifier); ok {
@@ -1040,21 +1200,27 @@ func (c *Compiler) compileAssignment(s *parser.AssignmentStatement, buf *strings
 		if c.isCaptured(target, fn) {
 			target = fmt.Sprintf("_env->%s", target)
 		} else if c.currentGlobals[target] && !isBuiltin(target) {
-            target = prefix + target
-        }
+			target = prefix + target
+		}
 		buf.WriteString(fmt.Sprintf("\t%s = %s;\n", target, valCode))
 		return nil
 	} else if mem, ok := s.Names[0].(*parser.MemberExpression); ok {
 		objCode, err := c.compileExpression(mem.Object, prefix, fn)
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 		buf.WriteString(fmt.Sprintf("\t%s->%s = %s;\n", objCode, mem.Member.Value, valCode))
 		return nil
 	} else if idx, ok := s.Names[0].(*parser.IndexExpression); ok {
 		// Map/Array Assignment
 		objCode, err := c.compileExpression(idx.Left, prefix, fn)
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 		idxCode, err := c.compileExpression(idx.Index, prefix, fn)
-		if err != nil { return err }
+		if err != nil {
+			return err
+		}
 
 		leftType := c.checker.Types[idx.Left]
 		if leftType != nil && leftType.Kind() == checker.KindMap {
@@ -1080,10 +1246,14 @@ func (c *Compiler) compileAssignment(s *parser.AssignmentStatement, buf *strings
 }
 
 func (c *Compiler) isCaptured(name string, fn *parser.FunctionLiteral) bool {
-	if fn == nil { return false }
+	if fn == nil {
+		return false
+	}
 	list := c.captures[fn]
 	for _, v := range list {
-		if v == name { return true }
+		if v == name {
+			return true
+		}
 	}
 	return false
 }
@@ -1093,44 +1263,50 @@ func (c *Compiler) compileReturn(s *parser.ReturnStatement, buf *strings.Builder
 		buf.WriteString("\treturn;\n")
 		return nil
 	}
-    if len(s.ReturnValues) == 1 {
-	    valCode, err := c.compileExpression(s.ReturnValues[0], prefix, fn)
-	    if err != nil { return err }
-	    buf.WriteString(fmt.Sprintf("\treturn %s;\n", valCode))
-        return nil
-    }
+	if len(s.ReturnValues) == 1 {
+		valCode, err := c.compileExpression(s.ReturnValues[0], prefix, fn)
+		if err != nil {
+			return err
+		}
+		buf.WriteString(fmt.Sprintf("\treturn %s;\n", valCode))
+		return nil
+	}
 
-    // Multiple return values -> Tuple Struct
-    // We need to know the Tuple Type Name.
-    // Use Target Return Types from Function Signature to ensure correct C Struct (e.g. MorphTuple_Int_Error vs MorphTuple_Int_Null)
+	// Multiple return values -> Tuple Struct
+	// We need to know the Tuple Type Name.
+	// Use Target Return Types from Function Signature to ensure correct C Struct (e.g. MorphTuple_Int_Error vs MorphTuple_Int_Null)
 
-    var valCodes []string
-    for _, expr := range s.ReturnValues {
-        code, err := c.compileExpression(expr, prefix, fn)
-        if err != nil { return err }
-        valCodes = append(valCodes, code)
-    }
+	var valCodes []string
+	for _, expr := range s.ReturnValues {
+		code, err := c.compileExpression(expr, prefix, fn)
+		if err != nil {
+			return err
+		}
+		valCodes = append(valCodes, code)
+	}
 
-    // Determine target types from function signature
-    var targetTypes []checker.Type
-    fnType := c.checker.Types[fn]
-    if ft, ok := fnType.(*checker.FunctionType); ok {
-        targetTypes = ft.ReturnTypes
-    } else {
-        // Fallback (should not happen if fn is valid)
-        for _, expr := range s.ReturnValues {
-             targetTypes = append(targetTypes, c.checker.Types[expr])
-        }
-    }
+	// Determine target types from function signature
+	var targetTypes []checker.Type
+	fnType := c.checker.Types[fn]
+	if ft, ok := fnType.(*checker.FunctionType); ok {
+		targetTypes = ft.ReturnTypes
+	} else {
+		// Fallback (should not happen if fn is valid)
+		for _, expr := range s.ReturnValues {
+			targetTypes = append(targetTypes, c.checker.Types[expr])
+		}
+	}
 
-    tupleName := c.getTupleCType(targetTypes, prefix)
-    buf.WriteString(fmt.Sprintf("\treturn (%s){ %s };\n", tupleName, strings.Join(valCodes, ", ")))
+	tupleName := c.getTupleCType(targetTypes, prefix)
+	buf.WriteString(fmt.Sprintf("\treturn (%s){ %s };\n", tupleName, strings.Join(valCodes, ", ")))
 	return nil
 }
 
 func (c *Compiler) compileIf(ie *parser.IfExpression, buf *strings.Builder, prefix string, fn *parser.FunctionLiteral) error {
 	cond, err := c.compileExpression(ie.Condition, prefix, fn)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	buf.WriteString(fmt.Sprintf("\tif (%s) {\n", cond))
 	c.compileStatement(ie.Consequence, buf, prefix, fn)
 	buf.WriteString("\t}")
@@ -1138,13 +1314,17 @@ func (c *Compiler) compileIf(ie *parser.IfExpression, buf *strings.Builder, pref
 		buf.WriteString(" else {\n")
 		c.compileStatement(ie.Alternative, buf, prefix, fn)
 		buf.WriteString("\t}\n")
-	} else { buf.WriteString("\n") }
+	} else {
+		buf.WriteString("\n")
+	}
 	return nil
 }
 
 func (c *Compiler) compileWhile(we *parser.WhileExpression, buf *strings.Builder, prefix string, fn *parser.FunctionLiteral) error {
 	cond, err := c.compileExpression(we.Condition, prefix, fn)
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	buf.WriteString(fmt.Sprintf("\twhile (%s) {\n", cond))
 	c.compileStatement(we.Body, buf, prefix, fn)
 	buf.WriteString("\t}\n")
@@ -1179,10 +1359,14 @@ func (c *Compiler) compileExpression(expr parser.Expression, prefix string, fn *
 		return fmt.Sprintf("mph_string_new(ctx, \"%s\")", escaped), nil
 	case *parser.IntegerLiteral:
 		return fmt.Sprintf("%d", e.Value), nil
+	case *parser.FloatLiteral:
+		return strconv.FormatFloat(e.Value, 'g', -1, 64), nil
 	case *parser.CharLiteral:
 		return fmt.Sprintf("%d", e.Value), nil
 	case *parser.BooleanLiteral:
-		if e.Value { return "1", nil }
+		if e.Value {
+			return "1", nil
+		}
 		return "0", nil
 	case *parser.NullLiteral:
 		return "NULL", nil
@@ -1190,7 +1374,9 @@ func (c *Compiler) compileExpression(expr parser.Expression, prefix string, fn *
 		return c.compileInfix(e, prefix, fn)
 	case *parser.PrefixExpression:
 		right, err := c.compileExpression(e.Right, prefix, fn)
-		if err != nil { return "", err }
+		if err != nil {
+			return "", err
+		}
 		return fmt.Sprintf("(%s%s)", e.Operator, right), nil
 	case *parser.StructLiteral:
 		return c.compileStructLiteral(e, prefix, fn)
@@ -1208,7 +1394,9 @@ func (c *Compiler) compileExpression(expr parser.Expression, prefix string, fn *
 			return mangle(modType.Name) + e.Member.Value, nil
 		}
 		obj, err := c.compileExpression(e.Object, prefix, fn)
-		if err != nil { return "", err }
+		if err != nil {
+			return "", err
+		}
 		return fmt.Sprintf("%s->%s", obj, e.Member.Value), nil
 	case *parser.InterpolatedString:
 		return c.compileInterpolatedString(e, prefix, fn)
@@ -1217,8 +1405,18 @@ func (c *Compiler) compileExpression(expr parser.Expression, prefix string, fn *
 	}
 }
 
+func isNilNode(n parser.Node) bool {
+	if n == nil {
+		return true
+	}
+	value := reflect.ValueOf(n)
+	return value.Kind() == reflect.Ptr && value.IsNil()
+}
+
 func (c *Compiler) compileFunctionLiteral(fn *parser.FunctionLiteral, prefix string, parentFn *parser.FunctionLiteral) (string, error) {
-	if err := c.compileFunction(fn, prefix); err != nil { return "", err }
+	if err := c.compileFunction(fn, prefix); err != nil {
+		return "", err
+	}
 	funcName := c.getAnonFuncName(fn)
 	envTypeName := fmt.Sprintf("Env_%s_%s", prefix, funcName)
 	captures := c.captures[fn]
@@ -1247,21 +1445,37 @@ func (c *Compiler) compileCall(call *parser.CallExpression, prefix string, fn *p
 	isDirect := false
 
 	if ident, ok := call.Function.(*parser.Identifier); ok {
-        switch ident.Value {
-        case "native_print": return c.compileBuiltin(call, "mph_native_print", prefix, fn)
-        case "native_print_error": return c.compileBuiltin(call, "mph_native_print_error", prefix, fn)
-        case "native_print_int": return c.compileBuiltin(call, "mph_native_print_int", prefix, fn)
-        case "saluran_baru": return c.compileBuiltin(call, "mph_channel_new", prefix, fn)
-        case "kirim": return c.compileBuiltin(call, "mph_channel_send", prefix, fn)
-        case "terima": return c.compileBuiltin(call, "mph_channel_recv", prefix, fn)
-        case "luncurkan": return c.compileSpawn(call, prefix, fn)
-        case "hapus": return c.compileDelete(call, prefix, fn)
-        case "panjang": return c.compileLen(call, prefix, fn)
-        case "error": return c.compileBuiltin(call, "mph_error_new", prefix, fn)
-        case "index": return c.compileBuiltin(call, "mph_string_index", prefix, fn)
-        case "trim": return c.compileBuiltin(call, "mph_string_trim", prefix, fn)
-        case "split": return c.compileBuiltin(call, "mph_string_split", prefix, fn)
-        }
+		if st, ok := c.checker.Types[call.Function].(*checker.StructType); ok {
+			return c.compileStructConstructor(call, st, prefix, fn)
+		}
+		switch ident.Value {
+		case "native_print":
+			return c.compileBuiltin(call, "mph_native_print", prefix, fn)
+		case "native_print_error":
+			return c.compileBuiltin(call, "mph_native_print_error", prefix, fn)
+		case "native_print_int":
+			return c.compileBuiltin(call, "mph_native_print_int", prefix, fn)
+		case "saluran_baru":
+			return c.compileBuiltin(call, "mph_channel_new", prefix, fn)
+		case "kirim":
+			return c.compileBuiltin(call, "mph_channel_send", prefix, fn)
+		case "terima":
+			return c.compileBuiltin(call, "mph_channel_recv", prefix, fn)
+		case "luncurkan":
+			return c.compileSpawn(call, prefix, fn)
+		case "hapus":
+			return c.compileDelete(call, prefix, fn)
+		case "panjang":
+			return c.compileLen(call, prefix, fn)
+		case "error":
+			return c.compileBuiltin(call, "mph_error_new", prefix, fn)
+		case "index":
+			return c.compileBuiltin(call, "mph_string_index", prefix, fn)
+		case "trim":
+			return c.compileBuiltin(call, "mph_string_trim", prefix, fn)
+		case "split":
+			return c.compileBuiltin(call, "mph_string_split", prefix, fn)
+		}
 
 		funcCode = ident.Value
 		if c.isCaptured(funcCode, fn) {
@@ -1299,7 +1513,9 @@ func (c *Compiler) compileCall(call *parser.CallExpression, prefix string, fn *p
 			isDirect = true
 
 			objCode, err := c.compileExpression(mem.Object, prefix, fn)
-			if err != nil { return "", err }
+			if err != nil {
+				return "", err
+			}
 
 			if isPtr {
 				objCode = fmt.Sprintf("(*%s)", objCode)
@@ -1312,7 +1528,9 @@ func (c *Compiler) compileCall(call *parser.CallExpression, prefix string, fn *p
 
 			for _, arg := range call.Arguments {
 				ac, err := c.compileExpression(arg, prefix, fn)
-				if err != nil { return "", err }
+				if err != nil {
+					return "", err
+				}
 				args = append(args, ac)
 			}
 			return fmt.Sprintf("%s(%s)", funcCode, strings.Join(args, ", ")), nil
@@ -1322,7 +1540,9 @@ func (c *Compiler) compileCall(call *parser.CallExpression, prefix string, fn *p
 	} else {
 		var err error
 		funcCode, err = c.compileExpression(call.Function, prefix, fn)
-		if err != nil { return "", err }
+		if err != nil {
+			return "", err
+		}
 	}
 
 	var args []string
@@ -1337,7 +1557,9 @@ func (c *Compiler) compileCall(call *parser.CallExpression, prefix string, fn *p
 
 	for _, arg := range call.Arguments {
 		ac, err := c.compileExpression(arg, prefix, fn)
-		if err != nil { return "", err }
+		if err != nil {
+			return "", err
+		}
 		args = append(args, ac)
 	}
 
@@ -1370,17 +1592,50 @@ func (c *Compiler) compileCall(call *parser.CallExpression, prefix string, fn *p
 	}
 }
 
+func (c *Compiler) compileStructConstructor(call *parser.CallExpression, st *checker.StructType, prefix string, fn *parser.FunctionLiteral) (string, error) {
+	cTypeName := c.structCTypeName(st, prefix)
+
+	var sb strings.Builder
+	sb.WriteString("({ ")
+	sb.WriteString(fmt.Sprintf("%s* _t = (%s*)mph_alloc(ctx, sizeof(%s), &mph_ti_%s); ", cTypeName, cTypeName, cTypeName, cTypeName))
+	for i, fieldName := range st.FieldOrder {
+		if i >= len(call.Arguments) {
+			break
+		}
+		valCode, err := c.compileExpression(call.Arguments[i], prefix, fn)
+		if err != nil {
+			return "", err
+		}
+		sb.WriteString(fmt.Sprintf("_t->%s = %s; ", fieldName, valCode))
+	}
+	sb.WriteString("_t; })")
+	return sb.String(), nil
+}
+
+func (c *Compiler) structCTypeName(st *checker.StructType, prefix string) string {
+	if st.Module != "" {
+		return mangle(st.Module) + st.Name
+	}
+	return prefix + st.Name
+}
+
 func (c *Compiler) isLocal(name string, fn *parser.FunctionLiteral) bool {
-	if fn == nil { return false }
+	if fn == nil {
+		return false
+	}
 	for _, p := range fn.Parameters {
-		if p.Name.Value == name { return true }
+		if p.Name.Value == name {
+			return true
+		}
 	}
 	// Also check local variables
 	if fn.Body != nil {
 		for _, stmt := range fn.Body.Statements {
 			if vs, ok := stmt.(*parser.VarStatement); ok {
 				for _, n := range vs.Names {
-					if n.Value == name { return true }
+					if n.Value == name {
+						return true
+					}
 				}
 			}
 		}
@@ -1397,7 +1652,9 @@ func (c *Compiler) compileBuiltin(call *parser.CallExpression, cName string, pre
 	args = append(args, "ctx")
 	for _, arg := range call.Arguments {
 		ac, err := c.compileExpression(arg, prefix, fn)
-		if err != nil { return "", err }
+		if err != nil {
+			return "", err
+		}
 		args = append(args, ac)
 	}
 	return fmt.Sprintf("%s(%s)", cName, strings.Join(args, ", ")), nil
@@ -1405,18 +1662,22 @@ func (c *Compiler) compileBuiltin(call *parser.CallExpression, cName string, pre
 
 func (c *Compiler) compileInfix(ie *parser.InfixExpression, prefix string, fn *parser.FunctionLiteral) (string, error) {
 	left, err := c.compileExpression(ie.Left, prefix, fn)
-	if err != nil { return "", err }
+	if err != nil {
+		return "", err
+	}
 	right, err := c.compileExpression(ie.Right, prefix, fn)
-	if err != nil { return "", err }
+	if err != nil {
+		return "", err
+	}
 
 	if ie.Operator == "+" {
 		if t := c.checker.Types[ie.Left]; t != nil {
-            if t.Kind() == checker.KindString {
-			    return fmt.Sprintf("mph_string_concat(ctx, %s, %s)", left, right), nil
-            }
-            if t.Kind() == checker.KindArray {
-                return fmt.Sprintf("mph_array_concat(ctx, %s, %s)", left, right), nil
-            }
+			if t.Kind() == checker.KindString {
+				return fmt.Sprintf("mph_string_concat(ctx, %s, %s)", left, right), nil
+			}
+			if t.Kind() == checker.KindArray {
+				return fmt.Sprintf("mph_array_concat(ctx, %s, %s)", left, right), nil
+			}
 		}
 	}
 	if ie.Operator == "==" {
@@ -1432,135 +1693,162 @@ func (c *Compiler) compileInterpolatedString(is *parser.InterpolatedString, pref
 		return "mph_string_new(ctx, \"\")", nil
 	}
 	current, err := c.compileExpression(is.Parts[0], prefix, fn)
-	if err != nil { return "", err }
+	if err != nil {
+		return "", err
+	}
 	for _, part := range is.Parts[1:] {
 		next, err := c.compileExpression(part, prefix, fn)
-		if err != nil { return "", err }
+		if err != nil {
+			return "", err
+		}
 		current = fmt.Sprintf("mph_string_concat(ctx, %s, %s)", current, next)
 	}
 	return current, nil
 }
 
 func (c *Compiler) mapCheckerTypeToC(t checker.Type, prefix string) string {
-	if t == nil { return "mph_int" }
+	if t == nil {
+		return "mph_int"
+	}
 	switch t.Kind() {
-	case checker.KindFunction: return "MorphClosure*"
-	case checker.KindInt: return "mph_int"
-	case checker.KindFloat: return "mph_float"
-	case checker.KindBool: return "mph_bool"
-	case checker.KindString: return "MorphString*"
-	case checker.KindArray: return "MorphArray*"
-	case checker.KindMap: return "MorphMap*"
+	case checker.KindFunction:
+		return "MorphClosure*"
+	case checker.KindInt:
+		return "mph_int"
+	case checker.KindFloat:
+		return "mph_float"
+	case checker.KindBool:
+		return "mph_bool"
+	case checker.KindString:
+		return "MorphString*"
+	case checker.KindArray:
+		return "MorphArray*"
+	case checker.KindMap:
+		return "MorphMap*"
 	case checker.KindStruct:
 		if st, ok := t.(*checker.StructType); ok {
-			if st.Module != "" { return mangle(st.Module) + st.Name + "*" }
+			if st.Module != "" {
+				return mangle(st.Module) + st.Name + "*"
+			}
 			return "mph_" + st.Name + "*"
 		}
-	case checker.KindInterface: return "MorphInterface"
-	case checker.KindVoid: return "void"
-    case checker.KindMulti:
-        if mt, ok := t.(*checker.MultiType); ok {
-            return c.getTupleCType(mt.Types, prefix)
-        }
-    case checker.KindUserError:
-        // error type maps to MorphError*
-        return "MorphError*"
+	case checker.KindInterface:
+		return "MorphInterface"
+	case checker.KindVoid:
+		return "void"
+	case checker.KindMulti:
+		if mt, ok := t.(*checker.MultiType); ok {
+			return c.getTupleCType(mt.Types, prefix)
+		}
+	case checker.KindUserError:
+		// error type maps to MorphError*
+		return "MorphError*"
 	}
 	return "mph_int"
 }
 
 func (c *Compiler) getTupleCType(types []checker.Type, prefix string) string {
-    // Generate signature key
-    var sigBuilder strings.Builder
-    for _, t := range types {
-        sigBuilder.WriteString(t.String())
-        sigBuilder.WriteString("_")
-    }
-    key := sigBuilder.String()
+	// Generate signature key
+	var sigBuilder strings.Builder
+	for _, t := range types {
+		sigBuilder.WriteString(t.String())
+		sigBuilder.WriteString("_")
+	}
+	key := sigBuilder.String()
 
-    if name, ok := c.tupleTypes[key]; ok {
-        return name
-    }
+	if name, ok := c.tupleTypes[key]; ok {
+		return name
+	}
 
-    // Generate new struct
-    // Naming convention: MorphTuple_<Hash> or similar.
-    // Simplified: MorphTuple_<Index>
-    name := fmt.Sprintf("MorphTuple_%d", len(c.tupleTypes))
+	// Generate new struct
+	// Naming convention: MorphTuple_<Hash> or similar.
+	// Simplified: MorphTuple_<Index>
+	name := fmt.Sprintf("MorphTuple_%d", len(c.tupleTypes))
 
-    // BUT we want stable names for Stdlib.
-    // If types are Int, UserError -> MorphTuple_Int_Error
-    // Let's try to make readable names if possible.
-    var nameBuilder strings.Builder
-    nameBuilder.WriteString("MorphTuple")
-    for _, t := range types {
-        nameBuilder.WriteString("_")
-        // Clean type name
-        clean := strings.ReplaceAll(t.String(), "[]", "Array")
-        clean = strings.ReplaceAll(clean, "*", "Ptr")
-        clean = strings.ReplaceAll(clean, "map[", "Map")
-        clean = strings.ReplaceAll(clean, "]", "")
-        clean = strings.ReplaceAll(clean, ".", "")
-        clean = strings.ReplaceAll(clean, " ", "")
-        // Handle error -> Error
-        if t.Kind() == checker.KindUserError { clean = "Error" }
-        if t.Kind() == checker.KindInt { clean = "Int" }
-        if t.Kind() == checker.KindString { clean = "String" }
-        nameBuilder.WriteString(clean)
-    }
-    name = nameBuilder.String()
+	// BUT we want stable names for Stdlib.
+	// If types are Int, UserError -> MorphTuple_Int_Error
+	// Let's try to make readable names if possible.
+	var nameBuilder strings.Builder
+	nameBuilder.WriteString("MorphTuple")
+	for _, t := range types {
+		nameBuilder.WriteString("_")
+		// Clean type name
+		clean := strings.ReplaceAll(t.String(), "[]", "Array")
+		clean = strings.ReplaceAll(clean, "*", "Ptr")
+		clean = strings.ReplaceAll(clean, "map[", "Map")
+		clean = strings.ReplaceAll(clean, "]", "")
+		clean = strings.ReplaceAll(clean, ".", "")
+		clean = strings.ReplaceAll(clean, " ", "")
+		// Handle error -> Error
+		if t.Kind() == checker.KindUserError {
+			clean = "Error"
+		}
+		if t.Kind() == checker.KindInt {
+			clean = "Int"
+		}
+		if t.Kind() == checker.KindString {
+			clean = "String"
+		}
+		nameBuilder.WriteString(clean)
+	}
+	name = nameBuilder.String()
 
-    // Check if name collision? (Unlikely with full types)
-    if _, exists := c.tupleTypes[name]; exists {
-       // Already registered? Return it.
-       // But key was signature. If name matches but sig doesn't? Collision.
-       // Assume types.String() is unique enough.
-       c.tupleTypes[key] = name // Map sig to existing name
-       return name
-    }
+	// Check if name collision? (Unlikely with full types)
+	if _, exists := c.tupleTypes[name]; exists {
+		// Already registered? Return it.
+		// But key was signature. If name matches but sig doesn't? Collision.
+		// Assume types.String() is unique enough.
+		c.tupleTypes[key] = name // Map sig to existing name
+		return name
+	}
 
-    c.tupleTypes[key] = name
-    c.tupleTypes[name] = name // Also map name to itself for consistency?
+	c.tupleTypes[key] = name
+	c.tupleTypes[name] = name // Also map name to itself for consistency?
 
-    // Generate definition
-    c.typeDefs.WriteString(fmt.Sprintf("typedef struct %s {\n", name))
+	// Generate definition
+	c.typeDefs.WriteString(fmt.Sprintf("typedef struct %s {\n", name))
 
-    // Collect pointer offsets for RTTI
-    var offsets []string
+	// Collect pointer offsets for RTTI
+	var offsets []string
 
-    for i, t := range types {
-        cType := c.mapCheckerTypeToC(t, prefix)
-        c.typeDefs.WriteString(fmt.Sprintf("\t%s v%d;\n", cType, i))
+	for i, t := range types {
+		cType := c.mapCheckerTypeToC(t, prefix)
+		c.typeDefs.WriteString(fmt.Sprintf("\t%s v%d;\n", cType, i))
 
-        if c.isPointerCheckerType(t) {
-            offsets = append(offsets, fmt.Sprintf("offsetof(%s, v%d)", name, i))
-        }
-    }
-    c.typeDefs.WriteString(fmt.Sprintf("} %s;\n\n", name))
+		if c.isPointerCheckerType(t) {
+			offsets = append(offsets, fmt.Sprintf("offsetof(%s, v%d)", name, i))
+		}
+	}
+	c.typeDefs.WriteString(fmt.Sprintf("} %s;\n\n", name))
 
-    // Generate RTTI
-    numPtrs := len(offsets)
-    offsetsStr := "NULL"
-    if numPtrs > 0 {
-        offsetsStr = fmt.Sprintf("(size_t[]){%s}", strings.Join(offsets, ", "))
-    }
-    c.typeDefs.WriteString(fmt.Sprintf("MorphTypeInfo mph_ti_%s = { \"%s\", sizeof(%s), %d, %s };\n", name, name, name, numPtrs, offsetsStr))
+	// Generate RTTI
+	numPtrs := len(offsets)
+	offsetsStr := "NULL"
+	if numPtrs > 0 {
+		offsetsStr = fmt.Sprintf("(size_t[]){%s}", strings.Join(offsets, ", "))
+	}
+	c.typeDefs.WriteString(fmt.Sprintf("MorphTypeInfo mph_ti_%s = { \"%s\", sizeof(%s), %d, %s };\n", name, name, name, numPtrs, offsetsStr))
 
-    return name
+	return name
 }
 
 func (c *Compiler) compileStructLiteral(sl *parser.StructLiteral, prefix string, fn *parser.FunctionLiteral) (string, error) {
 	var cTypeName string
 	if ident, ok := sl.Name.(*parser.Identifier); ok {
 		cTypeName = prefix + ident.Value
-	} else { return "", fmt.Errorf("complex struct literals not supported yet") }
+	} else {
+		return "", fmt.Errorf("complex struct literals not supported yet")
+	}
 
 	var sb strings.Builder
 	sb.WriteString("({ ")
-    // Pass pointer to global RTTI variable: &mph_ti_TypeName
+	// Pass pointer to global RTTI variable: &mph_ti_TypeName
 	sb.WriteString(fmt.Sprintf("%s* _t = (%s*)mph_alloc(ctx, sizeof(%s), &mph_ti_%s); ", cTypeName, cTypeName, cTypeName, cTypeName))
 	for fieldName, valExpr := range sl.Fields {
 		valCode, err := c.compileExpression(valExpr, prefix, fn)
-		if err != nil { return "", err }
+		if err != nil {
+			return "", err
+		}
 		sb.WriteString(fmt.Sprintf("_t->%s = %s; ", fieldName, valCode))
 	}
 	sb.WriteString("_t; })")
@@ -1574,7 +1862,9 @@ func (c *Compiler) compileArrayLiteral(al *parser.ArrayLiteral, prefix string, f
 	if arrType != nil {
 		if at, ok := arrType.(*checker.ArrayType); ok {
 			elemCType = c.mapCheckerTypeToC(at.Element, prefix)
-			if c.isPointerCheckerType(at.Element) { isPtr = 1 }
+			if c.isPointerCheckerType(at.Element) {
+				isPtr = 1
+			}
 		}
 	}
 	var sb strings.Builder
@@ -1582,7 +1872,9 @@ func (c *Compiler) compileArrayLiteral(al *parser.ArrayLiteral, prefix string, f
 	sb.WriteString(fmt.Sprintf("MorphArray* _a = mph_array_new(ctx, %d, sizeof(%s), %d); ", len(al.Elements), elemCType, isPtr))
 	for i, el := range al.Elements {
 		valCode, err := c.compileExpression(el, prefix, fn)
-		if err != nil { return "", err }
+		if err != nil {
+			return "", err
+		}
 		sb.WriteString(fmt.Sprintf("((%s*)_a->data)[%d] = %s; ", elemCType, i, valCode))
 	}
 	sb.WriteString("_a; })")
@@ -1595,8 +1887,14 @@ func (c *Compiler) compileHashLiteral(hl *parser.HashLiteral, prefix string, fn 
 	valIsPtr := 0
 	if mapType != nil {
 		if mt, ok := mapType.(*checker.MapType); ok {
-			if mt.Key.Kind() == checker.KindInt { kindEnum = "MPH_KEY_INT" } else if mt.Key.Kind() == checker.KindString { kindEnum = "MPH_KEY_STRING" }
-			if c.isPointerCheckerType(mt.Value) { valIsPtr = 1 }
+			if mt.Key.Kind() == checker.KindInt {
+				kindEnum = "MPH_KEY_INT"
+			} else if mt.Key.Kind() == checker.KindString {
+				kindEnum = "MPH_KEY_STRING"
+			}
+			if c.isPointerCheckerType(mt.Value) {
+				valIsPtr = 1
+			}
 		}
 	}
 	var sb strings.Builder
@@ -1604,11 +1902,17 @@ func (c *Compiler) compileHashLiteral(hl *parser.HashLiteral, prefix string, fn 
 	sb.WriteString(fmt.Sprintf("MorphMap* _m = mph_map_new(ctx, %s, %d); ", kindEnum, valIsPtr))
 	for key, val := range hl.Pairs {
 		keyCode, err := c.compileExpression(key, prefix, fn)
-		if err != nil { return "", err }
+		if err != nil {
+			return "", err
+		}
 		valCode, err := c.compileExpression(val, prefix, fn)
-		if err != nil { return "", err }
+		if err != nil {
+			return "", err
+		}
 		keyCast := fmt.Sprintf("(void*)%s", keyCode)
-		if kindEnum == "MPH_KEY_INT" { keyCast = fmt.Sprintf("(void*)(int64_t)%s", keyCode) }
+		if kindEnum == "MPH_KEY_INT" {
+			keyCast = fmt.Sprintf("(void*)(int64_t)%s", keyCode)
+		}
 		sb.WriteString(fmt.Sprintf("mph_map_set(ctx, _m, %s, (void*)%s); ", keyCast, valCode))
 	}
 	sb.WriteString("_m; })")
@@ -1617,12 +1921,18 @@ func (c *Compiler) compileHashLiteral(hl *parser.HashLiteral, prefix string, fn 
 
 func (c *Compiler) compileIndex(ie *parser.IndexExpression, prefix string, fn *parser.FunctionLiteral) (string, error) {
 	leftCode, err := c.compileExpression(ie.Left, prefix, fn)
-	if err != nil { return "", err }
+	if err != nil {
+		return "", err
+	}
 	indexCode, err := c.compileExpression(ie.Index, prefix, fn)
-	if err != nil { return "", err }
+	if err != nil {
+		return "", err
+	}
 
 	leftType := c.checker.Types[ie.Left]
-	if leftType == nil { return "", fmt.Errorf("unknown type for index expression") }
+	if leftType == nil {
+		return "", fmt.Errorf("unknown type for index expression")
+	}
 
 	if leftType.Kind() == checker.KindString {
 		return fmt.Sprintf("((MorphString*)%s)->data[%s]", leftCode, indexCode), nil
@@ -1635,7 +1945,9 @@ func (c *Compiler) compileIndex(ie *parser.IndexExpression, prefix string, fn *p
 		if mt, ok := leftType.(*checker.MapType); ok {
 			valCType := c.mapCheckerTypeToC(mt.Value, prefix)
 			keyCast := fmt.Sprintf("(void*)%s", indexCode)
-			if mt.Key.Kind() == checker.KindInt { keyCast = fmt.Sprintf("(void*)(int64_t)%s", indexCode) }
+			if mt.Key.Kind() == checker.KindInt {
+				keyCast = fmt.Sprintf("(void*)(int64_t)%s", indexCode)
+			}
 
 			if c.isPrimitive(mt.Value) {
 				return fmt.Sprintf("(%s)(int64_t)mph_map_get(ctx, %s, %s)", valCType, leftCode, keyCast), nil
@@ -1655,7 +1967,9 @@ func (c *Compiler) compileSpawn(call *parser.CallExpression, prefix string, fn *
 	} else if len(call.Arguments) == 2 {
 		if ident, ok := call.Arguments[0].(*parser.Identifier); ok {
 			arg, err := c.compileExpression(call.Arguments[1], prefix, fn)
-			if err != nil { return "", err }
+			if err != nil {
+				return "", err
+			}
 			return fmt.Sprintf("mph_thread_spawn((MorphEntryFunction)mph_%s, (void*)%s)", ident.Value, arg), nil
 		}
 	}
@@ -1663,25 +1977,41 @@ func (c *Compiler) compileSpawn(call *parser.CallExpression, prefix string, fn *
 }
 
 func (c *Compiler) compileDelete(call *parser.CallExpression, prefix string, fn *parser.FunctionLiteral) (string, error) {
-	if len(call.Arguments) != 2 { return "", fmt.Errorf("hapus expects 2 arguments") }
+	if len(call.Arguments) != 2 {
+		return "", fmt.Errorf("hapus expects 2 arguments")
+	}
 	mapCode, err := c.compileExpression(call.Arguments[0], prefix, fn)
-	if err != nil { return "", err }
+	if err != nil {
+		return "", err
+	}
 	keyCode, err := c.compileExpression(call.Arguments[1], prefix, fn)
-	if err != nil { return "", err }
+	if err != nil {
+		return "", err
+	}
 	mapType := c.checker.Types[call.Arguments[0]]
-	if mapType == nil || mapType.Kind() != checker.KindMap { return "", fmt.Errorf("hapus arg 1 must be map") }
+	if mapType == nil || mapType.Kind() != checker.KindMap {
+		return "", fmt.Errorf("hapus arg 1 must be map")
+	}
 	mt := mapType.(*checker.MapType)
 	keyCast := fmt.Sprintf("(void*)%s", keyCode)
-	if mt.Key.Kind() == checker.KindInt { keyCast = fmt.Sprintf("(void*)(int64_t)%s", keyCode) }
+	if mt.Key.Kind() == checker.KindInt {
+		keyCast = fmt.Sprintf("(void*)(int64_t)%s", keyCode)
+	}
 	return fmt.Sprintf("mph_map_delete(ctx, %s, %s)", mapCode, keyCast), nil
 }
 
 func (c *Compiler) compileLen(call *parser.CallExpression, prefix string, fn *parser.FunctionLiteral) (string, error) {
-	if len(call.Arguments) != 1 { return "", fmt.Errorf("panjang expects 1 argument") }
+	if len(call.Arguments) != 1 {
+		return "", fmt.Errorf("panjang expects 1 argument")
+	}
 	argCode, err := c.compileExpression(call.Arguments[0], prefix, fn)
-	if err != nil { return "", err }
+	if err != nil {
+		return "", err
+	}
 	argType := c.checker.Types[call.Arguments[0]]
-	if argType == nil { return "", fmt.Errorf("unknown type for panjang") }
+	if argType == nil {
+		return "", fmt.Errorf("unknown type for panjang")
+	}
 	if argType.Kind() == checker.KindMap {
 		return fmt.Sprintf("mph_map_len(ctx, %s)", argCode), nil
 	} else if argType.Kind() == checker.KindArray {
@@ -1693,11 +2023,17 @@ func (c *Compiler) compileLen(call *parser.CallExpression, prefix string, fn *pa
 }
 
 func (c *Compiler) compileTypeAssertion(call *parser.CallExpression, prefix string, fn *parser.FunctionLiteral) (string, error) {
-	if len(call.Arguments) != 2 { return "", fmt.Errorf("assert expects 2 args") }
+	if len(call.Arguments) != 2 {
+		return "", fmt.Errorf("assert expects 2 args")
+	}
 	ifaceCode, err := c.compileExpression(call.Arguments[0], prefix, fn)
-	if err != nil { return "", err }
+	if err != nil {
+		return "", err
+	}
 	targetType := c.checker.Types[call.Arguments[1]]
-	if targetType == nil || targetType.Kind() != checker.KindStruct { return "", fmt.Errorf("invalid assertion type") }
+	if targetType == nil || targetType.Kind() != checker.KindStruct {
+		return "", fmt.Errorf("invalid assertion type")
+	}
 	st := targetType.(*checker.StructType)
 	targetID := c.getStructID(st.Name)
 	targetCType := c.mapCheckerTypeToC(st, prefix)
@@ -1709,15 +2045,21 @@ func (c *Compiler) compileInterfaceConversion(iface *checker.InterfaceType, st *
 	sb.WriteString("({ ")
 	sb.WriteString("static void* _vt[] = { ")
 	ifaceMethods := make([]string, 0, len(iface.Methods))
-	for k := range iface.Methods { ifaceMethods = append(ifaceMethods, k) }
+	for k := range iface.Methods {
+		ifaceMethods = append(ifaceMethods, k)
+	}
 	sort.Strings(ifaceMethods)
 	for i, mName := range ifaceMethods {
-		if i > 0 { sb.WriteString(", ") }
+		if i > 0 {
+			sb.WriteString(", ")
+		}
 		structMethodName := fmt.Sprintf("%s%s_%s", prefix, st.Name, mName)
-		if st.Module != "" { structMethodName = mangle(st.Module) + st.Name + "_" + mName }
+		if st.Module != "" {
+			structMethodName = mangle(st.Module) + st.Name + "_" + mName
+		}
 		sb.WriteString("(void*)" + structMethodName)
 	}
-	sb.WriteString(" }; ");
+	sb.WriteString(" }; ")
 	structID := c.getStructID(st.Name)
 	sb.WriteString(fmt.Sprintf("(MorphInterface){ .instance = (void*)%s, .vtable = _vt, .type_id = %d };", srcCode, structID))
 	sb.WriteString(" })")
@@ -1726,42 +2068,60 @@ func (c *Compiler) compileInterfaceConversion(iface *checker.InterfaceType, st *
 
 func (c *Compiler) compileInterfaceCall(call *parser.CallExpression, mem *parser.MemberExpression, iface *checker.InterfaceType, prefix string, fn *parser.FunctionLiteral) (string, error) {
 	ifaceMethods := make([]string, 0, len(iface.Methods))
-	for k := range iface.Methods { ifaceMethods = append(ifaceMethods, k) }
+	for k := range iface.Methods {
+		ifaceMethods = append(ifaceMethods, k)
+	}
 	sort.Strings(ifaceMethods)
 	methodIndex := -1
 	for i, name := range ifaceMethods {
-		if name == mem.Member.Value { methodIndex = i; break }
+		if name == mem.Member.Value {
+			methodIndex = i
+			break
+		}
 	}
-	if methodIndex == -1 { return "", fmt.Errorf("method not found") }
+	if methodIndex == -1 {
+		return "", fmt.Errorf("method not found")
+	}
 
 	objCode, err := c.compileExpression(mem.Object, prefix, fn)
-	if err != nil { return "", err }
+	if err != nil {
+		return "", err
+	}
 
 	var args []string
 	args = append(args, "ctx")
 	args = append(args, fmt.Sprintf("(%s).instance", objCode))
 	for _, arg := range call.Arguments {
 		code, err := c.compileExpression(arg, prefix, fn)
-		if err != nil { return "", err }
+		if err != nil {
+			return "", err
+		}
 		args = append(args, code)
 	}
 
 	methodType := iface.Methods[mem.Member.Value]
 	retType := "void"
-	if len(methodType.ReturnTypes) > 0 { retType = c.mapCheckerTypeToC(methodType.ReturnTypes[0], prefix) }
+	if len(methodType.ReturnTypes) > 0 {
+		retType = c.mapCheckerTypeToC(methodType.ReturnTypes[0], prefix)
+	}
 	var paramTypes []string
 	paramTypes = append(paramTypes, "MorphContext*")
 	paramTypes = append(paramTypes, "void*")
-	for _, p := range methodType.Parameters { paramTypes = append(paramTypes, c.mapCheckerTypeToC(p, prefix)) }
+	for _, p := range methodType.Parameters {
+		paramTypes = append(paramTypes, c.mapCheckerTypeToC(p, prefix))
+	}
 	fnPtrType := fmt.Sprintf("%s (*)(%s)", retType, strings.Join(paramTypes, ", "))
 
 	return fmt.Sprintf("((%s)(%s).vtable[%d])(%s)", fnPtrType, objCode, methodIndex, strings.Join(args, ", ")), nil
 }
 
 func (c *Compiler) isPrimitive(t checker.Type) bool {
-	if t == nil { return true }
+	if t == nil {
+		return true
+	}
 	switch t.Kind() {
-	case checker.KindInt, checker.KindFloat, checker.KindBool: return true
+	case checker.KindInt, checker.KindFloat, checker.KindBool:
+		return true
 	}
 	return false
 }
@@ -1834,11 +2194,11 @@ func (c *Compiler) compileStructDef(s *parser.StructStatement, prefix string) er
 }
 
 func (c *Compiler) mapTypeToC(t parser.TypeNode, prefix string) (string, error) {
-    // Resolve to Checker Type to handle imports/mangling correctly
-    ct := c.resolveTypeNode(t)
-    if ct != nil && ct.Kind() != checker.KindUnknown {
-        return c.mapCheckerTypeToC(ct, prefix), nil
-    }
+	// Resolve to Checker Type to handle imports/mangling correctly
+	ct := c.resolveTypeNode(t)
+	if ct != nil && ct.Kind() != checker.KindUnknown {
+		return c.mapCheckerTypeToC(ct, prefix), nil
+	}
 
 	switch ty := t.(type) {
 	case *parser.SimpleType:
@@ -1859,7 +2219,7 @@ func (c *Compiler) mapTypeToC(t parser.TypeNode, prefix string) (string, error) 
 			return prefix + ty.Name + "*", nil
 		}
 	case *parser.QualifiedType:
-        // Fallback (should be handled by resolveTypeNode if imports are correct)
+		// Fallback (should be handled by resolveTypeNode if imports are correct)
 		return "mph_" + ty.Package.Value + "_" + ty.Name.Value + "*", nil
 	case *parser.ArrayType:
 		return "MorphArray*", nil
@@ -1873,59 +2233,71 @@ func (c *Compiler) mapTypeToC(t parser.TypeNode, prefix string) (string, error) 
 
 // New method to generate RTTI
 func (c *Compiler) compileStructRTTI(node parser.Node) error {
-    c.output.WriteString("// RTTI Definitions\n")
+	c.output.WriteString("// RTTI Definitions\n")
 
-    var generateRTTI func(prog *parser.Program, prefix string) error
-    generateRTTI = func(prog *parser.Program, prefix string) error {
-        for _, stmt := range prog.Statements {
-            if s, ok := stmt.(*parser.StructStatement); ok {
-                name := prefix + s.Name.Value
-                // Collect pointer offsets
-                var offsets []string
-                for _, f := range s.Fields {
-                    if c.isPointerType(f.Type) {
-                        offsets = append(offsets, fmt.Sprintf("offsetof(%s, %s)", name, f.Name))
-                    }
-                }
+	var generateRTTI func(prog *parser.Program, prefix string) error
+	generateRTTI = func(prog *parser.Program, prefix string) error {
+		for _, stmt := range prog.Statements {
+			if s, ok := stmt.(*parser.StructStatement); ok {
+				name := prefix + s.Name.Value
+				// Collect pointer offsets
+				var offsets []string
+				for _, f := range s.Fields {
+					if c.isPointerType(f.Type) {
+						offsets = append(offsets, fmt.Sprintf("offsetof(%s, %s)", name, f.Name))
+					}
+				}
 
-                numPtrs := len(offsets)
-                offsetsStr := "NULL"
-                if numPtrs > 0 {
-                    offsetsStr = fmt.Sprintf("(size_t[]){%s}", strings.Join(offsets, ", "))
-                }
+				numPtrs := len(offsets)
+				offsetsStr := "NULL"
+				if numPtrs > 0 {
+					offsetsStr = fmt.Sprintf("(size_t[]){%s}", strings.Join(offsets, ", "))
+				}
 
-                c.typeDefs.WriteString(fmt.Sprintf("MorphTypeInfo mph_ti_%s = { \"%s\", sizeof(%s), %d, %s };\n", name, s.Name.Value, name, numPtrs, offsetsStr))
-            }
-        }
-        return nil
-    }
+				c.typeDefs.WriteString(fmt.Sprintf("MorphTypeInfo mph_ti_%s = { \"%s\", sizeof(%s), %d, %s };\n", name, s.Name.Value, name, numPtrs, offsetsStr))
+			}
+		}
+		return nil
+	}
 
-    // Modules
+	// Modules
 	for path, mod := range c.checker.ModuleCache {
-		if mod.Program == nil { continue }
-		if err := generateRTTI(mod.Program, mangle(path)); err != nil { return err }
+		if mod.Program == nil {
+			continue
+		}
+		if err := generateRTTI(mod.Program, mangle(path)); err != nil {
+			return err
+		}
 	}
 
-    // Main
+	// Main
 	if prog, ok := node.(*parser.Program); ok {
-		if err := generateRTTI(prog, "mph_"); err != nil { return err }
+		if err := generateRTTI(prog, "mph_"); err != nil {
+			return err
+		}
 	}
-    c.output.WriteString("\n")
-    return nil
+	c.output.WriteString("\n")
+	return nil
 }
 
 func (c *Compiler) isPointerType(t parser.TypeNode) bool {
-    // Strings, Arrays, Maps, Closures, Structs are pointers
-    switch ty := t.(type) {
-    case *parser.SimpleType:
-        switch ty.Name {
-        case "int", "float", "bool", "void": return false
-        default: return true // Structs are pointers
-        }
-    case *parser.QualifiedType: return true
-    case *parser.ArrayType: return true
-    case *parser.MapType: return true
-    case *parser.FunctionType: return true
-    }
-    return false
+	// Strings, Arrays, Maps, Closures, Structs are pointers
+	switch ty := t.(type) {
+	case *parser.SimpleType:
+		switch ty.Name {
+		case "int", "float", "bool", "void":
+			return false
+		default:
+			return true // Structs are pointers
+		}
+	case *parser.QualifiedType:
+		return true
+	case *parser.ArrayType:
+		return true
+	case *parser.MapType:
+		return true
+	case *parser.FunctionType:
+		return true
+	}
+	return false
 }

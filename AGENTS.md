@@ -1,7 +1,7 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.48.0
+- **Versi**: 1.56.0
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
 - **Terakhir Diupdate**: 2025-12-25
 - **Status**: Active
@@ -54,6 +54,36 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.56.0 - 2025-12-25
+**Checksum**: SHA256:STRING_STDLIB_NATIVE_API
+**Perubahan**:
+- **Stdlib/String**: Mengganti implementasi mock `Length`/`Concat` menjadi native agar langsung memanggil runtime.
+- **Runtime/String**: Menambahkan `mph_string_len` serta native wrapper `mph_string_Length`/`mph_string_Concat`.
+
+**Konteks Sesi**:
+- **Audit/Stdlib**: Menghilangkan placeholder agar API string konsisten dengan runtime dan siap digunakan oleh program nyata.
+
+**File Terkait**:
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:a652d3eb16f46c2130ab2880738df2d6aa7ee8004893fca9cc13e65504d35085)
+- `stdlib/string.fox` (SHA256:5d5ca9a801e6e424486a9f76e6ccb1aa888129a1c0f58f164c5df12256268925)
+
+### Version 1.55.0 - 2025-12-25
+**Checksum**: SHA256:RUNTIME_NATIVE_ENV_AND_STRUCT_CTORS
+**Perubahan**:
+- **Compiler**: Menambahkan guard nil untuk node typed-nil pada analisis capture agar tidak panic.
+- **Compiler**: Menambahkan dukungan `FloatLiteral` pada ekspresi agar konstanta float dapat dikompilasi.
+- **Compiler**: Menambahkan constructor struct berbasis positional args (`TypeName(a, b, ...)`) agar tidak diperlakukan sebagai closure.
+- **Runtime**: Menambahkan `mph_io_make_file` dan menyelaraskan signature native IO/time dengan argumen `_env` agar kompatibel dengan pemanggilan compiler.
+- **Runtime/Header**: Menyesuaikan deklarasi `mph_time_Now` dan `mph_time_Sleep` dengan signature native terbaru.
+
+**Konteks Sesi**:
+- **Build/Runtime**: Memperbaiki crash capture analysis, memperbaiki constructor struct, dan memastikan native IO/time bisa dipanggil dengan env sesuai ABI compiler.
+
+**File Terkait**:
+- `pkg/compiler/compiler.go` (SHA256:59f89bb6d90aa8ace8dd13bf4388487631831510556c6e3a83c19221dcec8fef)
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:a8798b9f431547b7392434270ba6490b3fc66b23fee53aa1f0b16aff192c1924)
+- `pkg/compiler/runtime/morph.h.tpl` (SHA256:0d5ab8dea031fd82ba8ef8267f54cbf1163f86e158bfddfac935ffe5b5a869dc)
+
 ### Version 1.54.0 - 2025-12-25
 **Checksum**: SHA256:CAPTURE_ANALYSIS_CACHE
 **Perubahan**:
