@@ -1,7 +1,7 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.56.0
+- **Versi**: 1.57.0
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
 - **Terakhir Diupdate**: 2025-12-25
 - **Status**: Active
@@ -54,6 +54,17 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.57.0 - 2025-12-25
+**Checksum**: SHA256:NUMBER_CHESS_STRESS_TEST
+**Perubahan**:
+- **Examples**: Menambahkan stress test "catur angka" dengan 30 langkah bidak dan undo stack untuk uji stabilitas array/map/struct dasar.
+
+**Konteks Sesi**:
+- **Testing**: Menambah skenario deterministik untuk memvalidasi mekanisme move + undo pada array dan struct.
+
+**File Terkait**:
+- `examples/number_chess_stress.fox` (SHA256:38b9b3ac1c3ed0b0184e9a1e81fafdce4ff0e67396a03ec116867ebcc7896b9a)
+
 ### Version 1.56.0 - 2025-12-25
 **Checksum**: SHA256:STRING_STDLIB_NATIVE_API
 **Perubahan**:

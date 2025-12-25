@@ -1,0 +1,152 @@
+ambil "conv"
+
+struktur Move
+    Dari int
+    Ke int
+    Ditangkap int
+akhir
+
+fungsi abs(x int) int
+    jika x < 0
+        kembali 0 - x
+    akhir
+    kembali x
+akhir
+
+fungsi set_major(board []int, row int, sign int) void
+    var base = row * 8
+    board[base + 0] = sign * 5
+    board[base + 1] = sign * 3
+    board[base + 2] = sign * 3
+    board[base + 3] = sign * 9
+    board[base + 4] = sign * 10
+    board[base + 5] = sign * 3
+    board[base + 6] = sign * 3
+    board[base + 7] = sign * 5
+akhir
+
+fungsi buat_papan() []int
+    var board []int = []
+    var i = 0
+    selama i < 64
+        board = board + [0]
+        i = i + 1
+    akhir
+
+    i = 0
+    selama i < 8
+        board[8 + i] = 1
+        board[48 + i] = -1
+        i = i + 1
+    akhir
+
+    set_major(board, 0, 1)
+    set_major(board, 7, -1)
+
+    kembali board
+akhir
+
+fungsi board_sum(board []int) int
+    var i = 0
+    var total = 0
+    selama i < panjang(board)
+        total = total + board[i]
+        i = i + 1
+    akhir
+    kembali total
+akhir
+
+fungsi apply_move(board []int, from int, to int, moves []Move) (int, []Move)
+    var captured = board[to]
+    board[to] = board[from]
+    board[from] = 0
+    moves = moves + [Move{Dari: from, Ke: to, Ditangkap: captured}]
+    kembali captured, moves
+akhir
+
+fungsi undo_move(board []int, moves []Move) []Move
+    var len = panjang(moves)
+    jika len == 0
+        kembali moves
+    akhir
+
+    var last = moves[len - 1]
+    board[last.Dari] = board[last.Ke]
+    board[last.Ke] = last.Ditangkap
+
+    var newMoves []Move = []
+    var i = 0
+    selama i < len - 1
+        newMoves = newMoves + [moves[i]]
+        i = i + 1
+    akhir
+    kembali newMoves
+akhir
+
+fungsi main() void
+    var board = buat_papan()
+    var initialSum = board_sum(board)
+
+    var script []Move = [
+        Move{Dari: 12, Ke: 20, Ditangkap: 0},
+        Move{Dari: 52, Ke: 44, Ditangkap: 0},
+        Move{Dari: 11, Ke: 19, Ditangkap: 0},
+        Move{Dari: 51, Ke: 43, Ditangkap: 0},
+        Move{Dari: 1, Ke: 18, Ditangkap: 0},
+        Move{Dari: 57, Ke: 42, Ditangkap: 0},
+        Move{Dari: 2, Ke: 11, Ditangkap: 0},
+        Move{Dari: 58, Ke: 41, Ditangkap: 0},
+        Move{Dari: 3, Ke: 27, Ditangkap: 0},
+        Move{Dari: 59, Ke: 35, Ditangkap: 0},
+        Move{Dari: 0, Ke: 16, Ditangkap: 0},
+        Move{Dari: 56, Ke: 40, Ditangkap: 0},
+        Move{Dari: 4, Ke: 12, Ditangkap: 0},
+        Move{Dari: 60, Ke: 52, Ditangkap: 0},
+        Move{Dari: 5, Ke: 26, Ditangkap: 0},
+        Move{Dari: 61, Ke: 34, Ditangkap: 0},
+        Move{Dari: 6, Ke: 21, Ditangkap: 0},
+        Move{Dari: 62, Ke: 45, Ditangkap: 0},
+        Move{Dari: 15, Ke: 23, Ditangkap: 0},
+        Move{Dari: 55, Ke: 47, Ditangkap: 0},
+        Move{Dari: 9, Ke: 17, Ditangkap: 0},
+        Move{Dari: 49, Ke: 41, Ditangkap: 0},
+        Move{Dari: 18, Ke: 33, Ditangkap: 0},
+        Move{Dari: 42, Ke: 25, Ditangkap: 0},
+        Move{Dari: 27, Ke: 43, Ditangkap: 0},
+        Move{Dari: 35, Ke: 19, Ditangkap: 0},
+        Move{Dari: 16, Ke: 24, Ditangkap: 0},
+        Move{Dari: 40, Ke: 32, Ditangkap: 0},
+        Move{Dari: 21, Ke: 36, Ditangkap: 0},
+        Move{Dari: 45, Ke: 29, Ditangkap: 0}
+    ]
+
+    var moves []Move = []
+    var score = 0
+    var i = 0
+    selama i < panjang(script)
+        var captured, updated = apply_move(board, script[i].Dari, script[i].Ke, moves)
+        moves = updated
+        jika captured != 0
+            score = score + abs(captured)
+        akhir
+        i = i + 1
+    akhir
+
+    native_print("Catur angka: 30 langkah dieksekusi")
+    native_print("Captured score: " + conv.Itoa(score))
+    native_print("Undo stack size: " + conv.Itoa(panjang(moves)))
+
+    i = 0
+    selama i < 30
+        moves = undo_move(board, moves)
+        i = i + 1
+    akhir
+
+    var finalSum = board_sum(board)
+    jika finalSum != initialSum
+        native_print("Mismatch board sum setelah undo!")
+        native_print("Awal: " + conv.Itoa(initialSum) + " | Akhir: " + conv.Itoa(finalSum))
+    akhir
+
+    native_print("Catur angka stress test selesai")
+akhir
