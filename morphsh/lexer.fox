@@ -1,0 +1,203 @@
+ambil "morphsh/token"
+ambil "string"
+
+struktur Lexer
+    input string
+    position int
+    readPosition int
+    ch string
+    line int
+    column int
+akhir
+
+fungsi NewLexer(input string) Lexer
+    var l = Lexer{input: input, position: 0, readPosition: 0, ch: "", line: 1, column: 0}
+    l.readChar()
+    kembali l
+akhir
+
+fungsi (l *Lexer) NextToken() Token
+    var tok Token
+    var hasLeadingSpace = l.skipWhitespace()
+    var tokLine = l.line
+    var tokCol = l.column
+
+    jika l.ch == "="
+        jika l.peekChar() == "="
+            tok = Token{Type: EQ, Literal: "==", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+            l.readChar()
+        lain
+            tok = Token{Type: ASSIGN, Literal: "=", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+        akhir
+    lain jika l.ch == "!"
+        jika l.peekChar() == "="
+            tok = Token{Type: NOT_EQ, Literal: "!=", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+            l.readChar()
+        lain
+            tok = Token{Type: BANG, Literal: "!", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+        akhir
+    lain jika l.ch == "<"
+        jika l.peekChar() == "="
+            tok = Token{Type: LTE, Literal: "<=", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+            l.readChar()
+        lain jika l.peekChar() == "<"
+            tok = Token{Type: LSHIFT, Literal: "<<", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+            l.readChar()
+        lain
+            tok = Token{Type: LT, Literal: "<", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+        akhir
+    lain jika l.ch == ">"
+        jika l.peekChar() == "="
+            tok = Token{Type: GTE, Literal: ">=", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+            l.readChar()
+        lain jika l.peekChar() == ">"
+            tok = Token{Type: RSHIFT, Literal: ">>", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+            l.readChar()
+        lain
+            tok = Token{Type: GT, Literal: ">", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+        akhir
+    lain jika l.ch == "+"
+        tok = Token{Type: PLUS, Literal: "+", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+    lain jika l.ch == "-"
+        tok = Token{Type: MINUS, Literal: "-", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+    lain jika l.ch == "*"
+        tok = Token{Type: ASTERISK, Literal: "*", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+    lain jika l.ch == "/"
+        tok = Token{Type: SLASH, Literal: "/", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+    lain jika l.ch == "%"
+        tok = Token{Type: PERCENT, Literal: "%", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+    lain jika l.ch == "&"
+        tok = Token{Type: AND, Literal: "&", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+    lain jika l.ch == "|"
+        tok = Token{Type: OR, Literal: "|", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+    lain jika l.ch == "^"
+        tok = Token{Type: XOR, Literal: "^", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+    lain jika l.ch == "~"
+        tok = Token{Type: TILDE, Literal: "~", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+    lain jika l.ch == ","
+        tok = Token{Type: COMMA, Literal: ",", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+    lain jika l.ch == ";"
+        tok = Token{Type: SEMICOLON, Literal: ";", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+    lain jika l.ch == ":"
+        tok = Token{Type: COLON, Literal: ":", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+    lain jika l.ch == "."
+        tok = Token{Type: DOT, Literal: ".", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+    lain jika l.ch == "("
+        tok = Token{Type: LPAREN, Literal: "(", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+    lain jika l.ch == ")"
+        tok = Token{Type: RPAREN, Literal: ")", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+    lain jika l.ch == "{"
+        tok = Token{Type: LBRACE, Literal: "{", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+    lain jika l.ch == "}"
+        tok = Token{Type: RBRACE, Literal: "}", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+    lain jika l.ch == "["
+        tok = Token{Type: LBRACKET, Literal: "[", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+    lain jika l.ch == "]"
+        tok = Token{Type: RBRACKET, Literal: "]", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+    lain jika l.ch == "#" dan l.peekChar() == "{"
+        tok = Token{Type: INTERP_START, Literal: "#{", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+        l.readChar()
+    lain jika l.ch == "\""
+        var literal = l.readString()
+        tok = Token{Type: STRING, Literal: literal, Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+        l.readChar()
+        kembali tok
+    lain jika l.ch == ""
+        tok = Token{Type: EOF, Literal: "", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+    lain jika isLetter(l.ch)
+        var literal = l.readIdentifier()
+        tok = Token{Type: LookupIdent(literal), Literal: literal, Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+        kembali tok
+    lain jika isDigit(l.ch)
+        var literal, tokType = l.readNumber()
+        tok = Token{Type: tokType, Literal: literal, Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+        kembali tok
+    lain
+        tok = Token{Type: ILLEGAL, Literal: l.ch, Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+    akhir
+
+    l.readChar()
+    kembali tok
+akhir
+
+fungsi (l *Lexer) readChar() void
+    jika l.readPosition >= string.Length(l.input)
+        l.ch = ""
+    lain
+        l.ch = substring(l.input, l.readPosition, l.readPosition + 1)
+    akhir
+
+    l.position = l.readPosition
+    l.readPosition = l.readPosition + 1
+
+    jika l.ch == "\n"
+        l.line = l.line + 1
+        l.column = 0
+    lain
+        l.column = l.column + 1
+    akhir
+akhir
+
+fungsi (l *Lexer) peekChar() string
+    jika l.readPosition >= string.Length(l.input)
+        kembali ""
+    akhir
+    kembali substring(l.input, l.readPosition, l.readPosition + 1)
+akhir
+
+fungsi (l *Lexer) skipWhitespace() bool
+    var saw = salah
+    selama l.ch == " " atau l.ch == "\t" atau l.ch == "\n" atau l.ch == "\r"
+        saw = benar
+        l.readChar()
+    akhir
+    kembali saw
+akhir
+
+fungsi (l *Lexer) readIdentifier() string
+    var start = l.position
+    selama isLetter(l.ch) atau isDigit(l.ch)
+        l.readChar()
+    akhir
+    kembali substring(l.input, start, l.position)
+akhir
+
+fungsi (l *Lexer) readNumber() (string, string)
+    var start = l.position
+    selama isDigit(l.ch)
+        l.readChar()
+    akhir
+
+    jika l.ch == "." dan isDigit(l.peekChar())
+        l.readChar()
+        selama isDigit(l.ch)
+            l.readChar()
+        akhir
+        kembali substring(l.input, start, l.position), FLOAT
+    akhir
+
+    kembali substring(l.input, start, l.position), INT
+akhir
+
+fungsi (l *Lexer) readString() string
+    l.readChar()
+    var start = l.position
+    selama l.ch != "\"" dan l.ch != ""
+        l.readChar()
+    akhir
+    kembali substring(l.input, start, l.position)
+akhir
+
+fungsi isLetter(ch string) bool
+    jika ch == ""
+        kembali salah
+    akhir
+    kembali (ch >= "a" dan ch <= "z") atau (ch >= "A" dan ch <= "Z") atau ch == "_"
+akhir
+
+fungsi isDigit(ch string) bool
+    jika ch == ""
+        kembali salah
+    akhir
+    kembali ch >= "0" dan ch <= "9"
+akhir

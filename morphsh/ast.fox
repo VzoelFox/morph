@@ -1,0 +1,156 @@
+ambil "morphsh/token"
+
+antarmuka Node
+    fungsi TokenLiteral() string
+    fungsi VisitChildren(visitor Visitor) void
+akhir
+
+antarmuka Visitor
+    fungsi Visit(node Node) void
+akhir
+
+struktur NodeList
+    items []Node
+    count int
+akhir
+
+fungsi NewNodeList() NodeList
+    kembali NodeList{items: [], count: 0}
+akhir
+
+fungsi AddNode(list NodeList, node Node) NodeList
+    list.items = list.items + [node]
+    list.count = list.count + 1
+    kembali list
+akhir
+
+fungsi Walk(node Node, visitor Visitor) void
+    jika node == kosong
+        kembali
+    akhir
+    visitor.Visit(node)
+    node.VisitChildren(visitor)
+akhir
+
+fungsi WalkList(list NodeList, visitor Visitor) void
+    var i = 0
+    selama i < list.count
+        Walk(list.items[i], visitor)
+        i = i + 1
+    akhir
+akhir
+
+struktur Program
+    token Token
+    statements NodeList
+akhir
+
+fungsi (p Program) TokenLiteral() string
+    kembali p.token.Literal
+akhir
+
+fungsi (p Program) VisitChildren(visitor Visitor) void
+    WalkList(p.statements, visitor)
+akhir
+
+struktur Identifier
+    token Token
+    value string
+akhir
+
+fungsi (i Identifier) TokenLiteral() string
+    kembali i.token.Literal
+akhir
+
+fungsi (i Identifier) VisitChildren(visitor Visitor) void
+akhir
+
+struktur TypeName
+    token Token
+    name string
+akhir
+
+fungsi (t TypeName) TokenLiteral() string
+    kembali t.token.Literal
+akhir
+
+fungsi (t TypeName) VisitChildren(visitor Visitor) void
+akhir
+
+struktur IntegerLiteral
+    token Token
+    value string
+akhir
+
+fungsi (i IntegerLiteral) TokenLiteral() string
+    kembali i.token.Literal
+akhir
+
+fungsi (i IntegerLiteral) VisitChildren(visitor Visitor) void
+akhir
+
+struktur FloatLiteral
+    token Token
+    value string
+akhir
+
+fungsi (f FloatLiteral) TokenLiteral() string
+    kembali f.token.Literal
+akhir
+
+fungsi (f FloatLiteral) VisitChildren(visitor Visitor) void
+akhir
+
+struktur StringLiteral
+    token Token
+    value string
+akhir
+
+fungsi (s StringLiteral) TokenLiteral() string
+    kembali s.token.Literal
+akhir
+
+fungsi (s StringLiteral) VisitChildren(visitor Visitor) void
+akhir
+
+struktur ExpressionStatement
+    token Token
+    expression Node
+akhir
+
+fungsi (e ExpressionStatement) TokenLiteral() string
+    kembali e.token.Literal
+akhir
+
+fungsi (e ExpressionStatement) VisitChildren(visitor Visitor) void
+    Walk(e.expression, visitor)
+akhir
+
+struktur VarStatement
+    token Token
+    name Identifier
+    value Node
+    isConst bool
+akhir
+
+fungsi (v VarStatement) TokenLiteral() string
+    kembali v.token.Literal
+akhir
+
+fungsi (v VarStatement) VisitChildren(visitor Visitor) void
+    Walk(v.name, visitor)
+    Walk(v.value, visitor)
+akhir
+
+struktur BlockStatement
+    token Token
+    statements NodeList
+akhir
+
+fungsi (b BlockStatement) TokenLiteral() string
+    kembali b.token.Literal
+akhir
+
+fungsi (b BlockStatement) VisitChildren(visitor Visitor) void
+    WalkList(b.statements, visitor)
+akhir

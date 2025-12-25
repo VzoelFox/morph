@@ -1,0 +1,115 @@
+struktur Token
+    Type string
+    Literal string
+    Line int
+    Column int
+    HasLeadingSpace bool
+akhir
+
+tetapan ILLEGAL = "ILLEGAL"
+tetapan EOF = "EOF"
+
+tetapan IDENT = "IDENT"
+tetapan INT = "INT"
+tetapan FLOAT = "FLOAT"
+tetapan STRING = "STRING"
+tetapan CHAR = "CHAR"
+
+tetapan ASSIGN = "="
+tetapan PLUS = "+"
+tetapan MINUS = "-"
+tetapan BANG = "!"
+tetapan ASTERISK = "*"
+tetapan SLASH = "/"
+tetapan PERCENT = "%"
+
+tetapan LT = "<"
+tetapan GT = ">"
+tetapan EQ = "=="
+tetapan NOT_EQ = "!="
+tetapan LTE = "<="
+tetapan GTE = ">="
+
+tetapan AND = "&"
+tetapan OR = "|"
+tetapan XOR = "^"
+tetapan TILDE = "~"
+tetapan LSHIFT = "<<"
+tetapan RSHIFT = ">>"
+
+tetapan COMMA = ","
+tetapan SEMICOLON = ";"
+tetapan COLON = ":"
+tetapan DOT = "."
+
+tetapan LPAREN = "("
+tetapan RPAREN = ")"
+tetapan LBRACE = "{"
+tetapan RBRACE = "}"
+tetapan LBRACKET = "["
+tetapan RBRACKET = "]"
+
+tetapan INTERP_START = "#{"
+
+tetapan FUNGSI = "FUNGSI"
+tetapan NATIVE = "NATIVE"
+tetapan JIKA = "JIKA"
+tetapan ATAU_JIKA = "ATAU_JIKA"
+tetapan LAINNYA = "LAINNYA"
+tetapan KEMBALIKAN = "KEMBALIKAN"
+tetapan BENAR = "BENAR"
+tetapan SALAH = "SALAH"
+tetapan KOSONG = "KOSONG"
+tetapan AKHIR = "AKHIR"
+tetapan SELAMA = "SELAMA"
+tetapan DAN = "DAN"
+tetapan ATAU = "ATAU"
+tetapan AMBIL = "AMBIL"
+tetapan DARI = "DARI"
+tetapan BERHENTI = "BERHENTI"
+tetapan LANJUT = "LANJUT"
+tetapan STRUKTUR = "STRUKTUR"
+tetapan INTERFACE = "INTERFACE"
+tetapan VAR = "VAR"
+tetapan TETAPAN = "TETAPAN"
+tetapan MAP = "MAP"
+tetapan COMMENT = "COMMENT"
+tetapan PILIH = "PILIH"
+tetapan KASUS = "KASUS"
+
+var keywords map[string]string = {
+    "pilih": PILIH,
+    "kasus": KASUS,
+    "var": VAR,
+    "tetapan": TETAPAN,
+    "const": TETAPAN,
+    "map": MAP,
+    "struktur": STRUKTUR,
+    "antarmuka": INTERFACE,
+    "fungsi": FUNGSI,
+    "native": NATIVE,
+    "jika": JIKA,
+    "atau_jika": ATAU_JIKA,
+    "lainnya": LAINNYA,
+    "kembalikan": KEMBALIKAN,
+    "kembali": KEMBALIKAN,
+    "benar": BENAR,
+    "salah": SALAH,
+    "kosong": KOSONG,
+    "akhir": AKHIR,
+    "selama": SELAMA,
+    "dan": DAN,
+    "atau": ATAU,
+    "ambil": AMBIL,
+    "dari": DARI,
+    "berhenti": BERHENTI,
+    "lanjut": LANJUT,
+}
+
+fungsi LookupIdent(ident string) string
+    var tok = keywords[ident]
+    jika tok != ""
+        kembali tok
+    akhir
+    kembali IDENT
+akhir
