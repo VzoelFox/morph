@@ -1247,7 +1247,30 @@ func (c *Compiler) compileAssignment(s *parser.AssignmentStatement, buf *strings
 		if err != nil {
 			return err
 		}
-		buf.WriteString(fmt.Sprintf("\t%s->%s = %s;\n", objCode, mem.Member.Value, valCode))
+		objType := c.checker.Types[mem.Object]
+		objRef := objCode
+		valRef := valCode
+		var roots []rootTemp
+		if objType != nil && c.isPointerCheckerType(objType) {
+			objTemp := c.nextTemp("obj")
+			roots = append(roots, rootTemp{
+				cType: c.mapCheckerTypeToC(objType, prefix),
+				name:  objTemp,
+				value: objCode,
+			})
+			objRef = objTemp
+		}
+		if srcType != nil && c.isPointerCheckerType(srcType) {
+			valTemp := c.nextTemp("val")
+			roots = append(roots, rootTemp{
+				cType: c.mapCheckerTypeToC(srcType, prefix),
+				name:  valTemp,
+				value: valCode,
+			})
+			valRef = valTemp
+		}
+		expr := fmt.Sprintf("%s->%s = %s", objRef, mem.Member.Value, valRef)
+		buf.WriteString(fmt.Sprintf("\t%s;\n", c.wrapWithRoots(roots, expr, "void")))
 		return nil
 	} else if idx, ok := s.Names[0].(*parser.IndexExpression); ok {
 		// Map/Array Assignment
@@ -1347,12 +1370,24 @@ func (c *Compiler) compileReturn(s *parser.ReturnStatement, buf *strings.Builder
 	// Use Target Return Types from Function Signature to ensure correct C Struct (e.g. MorphTuple_Int_Error vs MorphTuple_Int_Null)
 
 	var valCodes []string
+	var roots []rootTemp
 	for _, expr := range s.ReturnValues {
 		code, err := c.compileExpression(expr, prefix, fn)
 		if err != nil {
 			return err
 		}
-		valCodes = append(valCodes, code)
+		valRef := code
+		exprType := c.checker.Types[expr]
+		if exprType != nil && c.isPointerCheckerType(exprType) {
+			temp := c.nextTemp("ret")
+			roots = append(roots, rootTemp{
+				cType: c.mapCheckerTypeToC(exprType, prefix),
+				name:  temp,
+				value: code,
+			})
+			valRef = temp
+		}
+		valCodes = append(valCodes, valRef)
 	}
 
 	// Determine target types from function signature
@@ -1368,7 +1403,11 @@ func (c *Compiler) compileReturn(s *parser.ReturnStatement, buf *strings.Builder
 	}
 
 	tupleName := c.getTupleCType(targetTypes, prefix)
-	buf.WriteString(fmt.Sprintf("\treturn (%s){ %s };\n", tupleName, strings.Join(valCodes, ", ")))
+	expr := fmt.Sprintf("(%s){ %s }", tupleName, strings.Join(valCodes, ", "))
+	if len(roots) > 0 {
+		expr = c.wrapWithRoots(roots, expr, tupleName)
+	}
+	buf.WriteString(fmt.Sprintf("\treturn %s;\n", expr))
 	return nil
 }
 
@@ -1478,7 +1517,21 @@ func (c *Compiler) compileExpression(expr parser.Expression, prefix string, fn *
 		if err != nil {
 			return "", err
 		}
-		return fmt.Sprintf("%s->%s", obj, e.Member.Value), nil
+		expr := fmt.Sprintf("%s->%s", obj, e.Member.Value)
+		if objType != nil && objType.Kind() != checker.KindInterface && c.isPointerCheckerType(objType) {
+			temp := c.nextTemp("obj")
+			roots := []rootTemp{
+				{
+					cType: c.mapCheckerTypeToC(objType, prefix),
+					name:  temp,
+					value: obj,
+				},
+			}
+			retType := c.mapCheckerTypeToC(c.checker.Types[e], prefix)
+			expr = fmt.Sprintf("%s->%s", temp, e.Member.Value)
+			return c.wrapWithRoots(roots, expr, retType), nil
+		}
+		return expr, nil
 	case *parser.InterpolatedString:
 		return c.compileInterpolatedString(e, prefix, fn)
 	default:
@@ -1601,23 +1654,56 @@ func (c *Compiler) compileCall(call *parser.CallExpression, prefix string, fn *p
 				return "", err
 			}
 
-			if isPtr {
-				objCode = fmt.Sprintf("(*%s)", objCode)
-			}
-
 			var args []string
 			args = append(args, "ctx")
 			args = append(args, "NULL")
-			args = append(args, objCode)
+
+			objRef := objCode
+			var roots []rootTemp
+			if c.isPointerCheckerType(objType) {
+				objTemp := c.nextTemp("recv")
+				roots = append(roots, rootTemp{
+					cType: c.mapCheckerTypeToC(objType, prefix),
+					name:  objTemp,
+					value: objCode,
+				})
+				objRef = objTemp
+			}
+
+			if isPtr {
+				objRef = fmt.Sprintf("(*%s)", objRef)
+			}
+
+			args = append(args, objRef)
 
 			for _, arg := range call.Arguments {
 				ac, err := c.compileExpression(arg, prefix, fn)
 				if err != nil {
 					return "", err
 				}
-				args = append(args, ac)
+				argRef := ac
+				argType := c.checker.Types[arg]
+				if argType != nil && c.isPointerCheckerType(argType) {
+					argTemp := c.nextTemp("arg")
+					roots = append(roots, rootTemp{
+						cType: c.mapCheckerTypeToC(argType, prefix),
+						name:  argTemp,
+						value: ac,
+					})
+					argRef = argTemp
+				}
+				args = append(args, argRef)
 			}
-			return fmt.Sprintf("%s(%s)", funcCode, strings.Join(args, ", ")), nil
+			callExpr := fmt.Sprintf("%s(%s)", funcCode, strings.Join(args, ", "))
+			if len(roots) == 0 {
+				return callExpr, nil
+			}
+			callType := c.checker.Types[call]
+			retType := "void"
+			if callType != nil {
+				retType = c.mapCheckerTypeToC(callType, prefix)
+			}
+			return c.wrapWithRoots(roots, callExpr, retType), nil
 		} else {
 			return "", fmt.Errorf("method calls not supported yet")
 		}
@@ -2420,7 +2506,15 @@ func (c *Compiler) compileInterfaceCall(call *parser.CallExpression, mem *parser
 	}
 
 	objTemp := c.nextTemp("iface")
+	type argInfo struct {
+		code      string
+		cType     string
+		temp      string
+		needsRoot bool
+	}
+
 	var args []string
+	var argInfos []argInfo
 	args = append(args, "ctx")
 	args = append(args, fmt.Sprintf("%s.instance", objTemp))
 	for _, arg := range call.Arguments {
@@ -2428,7 +2522,21 @@ func (c *Compiler) compileInterfaceCall(call *parser.CallExpression, mem *parser
 		if err != nil {
 			return "", err
 		}
-		args = append(args, code)
+		info := argInfo{code: code}
+		argType := c.checker.Types[arg]
+		if argType != nil && c.isPointerCheckerType(argType) {
+			info.needsRoot = true
+			info.cType = c.mapCheckerTypeToC(argType, prefix)
+			info.temp = c.nextTemp("arg")
+		}
+		argInfos = append(argInfos, info)
+	}
+	for _, info := range argInfos {
+		if info.needsRoot {
+			args = append(args, info.temp)
+		} else {
+			args = append(args, info.code)
+		}
 	}
 
 	methodType := iface.Methods[mem.Member.Value]
@@ -2448,14 +2556,23 @@ func (c *Compiler) compileInterfaceCall(call *parser.CallExpression, mem *parser
 	sb.WriteString("({ ")
 	sb.WriteString(fmt.Sprintf("MorphInterface %s = %s; ", objTemp, objCode))
 	sb.WriteString(fmt.Sprintf("mph_gc_push_root(ctx, (void**)&%s.instance); ", objTemp))
+	rootCount := 1
+	for _, info := range argInfos {
+		if !info.needsRoot {
+			continue
+		}
+		sb.WriteString(fmt.Sprintf("%s %s = %s; ", info.cType, info.temp, info.code))
+		sb.WriteString(fmt.Sprintf("mph_gc_push_root(ctx, (void**)&%s); ", info.temp))
+		rootCount++
+	}
 	if retType == "void" {
 		sb.WriteString(fmt.Sprintf("%s; ", callExpr))
-		sb.WriteString("mph_gc_pop_roots(ctx, 1); ")
+		sb.WriteString(fmt.Sprintf("mph_gc_pop_roots(ctx, %d); ", rootCount))
 		sb.WriteString("})")
 		return sb.String(), nil
 	}
 	sb.WriteString(fmt.Sprintf("%s _ret = %s; ", retType, callExpr))
-	sb.WriteString("mph_gc_pop_roots(ctx, 1); ")
+	sb.WriteString(fmt.Sprintf("mph_gc_pop_roots(ctx, %d); ", rootCount))
 	sb.WriteString("_ret; })")
 	return sb.String(), nil
 }

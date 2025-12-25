@@ -1,7 +1,7 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.58.1
+- **Versi**: 1.58.2
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
 - **Terakhir Diupdate**: 2025-12-25
 - **Status**: Active
@@ -54,6 +54,20 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.58.2 - 2025-12-25
+**Checksum**: SHA256:COMPILER_MEMBER_RETURN_ROOTS
+**Perubahan**:
+- **Compiler**: Menambahkan rooting temporaries pada akses member dan assignment member agar object/value temporaries tetap hidup selama evaluasi.
+- **Compiler**: Menambahkan rooting pada pemanggilan method struct dan interface (termasuk argumen) untuk mencegah GC reclaim di tengah evaluasi.
+- **Compiler**: Menambahkan rooting untuk nilai return multi-value (tuple) agar temporaries aman selama konstruksi tuple.
+
+**Konteks Sesi**:
+- **GC Safety**: Menutup celah rooting pada jalur akses member, method call, dan return multi-value.
+
+**File Terkait**:
+- `pkg/compiler/compiler.go` (SHA256:afae542db79f7b215dc07b7cdab0319491eda52989de6d62a13d06509bd73705)
+- `AGENTS.md` (SHA256:7c421d7df62ed3f7589f5a8ed54c68df2e99dc13f41cafa87afeea766747b838)
+
 ### Version 1.58.1 - 2025-12-25
 **Checksum**: SHA256:COMPILER_TEMP_ROOT_COVERAGE
 **Perubahan**:
