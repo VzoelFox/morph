@@ -1,7 +1,7 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.57.9
+- **Versi**: 1.58.0
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
 - **Terakhir Diupdate**: 2025-12-25
 - **Status**: Active
@@ -54,6 +54,22 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+### Version 1.58.0 - 2025-12-25
+**Checksum**: SHA256:GC_TEMP_ROOTING_SAFETY
+**Perubahan**:
+- **Compiler**: Menambahkan temp-rooting untuk literal struct/array/map dan constructor struct agar objek hasil alokasi tetap hidup saat inisialisasi field/elemen.
+- **Compiler**: Menambahkan root sementara pada argumen call dan concat string/array untuk menjaga lifetime temporaries selama evaluasi.
+- **Runtime/GC**: Menambahkan rooting internal pada constructor string/array/map dan operasi string agar alokasi bertingkat tidak kehilangan referensi saat GC.
+- **Runtime/Error**: Menjaga root untuk error/message saat membuat error object.
+
+**Konteks Sesi**:
+- **GC Safety**: Menutup celah GC pada temporaries dan alokasi bertingkat yang sebelumnya belum ter-root.
+
+**File Terkait**:
+- `pkg/compiler/compiler.go` (SHA256:e2ed48bea131b6a65a384fc2e2a911990bf1996b45fb472ccb9aa7f80245ba91)
+- `pkg/compiler/runtime/runtime.c.tpl` (SHA256:28d116771f90b3b036f6545ed96c6c31ef58b76bf742ca9b03ddebae12dc7dbb)
+- `AGENTS.md` (SHA256:4e4312befb03154c5d0257fbbe61b5c580b2646a49f0d0e0830b3fd273c695cb)
+
 ### Version 1.57.9 - 2025-12-25
 **Checksum**: SHA256:MORPHSH_CONTROL_FLOW_BOOTSTRAP
 **Perubahan**:
