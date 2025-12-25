@@ -14,38 +14,6 @@
 #define PAGE_SIZE 4096
 #define PAGE_HEADER_SIZE sizeof(MphPage)
 
-typedef struct MphPage {
-    void* start_addr;
-    size_t used_offset;
-    int flags; // 0=RAM, 1=DISK
-    uint64_t last_access;
-    struct MphPage* next;
-    // For disk swap
-    uint64_t swap_id;
-    // For Page Recycling
-    size_t live_bytes;
-    size_t size; // Total size of page (usually 4096, but larger for Large Objects)
-} MphPage;
-
-// Global Page List (in Context)
-// We need to update MorphContext struct definition in morph.h (but it's in a template, harder to change seamlessly without recompiling everything).
-// Workaround: We store it in the implementation file as static or attach to existing fields?
-// We can cast `heap_head` or use a new field if we updated morph.h.
-// Since morph.h is generated from template, we assume we can't change it easily right now without `morph.h.tpl`.
-// Wait, `morph.h.tpl` IS available. I should check `morph.h.tpl` first.
-// But for now, let's look at `runtime.c.tpl`.
-// I will implement `MphPage` logic but I need to store the head somewhere.
-// I will assume `ctx->heap_head` is now `MphPage*` instead of `ObjectHeader*`? No, that breaks GC.
-// I need `ctx->page_head`.
-// Let's modify `morph.h.tpl` first in next step?
-// The user prompt was about `runtime.c.tpl`.
-// I'll add `MphPage* page_head;` to `MorphContext` in `morph.h` if I can access it.
-// If I cannot change `morph.h`, I will use a global variable (not thread safe for multiple contexts, but okay for MVP).
-// `static MphPage* global_page_head = NULL;` // MVP
-
-static MphPage* global_page_head = NULL;
-static pthread_mutex_t page_lock = PTHREAD_MUTEX_INITIALIZER;
-
 // Forward Declarations
 void mph_gc_mark(MorphContext* ctx, void* obj);
 void mph_gc_mark_array(MorphContext* ctx, void* obj);
@@ -74,9 +42,7 @@ uint64_t mph_time_ms() {
 
 // --- Page Management ---
 
-static MphPage* current_alloc_page = NULL;
-
-MphPage* mph_page_new() {
+MphPage* mph_page_new(MorphContext* ctx) {
     MphPage* page = (MphPage*)malloc(sizeof(MphPage));
     // Allocate 4KB aligned memory
     // mmap is easiest for page alignment
@@ -92,10 +58,10 @@ MphPage* mph_page_new() {
     page->live_bytes = 0;
     page->size = PAGE_SIZE;
 
-    pthread_mutex_lock(&page_lock);
-    page->next = global_page_head;
-    global_page_head = page;
-    pthread_mutex_unlock(&page_lock);
+    pthread_mutex_lock(&ctx->page_lock);
+    page->next = ctx->page_head;
+    ctx->page_head = page;
+    pthread_mutex_unlock(&ctx->page_lock);
 
     return page;
 }
@@ -113,9 +79,12 @@ void mph_page_free(MphPage* page) {
 void mph_init_memory(MorphContext* ctx) {
     ctx->heap_head = NULL;
     ctx->allocated_bytes = 0;
-    ctx->next_gc_threshold = GC_THRESHOLD;
+    ctx->next_gc_threshold = GC_MIN_THRESHOLD;
     ctx->stack_top = NULL;
     ctx->daemon_running = 0;
+    ctx->page_head = NULL;
+    ctx->current_alloc_page = NULL;
+    ctx->free_list = NULL;
 
     // Initialize Mark Stack (Iterative GC)
     ctx->mark_stack.capacity = 1024; // Start small, realloc as needed
@@ -124,6 +93,7 @@ void mph_init_memory(MorphContext* ctx) {
     if (!ctx->mark_stack.items) { perror("malloc mark stack"); exit(1); }
 
     pthread_mutex_init(&ctx->memory_lock, NULL);
+    pthread_mutex_init(&ctx->page_lock, NULL);
 
     // Create directories
     mkdir(".morph.vz", 0755);
@@ -138,7 +108,24 @@ void mph_init_memory(MorphContext* ctx) {
 void mph_destroy_memory(MorphContext* ctx) {
     mph_stop_daemon(ctx);
     if (ctx->mark_stack.items) free(ctx->mark_stack.items);
-    // Cleanup pages?
+    ctx->free_list = NULL;
+    pthread_mutex_lock(&ctx->page_lock);
+    MphPage* page = ctx->page_head;
+    while (page) {
+        MphPage* next = page->next;
+        if (page->flags & FLAG_SWAPPED) {
+            char path[256];
+            sprintf(path, ".morph.vz/swap/page_%lu.bin", page->swap_id);
+            unlink(path);
+        }
+        mph_page_free(page);
+        page = next;
+    }
+    ctx->page_head = NULL;
+    ctx->current_alloc_page = NULL;
+    pthread_mutex_unlock(&ctx->page_lock);
+    pthread_mutex_destroy(&ctx->page_lock);
+    pthread_mutex_destroy(&ctx->memory_lock);
 }
 
 // Helper to get header from payload
@@ -209,28 +196,28 @@ void mph_page_swap_in(MphPage* page) {
 }
 
 // Find Page for Address
-MphPage* mph_find_page(void* addr) {
+MphPage* mph_find_page(MorphContext* ctx, void* addr) {
     uint64_t addr_val = (uint64_t)addr;
 
-    pthread_mutex_lock(&page_lock);
-    MphPage* cur = global_page_head;
+    pthread_mutex_lock(&ctx->page_lock);
+    MphPage* cur = ctx->page_head;
     while (cur) {
         uint64_t start = (uint64_t)cur->start_addr;
         uint64_t end = start + cur->size;
         if (addr_val >= start && addr_val < end) {
-            pthread_mutex_unlock(&page_lock);
+            pthread_mutex_unlock(&ctx->page_lock);
             return cur;
         }
         cur = cur->next;
     }
-    pthread_mutex_unlock(&page_lock);
+    pthread_mutex_unlock(&ctx->page_lock);
     return NULL;
 }
 
 void mph_swap_in(MorphContext* ctx, void* obj) {
     if (!obj) return;
     // Find page
-    MphPage* page = mph_find_page(obj);
+    MphPage* page = mph_find_page(ctx, obj);
     if (page) {
         if (page->flags & FLAG_SWAPPED) {
             mph_page_swap_in(page);
@@ -264,10 +251,9 @@ void mph_gc_mark(MorphContext* ctx, void* obj) {
     header->flags |= FLAG_MARKED;
 
     // Track live bytes for Page Recycling
-    MphPage* page = mph_find_page(obj);
+    MphPage* page = mph_find_page(ctx, obj);
     if (page) {
-        size_t size = header->type ? header->type->size : 0;
-        page->live_bytes += (size + sizeof(ObjectHeader));
+        page->live_bytes += (header->size + sizeof(ObjectHeader));
     }
 
     // Queue for processing children
@@ -337,7 +323,7 @@ void mph_log_zombie(ObjectHeader* obj) {
     // Log Format: [Time] [Addr] [Type] [Size]
     uint64_t now = mph_time_ms();
     const char* type_name = obj->type ? obj->type->name : "raw";
-    size_t size = obj->type ? obj->type->size : 0; // Approx
+    size_t size = obj->size;
 
     fprintf(f, "[%lu] DEAD: %p Type=%s Size=%lu\n", now, (void*)(obj+1), type_name, size);
     fclose(f);
@@ -355,14 +341,16 @@ void mph_gc_sweep(MorphContext* ctx) {
             // ZOMBIE LOGGING before free
             mph_log_zombie(curr);
 
-            if (curr->type) ctx->allocated_bytes -= curr->type->size;
-            // Arena: We do NOT free individual objects.
+            ctx->allocated_bytes -= curr->size;
+            curr->flags = 0;
+            curr->next = ctx->free_list;
+            ctx->free_list = curr;
         }
     }
 
     // Page Recycling
-    pthread_mutex_lock(&page_lock);
-    MphPage** p_ptr = &global_page_head;
+    pthread_mutex_lock(&ctx->page_lock);
+    MphPage** p_ptr = &ctx->page_head;
     while (*p_ptr) {
         MphPage* p = *p_ptr;
         // Do not free if it's the current allocation page (even if empty/0 live bytes because it's filling up)
@@ -375,7 +363,19 @@ void mph_gc_sweep(MorphContext* ctx) {
         // If it wasn't marked, live_bytes is 0.
         // So we can free swapped out pages too!
 
-        if (p != current_alloc_page && p->live_bytes == 0) {
+        if (p != ctx->current_alloc_page && p->live_bytes == 0) {
+            uint64_t start = (uint64_t)p->start_addr;
+            uint64_t end = start + p->size;
+            ObjectHeader** free_ptr = &ctx->free_list;
+            while (*free_ptr) {
+                ObjectHeader* free_hdr = *free_ptr;
+                uint64_t addr = (uint64_t)free_hdr;
+                if (addr >= start && addr < end) {
+                    *free_ptr = free_hdr->next;
+                    continue;
+                }
+                free_ptr = &free_hdr->next;
+            }
             *p_ptr = p->next;
             if (p->flags & FLAG_SWAPPED) {
                  char path[256];
@@ -387,20 +387,20 @@ void mph_gc_sweep(MorphContext* ctx) {
             p_ptr = &p->next;
         }
     }
-    pthread_mutex_unlock(&page_lock);
+    pthread_mutex_unlock(&ctx->page_lock);
 }
 
 void mph_gc_collect(MorphContext* ctx) {
     pthread_mutex_lock(&ctx->memory_lock);
 
     // Reset Live Bytes counters on all pages
-    pthread_mutex_lock(&page_lock);
-    MphPage* p = global_page_head;
+    pthread_mutex_lock(&ctx->page_lock);
+    MphPage* p = ctx->page_head;
     while (p) {
         p->live_bytes = 0;
         p = p->next;
     }
-    pthread_mutex_unlock(&page_lock);
+    pthread_mutex_unlock(&ctx->page_lock);
 
     StackRoot* root = ctx->stack_top;
     while (root) {
@@ -423,16 +423,16 @@ void* mph_daemon_loop(void* arg) {
         usleep(DAEMON_SLEEP_MS * 1000);
         ticks++;
 
-        pthread_mutex_lock(&page_lock);
+        pthread_mutex_lock(&ctx->page_lock);
         uint64_t now = mph_time_ms();
-        MphPage* cur = global_page_head;
+        MphPage* cur = ctx->page_head;
         while (cur) {
             if (!(cur->flags & FLAG_SWAPPED) && (now - cur->last_access > SWAP_AGE_THRESHOLD_SEC * 1000)) {
                 mph_page_swap_out(cur);
             }
             cur = cur->next;
         }
-        pthread_mutex_unlock(&page_lock);
+        pthread_mutex_unlock(&ctx->page_lock);
 
         // Idle GC Trigger
         // If no allocation for 2 seconds and we have > 1MB allocated, trigger GC
@@ -460,7 +460,11 @@ void mph_stop_daemon(MorphContext* ctx) {
 void* mph_alloc(MorphContext* ctx, size_t size, MorphTypeInfo* type_info) {
     if (ctx->allocated_bytes > ctx->next_gc_threshold) {
         mph_gc_collect(ctx);
-        ctx->next_gc_threshold = ctx->allocated_bytes + GC_THRESHOLD;
+        size_t base_threshold = GC_THRESHOLD;
+        if (ctx->allocated_bytes < GC_THRESHOLD) {
+            base_threshold = GC_MIN_THRESHOLD;
+        }
+        ctx->next_gc_threshold = ctx->allocated_bytes + base_threshold;
     }
 
     // Update last alloc time for Idle detection
@@ -471,6 +475,24 @@ void* mph_alloc(MorphContext* ctx, size_t size, MorphTypeInfo* type_info) {
     total_size = (total_size + 7) & ~7;
 
     pthread_mutex_lock(&ctx->memory_lock);
+
+    // Reuse freed objects (exact size match)
+    ObjectHeader** free_ptr = &ctx->free_list;
+    while (*free_ptr) {
+        ObjectHeader* free_hdr = *free_ptr;
+        if (free_hdr->size == size) {
+            *free_ptr = free_hdr->next;
+            free_hdr->type = type_info;
+            free_hdr->flags = 0;
+            free_hdr->size = size;
+            free_hdr->next = ctx->heap_head;
+            ctx->heap_head = free_hdr;
+            ctx->allocated_bytes += size;
+            pthread_mutex_unlock(&ctx->memory_lock);
+            return (void*)(free_hdr + 1);
+        }
+        free_ptr = &free_hdr->next;
+    }
 
     // Large Object Handling
     if (total_size > PAGE_SIZE) {
@@ -488,15 +510,16 @@ void* mph_alloc(MorphContext* ctx, size_t size, MorphTypeInfo* type_info) {
         page->live_bytes = 0;
         page->size = alloc_size;
 
-        pthread_mutex_lock(&page_lock);
-        page->next = global_page_head;
-        global_page_head = page;
-        pthread_mutex_unlock(&page_lock);
+        pthread_mutex_lock(&ctx->page_lock);
+        page->next = ctx->page_head;
+        ctx->page_head = page;
+        pthread_mutex_unlock(&ctx->page_lock);
 
         ObjectHeader* header = (ObjectHeader*)page->start_addr;
         memset(header, 0, total_size);
         header->type = type_info;
         header->flags = 0;
+        header->size = size;
 
         header->next = ctx->heap_head;
         ctx->heap_head = header;
@@ -506,18 +529,19 @@ void* mph_alloc(MorphContext* ctx, size_t size, MorphTypeInfo* type_info) {
         return (void*)(header + 1);
     }
 
-    if (!current_alloc_page || (current_alloc_page->used_offset + total_size > PAGE_SIZE)) {
+    if (!ctx->current_alloc_page || (ctx->current_alloc_page->used_offset + total_size > PAGE_SIZE)) {
         // New Page
-        current_alloc_page = mph_page_new();
+        ctx->current_alloc_page = mph_page_new(ctx);
     }
 
-    void* addr = (char*)current_alloc_page->start_addr + current_alloc_page->used_offset;
-    current_alloc_page->used_offset += total_size;
+    void* addr = (char*)ctx->current_alloc_page->start_addr + ctx->current_alloc_page->used_offset;
+    ctx->current_alloc_page->used_offset += total_size;
 
     ObjectHeader* header = (ObjectHeader*)addr;
     memset(header, 0, total_size);
     header->type = type_info;
     header->flags = 0;
+    header->size = size;
 
     // Link to heap list for GC sweeping
     header->next = ctx->heap_head;
