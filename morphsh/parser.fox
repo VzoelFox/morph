@@ -43,6 +43,29 @@ fungsi (p *Parser) ParseProgram() Program
     kembali program
 akhir
 
+tetapan PREC_LOWEST = 1
+tetapan PREC_EQUALS = 2
+tetapan PREC_COMPARE = 3
+tetapan PREC_SUM = 4
+tetapan PREC_PRODUCT = 5
+tetapan PREC_PREFIX = 6
+tetapan PREC_CALL = 7
+
+var precedences map[string]int = {
+    EQ: PREC_EQUALS,
+    NOT_EQ: PREC_EQUALS,
+    LT: PREC_COMPARE,
+    LTE: PREC_COMPARE,
+    GT: PREC_COMPARE,
+    GTE: PREC_COMPARE,
+    PLUS: PREC_SUM,
+    MINUS: PREC_SUM,
+    ASTERISK: PREC_PRODUCT,
+    SLASH: PREC_PRODUCT,
+    PERCENT: PREC_PRODUCT,
+    LPAREN: PREC_CALL,
+}
+
 fungsi (p *Parser) parseStatement() Node
     jika p.current.Type == VAR atau p.current.Type == TETAPAN
         kembali p.parseVarStatement()
@@ -84,6 +107,27 @@ fungsi (p *Parser) parseExpressionStatement() Node
 akhir
 
 fungsi (p *Parser) parseExpression() Node
+    kembali p.parseExpressionWithPrecedence(PREC_LOWEST)
+akhir
+
+fungsi (p *Parser) parseExpressionWithPrecedence(precedence int) Node
+    var left = p.parsePrefixExpression()
+    jika left == kosong
+        kembali kosong
+    akhir
+
+    selama p.peek.Type != SEMICOLON dan precedence < p.peekPrecedence()
+        jika !isInfixToken(p.peek.Type)
+            kembali left
+        akhir
+        p.nextToken()
+        left = p.parseInfixExpression(left)
+    akhir
+
+    kembali left
+akhir
+
+fungsi (p *Parser) parsePrefixExpression() Node
     jika p.current.Type == IDENT
         kembali Identifier{token: p.current, value: p.current.Literal}
     akhir
@@ -96,9 +140,105 @@ fungsi (p *Parser) parseExpression() Node
     jika p.current.Type == STRING
         kembali StringLiteral{token: p.current, value: p.current.Literal}
     akhir
+    jika p.current.Type == BANG atau p.current.Type == MINUS
+        var token = p.current
+        var op = p.current.Literal
+        p.nextToken()
+        var right = p.parseExpressionWithPrecedence(PREC_PREFIX)
+        kembali PrefixExpression{token: token, operator: op, right: right}
+    akhir
+    jika p.current.Type == LPAREN
+        kembali p.parseGroupedExpression()
+    akhir
 
     p.addError("parser: expression belum diimplementasi untuk token " + p.current.Type)
     kembali kosong
+akhir
+
+fungsi (p *Parser) parseGroupedExpression() Node
+    p.nextToken()
+    var exp = p.parseExpressionWithPrecedence(PREC_LOWEST)
+    jika !p.expectPeek(RPAREN)
+        kembali kosong
+    akhir
+    kembali exp
+akhir
+
+fungsi (p *Parser) parseInfixExpression(left Node) Node
+    jika p.current.Type == LPAREN
+        kembali p.parseCallExpression(left)
+    akhir
+
+    var token = p.current
+    var op = p.current.Literal
+    var precedence = p.currentPrecedence()
+    p.nextToken()
+    var right = p.parseExpressionWithPrecedence(precedence)
+    kembali InfixExpression{token: token, left: left, operator: op, right: right}
+akhir
+
+fungsi (p *Parser) parseCallExpression(fn Node) Node
+    var call = CallExpression{token: p.current, function: fn, arguments: NewNodeList()}
+    call.arguments = p.parseExpressionList(RPAREN)
+    kembali call
+akhir
+
+fungsi (p *Parser) parseExpressionList(end string) NodeList
+    var list = NewNodeList()
+    jika p.peek.Type == end
+        p.nextToken()
+        kembali list
+    akhir
+
+    p.nextToken()
+    var arg = p.parseExpressionWithPrecedence(PREC_LOWEST)
+    jika arg != kosong
+        list = AddNode(list, arg)
+    akhir
+
+    selama p.peek.Type == COMMA
+        p.nextToken()
+        p.nextToken()
+        var nextArg = p.parseExpressionWithPrecedence(PREC_LOWEST)
+        jika nextArg != kosong
+            list = AddNode(list, nextArg)
+        akhir
+    akhir
+
+    jika !p.expectPeek(end)
+        kembali list
+    akhir
+
+    kembali list
+akhir
+
+fungsi (p *Parser) peekPrecedence() int
+    var prec = precedences[p.peek.Type]
+    jika prec != 0
+        kembali prec
+    akhir
+    kembali PREC_LOWEST
+akhir
+
+fungsi (p *Parser) currentPrecedence() int
+    var prec = precedences[p.current.Type]
+    jika prec != 0
+        kembali prec
+    akhir
+    kembali PREC_LOWEST
+akhir
+
+fungsi isInfixToken(t string) bool
+    jika t == PLUS atau t == MINUS atau t == ASTERISK atau t == SLASH atau t == PERCENT
+        kembali benar
+    akhir
+    jika t == EQ atau t == NOT_EQ atau t == LT atau t == LTE atau t == GT atau t == GTE
+        kembali benar
+    akhir
+    jika t == LPAREN
+        kembali benar
+    akhir
+    kembali salah
 akhir
 
 fungsi (p *Parser) expectPeek(t string) bool
