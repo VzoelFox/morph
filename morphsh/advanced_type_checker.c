@@ -12,16 +12,10 @@ MorphArray* mph_string_split(MorphContext* ctx, MorphString* s, MorphString* sep
 // RTTI Definitions
 
 // Type IDs
-#define MPH_TYPE_mph_AdvancedType 2
-#define MPH_TYPE_mph_AdvancedChecker 3
-#define MPH_TYPE_mph_io_File 1
+#define MPH_TYPE_mph_AdvancedType 1
+#define MPH_TYPE_mph_AdvancedChecker 2
 
 // Struct Definitions (Env & Types)
-typedef struct mph_io_File mph_io_File;
-struct mph_io_File {
-	mph_int fd;
-};
-
 typedef struct mph_AdvancedType mph_AdvancedType;
 typedef struct mph_AdvancedChecker mph_AdvancedChecker;
 struct mph_AdvancedType {
@@ -38,12 +32,11 @@ struct mph_AdvancedChecker {
 	mph_int error_count;
 };
 
-MorphTypeInfo mph_ti_mph_io_File = { "File", sizeof(mph_io_File), 0, NULL };
 MorphTypeInfo mph_ti_mph_AdvancedType = { "AdvancedType", sizeof(mph_AdvancedType), 1, (size_t[]){offsetof(mph_AdvancedType, name)} };
 MorphTypeInfo mph_ti_mph_AdvancedChecker = { "AdvancedChecker", sizeof(mph_AdvancedChecker), 0, NULL };
 
 // Global Variables
-mph_io_File* mph_io_Stdout;
+mph_int mph_io_Stdout;
 mph_int mph_KIND_INT;
 mph_int mph_KIND_STRING;
 mph_int mph_KIND_BOOL;
@@ -69,32 +62,26 @@ mph_AdvancedType* mph_check_unary(MorphContext* ctx, void* _env_void, MorphStrin
 mph_AdvancedType* mph_check_array_access(MorphContext* ctx, void* _env_void, mph_AdvancedType* array_type, mph_AdvancedType* index_type);
 mph_AdvancedType* mph_check_advanced_call(MorphContext* ctx, void* _env_void, MorphString* func_name, mph_AdvancedType* arg_type);
 void mph_main(MorphContext* ctx, void* _env_void);
-mph_io_File* mph_io_make_file(MorphContext* ctx, void* _env_void, mph_int fd);
-mph_io_File* mph_io_Open(MorphContext* ctx, void* _env_void, MorphString* path);
-mph_io_File* mph_io_Create(MorphContext* ctx, void* _env_void, MorphString* path);
-MorphString* mph_io_Read(MorphContext* ctx, void* _env_void, mph_io_File* f, mph_int size);
-mph_int mph_io_Write(MorphContext* ctx, void* _env_void, mph_io_File* f, MorphString* s);
-mph_int mph_io_Close(MorphContext* ctx, void* _env_void, mph_io_File* f);
+mph_int mph_io_Write(MorphContext* ctx, void* _env_void, mph_int fd, MorphString* data);
+MorphString* mph_io_Read(MorphContext* ctx, void* _env_void, mph_int fd, mph_int size);
+void mph_io_Print(MorphContext* ctx, void* _env_void, MorphString* data);
+void mph_io_Println(MorphContext* ctx, void* _env_void, MorphString* data);
 
 // Function Definitions
-mph_io_File* mph_io_make_file(MorphContext* ctx, void* _env_void, mph_int fd);
+mph_int mph_io_Write(MorphContext* ctx, void* _env_void, mph_int fd, MorphString* data);
 
-mph_io_File* mph_io_Open(MorphContext* ctx, void* _env_void, MorphString* path);
+MorphString* mph_io_Read(MorphContext* ctx, void* _env_void, mph_int fd, mph_int size);
 
-mph_io_File* mph_io_Create(MorphContext* ctx, void* _env_void, MorphString* path);
+void mph_io_Print(MorphContext* ctx, void* _env_void, MorphString* data);
 
-MorphString* mph_io_Read(MorphContext* ctx, void* _env_void, mph_io_File* f, mph_int size);
-
-mph_int mph_io_Write(MorphContext* ctx, void* _env_void, mph_io_File* f, MorphString* s);
-
-mph_int mph_io_Close(MorphContext* ctx, void* _env_void, mph_io_File* f);
+void mph_io_Println(MorphContext* ctx, void* _env_void, MorphString* data);
 
 mph_AdvancedType* mph_make_advanced_int(MorphContext* ctx, void* _env_void) {
 	return ({ mph_AdvancedType* _ret_1 = ({ mph_AdvancedType* _t = (mph_AdvancedType*)mph_alloc(ctx, sizeof(mph_AdvancedType), &mph_ti_mph_AdvancedType); mph_gc_push_root(ctx, (void**)&_t); _t->kind = mph_KIND_INT; _t->name = mph_string_new(ctx, "int"); _t->element_type_kind = (-1); _t->is_pointer = 0; _t->is_nullable = 0; mph_gc_pop_roots(ctx, 1); _t; }); mph_gc_push_root(ctx, (void**)&_ret_1); mph_AdvancedType* _ret_2 = _ret_1; mph_gc_pop_roots(ctx, 1); _ret_2; });
 }
 
 mph_AdvancedType* mph_make_advanced_string(MorphContext* ctx, void* _env_void) {
-	return ({ mph_AdvancedType* _ret_3 = ({ mph_AdvancedType* _t = (mph_AdvancedType*)mph_alloc(ctx, sizeof(mph_AdvancedType), &mph_ti_mph_AdvancedType); mph_gc_push_root(ctx, (void**)&_t); _t->kind = mph_KIND_STRING; _t->name = mph_string_new(ctx, "string"); _t->element_type_kind = (-1); _t->is_pointer = 0; _t->is_nullable = 1; mph_gc_pop_roots(ctx, 1); _t; }); mph_gc_push_root(ctx, (void**)&_ret_3); mph_AdvancedType* _ret_4 = _ret_3; mph_gc_pop_roots(ctx, 1); _ret_4; });
+	return ({ mph_AdvancedType* _ret_3 = ({ mph_AdvancedType* _t = (mph_AdvancedType*)mph_alloc(ctx, sizeof(mph_AdvancedType), &mph_ti_mph_AdvancedType); mph_gc_push_root(ctx, (void**)&_t); _t->element_type_kind = (-1); _t->is_pointer = 0; _t->is_nullable = 1; _t->kind = mph_KIND_STRING; _t->name = mph_string_new(ctx, "string"); mph_gc_pop_roots(ctx, 1); _t; }); mph_gc_push_root(ctx, (void**)&_ret_3); mph_AdvancedType* _ret_4 = _ret_3; mph_gc_pop_roots(ctx, 1); _ret_4; });
 }
 
 mph_AdvancedType* mph_make_advanced_bool(MorphContext* ctx, void* _env_void) {
@@ -102,11 +89,11 @@ mph_AdvancedType* mph_make_advanced_bool(MorphContext* ctx, void* _env_void) {
 }
 
 mph_AdvancedType* mph_make_int_array(MorphContext* ctx, void* _env_void) {
-	return ({ mph_AdvancedType* _ret_7 = ({ mph_AdvancedType* _t = (mph_AdvancedType*)mph_alloc(ctx, sizeof(mph_AdvancedType), &mph_ti_mph_AdvancedType); mph_gc_push_root(ctx, (void**)&_t); _t->name = mph_string_new(ctx, "[]int"); _t->element_type_kind = mph_KIND_INT; _t->is_pointer = 0; _t->is_nullable = 1; _t->kind = mph_KIND_ARRAY; mph_gc_pop_roots(ctx, 1); _t; }); mph_gc_push_root(ctx, (void**)&_ret_7); mph_AdvancedType* _ret_8 = _ret_7; mph_gc_pop_roots(ctx, 1); _ret_8; });
+	return ({ mph_AdvancedType* _ret_7 = ({ mph_AdvancedType* _t = (mph_AdvancedType*)mph_alloc(ctx, sizeof(mph_AdvancedType), &mph_ti_mph_AdvancedType); mph_gc_push_root(ctx, (void**)&_t); _t->kind = mph_KIND_ARRAY; _t->name = mph_string_new(ctx, "[]int"); _t->element_type_kind = mph_KIND_INT; _t->is_pointer = 0; _t->is_nullable = 1; mph_gc_pop_roots(ctx, 1); _t; }); mph_gc_push_root(ctx, (void**)&_ret_7); mph_AdvancedType* _ret_8 = _ret_7; mph_gc_pop_roots(ctx, 1); _ret_8; });
 }
 
 mph_AdvancedType* mph_make_error_type(MorphContext* ctx, void* _env_void) {
-	return ({ mph_AdvancedType* _ret_9 = ({ mph_AdvancedType* _t = (mph_AdvancedType*)mph_alloc(ctx, sizeof(mph_AdvancedType), &mph_ti_mph_AdvancedType); mph_gc_push_root(ctx, (void**)&_t); _t->element_type_kind = (-1); _t->is_pointer = 0; _t->is_nullable = 1; _t->kind = mph_KIND_ERROR; _t->name = mph_string_new(ctx, "error"); mph_gc_pop_roots(ctx, 1); _t; }); mph_gc_push_root(ctx, (void**)&_ret_9); mph_AdvancedType* _ret_10 = _ret_9; mph_gc_pop_roots(ctx, 1); _ret_10; });
+	return ({ mph_AdvancedType* _ret_9 = ({ mph_AdvancedType* _t = (mph_AdvancedType*)mph_alloc(ctx, sizeof(mph_AdvancedType), &mph_ti_mph_AdvancedType); mph_gc_push_root(ctx, (void**)&_t); _t->kind = mph_KIND_ERROR; _t->name = mph_string_new(ctx, "error"); _t->element_type_kind = (-1); _t->is_pointer = 0; _t->is_nullable = 1; mph_gc_pop_roots(ctx, 1); _t; }); mph_gc_push_root(ctx, (void**)&_ret_9); mph_AdvancedType* _ret_10 = _ret_9; mph_gc_pop_roots(ctx, 1); _ret_10; });
 }
 
 mph_bool mph_types_compatible(MorphContext* ctx, void* _env_void, mph_AdvancedType* t1, mph_AdvancedType* t2) {
@@ -137,7 +124,7 @@ mph_bool mph_types_compatible(MorphContext* ctx, void* _env_void, mph_AdvancedTy
 }
 
 mph_AdvancedChecker* mph_advanced_checker_new(MorphContext* ctx, void* _env_void) {
-	return ({ mph_AdvancedChecker* _ret_25 = ({ mph_AdvancedChecker* _t = (mph_AdvancedChecker*)mph_alloc(ctx, sizeof(mph_AdvancedChecker), &mph_ti_mph_AdvancedChecker); mph_gc_push_root(ctx, (void**)&_t); _t->error_count = 0; _t->strict_mode = 1; _t->allow_implicit_conversion = 0; mph_gc_pop_roots(ctx, 1); _t; }); mph_gc_push_root(ctx, (void**)&_ret_25); mph_AdvancedChecker* _ret_26 = _ret_25; mph_gc_pop_roots(ctx, 1); _ret_26; });
+	return ({ mph_AdvancedChecker* _ret_25 = ({ mph_AdvancedChecker* _t = (mph_AdvancedChecker*)mph_alloc(ctx, sizeof(mph_AdvancedChecker), &mph_ti_mph_AdvancedChecker); mph_gc_push_root(ctx, (void**)&_t); _t->strict_mode = 1; _t->allow_implicit_conversion = 0; _t->error_count = 0; mph_gc_pop_roots(ctx, 1); _t; }); mph_gc_push_root(ctx, (void**)&_ret_25); mph_AdvancedChecker* _ret_26 = _ret_25; mph_gc_pop_roots(ctx, 1); _ret_26; });
 }
 
 mph_AdvancedType* mph_check_advanced_binary(MorphContext* ctx, void* _env_void, mph_AdvancedType* left, MorphString* op, mph_AdvancedType* right) {
@@ -371,127 +358,126 @@ mph_AdvancedType* mph_check_advanced_call(MorphContext* ctx, void* _env_void, Mo
 }
 
 void mph_main(MorphContext* ctx, void* _env_void) {
-	({ mph_io_File* _arg_159 = mph_io_Stdout; mph_gc_push_root(ctx, (void**)&_arg_159); MorphString* _arg_160 = mph_string_new(ctx, "=== ADVANCED TYPE CHECKER TEST ===\n"); mph_gc_push_root(ctx, (void**)&_arg_160); mph_int _ret_161 = mph_io_Write(ctx, NULL, _arg_159, _arg_160); mph_gc_pop_roots(ctx, 2); _ret_161; });
+	({ MorphString* _arg_159 = mph_string_new(ctx, "=== ADVANCED TYPE CHECKER TEST ===\n"); mph_gc_push_root(ctx, (void**)&_arg_159); mph_int _ret_160 = mph_io_Write(ctx, NULL, mph_io_Stdout, _arg_159); mph_gc_pop_roots(ctx, 1); _ret_160; });
 	mph_AdvancedChecker* checker = mph_advanced_checker_new(ctx, NULL);
 	mph_gc_push_root(ctx, (void**)&checker);
 	mph_AdvancedType* int_type = mph_make_advanced_int(ctx, NULL);
 	mph_gc_push_root(ctx, (void**)&int_type);
-	mph_AdvancedType* result1 = ({ mph_AdvancedType* _arg_162 = int_type; mph_gc_push_root(ctx, (void**)&_arg_162); MorphString* _arg_163 = mph_string_new(ctx, "+"); mph_gc_push_root(ctx, (void**)&_arg_163); mph_AdvancedType* _arg_164 = int_type; mph_gc_push_root(ctx, (void**)&_arg_164); mph_AdvancedType* _ret_165 = mph_check_advanced_binary(ctx, NULL, _arg_162, _arg_163, _arg_164); mph_gc_pop_roots(ctx, 3); _ret_165; });
+	mph_AdvancedType* result1 = ({ mph_AdvancedType* _arg_161 = int_type; mph_gc_push_root(ctx, (void**)&_arg_161); MorphString* _arg_162 = mph_string_new(ctx, "+"); mph_gc_push_root(ctx, (void**)&_arg_162); mph_AdvancedType* _arg_163 = int_type; mph_gc_push_root(ctx, (void**)&_arg_163); mph_AdvancedType* _ret_164 = mph_check_advanced_binary(ctx, NULL, _arg_161, _arg_162, _arg_163); mph_gc_pop_roots(ctx, 3); _ret_164; });
 	mph_gc_push_root(ctx, (void**)&result1);
-	if ((({ mph_AdvancedType* _obj_166 = result1; mph_gc_push_root(ctx, (void**)&_obj_166); mph_int _ret_167 = _obj_166->kind; mph_gc_pop_roots(ctx, 1); _ret_167; }) == mph_KIND_INT)) {
+	if ((({ mph_AdvancedType* _obj_165 = result1; mph_gc_push_root(ctx, (void**)&_obj_165); mph_int _ret_166 = _obj_165->kind; mph_gc_pop_roots(ctx, 1); _ret_166; }) == mph_KIND_INT)) {
 {
-	({ mph_io_File* _arg_168 = mph_io_Stdout; mph_gc_push_root(ctx, (void**)&_arg_168); MorphString* _arg_169 = mph_string_new(ctx, "â int + int -> int: PASS\n"); mph_gc_push_root(ctx, (void**)&_arg_169); mph_int _ret_170 = mph_io_Write(ctx, NULL, _arg_168, _arg_169); mph_gc_pop_roots(ctx, 2); _ret_170; });
+	({ MorphString* _arg_167 = mph_string_new(ctx, "â int + int -> int: PASS\n"); mph_gc_push_root(ctx, (void**)&_arg_167); mph_int _ret_168 = mph_io_Write(ctx, NULL, mph_io_Stdout, _arg_167); mph_gc_pop_roots(ctx, 1); _ret_168; });
 }
 	} else {
 {
-	({ mph_io_File* _arg_171 = mph_io_Stdout; mph_gc_push_root(ctx, (void**)&_arg_171); MorphString* _arg_172 = mph_string_new(ctx, "â int + int -> int: FAIL\n"); mph_gc_push_root(ctx, (void**)&_arg_172); mph_int _ret_173 = mph_io_Write(ctx, NULL, _arg_171, _arg_172); mph_gc_pop_roots(ctx, 2); _ret_173; });
+	({ MorphString* _arg_169 = mph_string_new(ctx, "â int + int -> int: FAIL\n"); mph_gc_push_root(ctx, (void**)&_arg_169); mph_int _ret_170 = mph_io_Write(ctx, NULL, mph_io_Stdout, _arg_169); mph_gc_pop_roots(ctx, 1); _ret_170; });
 }
 	}
 	mph_AdvancedType* string_type = mph_make_advanced_string(ctx, NULL);
 	mph_gc_push_root(ctx, (void**)&string_type);
-	mph_AdvancedType* result2 = ({ mph_AdvancedType* _arg_174 = string_type; mph_gc_push_root(ctx, (void**)&_arg_174); MorphString* _arg_175 = mph_string_new(ctx, "+"); mph_gc_push_root(ctx, (void**)&_arg_175); mph_AdvancedType* _arg_176 = string_type; mph_gc_push_root(ctx, (void**)&_arg_176); mph_AdvancedType* _ret_177 = mph_check_advanced_binary(ctx, NULL, _arg_174, _arg_175, _arg_176); mph_gc_pop_roots(ctx, 3); _ret_177; });
+	mph_AdvancedType* result2 = ({ mph_AdvancedType* _arg_171 = string_type; mph_gc_push_root(ctx, (void**)&_arg_171); MorphString* _arg_172 = mph_string_new(ctx, "+"); mph_gc_push_root(ctx, (void**)&_arg_172); mph_AdvancedType* _arg_173 = string_type; mph_gc_push_root(ctx, (void**)&_arg_173); mph_AdvancedType* _ret_174 = mph_check_advanced_binary(ctx, NULL, _arg_171, _arg_172, _arg_173); mph_gc_pop_roots(ctx, 3); _ret_174; });
 	mph_gc_push_root(ctx, (void**)&result2);
-	if ((({ mph_AdvancedType* _obj_178 = result2; mph_gc_push_root(ctx, (void**)&_obj_178); mph_int _ret_179 = _obj_178->kind; mph_gc_pop_roots(ctx, 1); _ret_179; }) == mph_KIND_STRING)) {
+	if ((({ mph_AdvancedType* _obj_175 = result2; mph_gc_push_root(ctx, (void**)&_obj_175); mph_int _ret_176 = _obj_175->kind; mph_gc_pop_roots(ctx, 1); _ret_176; }) == mph_KIND_STRING)) {
 {
-	({ mph_io_File* _arg_180 = mph_io_Stdout; mph_gc_push_root(ctx, (void**)&_arg_180); MorphString* _arg_181 = mph_string_new(ctx, "â string + string -> string: PASS\n"); mph_gc_push_root(ctx, (void**)&_arg_181); mph_int _ret_182 = mph_io_Write(ctx, NULL, _arg_180, _arg_181); mph_gc_pop_roots(ctx, 2); _ret_182; });
+	({ MorphString* _arg_177 = mph_string_new(ctx, "â string + string -> string: PASS\n"); mph_gc_push_root(ctx, (void**)&_arg_177); mph_int _ret_178 = mph_io_Write(ctx, NULL, mph_io_Stdout, _arg_177); mph_gc_pop_roots(ctx, 1); _ret_178; });
 }
 	} else {
 {
-	({ mph_io_File* _arg_183 = mph_io_Stdout; mph_gc_push_root(ctx, (void**)&_arg_183); MorphString* _arg_184 = mph_string_new(ctx, "â string + string -> string: FAIL\n"); mph_gc_push_root(ctx, (void**)&_arg_184); mph_int _ret_185 = mph_io_Write(ctx, NULL, _arg_183, _arg_184); mph_gc_pop_roots(ctx, 2); _ret_185; });
+	({ MorphString* _arg_179 = mph_string_new(ctx, "â string + string -> string: FAIL\n"); mph_gc_push_root(ctx, (void**)&_arg_179); mph_int _ret_180 = mph_io_Write(ctx, NULL, mph_io_Stdout, _arg_179); mph_gc_pop_roots(ctx, 1); _ret_180; });
 }
 	}
-	mph_AdvancedType* result3 = ({ mph_AdvancedType* _arg_186 = int_type; mph_gc_push_root(ctx, (void**)&_arg_186); MorphString* _arg_187 = mph_string_new(ctx, "=="); mph_gc_push_root(ctx, (void**)&_arg_187); mph_AdvancedType* _arg_188 = int_type; mph_gc_push_root(ctx, (void**)&_arg_188); mph_AdvancedType* _ret_189 = mph_check_advanced_binary(ctx, NULL, _arg_186, _arg_187, _arg_188); mph_gc_pop_roots(ctx, 3); _ret_189; });
+	mph_AdvancedType* result3 = ({ mph_AdvancedType* _arg_181 = int_type; mph_gc_push_root(ctx, (void**)&_arg_181); MorphString* _arg_182 = mph_string_new(ctx, "=="); mph_gc_push_root(ctx, (void**)&_arg_182); mph_AdvancedType* _arg_183 = int_type; mph_gc_push_root(ctx, (void**)&_arg_183); mph_AdvancedType* _ret_184 = mph_check_advanced_binary(ctx, NULL, _arg_181, _arg_182, _arg_183); mph_gc_pop_roots(ctx, 3); _ret_184; });
 	mph_gc_push_root(ctx, (void**)&result3);
-	if ((({ mph_AdvancedType* _obj_190 = result3; mph_gc_push_root(ctx, (void**)&_obj_190); mph_int _ret_191 = _obj_190->kind; mph_gc_pop_roots(ctx, 1); _ret_191; }) == mph_KIND_BOOL)) {
+	if ((({ mph_AdvancedType* _obj_185 = result3; mph_gc_push_root(ctx, (void**)&_obj_185); mph_int _ret_186 = _obj_185->kind; mph_gc_pop_roots(ctx, 1); _ret_186; }) == mph_KIND_BOOL)) {
 {
-	({ mph_io_File* _arg_192 = mph_io_Stdout; mph_gc_push_root(ctx, (void**)&_arg_192); MorphString* _arg_193 = mph_string_new(ctx, "â int == int -> bool: PASS\n"); mph_gc_push_root(ctx, (void**)&_arg_193); mph_int _ret_194 = mph_io_Write(ctx, NULL, _arg_192, _arg_193); mph_gc_pop_roots(ctx, 2); _ret_194; });
+	({ MorphString* _arg_187 = mph_string_new(ctx, "â int == int -> bool: PASS\n"); mph_gc_push_root(ctx, (void**)&_arg_187); mph_int _ret_188 = mph_io_Write(ctx, NULL, mph_io_Stdout, _arg_187); mph_gc_pop_roots(ctx, 1); _ret_188; });
 }
 	} else {
 {
-	({ mph_io_File* _arg_195 = mph_io_Stdout; mph_gc_push_root(ctx, (void**)&_arg_195); MorphString* _arg_196 = mph_string_new(ctx, "â int == int -> bool: FAIL\n"); mph_gc_push_root(ctx, (void**)&_arg_196); mph_int _ret_197 = mph_io_Write(ctx, NULL, _arg_195, _arg_196); mph_gc_pop_roots(ctx, 2); _ret_197; });
+	({ MorphString* _arg_189 = mph_string_new(ctx, "â int == int -> bool: FAIL\n"); mph_gc_push_root(ctx, (void**)&_arg_189); mph_int _ret_190 = mph_io_Write(ctx, NULL, mph_io_Stdout, _arg_189); mph_gc_pop_roots(ctx, 1); _ret_190; });
 }
 	}
 	mph_AdvancedType* bool_type = mph_make_advanced_bool(ctx, NULL);
 	mph_gc_push_root(ctx, (void**)&bool_type);
-	mph_AdvancedType* result4 = ({ mph_AdvancedType* _arg_198 = bool_type; mph_gc_push_root(ctx, (void**)&_arg_198); MorphString* _arg_199 = mph_string_new(ctx, "&&"); mph_gc_push_root(ctx, (void**)&_arg_199); mph_AdvancedType* _arg_200 = bool_type; mph_gc_push_root(ctx, (void**)&_arg_200); mph_AdvancedType* _ret_201 = mph_check_advanced_binary(ctx, NULL, _arg_198, _arg_199, _arg_200); mph_gc_pop_roots(ctx, 3); _ret_201; });
+	mph_AdvancedType* result4 = ({ mph_AdvancedType* _arg_191 = bool_type; mph_gc_push_root(ctx, (void**)&_arg_191); MorphString* _arg_192 = mph_string_new(ctx, "&&"); mph_gc_push_root(ctx, (void**)&_arg_192); mph_AdvancedType* _arg_193 = bool_type; mph_gc_push_root(ctx, (void**)&_arg_193); mph_AdvancedType* _ret_194 = mph_check_advanced_binary(ctx, NULL, _arg_191, _arg_192, _arg_193); mph_gc_pop_roots(ctx, 3); _ret_194; });
 	mph_gc_push_root(ctx, (void**)&result4);
-	if ((({ mph_AdvancedType* _obj_202 = result4; mph_gc_push_root(ctx, (void**)&_obj_202); mph_int _ret_203 = _obj_202->kind; mph_gc_pop_roots(ctx, 1); _ret_203; }) == mph_KIND_BOOL)) {
+	if ((({ mph_AdvancedType* _obj_195 = result4; mph_gc_push_root(ctx, (void**)&_obj_195); mph_int _ret_196 = _obj_195->kind; mph_gc_pop_roots(ctx, 1); _ret_196; }) == mph_KIND_BOOL)) {
 {
-	({ mph_io_File* _arg_204 = mph_io_Stdout; mph_gc_push_root(ctx, (void**)&_arg_204); MorphString* _arg_205 = mph_string_new(ctx, "â bool && bool -> bool: PASS\n"); mph_gc_push_root(ctx, (void**)&_arg_205); mph_int _ret_206 = mph_io_Write(ctx, NULL, _arg_204, _arg_205); mph_gc_pop_roots(ctx, 2); _ret_206; });
+	({ MorphString* _arg_197 = mph_string_new(ctx, "â bool && bool -> bool: PASS\n"); mph_gc_push_root(ctx, (void**)&_arg_197); mph_int _ret_198 = mph_io_Write(ctx, NULL, mph_io_Stdout, _arg_197); mph_gc_pop_roots(ctx, 1); _ret_198; });
 }
 	} else {
 {
-	({ mph_io_File* _arg_207 = mph_io_Stdout; mph_gc_push_root(ctx, (void**)&_arg_207); MorphString* _arg_208 = mph_string_new(ctx, "â bool && bool -> bool: FAIL\n"); mph_gc_push_root(ctx, (void**)&_arg_208); mph_int _ret_209 = mph_io_Write(ctx, NULL, _arg_207, _arg_208); mph_gc_pop_roots(ctx, 2); _ret_209; });
+	({ MorphString* _arg_199 = mph_string_new(ctx, "â bool && bool -> bool: FAIL\n"); mph_gc_push_root(ctx, (void**)&_arg_199); mph_int _ret_200 = mph_io_Write(ctx, NULL, mph_io_Stdout, _arg_199); mph_gc_pop_roots(ctx, 1); _ret_200; });
 }
 	}
-	mph_AdvancedType* result5 = ({ MorphString* _arg_210 = mph_string_new(ctx, "!"); mph_gc_push_root(ctx, (void**)&_arg_210); mph_AdvancedType* _arg_211 = bool_type; mph_gc_push_root(ctx, (void**)&_arg_211); mph_AdvancedType* _ret_212 = mph_check_unary(ctx, NULL, _arg_210, _arg_211); mph_gc_pop_roots(ctx, 2); _ret_212; });
+	mph_AdvancedType* result5 = ({ MorphString* _arg_201 = mph_string_new(ctx, "!"); mph_gc_push_root(ctx, (void**)&_arg_201); mph_AdvancedType* _arg_202 = bool_type; mph_gc_push_root(ctx, (void**)&_arg_202); mph_AdvancedType* _ret_203 = mph_check_unary(ctx, NULL, _arg_201, _arg_202); mph_gc_pop_roots(ctx, 2); _ret_203; });
 	mph_gc_push_root(ctx, (void**)&result5);
-	if ((({ mph_AdvancedType* _obj_213 = result5; mph_gc_push_root(ctx, (void**)&_obj_213); mph_int _ret_214 = _obj_213->kind; mph_gc_pop_roots(ctx, 1); _ret_214; }) == mph_KIND_BOOL)) {
+	if ((({ mph_AdvancedType* _obj_204 = result5; mph_gc_push_root(ctx, (void**)&_obj_204); mph_int _ret_205 = _obj_204->kind; mph_gc_pop_roots(ctx, 1); _ret_205; }) == mph_KIND_BOOL)) {
 {
-	({ mph_io_File* _arg_215 = mph_io_Stdout; mph_gc_push_root(ctx, (void**)&_arg_215); MorphString* _arg_216 = mph_string_new(ctx, "â !bool -> bool: PASS\n"); mph_gc_push_root(ctx, (void**)&_arg_216); mph_int _ret_217 = mph_io_Write(ctx, NULL, _arg_215, _arg_216); mph_gc_pop_roots(ctx, 2); _ret_217; });
+	({ MorphString* _arg_206 = mph_string_new(ctx, "â !bool -> bool: PASS\n"); mph_gc_push_root(ctx, (void**)&_arg_206); mph_int _ret_207 = mph_io_Write(ctx, NULL, mph_io_Stdout, _arg_206); mph_gc_pop_roots(ctx, 1); _ret_207; });
 }
 	} else {
 {
-	({ mph_io_File* _arg_218 = mph_io_Stdout; mph_gc_push_root(ctx, (void**)&_arg_218); MorphString* _arg_219 = mph_string_new(ctx, "â !bool -> bool: FAIL\n"); mph_gc_push_root(ctx, (void**)&_arg_219); mph_int _ret_220 = mph_io_Write(ctx, NULL, _arg_218, _arg_219); mph_gc_pop_roots(ctx, 2); _ret_220; });
+	({ MorphString* _arg_208 = mph_string_new(ctx, "â !bool -> bool: FAIL\n"); mph_gc_push_root(ctx, (void**)&_arg_208); mph_int _ret_209 = mph_io_Write(ctx, NULL, mph_io_Stdout, _arg_208); mph_gc_pop_roots(ctx, 1); _ret_209; });
 }
 	}
 	mph_AdvancedType* array_type = mph_make_int_array(ctx, NULL);
 	mph_gc_push_root(ctx, (void**)&array_type);
-	mph_AdvancedType* result6 = ({ mph_AdvancedType* _arg_221 = array_type; mph_gc_push_root(ctx, (void**)&_arg_221); mph_AdvancedType* _arg_222 = int_type; mph_gc_push_root(ctx, (void**)&_arg_222); mph_AdvancedType* _ret_223 = mph_check_array_access(ctx, NULL, _arg_221, _arg_222); mph_gc_pop_roots(ctx, 2); _ret_223; });
+	mph_AdvancedType* result6 = ({ mph_AdvancedType* _arg_210 = array_type; mph_gc_push_root(ctx, (void**)&_arg_210); mph_AdvancedType* _arg_211 = int_type; mph_gc_push_root(ctx, (void**)&_arg_211); mph_AdvancedType* _ret_212 = mph_check_array_access(ctx, NULL, _arg_210, _arg_211); mph_gc_pop_roots(ctx, 2); _ret_212; });
 	mph_gc_push_root(ctx, (void**)&result6);
-	if ((({ mph_AdvancedType* _obj_224 = result6; mph_gc_push_root(ctx, (void**)&_obj_224); mph_int _ret_225 = _obj_224->kind; mph_gc_pop_roots(ctx, 1); _ret_225; }) == mph_KIND_INT)) {
+	if ((({ mph_AdvancedType* _obj_213 = result6; mph_gc_push_root(ctx, (void**)&_obj_213); mph_int _ret_214 = _obj_213->kind; mph_gc_pop_roots(ctx, 1); _ret_214; }) == mph_KIND_INT)) {
 {
-	({ mph_io_File* _arg_226 = mph_io_Stdout; mph_gc_push_root(ctx, (void**)&_arg_226); MorphString* _arg_227 = mph_string_new(ctx, "â []int[int] -> int: PASS\n"); mph_gc_push_root(ctx, (void**)&_arg_227); mph_int _ret_228 = mph_io_Write(ctx, NULL, _arg_226, _arg_227); mph_gc_pop_roots(ctx, 2); _ret_228; });
+	({ MorphString* _arg_215 = mph_string_new(ctx, "â []int[int] -> int: PASS\n"); mph_gc_push_root(ctx, (void**)&_arg_215); mph_int _ret_216 = mph_io_Write(ctx, NULL, mph_io_Stdout, _arg_215); mph_gc_pop_roots(ctx, 1); _ret_216; });
 }
 	} else {
 {
-	({ mph_io_File* _arg_229 = mph_io_Stdout; mph_gc_push_root(ctx, (void**)&_arg_229); MorphString* _arg_230 = mph_string_new(ctx, "â []int[int] -> int: FAIL\n"); mph_gc_push_root(ctx, (void**)&_arg_230); mph_int _ret_231 = mph_io_Write(ctx, NULL, _arg_229, _arg_230); mph_gc_pop_roots(ctx, 2); _ret_231; });
+	({ MorphString* _arg_217 = mph_string_new(ctx, "â []int[int] -> int: FAIL\n"); mph_gc_push_root(ctx, (void**)&_arg_217); mph_int _ret_218 = mph_io_Write(ctx, NULL, mph_io_Stdout, _arg_217); mph_gc_pop_roots(ctx, 1); _ret_218; });
 }
 	}
-	mph_AdvancedType* result7 = ({ MorphString* _arg_232 = mph_string_new(ctx, "len"); mph_gc_push_root(ctx, (void**)&_arg_232); mph_AdvancedType* _arg_233 = array_type; mph_gc_push_root(ctx, (void**)&_arg_233); mph_AdvancedType* _ret_234 = mph_check_advanced_call(ctx, NULL, _arg_232, _arg_233); mph_gc_pop_roots(ctx, 2); _ret_234; });
+	mph_AdvancedType* result7 = ({ MorphString* _arg_219 = mph_string_new(ctx, "len"); mph_gc_push_root(ctx, (void**)&_arg_219); mph_AdvancedType* _arg_220 = array_type; mph_gc_push_root(ctx, (void**)&_arg_220); mph_AdvancedType* _ret_221 = mph_check_advanced_call(ctx, NULL, _arg_219, _arg_220); mph_gc_pop_roots(ctx, 2); _ret_221; });
 	mph_gc_push_root(ctx, (void**)&result7);
-	if ((({ mph_AdvancedType* _obj_235 = result7; mph_gc_push_root(ctx, (void**)&_obj_235); mph_int _ret_236 = _obj_235->kind; mph_gc_pop_roots(ctx, 1); _ret_236; }) == mph_KIND_INT)) {
+	if ((({ mph_AdvancedType* _obj_222 = result7; mph_gc_push_root(ctx, (void**)&_obj_222); mph_int _ret_223 = _obj_222->kind; mph_gc_pop_roots(ctx, 1); _ret_223; }) == mph_KIND_INT)) {
 {
-	({ mph_io_File* _arg_237 = mph_io_Stdout; mph_gc_push_root(ctx, (void**)&_arg_237); MorphString* _arg_238 = mph_string_new(ctx, "â len([]int) -> int: PASS\n"); mph_gc_push_root(ctx, (void**)&_arg_238); mph_int _ret_239 = mph_io_Write(ctx, NULL, _arg_237, _arg_238); mph_gc_pop_roots(ctx, 2); _ret_239; });
+	({ MorphString* _arg_224 = mph_string_new(ctx, "â len([]int) -> int: PASS\n"); mph_gc_push_root(ctx, (void**)&_arg_224); mph_int _ret_225 = mph_io_Write(ctx, NULL, mph_io_Stdout, _arg_224); mph_gc_pop_roots(ctx, 1); _ret_225; });
 }
 	} else {
 {
-	({ mph_io_File* _arg_240 = mph_io_Stdout; mph_gc_push_root(ctx, (void**)&_arg_240); MorphString* _arg_241 = mph_string_new(ctx, "â len([]int) -> int: FAIL\n"); mph_gc_push_root(ctx, (void**)&_arg_241); mph_int _ret_242 = mph_io_Write(ctx, NULL, _arg_240, _arg_241); mph_gc_pop_roots(ctx, 2); _ret_242; });
+	({ MorphString* _arg_226 = mph_string_new(ctx, "â len([]int) -> int: FAIL\n"); mph_gc_push_root(ctx, (void**)&_arg_226); mph_int _ret_227 = mph_io_Write(ctx, NULL, mph_io_Stdout, _arg_226); mph_gc_pop_roots(ctx, 1); _ret_227; });
 }
 	}
-	if (({ mph_AdvancedType* _arg_243 = int_type; mph_gc_push_root(ctx, (void**)&_arg_243); mph_AdvancedType* _arg_244 = int_type; mph_gc_push_root(ctx, (void**)&_arg_244); mph_bool _ret_245 = mph_types_compatible(ctx, NULL, _arg_243, _arg_244); mph_gc_pop_roots(ctx, 2); _ret_245; })) {
+	if (({ mph_AdvancedType* _arg_228 = int_type; mph_gc_push_root(ctx, (void**)&_arg_228); mph_AdvancedType* _arg_229 = int_type; mph_gc_push_root(ctx, (void**)&_arg_229); mph_bool _ret_230 = mph_types_compatible(ctx, NULL, _arg_228, _arg_229); mph_gc_pop_roots(ctx, 2); _ret_230; })) {
 {
-	({ mph_io_File* _arg_246 = mph_io_Stdout; mph_gc_push_root(ctx, (void**)&_arg_246); MorphString* _arg_247 = mph_string_new(ctx, "â int compatible with int: PASS\n"); mph_gc_push_root(ctx, (void**)&_arg_247); mph_int _ret_248 = mph_io_Write(ctx, NULL, _arg_246, _arg_247); mph_gc_pop_roots(ctx, 2); _ret_248; });
+	({ MorphString* _arg_231 = mph_string_new(ctx, "â int compatible with int: PASS\n"); mph_gc_push_root(ctx, (void**)&_arg_231); mph_int _ret_232 = mph_io_Write(ctx, NULL, mph_io_Stdout, _arg_231); mph_gc_pop_roots(ctx, 1); _ret_232; });
 }
 	} else {
 {
-	({ mph_io_File* _arg_249 = mph_io_Stdout; mph_gc_push_root(ctx, (void**)&_arg_249); MorphString* _arg_250 = mph_string_new(ctx, "â int compatible with int: FAIL\n"); mph_gc_push_root(ctx, (void**)&_arg_250); mph_int _ret_251 = mph_io_Write(ctx, NULL, _arg_249, _arg_250); mph_gc_pop_roots(ctx, 2); _ret_251; });
+	({ MorphString* _arg_233 = mph_string_new(ctx, "â int compatible with int: FAIL\n"); mph_gc_push_root(ctx, (void**)&_arg_233); mph_int _ret_234 = mph_io_Write(ctx, NULL, mph_io_Stdout, _arg_233); mph_gc_pop_roots(ctx, 1); _ret_234; });
 }
 	}
-	if ((({ mph_AdvancedType* _arg_252 = int_type; mph_gc_push_root(ctx, (void**)&_arg_252); mph_AdvancedType* _arg_253 = string_type; mph_gc_push_root(ctx, (void**)&_arg_253); mph_bool _ret_254 = mph_types_compatible(ctx, NULL, _arg_252, _arg_253); mph_gc_pop_roots(ctx, 2); _ret_254; }) == 0)) {
+	if ((({ mph_AdvancedType* _arg_235 = int_type; mph_gc_push_root(ctx, (void**)&_arg_235); mph_AdvancedType* _arg_236 = string_type; mph_gc_push_root(ctx, (void**)&_arg_236); mph_bool _ret_237 = mph_types_compatible(ctx, NULL, _arg_235, _arg_236); mph_gc_pop_roots(ctx, 2); _ret_237; }) == 0)) {
 {
-	({ mph_io_File* _arg_255 = mph_io_Stdout; mph_gc_push_root(ctx, (void**)&_arg_255); MorphString* _arg_256 = mph_string_new(ctx, "â int incompatible with string: PASS\n"); mph_gc_push_root(ctx, (void**)&_arg_256); mph_int _ret_257 = mph_io_Write(ctx, NULL, _arg_255, _arg_256); mph_gc_pop_roots(ctx, 2); _ret_257; });
+	({ MorphString* _arg_238 = mph_string_new(ctx, "â int incompatible with string: PASS\n"); mph_gc_push_root(ctx, (void**)&_arg_238); mph_int _ret_239 = mph_io_Write(ctx, NULL, mph_io_Stdout, _arg_238); mph_gc_pop_roots(ctx, 1); _ret_239; });
 }
 	} else {
 {
-	({ mph_io_File* _arg_258 = mph_io_Stdout; mph_gc_push_root(ctx, (void**)&_arg_258); MorphString* _arg_259 = mph_string_new(ctx, "â int incompatible with string: FAIL\n"); mph_gc_push_root(ctx, (void**)&_arg_259); mph_int _ret_260 = mph_io_Write(ctx, NULL, _arg_258, _arg_259); mph_gc_pop_roots(ctx, 2); _ret_260; });
+	({ MorphString* _arg_240 = mph_string_new(ctx, "â int incompatible with string: FAIL\n"); mph_gc_push_root(ctx, (void**)&_arg_240); mph_int _ret_241 = mph_io_Write(ctx, NULL, mph_io_Stdout, _arg_240); mph_gc_pop_roots(ctx, 1); _ret_241; });
 }
 	}
-	({ mph_io_File* _arg_261 = mph_io_Stdout; mph_gc_push_root(ctx, (void**)&_arg_261); MorphString* _arg_262 = mph_string_new(ctx, "\nð ADVANCED TYPE CHECKER COMPLETE!\n"); mph_gc_push_root(ctx, (void**)&_arg_262); mph_int _ret_263 = mph_io_Write(ctx, NULL, _arg_261, _arg_262); mph_gc_pop_roots(ctx, 2); _ret_263; });
-	({ mph_io_File* _arg_264 = mph_io_Stdout; mph_gc_push_root(ctx, (void**)&_arg_264); MorphString* _arg_265 = mph_string_new(ctx, "â Go-compatible semantics\n"); mph_gc_push_root(ctx, (void**)&_arg_265); mph_int _ret_266 = mph_io_Write(ctx, NULL, _arg_264, _arg_265); mph_gc_pop_roots(ctx, 2); _ret_266; });
-	({ mph_io_File* _arg_267 = mph_io_Stdout; mph_gc_push_root(ctx, (void**)&_arg_267); MorphString* _arg_268 = mph_string_new(ctx, "â Advanced type operations\n"); mph_gc_push_root(ctx, (void**)&_arg_268); mph_int _ret_269 = mph_io_Write(ctx, NULL, _arg_267, _arg_268); mph_gc_pop_roots(ctx, 2); _ret_269; });
-	({ mph_io_File* _arg_270 = mph_io_Stdout; mph_gc_push_root(ctx, (void**)&_arg_270); MorphString* _arg_271 = mph_string_new(ctx, "â Array/slice support\n"); mph_gc_push_root(ctx, (void**)&_arg_271); mph_int _ret_272 = mph_io_Write(ctx, NULL, _arg_270, _arg_271); mph_gc_pop_roots(ctx, 2); _ret_272; });
-	({ mph_io_File* _arg_273 = mph_io_Stdout; mph_gc_push_root(ctx, (void**)&_arg_273); MorphString* _arg_274 = mph_string_new(ctx, "â Built-in function validation\n"); mph_gc_push_root(ctx, (void**)&_arg_274); mph_int _ret_275 = mph_io_Write(ctx, NULL, _arg_273, _arg_274); mph_gc_pop_roots(ctx, 2); _ret_275; });
-	({ mph_io_File* _arg_276 = mph_io_Stdout; mph_gc_push_root(ctx, (void**)&_arg_276); MorphString* _arg_277 = mph_string_new(ctx, "â Type compatibility checking\n"); mph_gc_push_root(ctx, (void**)&_arg_277); mph_int _ret_278 = mph_io_Write(ctx, NULL, _arg_276, _arg_277); mph_gc_pop_roots(ctx, 2); _ret_278; });
-	({ mph_io_File* _arg_279 = mph_io_Stdout; mph_gc_push_root(ctx, (void**)&_arg_279); MorphString* _arg_280 = mph_string_new(ctx, "â Semantic gap dengan Go: RESOLVED\n"); mph_gc_push_root(ctx, (void**)&_arg_280); mph_int _ret_281 = mph_io_Write(ctx, NULL, _arg_279, _arg_280); mph_gc_pop_roots(ctx, 2); _ret_281; });
+	({ MorphString* _arg_242 = mph_string_new(ctx, "\nð ADVANCED TYPE CHECKER COMPLETE!\n"); mph_gc_push_root(ctx, (void**)&_arg_242); mph_int _ret_243 = mph_io_Write(ctx, NULL, mph_io_Stdout, _arg_242); mph_gc_pop_roots(ctx, 1); _ret_243; });
+	({ MorphString* _arg_244 = mph_string_new(ctx, "â Go-compatible semantics\n"); mph_gc_push_root(ctx, (void**)&_arg_244); mph_int _ret_245 = mph_io_Write(ctx, NULL, mph_io_Stdout, _arg_244); mph_gc_pop_roots(ctx, 1); _ret_245; });
+	({ MorphString* _arg_246 = mph_string_new(ctx, "â Advanced type operations\n"); mph_gc_push_root(ctx, (void**)&_arg_246); mph_int _ret_247 = mph_io_Write(ctx, NULL, mph_io_Stdout, _arg_246); mph_gc_pop_roots(ctx, 1); _ret_247; });
+	({ MorphString* _arg_248 = mph_string_new(ctx, "â Array/slice support\n"); mph_gc_push_root(ctx, (void**)&_arg_248); mph_int _ret_249 = mph_io_Write(ctx, NULL, mph_io_Stdout, _arg_248); mph_gc_pop_roots(ctx, 1); _ret_249; });
+	({ MorphString* _arg_250 = mph_string_new(ctx, "â Built-in function validation\n"); mph_gc_push_root(ctx, (void**)&_arg_250); mph_int _ret_251 = mph_io_Write(ctx, NULL, mph_io_Stdout, _arg_250); mph_gc_pop_roots(ctx, 1); _ret_251; });
+	({ MorphString* _arg_252 = mph_string_new(ctx, "â Type compatibility checking\n"); mph_gc_push_root(ctx, (void**)&_arg_252); mph_int _ret_253 = mph_io_Write(ctx, NULL, mph_io_Stdout, _arg_252); mph_gc_pop_roots(ctx, 1); _ret_253; });
+	({ MorphString* _arg_254 = mph_string_new(ctx, "â Semantic gap dengan Go: RESOLVED\n"); mph_gc_push_root(ctx, (void**)&_arg_254); mph_int _ret_255 = mph_io_Write(ctx, NULL, mph_io_Stdout, _arg_254); mph_gc_pop_roots(ctx, 1); _ret_255; });
 	mph_gc_pop_roots(ctx, 12);
 }
 
 
 // Entry Point
 void morph_entry_point(MorphContext* ctx) {
-	mph_io_Stdout = mph_io_make_file(ctx, NULL, 1);
-	mph_gc_push_root(ctx, (void**)&mph_io_Stdout);
+	mph_io_Stdout = 1;
 	mph_KIND_INT = 0;
 	mph_KIND_STRING = 1;
 	mph_KIND_BOOL = 2;

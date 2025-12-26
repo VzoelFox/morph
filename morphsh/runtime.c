@@ -1224,7 +1224,9 @@ void* mph_alloc_secure(MorphContext* ctx, size_t size, MorphTypeInfo* type_info,
     }
 
     if (ctx->allocated_bytes > ctx->next_gc_threshold) {
+        printf("DEBUG: Sync GC - bytes: %zu, threshold: %zu\n", ctx->allocated_bytes, ctx->next_gc_threshold);
         mph_gc_collect(ctx);
+        printf("DEBUG: After GC - bytes: %zu\n", ctx->allocated_bytes);
         size_t base_threshold = GC_THRESHOLD;
         if (ctx->allocated_bytes < GC_THRESHOLD) {
             base_threshold = GC_MIN_THRESHOLD;
@@ -1942,11 +1944,16 @@ MorphString* mph_io_Read(MorphContext* ctx, void* _env, void* f, mph_int size) {
     MorphString* s = (MorphString*)mph_alloc(ctx, sizeof(MorphString), &mph_ti_string_real);
     s->data = buf; s->length = r; return s;
 }
-mph_int mph_io_Write(MorphContext* ctx, void* _env, void* f, MorphString* s) {
+mph_int mph_io_Write(MorphContext* ctx, void* _env, mph_int fd, MorphString* s) {
     mph_swap_in(ctx, s);
     mph_init_files();
-    if (!f) return -1;
-    int fd = ((InternalFile*)f)->fd;
+    if (fd < 0) return -1;
+    // fd 0=stdin, 1=stdout, 2=stderr are pre-initialized
+    if (fd <= 2) {
+        FILE* out = (fd == 1) ? stdout : (fd == 2) ? stderr : stdin;
+        return fwrite(s->data, 1, s->length, out);
+    }
+    if (fd >= mph_file_count) return -1;
     return fwrite(s->data, 1, s->length, mph_file_table[fd]);
 }
 mph_int mph_io_Close(MorphContext* ctx, void* _env, void* f) {
@@ -1955,6 +1962,22 @@ mph_int mph_io_Close(MorphContext* ctx, void* _env, void* f) {
     int fd = ((InternalFile*)f)->fd;
     if (fd <= 2) return 0;
     return fclose(mph_file_table[fd]);
+}
+
+void mph_io_Print(MorphContext* ctx, void* _env, MorphString* s) {
+    mph_swap_in(ctx, s);
+    if (s && s->data) {
+        printf("%s", s->data);
+    }
+}
+
+void mph_io_Println(MorphContext* ctx, void* _env, MorphString* s) {
+    mph_swap_in(ctx, s);
+    if (s && s->data) {
+        printf("%s\n", s->data);
+    } else {
+        printf("\n");
+    }
 }
 
 // --- Native Implementations for Stdlib ---
