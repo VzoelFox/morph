@@ -1,12 +1,19 @@
 # Hutang Teknis & Catatan Pengembangan Morph
 
 ## Status: Active
-**Last Updated**: 2025-12-26
+**Last Updated**: 2025-12-26 14:46
 
 ### Pending / Open
-- **GC Threshold**: Saat ini di-tune untuk development (256KB/1MB). Perlu dinaikkan ke 8MB/64MB saat production release.
+- **Tree Walker Implementation**: Port morphsh tree_walker.fox ke morphfox dengan essential functions
+- **Self-Compilation Test**: Test N3 compile dirinya sendiri
+- **Production GC**: Restore thresholds ke 64MB/8MB saat production ready
 
 ### Completed / Resolved
+- **Import System Fix**: Module resolution working dengan capitalized function exports. Search paths include morphfox directories. (2025-12-26)
+- **String & Logic Implementation**: IntToString, BoolToString, StringEquals, essential evaluation functions implemented. Single-file approach untuk bypass complex imports. (2025-12-26)
+- **Memory System Fix**: GC thresholds tuned ke 1MB/256KB untuk development. Format warnings fixed. N3 programs tidak OOM lagi. (2025-12-26)
+- **MorphFox N3 Foundation**: Clean architecture created dengan zero C dependency target. Pure Morph syscall interface, organized structure. (2025-12-26)
+- **CI/CD System Fix**: Updated untuk self-hosted architecture. Pre-built binary approach. Release packaging includes complete ecosystem. (2025-12-26)
 - **GC Verification**: GC terbukti bekerja dengan benar. Memory turun dari 33MB ke 2.7MB dengan threshold rendah. ~380 GC cycles untuk 100k iterations. (2025-12-26)
 - **Native I/O Functions**: Added `mph_io_Print`, `mph_io_Println`. Fixed `mph_io_Write` untuk menerima fd int. (2025-12-26)
 - **Phase 5 - Interface Type Checking**: Implemented complete interface type system dengan duck typing, interface assignment checking, dan method call validation. Files: `morphsh/interface_simple.fox`. Status: All 4 test cases passed. (2025-12-26)
@@ -17,7 +24,7 @@
 - **Bootstrap Type System**: Implemented complete type system dan advanced type checker untuk mengatasi semantik gap dengan Go. Files: `morphsh/bootstrap_complete.fox`, `morphsh/advanced_type_checker.fox`. Status: Production-ready dengan 16 test cases passed. (2025-12-26)
 
 ### Future Improvements (Deferred)
-**Note**: Do not implement these until Type Checker (`pkg/checker`) is fully robust and tested.
+**Note**: Do not implement these until Tree Walker is fully functional.
 
 #### Analysis Tool (`pkg/analysis`)
 - **Status**: **REMOVED**. Package deleted in v1.9.0 to eliminate duplication with `pkg/checker`.

@@ -7,12 +7,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/VzoelFox/morph/pkg/checker"
-	"github.com/VzoelFox/morph/pkg/compiler"
-	cruntime "github.com/VzoelFox/morph/pkg/compiler/runtime"
-	"github.com/VzoelFox/morph/pkg/evaluator"
-	"github.com/VzoelFox/morph/pkg/lexer"
-	"github.com/VzoelFox/morph/pkg/parser"
+	"github.com/VzoelFox/morph/pkg_legacy/checker"
+	"github.com/VzoelFox/morph/pkg_legacy/compiler"
+	cruntime "github.com/VzoelFox/morph/pkg_legacy/compiler/runtime"
+	"github.com/VzoelFox/morph/pkg_legacy/evaluator"
+	"github.com/VzoelFox/morph/pkg_legacy/lexer"
+	"github.com/VzoelFox/morph/pkg_legacy/parser"
 )
 
 // EvalImporter implements evaluator.Importer
@@ -43,6 +43,10 @@ type FileImporter struct {
 func (fi *FileImporter) Import(path string) (*parser.Program, error) {
 	// 1. Try Absolute Path
 	if filepath.IsAbs(path) {
+		// Add extension if missing
+		if filepath.Ext(path) == "" {
+			path += ".fox"
+		}
 		return fi.parseFile(path)
 	}
 
@@ -137,7 +141,14 @@ func runBuild(filename string) {
 	absPath, _ := filepath.Abs(filename)
 	rootDir := filepath.Dir(absPath)
 	currentDir, _ := os.Getwd()
-	searchPaths := []string{rootDir, currentDir, filepath.Join(currentDir, "stdlib"), "."}
+	searchPaths := []string{
+		rootDir, 
+		currentDir, 
+		filepath.Join(currentDir, "stdlib"), 
+		filepath.Join(currentDir, "morphfox"),
+		filepath.Join(currentDir, "morphfox", "stdlib"),
+		".",
+	}
 
 	c.SetImporter(&FileImporter{SearchPaths: searchPaths})
 	c.Check(prog)
@@ -215,7 +226,13 @@ func runN3Build(filename string) {
 	// 2. Type Check
 	rootDir := filepath.Dir(filename)
 	importer := &FileImporter{
-		SearchPaths: []string{rootDir, ".", "stdlib"},
+		SearchPaths: []string{
+			rootDir, 
+			".", 
+			"stdlib",
+			"morphfox",
+			"morphfox/stdlib",
+		},
 	}
 	c := checker.New()
 	c.SetImporter(importer)
@@ -271,7 +288,14 @@ func runInterpreter(filename string) {
 	absPath, _ := filepath.Abs(filename)
 	rootDir := filepath.Dir(absPath)
 	currentDir, _ := os.Getwd()
-	searchPaths := []string{rootDir, currentDir, filepath.Join(currentDir, "stdlib"), "."}
+	searchPaths := []string{
+		rootDir, 
+		currentDir, 
+		filepath.Join(currentDir, "stdlib"), 
+		filepath.Join(currentDir, "morphfox"),
+		filepath.Join(currentDir, "morphfox", "stdlib"),
+		".",
+	}
 
 	c.SetImporter(&FileImporter{SearchPaths: searchPaths})
 
