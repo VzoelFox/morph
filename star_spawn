@@ -1,0 +1,41 @@
+#!/bin/bash
+# Star Spawn - Fall Script Runner
+
+FALL_FILE="$1"
+
+if [ -z "$FALL_FILE" ]; then
+    echo "Usage: star spawn file.fall"
+    exit 1
+fi
+
+if [ ! -f "$FALL_FILE" ]; then
+    echo "❌ Fall file not found: $FALL_FILE"
+    exit 1
+fi
+
+echo "⭐ Star Spawn - Running Fall Script: $FALL_FILE"
+
+# Simple Fall script interpreter
+while IFS= read -r line; do
+    # Skip comments and empty lines
+    if [[ "$line" =~ ^#.*$ ]] || [[ -z "$line" ]]; then
+        continue
+    fi
+    
+    # Parse Fall commands
+    if [[ "$line" =~ ^install\ (.+)$ ]]; then
+        PACKAGE="${BASH_REMATCH[1]}"
+        echo "📦 Installing package: $PACKAGE"
+        # Create package folder structure
+        mkdir -p "packages/$PACKAGE"
+        echo "✅ Package $PACKAGE installed"
+    elif [[ "$line" =~ ^run\ (.+)$ ]]; then
+        MORPH_FILE="${BASH_REMATCH[1]}"
+        echo "🚀 Running Morph file: $MORPH_FILE"
+        ./morphsh/main "$MORPH_FILE"
+    else
+        echo "⚠️  Unknown Fall command: $line"
+    fi
+done < "$FALL_FILE"
+
+echo "✅ Fall script execution complete"
