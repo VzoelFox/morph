@@ -1,0 +1,38 @@
+struktur Program
+    functions []string
+akhir
+
+struktur FunctionNode
+    name string
+    params []string
+    body string
+akhir
+
+struktur ExpressionNode
+    type string
+    value string
+akhir
+
+fungsi NewProgram() Program
+    kembalikan Program{functions: []string{}}
+akhir
+
+fungsi NewFunction(name string) FunctionNode
+    kembalikan FunctionNode{
+        name: name,
+        params: []string{},
+        body: ""
+    }
+akhir
+
+fungsi NewExpression(typ string, val string) ExpressionNode
+    kembalikan ExpressionNode{
+        type: typ,
+        value: val
+    }
+akhir
+
+fungsi addFunction(prog Program, funcName string) Program
+    prog.functions = append(prog.functions, funcName)
+    kembalikan prog
+akhir

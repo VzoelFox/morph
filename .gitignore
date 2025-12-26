@@ -38,10 +38,13 @@ morph
 out.c
 *_out.c
 
-# Ignore Generated C/H files in examples/ but keep .fox files
+# Ignore Generated C/H files in examples/ and root but keep .fox files
 examples/*.c
 examples/*.h
 examples/function_type_test
 examples/stress_test
-.morph.vz/
-.morph.vz/
+
+# Ignore C artifacts in root directory
+/*.c
+/*.h
+/test_*

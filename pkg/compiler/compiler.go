@@ -847,11 +847,23 @@ func (c *Compiler) findTypeForName(body parser.Statement, name string) checker.T
 			}
 		case *parser.IfExpression:
 			finder(t.Condition)
-			finder(t.Consequence)
-			finder(t.Alternative)
+			if t.Consequence != nil {
+				finder(t.Consequence)
+			}
+			for _, clause := range t.ElseIfs {
+				finder(clause.Condition)
+				if clause.Consequence != nil {
+					finder(clause.Consequence)
+				}
+			}
+			if t.Alternative != nil {
+				finder(t.Alternative)
+			}
 		case *parser.WhileExpression:
 			finder(t.Condition)
-			finder(t.Body)
+			if t.Body != nil {
+				finder(t.Body)
+			}
 		case *parser.CallExpression:
 			finder(t.Function)
 			for _, a := range t.Arguments {
@@ -1626,6 +1638,8 @@ func (c *Compiler) compileCall(call *parser.CallExpression, prefix string, fn *p
 			return c.compileBuiltin(call, "mph_string_index", prefix, fn)
 		case "trim":
 			return c.compileBuiltin(call, "mph_string_trim", prefix, fn)
+		case "substring":
+			return c.compileBuiltin(call, "mph_string_substring", prefix, fn)
 		case "split":
 			return c.compileBuiltin(call, "mph_string_split", prefix, fn)
 		}

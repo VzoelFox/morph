@@ -1,0 +1,31 @@
+ambil "morphsh/lexer_minimal"
+ambil "morphsh/token"
+
+fungsi main() void
+    var input = "fungsi main() void kembalikan 42 akhir"
+    var lexer = NewLexer(input)
+    
+    native_print("=== Testing Lexer Minimal ===")
+    
+    var i = 0
+    selama i < 10
+        var tok Token
+        lexer, tok = NextToken(lexer)
+        
+        native_print("Token:")
+        native_print(tok.Type)
+        native_print("Literal:")
+        native_print(tok.Literal)
+        
+        jika tok.Type == EOF
+            native_print("EOF reached")
+            kembalikan
+        akhir
+        
+        i = i + 1
+    akhir
+    
+    native_print("=== Test completed ===")
+akhir
+
+main()

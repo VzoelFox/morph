@@ -1,0 +1,359 @@
+ambil "morphsh/token"
+
+struktur Lexer
+    input string
+    position int
+    readPosition int
+    ch int
+    line int
+    column int
+akhir
+
+fungsi NewLexer(input string) Lexer
+    var l = Lexer{
+        input: input,
+        position: 0,
+        readPosition: 0,
+        ch: 0,
+        line: 1,
+        column: 0
+    }
+    l = readChar(l)
+    kembalikan l
+akhir
+
+fungsi readChar(l Lexer) Lexer
+    jika l.readPosition >= panjang(l.input)
+        l.ch = 0
+    lainnya
+        l.ch = l.input[l.readPosition]
+    akhir
+    
+    l.position = l.readPosition
+    l.readPosition = l.readPosition + 1
+    
+    jika l.ch == 10  # newline
+        l.line = l.line + 1
+        l.column = 0
+    lainnya
+        l.column = l.column + 1
+    akhir
+    
+    kembalikan l
+akhir
+
+fungsi peekChar(l Lexer) int
+    jika l.readPosition >= panjang(l.input)
+        kembalikan 0
+    akhir
+    kembalikan l.input[l.readPosition]
+akhir
+
+fungsi skipWhitespace(l Lexer) Lexer
+    selama l.ch == 32 atau l.ch == 9 atau l.ch == 10 atau l.ch == 13
+        l = readChar(l)
+    akhir
+    kembalikan l
+akhir
+
+fungsi skipComment(l Lexer) Lexer
+    jika l.ch == 35  # #
+        selama l.ch != 10 dan l.ch != 0  # until newline or EOF
+            l = readChar(l)
+        akhir
+    akhir
+    kembalikan l
+akhir
+
+fungsi isLetter(ch int) bool
+    kembalikan (ch >= 97 dan ch <= 122) atau (ch >= 65 dan ch <= 90) atau ch == 95
+akhir
+
+fungsi isDigit(ch int) bool
+    kembalikan ch >= 48 dan ch <= 57
+akhir
+
+fungsi readIdentifier(l Lexer) (Lexer, string)
+    var position = l.position
+    selama isLetter(l.ch) atau isDigit(l.ch)
+        l = readChar(l)
+    akhir
+    kembalikan l, substring(l.input, position, l.position)
+akhir
+
+fungsi readNumber(l Lexer) (Lexer, string, string)
+    var position = l.position
+    var tokenType = INT
+    
+    selama isDigit(l.ch)
+        l = readChar(l)
+    akhir
+    
+    # Check for float
+    jika l.ch == 46 dan isDigit(peekChar(l))  # '.' followed by digit
+        tokenType = FLOAT
+        l = readChar(l)  # consume '.'
+        selama isDigit(l.ch)
+            l = readChar(l)
+        akhir
+    akhir
+    
+    kembalikan l, substring(l.input, position, l.position), tokenType
+akhir
+
+fungsi readString(l Lexer) (Lexer, string)
+    var position = l.position + 1
+    l = readChar(l)  # skip opening quote
+    
+    selama l.ch != 34 dan l.ch != 0  # until closing quote or EOF
+        jika l.ch == 92  # backslash escape
+            l = readChar(l)  # skip backslash
+            jika l.ch != 0
+                l = readChar(l)  # skip escaped char
+            akhir
+        lainnya
+            l = readChar(l)
+        akhir
+    akhir
+    
+    var literal = substring(l.input, position, l.position)
+    
+    jika l.ch == 34  # closing quote
+        l = readChar(l)
+    akhir
+    
+    kembalikan l, literal
+akhir
+
+fungsi readCharLiteral(l Lexer) (Lexer, string)
+    jika l.ch != 39  # not single quote
+        kembalikan l, ""
+    akhir
+    
+    l = readChar(l)  # skip opening quote
+    var ch = l.ch
+    
+    jika l.ch == 92  # backslash escape
+        l = readChar(l)
+        jika l.ch == 110  # 'n'
+            ch = 10
+        atau_jika l.ch == 116  # 't'
+            ch = 9
+        atau_jika l.ch == 114  # 'r'
+            ch = 13
+        atau_jika l.ch == 92   # '\'
+            ch = 92
+        atau_jika l.ch == 39   # '\''
+            ch = 39
+        lainnya
+            ch = l.ch
+        akhir
+    akhir
+    
+    l = readChar(l)  # skip char
+    
+    jika l.ch == 39  # closing quote
+        l = readChar(l)
+    akhir
+    
+    kembalikan l, string(ch)
+akhir
+
+fungsi lookupIdent(ident string) string
+    jika ident == "fungsi"
+        kembalikan FUNGSI
+    atau_jika ident == "jika"
+        kembalikan JIKA
+    atau_jika ident == "atau_jika"
+        kembalikan ATAU_JIKA
+    atau_jika ident == "lainnya"
+        kembalikan LAINNYA
+    atau_jika ident == "kembalikan"
+        kembalikan KEMBALIKAN
+    atau_jika ident == "benar"
+        kembalikan BENAR
+    atau_jika ident == "salah"
+        kembalikan SALAH
+    atau_jika ident == "kosong"
+        kembalikan KOSONG
+    atau_jika ident == "akhir"
+        kembalikan AKHIR
+    atau_jika ident == "selama"
+        kembalikan SELAMA
+    atau_jika ident == "ambil"
+        kembalikan AMBIL
+    atau_jika ident == "var"
+        kembalikan VAR
+    atau_jika ident == "struktur"
+        kembalikan STRUKTUR
+    atau_jika ident == "tetapan"
+        kembalikan TETAPAN
+    atau_jika ident == "native"
+        kembalikan NATIVE
+    atau_jika ident == "pilih"
+        kembalikan PILIH
+    atau_jika ident == "kasus"
+        kembalikan KASUS
+    atau_jika ident == "dan"
+        kembalikan DAN
+    atau_jika ident == "atau"
+        kembalikan ATAU
+    lainnya
+        kembalikan IDENT
+    akhir
+akhir
+
+fungsi NextToken(l Lexer) (Lexer, Token)
+    l = skipWhitespace(l)
+    
+    # Skip comments
+    jika l.ch == 35  # #
+        l = skipComment(l)
+        l = skipWhitespace(l)
+    akhir
+    
+    var tok = Token{
+        Type: ILLEGAL,
+        Literal: "",
+        Line: l.line,
+        Column: l.column,
+        HasLeadingSpace: salah
+    }
+    
+    jika l.ch == 61  # =
+        jika peekChar(l) == 61
+            tok.Type = EQ
+            tok.Literal = "=="
+            l = readChar(l)
+        lainnya
+            tok.Type = ASSIGN
+            tok.Literal = "="
+        akhir
+    atau_jika l.ch == 43  # +
+        tok.Type = PLUS
+        tok.Literal = "+"
+    atau_jika l.ch == 45  # -
+        tok.Type = MINUS
+        tok.Literal = "-"
+    atau_jika l.ch == 33  # !
+        jika peekChar(l) == 61
+            tok.Type = NOT_EQ
+            tok.Literal = "!="
+            l = readChar(l)
+        lainnya
+            tok.Type = BANG
+            tok.Literal = "!"
+        akhir
+    atau_jika l.ch == 42  # *
+        tok.Type = ASTERISK
+        tok.Literal = "*"
+    atau_jika l.ch == 47  # /
+        tok.Type = SLASH
+        tok.Literal = "/"
+    atau_jika l.ch == 37  # %
+        tok.Type = PERCENT
+        tok.Literal = "%"
+    atau_jika l.ch == 60  # <
+        jika peekChar(l) == 61
+            tok.Type = LTE
+            tok.Literal = "<="
+            l = readChar(l)
+        atau_jika peekChar(l) == 60
+            tok.Type = LSHIFT
+            tok.Literal = "<<"
+            l = readChar(l)
+        lainnya
+            tok.Type = LT
+            tok.Literal = "<"
+        akhir
+    atau_jika l.ch == 62  # >
+        jika peekChar(l) == 61
+            tok.Type = GTE
+            tok.Literal = ">="
+            l = readChar(l)
+        atau_jika peekChar(l) == 62
+            tok.Type = RSHIFT
+            tok.Literal = ">>"
+            l = readChar(l)
+        lainnya
+            tok.Type = GT
+            tok.Literal = ">"
+        akhir
+    atau_jika l.ch == 38  # &
+        tok.Type = AND
+        tok.Literal = "&"
+    atau_jika l.ch == 124  # |
+        tok.Type = OR
+        tok.Literal = "|"
+    atau_jika l.ch == 94  # ^
+        tok.Type = XOR
+        tok.Literal = "^"
+    atau_jika l.ch == 126  # ~
+        tok.Type = TILDE
+        tok.Literal = "~"
+    atau_jika l.ch == 44  # ,
+        tok.Type = COMMA
+        tok.Literal = ","
+    atau_jika l.ch == 59  # ;
+        tok.Type = SEMICOLON
+        tok.Literal = ";"
+    atau_jika l.ch == 58  # :
+        tok.Type = COLON
+        tok.Literal = ":"
+    atau_jika l.ch == 46  # .
+        tok.Type = DOT
+        tok.Literal = "."
+    atau_jika l.ch == 40  # (
+        tok.Type = LPAREN
+        tok.Literal = "("
+    atau_jika l.ch == 41  # )
+        tok.Type = RPAREN
+        tok.Literal = ")"
+    atau_jika l.ch == 123  # {
+        tok.Type = LBRACE
+        tok.Literal = "{"
+    atau_jika l.ch == 125  # }
+        tok.Type = RBRACE
+        tok.Literal = "}"
+    atau_jika l.ch == 91  # [
+        tok.Type = LBRACKET
+        tok.Literal = "["
+    atau_jika l.ch == 93  # ]
+        tok.Type = RBRACKET
+        tok.Literal = "]"
+    atau_jika l.ch == 34  # "
+        var literal string
+        l, literal = readString(l)
+        tok.Type = STRING
+        tok.Literal = literal
+        kembalikan l, tok
+    atau_jika l.ch == 39  # '
+        var literal string
+        l, literal = readCharLiteral(l)
+        tok.Type = CHAR
+        tok.Literal = literal
+        kembalikan l, tok
+    atau_jika l.ch == 0
+        tok.Type = EOF
+        tok.Literal = ""
+    atau_jika isLetter(l.ch)
+        var literal string
+        l, literal = readIdentifier(l)
+        tok.Type = lookupIdent(literal)
+        tok.Literal = literal
+        kembalikan l, tok
+    atau_jika isDigit(l.ch)
+        var literal string
+        var tokenType string
+        l, literal, tokenType = readNumber(l)
+        tok.Type = tokenType
+        tok.Literal = literal
+        kembalikan l, tok
+    lainnya
+        tok.Type = ILLEGAL
+        tok.Literal = "?"
+    akhir
+    
+    l = readChar(l)
+    kembalikan l, tok
+akhir

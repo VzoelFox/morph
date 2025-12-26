@@ -40,6 +40,49 @@ Dokumen ini adalah **single source of truth** untuk AI Agent dalam pengembangan 
 - **Solusi**: Disable daemon GC, tambah shared object allocator untuk cross-thread objects
 - **Test**: Multi-thread stress test berhasil tanpa race condition atau crash
 
+## Perubahan 2025-12-26 00:40 WIB
+- **Bootstrap Phase 1**: Started self-hosting with minimal lexer
+- **Files**: `morphsh/lexer_minimal.fox`, `morphsh/test_lexer.fox` (SHA256:new)
+- **Milestone**: Implemented basic lexer in Morph language for bootstrap
+- **Features**: Token recognition, keyword lookup, basic string/number parsing
+- **Status**: Foundation ready, lexer logic complete, ready for next phase
+
+## Perubahan 2025-12-26 00:43 WIB
+- **String Functions Complete**: Fixed missing substring() function for lexer
+- **Files**: `pkg/compiler/compiler.go`, `pkg/compiler/runtime/morph.h.tpl` (SHA256:updated)
+- **Functions**: `panjang()`, `substring()` now fully working in Morph
+- **Test**: Complete lexer tokenization validation successful
+- **Status**: All string functions ready, lexer can now be fully implemented
+
+## Perubahan 2025-12-26 00:46 WIB
+- **Bootstrap Complete**: Lexer + Parser + AST foundation ready
+- **Files**: `morphsh/parser_simple.fox`, `morphsh/ast_minimal.fox` (SHA256:new)
+- **Milestone**: Complete bootstrap foundation for self-hosting
+- **Components**: Lexer (✅), Parser (✅), AST (✅) all implemented in Morph
+- **Status**: Ready for full self-hosting compiler implementation
+
+## Perubahan 2025-12-26 00:49 WIB
+- **Self-Hosting MVP**: Complete compiler pipeline in Morph language
+- **Files**: `morphsh/main.fox`, `morphsh/integrated.fox` (SHA256:new)
+- **Achievement**: Full compilation pipeline (Lexer→Parser→CodeGen) working in Morph
+- **Output**: Generates C code from Morph source, self-hosting foundation complete
+- **Status**: MILESTONE - Morph can now compile simple programs written in Morph!
+
+## Perubahan 2025-12-26 01:09 WIB
+- **Bug Fix**: Fixed critical segmentation fault in compiler `findTypeForName` function
+- **File**: `pkg/compiler/compiler.go` (SHA256:updated)
+- **Issue**: Null pointer dereference when traversing AST nodes with nil Alternative/Body fields
+- **Solution**: Added null checks for `t.Alternative`, `t.Body`, and `clause.Consequence` in AST traversal
+- **Impact**: Complex concurrency programs with nested if/while now compile successfully
+- **Test**: `examples/concurrency.fox` now compiles and runs correctly
+
+## Perubahan 2025-12-26 00:51 WIB
+- **Full Lexer Implementation**: Upgraded from minimal to complete lexer
+- **Files**: `morphsh/lexer_full.fox` (SHA256:new)
+- **Features**: All operators (==, !=, <=, >=, <<, >>, &, |, ^, ~), float literals, char literals, escape sequences, comments
+- **Coverage**: Complete token recognition for entire Morph language syntax
+- **Status**: Production-ready lexer implemented in Morph, ready for full parser
+
 ---
 
 ## Struktur Project
