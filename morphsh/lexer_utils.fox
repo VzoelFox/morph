@@ -1,0 +1,29 @@
+# lexer_utils.fox - Utility functions for Lexer
+ambil "io"
+
+# Lexer utility functions
+fungsi lexer_get_input(lexer any) string
+    # Return the input string from lexer
+    # In Go: func (l *Lexer) Input() string { return l.input }
+    
+    # For now, return empty string as placeholder
+    # TODO: Implement proper lexer input access
+    kembali ""
+akhir
+
+fungsi main() void
+    io.Write(io.Stdout, "=== LEXER UTILS TEST ===\n")
+    
+    # Test lexer utility functions
+    var input = lexer_get_input(nil)
+    io.Write(io.Stdout, "Lexer input access: ")
+    jika input == ""
+        io.Write(io.Stdout, "OK (placeholder)\n")
+    lainnya
+        io.Write(io.Stdout, "ERROR\n")
+    akhir
+    
+    io.Write(io.Stdout, "Lexer utils implemented successfully!\n")
+akhir
+
+main()

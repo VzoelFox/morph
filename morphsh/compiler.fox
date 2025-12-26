@@ -1,0 +1,134 @@
+# compiler.fox - Simple C code generator (Phase 3)
+ambil "io"
+
+# Compiler state (simplified)
+struktur Compiler
+    has_main bool
+    function_count int
+    struct_count int
+akhir
+
+# Create new compiler
+fungsi new_compiler() Compiler
+    var comp = Compiler{
+        has_main: salah,
+        function_count: 0,
+        struct_count: 0
+    }
+    kembali comp
+akhir
+
+# Compile function declaration
+fungsi compile_function(comp Compiler, name string) Compiler
+    var is_main = salah
+    jika name == "main"
+        is_main = benar
+    akhir
+    
+    var updated = Compiler{
+        has_main: comp.has_main atau is_main,
+        function_count: comp.function_count + 1,
+        struct_count: comp.struct_count
+    }
+    kembali updated
+akhir
+
+# Compile struct declaration
+fungsi compile_struct(comp Compiler, name string) Compiler
+    var updated = Compiler{
+        has_main: comp.has_main,
+        function_count: comp.function_count,
+        struct_count: comp.struct_count + 1
+    }
+    kembali updated
+akhir
+
+# Generate C header
+fungsi generate_header() string
+    kembali "#include <stdio.h>\n#include <stdlib.h>\n"
+akhir
+
+# Generate C function prototype
+fungsi generate_function_prototype(name string, return_type string) string
+    # Simplified: return_type name();
+    kembali return_type + " " + name + "();"
+akhir
+
+# Generate C struct definition
+fungsi generate_struct_def(name string) string
+    # Simplified: typedef struct { int dummy; } name;
+    kembali "typedef struct { int dummy; } " + name + ";"
+akhir
+
+# Generate main function wrapper
+fungsi generate_main_wrapper() string
+    kembali "int main() { morph_main(); return 0; }"
+akhir
+
+# Check if compilation is complete
+fungsi is_compilation_complete(comp Compiler) bool
+    var has_functions = comp.function_count > 0
+    jika comp.has_main dan has_functions
+        kembali benar
+    lainnya
+        kembali salah
+    akhir
+akhir
+
+fungsi main() void
+    io.Write(io.Stdout, "=== COMPILER SYSTEM TEST ===\n")
+    
+    # Test compiler creation
+    var comp = new_compiler()
+    io.Write(io.Stdout, "Created compiler: OK\n")
+    
+    # Test function compilation
+    comp = compile_function(comp, "test_func")
+    jika comp.function_count == 1
+        io.Write(io.Stdout, "Function compilation: OK\n")
+    lainnya
+        io.Write(io.Stdout, "Function compilation: ERROR\n")
+    akhir
+    
+    # Test main function compilation
+    comp = compile_function(comp, "main")
+    jika comp.has_main
+        io.Write(io.Stdout, "Main function detection: OK\n")
+    lainnya
+        io.Write(io.Stdout, "Main function detection: ERROR\n")
+    akhir
+    
+    # Test struct compilation
+    comp = compile_struct(comp, "TestStruct")
+    jika comp.struct_count == 1
+        io.Write(io.Stdout, "Struct compilation: OK\n")
+    lainnya
+        io.Write(io.Stdout, "Struct compilation: ERROR\n")
+    akhir
+    
+    # Test code generation
+    var header = generate_header()
+    jika header != ""
+        io.Write(io.Stdout, "Header generation: OK\n")
+    lainnya
+        io.Write(io.Stdout, "Header generation: ERROR\n")
+    akhir
+    
+    var prototype = generate_function_prototype("test", "void")
+    jika prototype != ""
+        io.Write(io.Stdout, "Prototype generation: OK\n")
+    lainnya
+        io.Write(io.Stdout, "Prototype generation: ERROR\n")
+    akhir
+    
+    # Test compilation completeness
+    jika is_compilation_complete(comp)
+        io.Write(io.Stdout, "Compilation completeness: OK\n")
+    lainnya
+        io.Write(io.Stdout, "Compilation completeness: ERROR\n")
+    akhir
+    
+    io.Write(io.Stdout, "Compiler system implemented successfully!\n")
+akhir
+
+main()

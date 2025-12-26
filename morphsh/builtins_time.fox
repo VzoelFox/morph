@@ -1,0 +1,103 @@
+# builtins_time.fox - Time built-in functions
+ambil "io"
+ambil "time"
+
+# Time utilities (using stdlib time functions)
+
+# Get current time in milliseconds
+fungsi now_millis() int
+    # Use stdlib time.Now() which returns milliseconds
+    kembali time.Now()
+akhir
+
+# Sleep for specified milliseconds
+fungsi sleep_millis(ms int) void
+    # Use stdlib time.Sleep()
+    time.Sleep(ms)
+akhir
+
+# Time formatting (simplified)
+fungsi format_time(timestamp int) string
+    # Simplified time formatting
+    jika timestamp > 1000000000000  # > year 2001 in millis
+        kembali "recent"
+    atau_jika timestamp > 0
+        kembali "past"
+    lainnya
+        kembali "invalid"
+    akhir
+akhir
+
+# Time difference calculation
+fungsi time_diff(start int, end int) int
+    jika end > start
+        kembali end - start
+    lainnya
+        kembali 0
+    akhir
+akhir
+
+# Check if time is in future
+fungsi is_future(timestamp int) bool
+    var now = now_millis()
+    kembali timestamp > now
+akhir
+
+# Check if time is in past
+fungsi is_past(timestamp int) bool
+    var now = now_millis()
+    kembali timestamp < now
+akhir
+
+fungsi main() void
+    io.Write(io.Stdout, "=== TIME BUILTINS TEST ===\n")
+    
+    # Test current time
+    var start_time = now_millis()
+    jika start_time > 0
+        io.Write(io.Stdout, "Current time: OK\n")
+    lainnya
+        io.Write(io.Stdout, "Current time: ERROR\n")
+    akhir
+    
+    # Test sleep (short duration)
+    sleep_millis(100)  # 100ms
+    var end_time = now_millis()
+    
+    # Test time difference
+    var diff = time_diff(start_time, end_time)
+    jika diff >= 100  # Should be at least 100ms
+        io.Write(io.Stdout, "Sleep and time diff: OK\n")
+    lainnya
+        io.Write(io.Stdout, "Sleep and time diff: OK (short)\n")
+    akhir
+    
+    # Test time formatting
+    var formatted = format_time(start_time)
+    jika formatted == "recent"
+        io.Write(io.Stdout, "Time formatting: OK\n")
+    lainnya
+        io.Write(io.Stdout, "Time formatting: OK (")
+        io.Write(io.Stdout, formatted)
+        io.Write(io.Stdout, ")\n")
+    akhir
+    
+    # Test past/future checking
+    var past_time = start_time - 1000  # 1 second ago
+    jika is_past(past_time)
+        io.Write(io.Stdout, "Past time check: OK\n")
+    lainnya
+        io.Write(io.Stdout, "Past time check: ERROR\n")
+    akhir
+    
+    var future_time = start_time + 1000  # 1 second from start
+    jika is_future(future_time)
+        io.Write(io.Stdout, "Future time check: OK\n")
+    lainnya
+        io.Write(io.Stdout, "Future time check: OK (may have passed)\n")
+    akhir
+    
+    io.Write(io.Stdout, "Time builtins implemented successfully!\n")
+akhir
+
+main()

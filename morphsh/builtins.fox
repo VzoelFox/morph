@@ -1,0 +1,81 @@
+# builtins.fox - Built-in functions registry
+ambil "io"
+
+# Native function registry (simplified)
+# In Go: var NativeRegistry = map[string]NativeFunc{}
+
+# Built-in function names
+tetapan BUILTIN_PRINT = 1
+tetapan BUILTIN_LEN = 2
+tetapan BUILTIN_PUSH = 3
+tetapan BUILTIN_POP = 4
+
+# Simple registry using arrays (placeholder for map)
+var builtin_names = [""]
+var builtin_ids = [0]
+
+# Register a native function
+fungsi register_native(name string, id int) void
+    # In real implementation, would use map
+    # For now, just add to arrays
+    builtin_names = builtin_names + [name]
+    builtin_ids = builtin_ids + [id]
+akhir
+
+# Lookup native function
+fungsi lookup_native(name string) int
+    var i = 0
+    selama i < len(builtin_names)
+        jika builtin_names[i] == name
+            kembali builtin_ids[i]
+        akhir
+        i = i + 1
+    akhir
+    kembali 0  # Not found
+akhir
+
+# Check if function is native
+fungsi is_native_function(name string) bool
+    var id = lookup_native(name)
+    kembali id != 0
+akhir
+
+# Initialize built-in functions
+fungsi init_builtins() void
+    register_native("print", BUILTIN_PRINT)
+    register_native("len", BUILTIN_LEN)
+    register_native("push", BUILTIN_PUSH)
+    register_native("pop", BUILTIN_POP)
+akhir
+
+fungsi main() void
+    io.Write(io.Stdout, "=== BUILTINS SYSTEM TEST ===\n")
+    
+    # Initialize built-ins
+    init_builtins()
+    io.Write(io.Stdout, "Initialized builtins: OK\n")
+    
+    # Test function lookup
+    jika is_native_function("print")
+        io.Write(io.Stdout, "Print function lookup: OK\n")
+    lainnya
+        io.Write(io.Stdout, "Print function lookup: ERROR\n")
+    akhir
+    
+    jika is_native_function("len")
+        io.Write(io.Stdout, "Len function lookup: OK\n")
+    lainnya
+        io.Write(io.Stdout, "Len function lookup: ERROR\n")
+    akhir
+    
+    # Test non-existent function
+    jika !is_native_function("nonexistent")
+        io.Write(io.Stdout, "Non-existent function: OK\n")
+    lainnya
+        io.Write(io.Stdout, "Non-existent function: ERROR\n")
+    akhir
+    
+    io.Write(io.Stdout, "Builtins system implemented successfully!\n")
+akhir
+
+main()
