@@ -12,9 +12,15 @@ MorphArray* mph_string_split(MorphContext* ctx, MorphString* s, MorphString* sep
 // RTTI Definitions
 
 // Type IDs
-#define MPH_TYPE_mph_Value 1
+#define MPH_TYPE_mph_io_File 1
+#define MPH_TYPE_mph_Value 2
 
 // Struct Definitions (Env & Types)
+typedef struct mph_io_File mph_io_File;
+struct mph_io_File {
+	mph_int fd;
+};
+
 typedef struct mph_Value mph_Value;
 struct mph_Value {
 	MorphString* type;
@@ -22,9 +28,11 @@ struct mph_Value {
 	mph_bool boolVal;
 };
 
+MorphTypeInfo mph_ti_mph_io_File = { "File", sizeof(mph_io_File), 0, NULL };
 MorphTypeInfo mph_ti_mph_Value = { "Value", sizeof(mph_Value), 1, (size_t[]){offsetof(mph_Value, type)} };
 
 // Global Variables
+mph_io_File* mph_io_Stdout;
 
 // Function Prototypes
 mph_Value* mph_NewIntValue(MorphContext* ctx, void* _env_void, mph_int val);
@@ -33,14 +41,32 @@ mph_Value* mph_EvalAdd(MorphContext* ctx, void* _env_void, mph_Value* left, mph_
 mph_Value* mph_EvalCompare(MorphContext* ctx, void* _env_void, mph_Value* left, mph_Value* right);
 void mph_TestTreeWalker(MorphContext* ctx, void* _env_void);
 void mph_main(MorphContext* ctx, void* _env_void);
+mph_io_File* mph_io_make_file(MorphContext* ctx, void* _env_void, mph_int fd);
+mph_io_File* mph_io_Open(MorphContext* ctx, void* _env_void, MorphString* path);
+mph_io_File* mph_io_Create(MorphContext* ctx, void* _env_void, MorphString* path);
+MorphString* mph_io_Read(MorphContext* ctx, void* _env_void, mph_io_File* f, mph_int size);
+mph_int mph_io_Write(MorphContext* ctx, void* _env_void, mph_io_File* f, MorphString* s);
+mph_int mph_io_Close(MorphContext* ctx, void* _env_void, mph_io_File* f);
 
 // Function Definitions
+mph_io_File* mph_io_make_file(MorphContext* ctx, void* _env_void, mph_int fd);
+
+mph_io_File* mph_io_Open(MorphContext* ctx, void* _env_void, MorphString* path);
+
+mph_io_File* mph_io_Create(MorphContext* ctx, void* _env_void, MorphString* path);
+
+MorphString* mph_io_Read(MorphContext* ctx, void* _env_void, mph_io_File* f, mph_int size);
+
+mph_int mph_io_Write(MorphContext* ctx, void* _env_void, mph_io_File* f, MorphString* s);
+
+mph_int mph_io_Close(MorphContext* ctx, void* _env_void, mph_io_File* f);
+
 mph_Value* mph_NewIntValue(MorphContext* ctx, void* _env_void, mph_int val) {
-	return ({ mph_Value* _ret_1 = ({ mph_Value* _t = (mph_Value*)mph_alloc(ctx, sizeof(mph_Value), &mph_ti_mph_Value); mph_gc_push_root(ctx, (void**)&_t); _t->type = mph_string_new(ctx, "INT"); _t->intVal = val; _t->boolVal = 0; mph_gc_pop_roots(ctx, 1); _t; }); mph_gc_push_root(ctx, (void**)&_ret_1); mph_Value* _ret_2 = _ret_1; mph_gc_pop_roots(ctx, 1); _ret_2; });
+	return ({ mph_Value* _ret_1 = ({ mph_Value* _t = (mph_Value*)mph_alloc(ctx, sizeof(mph_Value), &mph_ti_mph_Value); mph_gc_push_root(ctx, (void**)&_t); _t->boolVal = 0; _t->type = mph_string_new(ctx, "INT"); _t->intVal = val; mph_gc_pop_roots(ctx, 1); _t; }); mph_gc_push_root(ctx, (void**)&_ret_1); mph_Value* _ret_2 = _ret_1; mph_gc_pop_roots(ctx, 1); _ret_2; });
 }
 
 mph_Value* mph_NewBoolValue(MorphContext* ctx, void* _env_void, mph_bool val) {
-	return ({ mph_Value* _ret_3 = ({ mph_Value* _t = (mph_Value*)mph_alloc(ctx, sizeof(mph_Value), &mph_ti_mph_Value); mph_gc_push_root(ctx, (void**)&_t); _t->intVal = 0; _t->boolVal = val; _t->type = mph_string_new(ctx, "BOOL"); mph_gc_pop_roots(ctx, 1); _t; }); mph_gc_push_root(ctx, (void**)&_ret_3); mph_Value* _ret_4 = _ret_3; mph_gc_pop_roots(ctx, 1); _ret_4; });
+	return ({ mph_Value* _ret_3 = ({ mph_Value* _t = (mph_Value*)mph_alloc(ctx, sizeof(mph_Value), &mph_ti_mph_Value); mph_gc_push_root(ctx, (void**)&_t); _t->boolVal = val; _t->type = mph_string_new(ctx, "BOOL"); _t->intVal = 0; mph_gc_pop_roots(ctx, 1); _t; }); mph_gc_push_root(ctx, (void**)&_ret_3); mph_Value* _ret_4 = _ret_3; mph_gc_pop_roots(ctx, 1); _ret_4; });
 }
 
 mph_Value* mph_EvalAdd(MorphContext* ctx, void* _env_void, mph_Value* left, mph_Value* right) {
@@ -102,14 +128,15 @@ void mph_TestTreeWalker(MorphContext* ctx, void* _env_void) {
 }
 
 void mph_main(MorphContext* ctx, void* _env_void) {
-	mph_native_print(ctx, mph_string_new(ctx, "=== Morph Tree Walker ==="));
+	({ mph_io_File* _arg_39 = mph_io_Stdout; mph_gc_push_root(ctx, (void**)&_arg_39); MorphString* _arg_40 = mph_string_new(ctx, "=== Morph Tree Walker ===\n"); mph_gc_push_root(ctx, (void**)&_arg_40); mph_int _ret_41 = mph_io_Write(ctx, NULL, _arg_39, _arg_40); mph_gc_pop_roots(ctx, 2); _ret_41; });
 	mph_TestTreeWalker(ctx, NULL);
-	mph_native_print(ctx, mph_string_new(ctx, "Tree walker ready!"));
+	({ mph_io_File* _arg_42 = mph_io_Stdout; mph_gc_push_root(ctx, (void**)&_arg_42); MorphString* _arg_43 = mph_string_new(ctx, "Tree walker ready!\n"); mph_gc_push_root(ctx, (void**)&_arg_43); mph_int _ret_44 = mph_io_Write(ctx, NULL, _arg_42, _arg_43); mph_gc_pop_roots(ctx, 2); _ret_44; });
 }
 
 
 // Entry Point
 void morph_entry_point(MorphContext* ctx) {
-	mph_main(ctx, NULL);
+	mph_io_Stdout = mph_io_make_file(ctx, NULL, 1);
+	mph_gc_push_root(ctx, (void**)&mph_io_Stdout);
 	mph_main(ctx, NULL);
 }

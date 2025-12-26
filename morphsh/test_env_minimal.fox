@@ -1,3 +1,4 @@
+ambil "io"
 # Minimal Environment Test
 
 struktur Env
@@ -26,14 +27,14 @@ fungsi env_get(e Env, name string) int
 akhir
 
 fungsi main() void
-    native_print("=== ENV TEST ===")
+    io.Write(io.Stdout, "=== ENV TEST ===" + "\n")
     
     var e = Env(0)
     e = env_set(e, "x", 42)
     
     var x = env_get(e, "x")
     jika x == 42
-        native_print("x=42: OK")
+        io.Write(io.Stdout, "x=42: OK" + "\n")
     akhir
     
     e = env_set(e, "y", 10)
@@ -41,10 +42,10 @@ fungsi main() void
     
     var sum = env_get(e, "y") + env_get(e, "z")
     jika sum == 30
-        native_print("y+z=30: OK")
+        io.Write(io.Stdout, "y+z=30: OK" + "\n")
     akhir
     
-    native_print("=== PASSED ===")
+    io.Write(io.Stdout, "=== PASSED ===" + "\n")
 akhir
 
 main()

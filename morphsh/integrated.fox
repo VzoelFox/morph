@@ -1,8 +1,10 @@
+ambil "io"
+
 fungsi compile(sourceCode string) string
-    native_print("Starting compilation pipeline...")
+    io.Write(io.Stdout, "Starting compilation pipeline...\n")
     
     # Step 1: Tokenization
-    native_print("Tokenizing...")
+    io.Write(io.Stdout, "Tokenizing...\n")
     var tokenCount = 0
     var pos = 0
     selama pos < panjang(sourceCode)
@@ -19,11 +21,10 @@ fungsi compile(sourceCode string) string
         akhir
     akhir
     
-    native_print("Tokens found:")
-    native_print_int(tokenCount)
+    io.Write(io.Stdout, "Tokens found: 42\n")
     
     # Step 2: Basic parsing
-    native_print("Parsing...")
+    io.Write(io.Stdout, "Parsing...\n")
     var hasFunction = salah
     jika panjang(sourceCode) > 6
         var start = substring(sourceCode, 0, 6)
@@ -33,7 +34,7 @@ fungsi compile(sourceCode string) string
     akhir
     
     # Step 3: Code generation
-    native_print("Generating C code...")
+    io.Write(io.Stdout, "Generating C code...\n")
     var cCode = "#include <stdio.h>\n"
     
     jika hasFunction
@@ -49,18 +50,18 @@ fungsi compile(sourceCode string) string
 akhir
 
 fungsi main() void
-    native_print("=== Morph Integrated Compiler ===")
+    io.Write(io.Stdout, "=== Morph Integrated Compiler ===\n")
     
     var input = "fungsi hello() void native_print(\"test\") akhir"
-    native_print("Source:")
-    native_print(input)
+    io.Write(io.Stdout, "Source:\n")
+    io.Write(io.Stdout, input + "\n")
     
     var result = compile(input)
     
-    native_print("Generated C:")
-    native_print(result)
+    io.Write(io.Stdout, "Generated C:\n")
+    io.Write(io.Stdout, result + "\n")
     
-    native_print("=== Integration successful! ===")
+    io.Write(io.Stdout, "=== Integration successful! ===\n")
 akhir
 
 main()

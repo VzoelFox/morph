@@ -1,3 +1,5 @@
+ambil "io"
+
 # Minimal Tree Walker Test
 
 struktur Value
@@ -33,30 +35,30 @@ fungsi EvalCompare(left Value, right Value) Value
 akhir
 
 fungsi TestTreeWalker() void
-    native_print("=== Tree Walker Test ===")
+    io.Write(io.Stdout, "=== Tree Walker Test ===" + "\n")
     
     var a = NewIntValue(10)
     var b = NewIntValue(5)
     
     var sum = EvalAdd(a, b)
-    native_print("10 + 5 =")
+    io.Write(io.Stdout, "10 + 5 =" + "\n")
     native_print_int(sum.intVal)
     
     var cmp = EvalCompare(a, b)
-    native_print("10 > 5:")
+    io.Write(io.Stdout, "10 > 5:" + "\n")
     jika cmp.boolVal
-        native_print("true")
+        io.Write(io.Stdout, "true" + "\n")
     lainnya
-        native_print("false")
+        io.Write(io.Stdout, "false" + "\n")
     akhir
     
-    native_print("=== Tree Walker Works ===")
+    io.Write(io.Stdout, "=== Tree Walker Works ===" + "\n")
 akhir
 
 fungsi main() void
-    native_print("=== Morph Tree Walker ===")
+    io.Write(io.Stdout, "=== Morph Tree Walker ===\n")
     TestTreeWalker()
-    native_print("Tree walker ready!")
+    io.Write(io.Stdout, "Tree walker ready!\n")
 akhir
 
 main()

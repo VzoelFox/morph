@@ -1,3 +1,4 @@
+ambil "io"
 # Ultra Minimal Environment Test
 # Hardcoded variables untuk avoid string comparison overhead
 
@@ -27,13 +28,13 @@ fungsi env_set_z(e Env, val int) Env
 akhir
 
 fungsi main() void
-    native_print("=== ENV TEST ===")
+    io.Write(io.Stdout, "=== ENV TEST ===" + "\n")
     
     var e = env_new()
     e = env_set_x(e, 42)
     
     jika e.x == 42
-        native_print("x=42: OK")
+        io.Write(io.Stdout, "x=42: OK" + "\n")
     akhir
     
     e = env_set_y(e, 10)
@@ -41,10 +42,10 @@ fungsi main() void
     
     var sum = e.y + e.z
     jika sum == 30
-        native_print("y+z=30: OK")
+        io.Write(io.Stdout, "y+z=30: OK" + "\n")
     akhir
     
-    native_print("=== PASSED ===")
+    io.Write(io.Stdout, "=== PASSED ===" + "\n")
 akhir
 
 main()

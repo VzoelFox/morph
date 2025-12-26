@@ -4,6 +4,12 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/stat.h>
+#include <stdarg.h>
 
 // --- Constants ---
 #define GC_THRESHOLD (64 * 1024 * 1024) // 64MB
@@ -33,10 +39,22 @@ typedef struct MorphTypeInfo {
     void (*mark_fn)(MorphContext*, void*); // Custom marking function (e.g. for Containers)
 } MorphTypeInfo;
 
+// --- Memory Safety & Validation ---
+#define MEMORY_CANARY_MAGIC 0xDEADBEEF
+#define MEMORY_FREE_MAGIC   0xFEEDFACE
+
+typedef struct MemoryTracker {
+    void* address;
+    size_t size;
+    uint64_t alloc_time;
+    char zone_id[16];
+    struct MemoryTracker* next;
+} MemoryTracker;
+
 typedef struct ObjectHeader {
     struct ObjectHeader* next;  // Global GC list
     MorphTypeInfo* type;        // RTTI
-    uint8_t flags;              // 0x1: Marked, 0x2: Swapped
+    uint8_t flags;              // 0x1: Marked, 0x2: Swapped, 0x4: Valid
     uint64_t last_access;       // Timestamp (ms) for LRU Eviction
     uint64_t swap_id;           // ID for swap file
     size_t size;                // Payload size
@@ -45,6 +63,11 @@ typedef struct ObjectHeader {
     struct ObjectHeader* free_prev;
     struct ObjectHeader* page_free_next;
     struct ObjectHeader* page_free_prev;
+    char zone_id[16];           // Zone ownership
+    int required_clearance;     // Minimum clearance to access
+    uint32_t canary_start;      // Memory corruption detection
+    // Payload follows here
+    // uint32_t canary_end;     // At end of payload
 } ObjectHeader;
 
 typedef struct MphPage {
@@ -59,13 +82,107 @@ typedef struct MphPage {
     ObjectHeader* free_list;
 } MphPage;
 
+// --- Forward Declarations ---
+typedef enum SwapResult SwapResult;
+typedef struct SwapRequest SwapRequest;
+typedef struct SwapSlot SwapSlot;
+typedef struct SwapPool SwapPool;
+
+// --- Swap Pool System ---
+#define SWAP_POOL_SIZE (256 * 1024 * 1024) // 256MB pool
+#define SWAP_SLOT_SIZE (64 * 1024)          // 64KB slots
+#define SWAP_SLOTS_COUNT (SWAP_POOL_SIZE / SWAP_SLOT_SIZE)
+
+typedef enum SwapResult {
+    SWAP_SUCCESS = 0,
+    SWAP_ERROR_NULL_POOL,
+    SWAP_ERROR_INVALID_SLOT,
+    SWAP_ERROR_ZONE_MISMATCH,
+    SWAP_ERROR_QUEUE_FULL,
+    SWAP_ERROR_THREAD_FAILED,
+    SWAP_ERROR_IO_FAILED
+} SwapResult;
+
+typedef struct SwapSlot {
+    uint64_t slot_id;
+    mph_bool is_free;
+    void* data;
+    size_t size;
+    char zone_id[16];
+    struct SwapSlot* next_free;
+} SwapSlot;
+
+typedef struct SwapRequest {
+    enum { SWAP_IN, SWAP_OUT, CHECKPOINT } type;
+    void* page_addr;
+    size_t size;
+    uint64_t slot_id;
+    char zone_id[16];
+    SwapResult* result;        // Error as value
+    pthread_mutex_t* done_mutex;
+    pthread_cond_t* done_cond;
+    mph_bool completed;
+    struct SwapRequest* next;
+} SwapRequest;
+
+typedef struct SwapPool {
+    void* pool_base;           // Pre-allocated pool
+    SwapSlot* slots;           // Slot metadata
+    SwapSlot* free_head;       // Free list
+    pthread_mutex_t pool_lock;
+    size_t free_count;
+    
+    // Async Worker Thread
+    pthread_t async_thread;
+    int async_running;
+    SwapRequest* request_queue_head;
+    SwapRequest* request_queue_tail;
+    pthread_mutex_t queue_lock;
+    pthread_cond_t queue_cond;
+    size_t queue_size;
+    size_t max_queue_size;     // Safety limit
+    
+    // Error tracking
+    size_t error_count;
+    SwapResult last_error;
+} SwapPool;
+
+// --- .z System Logging ---
+typedef enum {
+    LOG_LEVEL_DEBUG = 0,
+    LOG_LEVEL_INFO,
+    LOG_LEVEL_WARN,
+    LOG_LEVEL_ERROR,
+    LOG_LEVEL_FATAL
+} LogLevel;
+
+typedef struct ZLogEntry {
+    uint64_t timestamp_ms;
+    LogLevel level;
+    char zone_id[16];
+    char worker_id[16];
+    SwapResult error_code;
+    char message[256];
+    char function[64];
+    int line;
+    struct ZLogEntry* next;
+} ZLogEntry;
+
+typedef struct ZLogger {
+    FILE* z_file;
+    pthread_mutex_t log_lock;
+    ZLogEntry* log_head;
+    size_t log_count;
+    size_t max_entries;
+    mph_bool system_only;
+} ZLogger;
+
 // Shadow Stack for Roots
 typedef struct StackRoot {
     void** ptr; // Pointer to the local variable (which is a pointer to object)
     struct StackRoot* next;
 } StackRoot;
 
-// Iterative GC Mark Stack
 #define MARK_STACK_BLOCK_SIZE 1024
 
 typedef struct MarkStackBlock {
@@ -95,9 +212,37 @@ struct MorphContext {
     ObjectHeader* free_list;    // Reusable freed objects (exact size)
 
     pthread_t daemon_thread;    // GC/Swap Daemon
-    int daemon_running;
+    volatile int daemon_running; // Atomic flag
+    pthread_mutex_t gc_lock;    // Dedicated GC lock (separate from memory_lock)
     pthread_mutex_t memory_lock; // Lock for heap access (Daemon vs Main)
     uint64_t last_alloc_time;
+
+    // Memory Zone Isolation
+    char zone_id[16];           // "ZONE_A", "ZONE_B", etc
+    int clearance_level;        // Security clearance (1, 2, 3...)
+    void* zone_base_addr;       // Base address for this zone
+    size_t zone_size_limit;     // Hard limit for zone memory
+    size_t zone_allocated;      // Current zone usage
+
+    // Robust Swap System
+    SwapPool* swap_pool;        // Dedicated swap pool
+    mph_bool swap_enabled;      // Enable/disable swapping
+    
+    // Worker Checkpoint
+    char worker_id[16];         // Worker identifier
+    void* checkpoint_data;      // Serialized worker state
+    size_t checkpoint_size;     // Size of checkpoint
+
+    // .z System Logging
+    ZLogger* z_logger;          // System-only logger
+    mph_bool logging_enabled;   // Enable/disable logging
+
+    // Memory Safety & Validation
+    MemoryTracker* alloc_tracker; // Track all allocations
+    pthread_mutex_t tracker_lock; // Lock for allocation tracking
+    size_t total_allocations;     // Total allocation count
+    size_t active_allocations;    // Currently active allocations
+    mph_bool debug_mode;          // Enable debug checks
 
     void* scheduler;            // Placeholder
 };
@@ -174,7 +319,12 @@ typedef struct MorphError {
 
 // Memory
 void mph_init_memory(MorphContext* ctx);
+void mph_init_memory_zone(MorphContext* ctx, const char* zone_id, int clearance, size_t zone_limit);
 void mph_destroy_memory(MorphContext* ctx);
+
+// Zone Security
+mph_bool mph_can_access_memory(MorphContext* ctx, void* ptr);
+void* mph_alloc_secure(MorphContext* ctx, size_t size, MorphTypeInfo* type_info, int required_clearance);
 
 // Shadow Stack
 void mph_gc_push_root(MorphContext* ctx, void** ptr);
@@ -189,6 +339,49 @@ void mph_gc_collect(MorphContext* ctx);
 void mph_start_daemon(MorphContext* ctx);
 void mph_stop_daemon(MorphContext* ctx);
 void mph_swap_in(MorphContext* ctx, void* obj); // Ensure object is in RAM
+
+// Swap Pool
+SwapPool* mph_swap_pool_create(size_t pool_size);
+void mph_swap_pool_destroy(SwapPool* pool);
+uint64_t mph_swap_pool_alloc_slot(SwapPool* pool, const char* zone_id, size_t size);
+void mph_swap_pool_free_slot(SwapPool* pool, uint64_t slot_id);
+
+// Async Swap Operations (Error as Value)
+SwapResult mph_swap_async_request(SwapPool* pool, int type, void* addr, size_t size, const char* zone_id);
+SwapResult mph_swap_async_wait(SwapPool* pool, SwapRequest* req);
+void* mph_swap_worker_thread(void* arg);
+SwapResult mph_swap_start_worker(SwapPool* pool);
+SwapResult mph_swap_stop_worker(SwapPool* pool);
+
+// Worker Checkpoint
+void mph_worker_checkpoint_save(MorphContext* ctx);
+mph_bool mph_worker_checkpoint_restore(MorphContext* ctx);
+void mph_worker_set_id(MorphContext* ctx, const char* worker_id);
+
+// .z System Logging (System-Only Access)
+ZLogger* mph_z_logger_create(const char* zone_id);
+void mph_z_logger_destroy(ZLogger* logger);
+void mph_z_log(ZLogger* logger, LogLevel level, const char* zone_id, const char* worker_id, 
+               SwapResult error_code, const char* function, int line, const char* format, ...);
+void mph_z_log_error_detail(ZLogger* logger, const char* zone_id, const char* worker_id,
+                           SwapResult error_code, const char* operation, const char* reason);
+mph_bool mph_z_is_system_accessible(void);
+
+#define Z_LOG_DEBUG(logger, zone, worker, code, ...) \
+    mph_z_log(logger, LOG_LEVEL_DEBUG, zone, worker, code, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define Z_LOG_ERROR(logger, zone, worker, code, ...) \
+    mph_z_log(logger, LOG_LEVEL_ERROR, zone, worker, code, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define Z_LOG_FATAL(logger, zone, worker, code, ...) \
+    mph_z_log(logger, LOG_LEVEL_FATAL, zone, worker, code, __FUNCTION__, __LINE__, __VA_ARGS__)
+
+// Memory Safety & Validation API
+mph_bool mph_is_valid_object(MorphContext* ctx, void* obj);
+mph_bool mph_validate_memory_integrity(MorphContext* ctx);
+void mph_track_allocation(MorphContext* ctx, void* obj, size_t size);
+void mph_untrack_allocation(MorphContext* ctx, void* obj);
+void mph_memory_barrier(void);
+void mph_set_debug_mode(MorphContext* ctx, mph_bool enabled);
+size_t mph_get_memory_stats(MorphContext* ctx, size_t* active, size_t* total);
 
 // Strings
 MorphString* mph_string_new(MorphContext* ctx, const char* literal);

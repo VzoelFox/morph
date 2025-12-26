@@ -1,3 +1,4 @@
+ambil "io"
 ambil "morphsh/ast"
 
 # Type system untuk bootstrap compiler
@@ -171,33 +172,33 @@ akhir
 
 fungsi PrintErrors(tc TypeChecker) void
     jika panjang(tc.errors) > 0
-        native_print("Type errors:")
+        io.Write(io.Stdout, "Type errors:" + "\n")
         var i = 0
         selama i < panjang(tc.errors)
-            native_print("- " + tc.errors[i])
+            io.Write(io.Stdout, "- " + tc.errors[i] + "\n")
             i = i + 1
         akhir
     lainnya
-        native_print("No type errors")
+        io.Write(io.Stdout, "No type errors" + "\n")
     akhir
 akhir
 
 # Test function
 fungsi TestTypeChecker() void
-    native_print("=== Testing Type Checker ===")
+    io.Write(io.Stdout, "=== Testing Type Checker ===" + "\n")
     
     var tc = NewTypeChecker()
     
     # Test built-in types
     var intTyp, ok = GetType(tc, "int")
     jika ok
-        native_print("Found int type: " + intTyp.name)
+        io.Write(io.Stdout, "Found int type: " + intTyp.name + "\n")
     akhir
     
     var strTyp, ok2 = GetType(tc, "string")
     jika ok2
-        native_print("Found string type: " + strTyp.name)
+        io.Write(io.Stdout, "Found string type: " + strTyp.name + "\n")
     akhir
     
-    native_print("=== Type Checker Ready ===")
+    io.Write(io.Stdout, "=== Type Checker Ready ===" + "\n")
 akhir

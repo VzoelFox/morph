@@ -1,3 +1,5 @@
+ambil "io"
+
 # Minimal Type System Test
 
 struktur Type
@@ -17,21 +19,21 @@ fungsi types_equal(t1 Type, t2 Type) bool
 akhir
 
 fungsi main() void
-    native_print("=== TYPE SYSTEM TEST ===")
+    io.Write(io.Stdout, "=== TYPE SYSTEM TEST ===\n")
     
     var t1 = type_int()
     var t2 = type_int()
     var t3 = type_bool()
     
     jika types_equal(t1, t2)
-        native_print("Int == Int: OK")
+        io.Write(io.Stdout, "Int == Int: OK\n")
     akhir
     
     jika !types_equal(t1, t3)
-        native_print("Int != Bool: OK")
+        io.Write(io.Stdout, "Int != Bool: OK\n")
     akhir
     
-    native_print("=== TEST PASSED ===")
+    io.Write(io.Stdout, "=== TEST PASSED ===\n")
 akhir
 
 main()

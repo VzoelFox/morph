@@ -1,3 +1,4 @@
+ambil "io"
 # Test Environment
 
 struktur Environment
@@ -63,7 +64,7 @@ fungsi env_get_bool(env Environment, name string) bool
 akhir
 
 fungsi main() void
-    native_print("=== ENVIRONMENT TEST ===")
+    io.Write(io.Stdout, "=== ENVIRONMENT TEST ===" + "\n")
     
     var env = env_new()
     
@@ -73,21 +74,21 @@ fungsi main() void
     # Get variable x
     var x_val = env_get_int(env, "x")
     jika x_val == 42
-        native_print("Set/Get x=42: OK")
+        io.Write(io.Stdout, "Set/Get x=42: OK" + "\n")
     akhir
     
     # Update variable x = 100
     env = env_set(env, "x", 0, 100, salah)
     var x_val2 = env_get_int(env, "x")
     jika x_val2 == 100
-        native_print("Update x=100: OK")
+        io.Write(io.Stdout, "Update x=100: OK" + "\n")
     akhir
     
     # Set variable y = true
     env = env_set(env, "y", 2, 0, benar)
     var y_val = env_get_bool(env, "y")
     jika y_val
-        native_print("Set/Get y=true: OK")
+        io.Write(io.Stdout, "Set/Get y=true: OK" + "\n")
     akhir
     
     # Multiple variables
@@ -97,10 +98,10 @@ fungsi main() void
     
     var sum = env_get_int(env, "a") + env_get_int(env, "b") + env_get_int(env, "c")
     jika sum == 60
-        native_print("Multiple vars a+b+c=60: OK")
+        io.Write(io.Stdout, "Multiple vars a+b+c=60: OK" + "\n")
     akhir
     
-    native_print("=== TEST PASSED ===")
+    io.Write(io.Stdout, "=== TEST PASSED ===" + "\n")
 akhir
 
 main()

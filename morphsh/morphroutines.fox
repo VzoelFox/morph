@@ -1,3 +1,4 @@
+ambil "io"
 # Morphroutines - Custom Concurrent System
 # Process → Unit → Shard → Fragment dengan Worker Mobility
 
@@ -124,34 +125,34 @@ akhir
 
 # Worker migration dengan security check
 fungsi MigrateWorker(worker Worker, fromUnit int, toUnit Unit) (Worker, bool)
-    native_print("=== Worker Migration ===")
-    native_print("Worker ID:")
+    io.Write(io.Stdout, "=== Worker Migration ===" + "\n")
+    io.Write(io.Stdout, "Worker ID:" + "\n")
     native_print_int(worker.id)
-    native_print("From Unit:")
+    io.Write(io.Stdout, "From Unit:" + "\n")
     native_print_int(fromUnit)
-    native_print("To Unit:")
+    io.Write(io.Stdout, "To Unit:" + "\n")
     native_print_int(toUnit.id)
     
     jika !CanWorkerMigrateToUnit(worker, toUnit)
-        native_print("Migration DENIED - Security clearance insufficient")
+        io.Write(io.Stdout, "Migration DENIED - Security clearance insufficient" + "\n")
         kembalikan worker, salah
     akhir
     
     # Perform migration
     worker.currentUnit = toUnit.id
-    native_print("Migration APPROVED - Worker migrated")
-    native_print("New memory zone:")
-    native_print(toUnit.memoryZone)
+    io.Write(io.Stdout, "Migration APPROVED - Worker migrated" + "\n")
+    io.Write(io.Stdout, "New memory zone:" + "\n")
+    io.Write(io.Stdout, toUnit.memoryZone + "\n")
     
     kembalikan worker, benar
 akhir
 
 # Execute fragment dengan memory awareness
 fungsi ExecuteFragment(fragment Fragment, memoryZone string) Fragment
-    native_print("Executing fragment:")
+    io.Write(io.Stdout, "Executing fragment:" + "\n")
     native_print_int(fragment.id)
-    native_print("Memory zone:")
-    native_print(memoryZone)
+    io.Write(io.Stdout, "Memory zone:" + "\n")
+    io.Write(io.Stdout, memoryZone + "\n")
     
     # Simulate work dengan memory allocation
     fragment.status = "RUNNING"
@@ -160,7 +161,7 @@ fungsi ExecuteFragment(fragment Fragment, memoryZone string) Fragment
     fragment.result = fragment.id * 10
     fragment.status = "COMPLETED"
     
-    native_print("Fragment completed with result:")
+    io.Write(io.Stdout, "Fragment completed with result:" + "\n")
     native_print_int(fragment.result)
     
     kembalikan fragment
@@ -201,8 +202,8 @@ akhir
 
 # Async I/O simulation
 fungsi AsyncReadFile(filename string) MorphResult
-    native_print("Async reading file:")
-    native_print(filename)
+    io.Write(io.Stdout, "Async reading file:" + "\n")
+    io.Write(io.Stdout, filename + "\n")
     
     # Simulate async operation
     jika filename == "valid.txt"
@@ -214,7 +215,7 @@ akhir
 
 # Test morphroutines system
 fungsi TestMorphroutines() void
-    native_print("=== Testing Morphroutines System ===")
+    io.Write(io.Stdout, "=== Testing Morphroutines System ===" + "\n")
     
     # Create process
     var process = NewMorphProcess(1)
@@ -231,13 +232,13 @@ fungsi TestMorphroutines() void
     var migrated bool
     worker1, migrated = MigrateWorker(worker1, 0, unit1)
     jika migrated
-        native_print("Worker 1 migration successful")
+        io.Write(io.Stdout, "Worker 1 migration successful" + "\n")
     akhir
     
     # Test security denial
     worker1, migrated = MigrateWorker(worker1, 1, unit2)
     jika !migrated
-        native_print("Worker 1 migration denied (security)")
+        io.Write(io.Stdout, "Worker 1 migration denied (security + "\n")")
     akhir
     
     # Test fragment execution
@@ -247,22 +248,22 @@ fungsi TestMorphroutines() void
     # Test async I/O
     var result = AsyncReadFile("valid.txt")
     jika !result.hasError
-        native_print("Async read result:")
+        io.Write(io.Stdout, "Async read result:" + "\n")
         native_print_int(result.value)
     lainnya
-        native_print("Async error:")
-        native_print(result.error)
+        io.Write(io.Stdout, "Async error:" + "\n")
+        io.Write(io.Stdout, result.error + "\n")
     akhir
     
-    native_print("=== Morphroutines Test Complete ===")
+    io.Write(io.Stdout, "=== Morphroutines Test Complete ===" + "\n")
 akhir
 
 fungsi main() void
-    native_print("=== Morph Morphroutines System ===")
+    io.Write(io.Stdout, "=== Morph Morphroutines System ===" + "\n")
     
     TestMorphroutines()
     
-    native_print("Morphroutines ready!")
+    io.Write(io.Stdout, "Morphroutines ready!" + "\n")
 akhir
 
 main()

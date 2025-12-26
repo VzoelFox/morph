@@ -1,3 +1,4 @@
+ambil "io"
 # Minimal AST Integration Test
 
 struktur SimpleAST
@@ -23,21 +24,21 @@ fungsi EvalSimpleAST(node SimpleAST) int
 akhir
 
 fungsi TestAST() void
-    native_print("=== AST Integration Test ===")
+    io.Write(io.Stdout, "=== AST Integration Test ===" + "\n")
     
     var node = NewIntAST(42)
     var result = EvalSimpleAST(node)
     
-    native_print("AST node value:")
+    io.Write(io.Stdout, "AST node value:" + "\n")
     native_print_int(result)
     
-    native_print("=== AST Works ===")
+    io.Write(io.Stdout, "=== AST Works ===" + "\n")
 akhir
 
 fungsi main() void
-    native_print("=== Morph AST ===")
+    io.Write(io.Stdout, "=== Morph AST ===" + "\n")
     TestAST()
-    native_print("Done!")
+    io.Write(io.Stdout, "Done!" + "\n")
 akhir
 
 main()

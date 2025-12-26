@@ -1,3 +1,5 @@
+ambil "io"
+
 # Minimal Evaluator Test
 
 struktur Value
@@ -42,27 +44,27 @@ fungsi eval_lt(left Value, right Value) Value
 akhir
 
 fungsi main() void
-    native_print("=== EVALUATOR TEST ===")
+    io.Write(io.Stdout, "=== EVALUATOR TEST ===\n")
     
     var v1 = value_int(10)
     var v2 = value_int(5)
     
     var add_result = eval_add(v1, v2)
     jika add_result.int_val == 15
-        native_print("10 + 5 = 15: OK")
+        io.Write(io.Stdout, "10 + 5 = 15: OK\n")
     akhir
     
     var mul_result = eval_mul(v1, v2)
     jika mul_result.int_val == 50
-        native_print("10 * 5 = 50: OK")
+        io.Write(io.Stdout, "10 * 5 = 50: OK\n")
     akhir
     
     var lt_result = eval_lt(v2, v1)
     jika lt_result.bool_val
-        native_print("5 < 10 = true: OK")
+        io.Write(io.Stdout, "5 < 10 = true: OK\n")
     akhir
     
-    native_print("=== TEST PASSED ===")
+    io.Write(io.Stdout, "=== TEST PASSED ===\n")
 akhir
 
 main()

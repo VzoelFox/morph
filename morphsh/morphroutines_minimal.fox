@@ -1,3 +1,5 @@
+ambil "io"
+
 # Morphroutines Minimal - Security Clearance System
 
 struktur Worker
@@ -30,7 +32,7 @@ fungsi CanMigrate(worker Worker, unit Unit) bool
 akhir
 
 fungsi TestMorphroutines() void
-    native_print("=== Morphroutines Security Test ===")
+    io.Write(io.Stdout, "=== Morphroutines Security Test ===")
     
     var worker1 = NewWorker(1, 1, "ZONE_A")
     var worker2 = NewWorker(2, 2, "ZONE_B")
@@ -40,30 +42,30 @@ fungsi TestMorphroutines() void
     
     # Test migrations
     jika CanMigrate(worker1, unit1)
-        native_print("Worker 1 → Unit 1: ALLOWED")
+        io.Write(io.Stdout, "Worker 1 → Unit 1: ALLOWED")
     lainnya
-        native_print("Worker 1 → Unit 1: DENIED")
+        io.Write(io.Stdout, "Worker 1 → Unit 1: DENIED")
     akhir
     
     jika CanMigrate(worker1, unit2)
-        native_print("Worker 1 → Unit 2: ALLOWED")
+        io.Write(io.Stdout, "Worker 1 → Unit 2: ALLOWED")
     lainnya
-        native_print("Worker 1 → Unit 2: DENIED (Security)")
+        io.Write(io.Stdout, "Worker 1 → Unit 2: DENIED (Security)\n")
     akhir
     
     jika CanMigrate(worker2, unit2)
-        native_print("Worker 2 → Unit 2: ALLOWED")
+        io.Write(io.Stdout, "Worker 2 → Unit 2: ALLOWED")
     lainnya
-        native_print("Worker 2 → Unit 2: DENIED")
+        io.Write(io.Stdout, "Worker 2 → Unit 2: DENIED")
     akhir
     
-    native_print("=== Security System Works ===")
+    io.Write(io.Stdout, "=== Security System Works ===")
 akhir
 
 fungsi main() void
-    native_print("=== Morphroutines Security ===")
+    io.Write(io.Stdout, "=== Morphroutines Security ===")
     TestMorphroutines()
-    native_print("Security clearance ready!")
+    io.Write(io.Stdout, "Security clearance ready!")
 akhir
 
 main()

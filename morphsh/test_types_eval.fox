@@ -1,22 +1,23 @@
+ambil "io"
 # Test Type System dan Evaluator
 
 fungsi main() void
-    native_print("=== TYPE SYSTEM TEST ===")
+    io.Write(io.Stdout, "=== TYPE SYSTEM TEST ===" + "\n")
     
     # Test type creation
     var t_int = type_int()
     var t_str = type_string()
     var t_bool = type_bool()
     
-    native_print("Types created")
+    io.Write(io.Stdout, "Types created" + "\n")
     
     # Test type equality
     var t_int2 = type_int()
     jika types_equal(t_int, t_int2)
-        native_print("Type equality: OK")
+        io.Write(io.Stdout, "Type equality: OK" + "\n")
     akhir
     
-    native_print("=== TYPE CHECKER TEST ===")
+    io.Write(io.Stdout, "=== TYPE CHECKER TEST ===" + "\n")
     
     # Test type checker
     var checker = checker_new()
@@ -24,31 +25,31 @@ fungsi main() void
     # Test binary operations
     var result_add = check_binary(checker, t_int, "+", t_int)
     jika result_add.kind == 0
-        native_print("Int + Int = Int: OK")
+        io.Write(io.Stdout, "Int + Int = Int: OK" + "\n")
     akhir
     
     var result_str_concat = check_binary(checker, t_str, "+", t_str)
     jika result_str_concat.kind == 1
-        native_print("String + String = String: OK")
+        io.Write(io.Stdout, "String + String = String: OK" + "\n")
     akhir
     
     var result_cmp = check_binary(checker, t_int, "<", t_int)
     jika result_cmp.kind == 2
-        native_print("Int < Int = Bool: OK")
+        io.Write(io.Stdout, "Int < Int = Bool: OK" + "\n")
     akhir
     
     # Test unary operations
     var result_neg = check_unary(checker, "-", t_int)
     jika result_neg.kind == 0
-        native_print("Unary - Int = Int: OK")
+        io.Write(io.Stdout, "Unary - Int = Int: OK" + "\n")
     akhir
     
     var result_not = check_unary(checker, "!", t_bool)
     jika result_not.kind == 2
-        native_print("Unary ! Bool = Bool: OK")
+        io.Write(io.Stdout, "Unary ! Bool = Bool: OK" + "\n")
     akhir
     
-    native_print("=== EVALUATOR TEST ===")
+    io.Write(io.Stdout, "=== EVALUATOR TEST ===" + "\n")
     
     # Test value creation
     var v1 = value_int(10)
@@ -56,34 +57,34 @@ fungsi main() void
     var v_true = value_bool(benar)
     var v_false = value_bool(salah)
     
-    native_print("Values created")
+    io.Write(io.Stdout, "Values created" + "\n")
     
     # Test arithmetic
     var add_result = eval_add(v1, v2)
     jika add_result.kind == 0
         jika add_result.int_val == 15
-            native_print("10 + 5 = 15: OK")
+            io.Write(io.Stdout, "10 + 5 = 15: OK" + "\n")
         akhir
     akhir
     
     var sub_result = eval_sub(v1, v2)
     jika sub_result.kind == 0
         jika sub_result.int_val == 5
-            native_print("10 - 5 = 5: OK")
+            io.Write(io.Stdout, "10 - 5 = 5: OK" + "\n")
         akhir
     akhir
     
     var mul_result = eval_mul(v1, v2)
     jika mul_result.kind == 0
         jika mul_result.int_val == 50
-            native_print("10 * 5 = 50: OK")
+            io.Write(io.Stdout, "10 * 5 = 50: OK" + "\n")
         akhir
     akhir
     
     var div_result = eval_div(v1, v2)
     jika div_result.kind == 0
         jika div_result.int_val == 2
-            native_print("10 / 5 = 2: OK")
+            io.Write(io.Stdout, "10 / 5 = 2: OK" + "\n")
         akhir
     akhir
     
@@ -91,21 +92,21 @@ fungsi main() void
     var eq_result = eval_eq(v1, v1)
     jika eq_result.kind == 2
         jika eq_result.bool_val
-            native_print("10 == 10 = true: OK")
+            io.Write(io.Stdout, "10 == 10 = true: OK" + "\n")
         akhir
     akhir
     
     var lt_result = eval_lt(v2, v1)
     jika lt_result.kind == 2
         jika lt_result.bool_val
-            native_print("5 < 10 = true: OK")
+            io.Write(io.Stdout, "5 < 10 = true: OK" + "\n")
         akhir
     akhir
     
     var gt_result = eval_gt(v1, v2)
     jika gt_result.kind == 2
         jika gt_result.bool_val
-            native_print("10 > 5 = true: OK")
+            io.Write(io.Stdout, "10 > 5 = true: OK" + "\n")
         akhir
     akhir
     
@@ -113,37 +114,37 @@ fungsi main() void
     var neg_result = eval_negate(v2)
     jika neg_result.kind == 0
         jika neg_result.int_val == -5
-            native_print("-(5) = -5: OK")
+            io.Write(io.Stdout, "-(5 + "\n") = -5: OK")
         akhir
     akhir
     
     var not_result = eval_not(v_true)
     jika not_result.kind == 2
         jika !not_result.bool_val
-            native_print("!(true) = false: OK")
+            io.Write(io.Stdout, "!(true + "\n") = false: OK")
         akhir
     akhir
     
     # Test truthiness
     jika is_truthy(v_true)
-        native_print("Truthiness true: OK")
+        io.Write(io.Stdout, "Truthiness true: OK" + "\n")
     akhir
     
     jika !is_truthy(v_false)
-        native_print("Truthiness false: OK")
+        io.Write(io.Stdout, "Truthiness false: OK" + "\n")
     akhir
     
     var v_zero = value_int(0)
     jika !is_truthy(v_zero)
-        native_print("Truthiness 0: OK")
+        io.Write(io.Stdout, "Truthiness 0: OK" + "\n")
     akhir
     
     var v_nonzero = value_int(42)
     jika is_truthy(v_nonzero)
-        native_print("Truthiness 42: OK")
+        io.Write(io.Stdout, "Truthiness 42: OK" + "\n")
     akhir
     
-    native_print("=== ALL TESTS PASSED ===")
+    io.Write(io.Stdout, "=== ALL TESTS PASSED ===" + "\n")
 akhir
 
 main()

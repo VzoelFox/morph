@@ -1,3 +1,5 @@
+ambil "io"
+
 # Simple Interpreter - Combine Type System + Evaluator + Environment
 # Minimal working interpreter untuk bootstrap
 
@@ -25,26 +27,26 @@ fungsi eval_mul(left Value, right Value) Value
 akhir
 
 fungsi main() void
-    native_print("=== SIMPLE INTERPRETER TEST ===")
+    io.Write(io.Stdout, "=== SIMPLE INTERPRETER TEST ===\n")
     
     # Simulate: var x = 10
     var env = Env(10, 0, 0)
-    native_print("var x = 10")
+    io.Write(io.Stdout, "var x = 10\n")
     
     # Simulate: var y = 5
     env.y = 5
-    native_print("var y = 5")
+    io.Write(io.Stdout, "var y = 5\n")
     
     # Simulate: var result = x + y
     var v_x = value_int(env.x)
     var v_y = value_int(env.y)
     var v_add = eval_add(v_x, v_y)
     env.result = v_add.int_val
-    native_print("var result = x + y")
+    io.Write(io.Stdout, "var result = x + y\n")
     
     # Check result
     jika env.result == 15
-        native_print("result = 15: OK")
+        io.Write(io.Stdout, "result = 15: OK\n")
     akhir
     
     # Simulate: result = result * 2
@@ -52,14 +54,14 @@ fungsi main() void
     var v_two = value_int(2)
     var v_mul = eval_mul(v_result, v_two)
     env.result = v_mul.int_val
-    native_print("result = result * 2")
+    io.Write(io.Stdout, "result = result * 2\n")
     
     # Check result
     jika env.result == 30
-        native_print("result = 30: OK")
+        io.Write(io.Stdout, "result = 30: OK\n")
     akhir
     
-    native_print("=== INTERPRETER WORKING ===")
+    io.Write(io.Stdout, "=== INTERPRETER WORKING ===\n")
 akhir
 
 main()

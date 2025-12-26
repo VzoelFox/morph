@@ -1,3 +1,4 @@
+ambil "io"
 # Full Tree Walker Evaluator untuk MorphSH - Simplified Version
 
 struktur Value
@@ -191,66 +192,66 @@ akhir
 
 # Test functions
 fungsi TestTreeWalker() void
-    native_print("=== Testing Full Tree Walker ===")
+    io.Write(io.Stdout, "=== Testing Full Tree Walker ===" + "\n")
     
     # Test basic values
     var intVal = NewIntValue(42)
-    native_print("Int value: " + ValueToString(intVal))
+    io.Write(io.Stdout, "Int value: " + ValueToString(intVal + "\n"))
     
     var strVal = NewStringValue("hello")
-    native_print("String value: " + ValueToString(strVal))
+    io.Write(io.Stdout, "String value: " + ValueToString(strVal + "\n"))
     
     var boolVal = NewBoolValue(benar)
-    native_print("Bool value: " + ValueToString(boolVal))
+    io.Write(io.Stdout, "Bool value: " + ValueToString(boolVal + "\n"))
     
     # Test arithmetic
     var left = NewIntValue(10)
     var right = NewIntValue(5)
     var result = EvalInfixExpression(left, "+", right)
-    native_print("10 + 5 = " + ValueToString(result))
+    io.Write(io.Stdout, "10 + 5 = " + ValueToString(result + "\n"))
     
     # Test comparison
     var cmpResult = EvalInfixExpression(left, ">", right)
-    native_print("10 > 5: " + ValueToString(cmpResult))
+    io.Write(io.Stdout, "10 > 5: " + ValueToString(cmpResult + "\n"))
     
     # Test string concat
     var str1 = NewStringValue("Hello")
     var str2 = NewStringValue(" World")
     var strResult = EvalInfixExpression(str1, "+", str2)
-    native_print("Concat: " + ValueToString(strResult))
+    io.Write(io.Stdout, "Concat: " + ValueToString(strResult + "\n"))
     
     # Test prefix operations
     var negResult = EvalPrefixExpression("-", NewIntValue(42))
-    native_print("-42 = " + ValueToString(negResult))
+    io.Write(io.Stdout, "-42 = " + ValueToString(negResult + "\n"))
     
     var notResult = EvalPrefixExpression("!", NewBoolValue(benar))
-    native_print("!true = " + ValueToString(notResult))
+    io.Write(io.Stdout, "!true = " + ValueToString(notResult + "\n"))
     
     # Test truthiness
     var truthyInt = IsTruthy(NewIntValue(5))
     var truthyZero = IsTruthy(NewIntValue(0))
     var truthyNull = IsTruthy(NewNullValue())
     
-    native_print("Truthy tests:")
+    io.Write(io.Stdout, "Truthy tests:" + "\n")
     jika truthyInt
-        native_print("- 5 is truthy")
+        io.Write(io.Stdout, "- 5 is truthy" + "\n")
     akhir
     jika !truthyZero
-        native_print("- 0 is falsy")
+        io.Write(io.Stdout, "- 0 is falsy" + "\n")
     akhir
     jika !truthyNull
-        native_print("- null is falsy")
+        io.Write(io.Stdout, "- null is falsy" + "\n")
     akhir
     
-    native_print("=== Tree Walker Ready ===")
+    io.Write(io.Stdout, "=== Tree Walker Ready ===" + "\n")
 akhir
 
 fungsi main() void
-    native_print("=== Morph Full Tree Walker ===")
+    io.Write(io.Stdout, "=== Morph Full Tree Walker ===" + "\n")
     
     TestTreeWalker()
     
-    native_print("Full tree walker implementation complete!")
+    io.Write(io.Stdout, "Full tree walker implementation complete!" + "\n")
 akhir
 
 main()

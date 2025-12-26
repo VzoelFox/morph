@@ -1,3 +1,4 @@
+ambil "io"
 ambil "morphsh/ast"
 
 # Value types untuk evaluator
@@ -87,32 +88,32 @@ akhir
 
 # Test functions
 fungsi TestEvaluator() void
-    native_print("=== Testing Evaluator ===")
+    io.Write(io.Stdout, "=== Testing Evaluator ===" + "\n")
     
     var intVal = NewIntValue(42)
-    native_print("Int value:")
+    io.Write(io.Stdout, "Int value:" + "\n")
     native_print_int(intVal.intVal)
     
     var strVal = NewStringValue("hello")
-    native_print("String value:")
-    native_print(strVal.stringVal)
+    io.Write(io.Stdout, "String value:" + "\n")
+    io.Write(io.Stdout, strVal.stringVal + "\n")
     
-    native_print("=== Evaluator Ready ===")
+    io.Write(io.Stdout, "=== Evaluator Ready ===" + "\n")
 akhir
 
 fungsi TestTypeChecker() void
-    native_print("=== Testing Type Checker ===")
+    io.Write(io.Stdout, "=== Testing Type Checker ===" + "\n")
     
     var tc = NewTypeChecker()
     jika tc.hasTypes
-        native_print("Type checker initialized")
+        io.Write(io.Stdout, "Type checker initialized" + "\n")
     akhir
     
-    native_print("=== Type Checker Ready ===")
+    io.Write(io.Stdout, "=== Type Checker Ready ===" + "\n")
 akhir
 
 fungsi main() void
-    native_print("=== Morph Self-Hosting Compiler ===")
+    io.Write(io.Stdout, "=== Morph Self-Hosting Compiler ===" + "\n")
     
     # Test evaluator
     TestEvaluator()
@@ -120,13 +121,13 @@ fungsi main() void
     # Test type checker
     TestTypeChecker()
     
-    native_print("Compiling: test.fox")
-    native_print("[1/4] Reading source...")
-    native_print("[2/4] Lexical analysis...")
-    native_print("[3/4] Parsing...")
-    native_print("[4/4] Code generation...")
-    native_print("Output: test.c")
-    native_print("=== Compilation successful! ===")
+    io.Write(io.Stdout, "Compiling: test.fox" + "\n")
+    io.Write(io.Stdout, "[1/4] Reading source..." + "\n")
+    io.Write(io.Stdout, "[2/4] Lexical analysis..." + "\n")
+    io.Write(io.Stdout, "[3/4] Parsing..." + "\n")
+    io.Write(io.Stdout, "[4/4] Code generation..." + "\n")
+    io.Write(io.Stdout, "Output: test.c" + "\n")
+    io.Write(io.Stdout, "=== Compilation successful! ===" + "\n")
 akhir
 
 main()

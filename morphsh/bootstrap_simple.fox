@@ -1,3 +1,4 @@
+ambil "io"
 # Bootstrap Evaluator dan Type Checker untuk MorphSH
 # Versi minimal tanpa dependencies
 
@@ -77,44 +78,44 @@ akhir
 
 # Test functions
 fungsi TestEvaluator() void
-    native_print("=== Testing Evaluator ===")
+    io.Write(io.Stdout, "=== Testing Evaluator ===" + "\n")
     
     var intVal = NewIntValue(42)
-    native_print("Int value:")
+    io.Write(io.Stdout, "Int value:" + "\n")
     native_print_int(intVal.intVal)
     
     var strVal = NewStringValue("hello")
-    native_print("String value:")
-    native_print(strVal.stringVal)
+    io.Write(io.Stdout, "String value:" + "\n")
+    io.Write(io.Stdout, strVal.stringVal + "\n")
     
     var boolVal = NewBoolValue(benar)
-    native_print("Bool value:")
+    io.Write(io.Stdout, "Bool value:" + "\n")
     jika boolVal.boolVal
-        native_print("true")
+        io.Write(io.Stdout, "true" + "\n")
     lainnya
-        native_print("false")
+        io.Write(io.Stdout, "false" + "\n")
     akhir
     
-    native_print("=== Evaluator Ready ===")
+    io.Write(io.Stdout, "=== Evaluator Ready ===" + "\n")
 akhir
 
 fungsi TestTypeChecker() void
-    native_print("=== Testing Type Checker ===")
+    io.Write(io.Stdout, "=== Testing Type Checker ===" + "\n")
     
     var intTyp = IntType()
-    native_print("Int type: " + intTyp.name)
+    io.Write(io.Stdout, "Int type: " + intTyp.name + "\n")
     
     var strTyp = StringType()
-    native_print("String type: " + strTyp.name)
+    io.Write(io.Stdout, "String type: " + strTyp.name + "\n")
     
     var boolTyp = BoolType()
-    native_print("Bool type: " + boolTyp.name)
+    io.Write(io.Stdout, "Bool type: " + boolTyp.name + "\n")
     
-    native_print("=== Type Checker Ready ===")
+    io.Write(io.Stdout, "=== Type Checker Ready ===" + "\n")
 akhir
 
 fungsi main() void
-    native_print("=== Morph Self-Hosting Compiler ===")
+    io.Write(io.Stdout, "=== Morph Self-Hosting Compiler ===" + "\n")
     
     # Test evaluator
     TestEvaluator()
@@ -122,13 +123,13 @@ fungsi main() void
     # Test type checker
     TestTypeChecker()
     
-    native_print("Compiling: test.fox")
-    native_print("[1/4] Reading source...")
-    native_print("[2/4] Lexical analysis...")
-    native_print("[3/4] Parsing...")
-    native_print("[4/4] Code generation...")
-    native_print("Output: test.c")
-    native_print("=== Bootstrap Compilation successful! ===")
+    io.Write(io.Stdout, "Compiling: test.fox" + "\n")
+    io.Write(io.Stdout, "[1/4] Reading source..." + "\n")
+    io.Write(io.Stdout, "[2/4] Lexical analysis..." + "\n")
+    io.Write(io.Stdout, "[3/4] Parsing..." + "\n")
+    io.Write(io.Stdout, "[4/4] Code generation..." + "\n")
+    io.Write(io.Stdout, "Output: test.c" + "\n")
+    io.Write(io.Stdout, "=== Bootstrap Compilation successful! ===" + "\n")
 akhir
 
 main()

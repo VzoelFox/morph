@@ -1,3 +1,4 @@
+ambil "io"
 ambil "morphsh/ast"
 
 # AST-Integrated Tree Walker Evaluator
@@ -249,12 +250,12 @@ akhir
 
 # Test AST Integration
 fungsi TestASTIntegration() void
-    native_print("=== Testing AST Integration ===")
+    io.Write(io.Stdout, "=== Testing AST Integration ===" + "\n")
     
     var eval = NewASTEvaluator()
     
     # Test creating simple AST nodes (simulated)
-    native_print("Testing literal evaluation:")
+    io.Write(io.Stdout, "Testing literal evaluation:" + "\n")
     
     # Simulate integer literal
     var intLit = IntegerLiteral{
@@ -262,7 +263,7 @@ fungsi TestASTIntegration() void
         value: "42"
     }
     var intResult = EvalIntegerLiteral(intLit)
-    native_print("Integer 42: " + ValueToString(intResult))
+    io.Write(io.Stdout, "Integer 42: " + ValueToString(intResult + "\n"))
     
     # Simulate string literal
     var strLit = StringLiteral{
@@ -270,31 +271,31 @@ fungsi TestASTIntegration() void
         value: "hello"
     }
     var strResult = EvalStringLiteral(strLit)
-    native_print("String hello: " + ValueToString(strResult))
+    io.Write(io.Stdout, "String hello: " + ValueToString(strResult + "\n"))
     
     # Test infix expressions
-    native_print("Testing expressions:")
+    io.Write(io.Stdout, "Testing expressions:" + "\n")
     var left = NewIntValue(10)
     var right = NewIntValue(5)
     var addResult = EvalInfixExpression(left, "+", right)
-    native_print("10 + 5 = " + ValueToString(addResult))
+    io.Write(io.Stdout, "10 + 5 = " + ValueToString(addResult + "\n"))
     
     var cmpResult = EvalInfixExpression(left, ">", right)
-    native_print("10 > 5 = " + ValueToString(cmpResult))
+    io.Write(io.Stdout, "10 > 5 = " + ValueToString(cmpResult + "\n"))
     
     # Test prefix expressions
     var negResult = EvalPrefixExpression("-", NewIntValue(42))
-    native_print("-42 = " + ValueToString(negResult))
+    io.Write(io.Stdout, "-42 = " + ValueToString(negResult + "\n"))
     
-    native_print("=== AST Integration Ready ===")
+    io.Write(io.Stdout, "=== AST Integration Ready ===" + "\n")
 akhir
 
 fungsi main() void
-    native_print("=== Morph AST-Integrated Evaluator ===")
+    io.Write(io.Stdout, "=== Morph AST-Integrated Evaluator ===" + "\n")
     
     TestASTIntegration()
     
-    native_print("AST integration complete!")
+    io.Write(io.Stdout, "AST integration complete!" + "\n")
 akhir
 
 main()

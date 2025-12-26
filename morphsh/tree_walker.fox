@@ -1,3 +1,4 @@
+ambil "io"
 ambil "morphsh/ast"
 
 # Full Tree Walker Evaluator untuk MorphSH
@@ -277,47 +278,47 @@ akhir
 
 # Test functions
 fungsi TestTreeWalker() void
-    native_print("=== Testing Full Tree Walker ===")
+    io.Write(io.Stdout, "=== Testing Full Tree Walker ===" + "\n")
     
     var tw = NewTreeWalker()
     
     # Test basic values
     var intVal = NewIntValue(42)
-    native_print("Int evaluation:")
+    io.Write(io.Stdout, "Int evaluation:" + "\n")
     native_print_int(intVal.intVal)
     
     # Test arithmetic
     var left = NewIntValue(10)
     var right = NewIntValue(5)
     var result = EvalInfixExpression(left, "+", right)
-    native_print("10 + 5 =")
+    io.Write(io.Stdout, "10 + 5 =" + "\n")
     native_print_int(result.intVal)
     
     # Test comparison
     var cmpResult = EvalInfixExpression(left, ">", right)
-    native_print("10 > 5:")
+    io.Write(io.Stdout, "10 > 5:" + "\n")
     jika cmpResult.boolVal
-        native_print("true")
+        io.Write(io.Stdout, "true" + "\n")
     lainnya
-        native_print("false")
+        io.Write(io.Stdout, "false" + "\n")
     akhir
     
     # Test string concat
     var str1 = NewStringValue("Hello")
     var str2 = NewStringValue(" World")
     var strResult = EvalInfixExpression(str1, "+", str2)
-    native_print("String concat:")
-    native_print(strResult.stringVal)
+    io.Write(io.Stdout, "String concat:" + "\n")
+    io.Write(io.Stdout, strResult.stringVal + "\n")
     
-    native_print("=== Tree Walker Ready ===")
+    io.Write(io.Stdout, "=== Tree Walker Ready ===" + "\n")
 akhir
 
 fungsi main() void
-    native_print("=== Morph Full Tree Walker ===")
+    io.Write(io.Stdout, "=== Morph Full Tree Walker ===" + "\n")
     
     TestTreeWalker()
     
-    native_print("Full tree walker implementation complete!")
+    io.Write(io.Stdout, "Full tree walker implementation complete!" + "\n")
 akhir
 
 main()

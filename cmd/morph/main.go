@@ -173,7 +173,7 @@ func runBuild(filename string) {
 
 	// 4. GCC
 	fmt.Println("🔨 Compiling with GCC...")
-	cmd := exec.Command("gcc", "-o", outExe, outC, filepath.Join(workDir, "runtime.c"))
+	cmd := exec.Command("gcc", "-o", outExe, outC, filepath.Join(workDir, "runtime.c"), "-lpthread")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {

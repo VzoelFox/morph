@@ -82,6 +82,8 @@ void mph_page_free(MphPage* page) {
 // --- Memory ---
 
 void mph_init_memory(MorphContext* ctx) {
+    write(STDERR_FILENO, "INIT_START\n", 11);
+    printf("DEBUG: mph_init_memory called\n");
     ctx->heap_head = NULL;
     ctx->allocated_bytes = 0;
     ctx->next_gc_threshold = GC_MIN_THRESHOLD;
@@ -117,6 +119,21 @@ void mph_init_memory(MorphContext* ctx) {
 
     // Start GC daemon dengan proper locking
     mph_start_daemon(ctx);
+    
+    // ENABLE .z system logger (moved here)
+    printf("DEBUG: About to create Z-Logger for zone: %s\n", ctx->zone_id);
+    fflush(stdout);
+    ctx->z_logger = mph_z_logger_create(ctx->zone_id);
+    ctx->logging_enabled = 1;
+    
+    // Debug: pastikan logger dibuat
+    if (ctx->z_logger) {
+        printf("DEBUG: Z-Logger created successfully for zone: %s\n", ctx->zone_id);
+        fflush(stdout);
+    } else {
+        printf("DEBUG: Z-Logger creation FAILED for zone: %s\n", ctx->zone_id);
+        fflush(stdout);
+    }
 }
 
 void mph_init_memory_zone(MorphContext* ctx, const char* zone_id, int clearance, size_t zone_limit) {
@@ -129,9 +146,20 @@ void mph_init_memory_zone(MorphContext* ctx, const char* zone_id, int clearance,
     // SIMPLIFIED: No zone memory allocation untuk avoid complexity
     ctx->zone_base_addr = NULL;
     
-    // DISABLE .z system logger
-    ctx->z_logger = NULL;
-    ctx->logging_enabled = 0;
+    // ENABLE .z system logger
+    printf("DEBUG: About to create Z-Logger for zone: %s\n", ctx->zone_id);
+    fflush(stdout);
+    ctx->z_logger = mph_z_logger_create(ctx->zone_id);
+    ctx->logging_enabled = 1;
+    
+    // Debug: pastikan logger dibuat
+    if (ctx->z_logger) {
+        printf("DEBUG: Z-Logger created successfully for zone: %s\n", ctx->zone_id);
+        fflush(stdout);
+    } else {
+        printf("DEBUG: Z-Logger creation FAILED for zone: %s\n", ctx->zone_id);
+        fflush(stdout);
+    }
     
     // DISABLE swap pool
     ctx->swap_pool = NULL;
@@ -446,8 +474,8 @@ mph_bool mph_worker_checkpoint_restore(MorphContext* ctx) {
 // --- .z System Logging Implementation ---
 
 mph_bool mph_z_is_system_accessible(void) {
-    // Check if running as system process (simplified check)
-    return (geteuid() == 0 || getuid() == 0);
+    // Development mode: allow all access
+    return 1;
 }
 
 ZLogger* mph_z_logger_create(const char* zone_id) {
@@ -488,6 +516,8 @@ ZLogger* mph_z_logger_create(const char* zone_id) {
 
 void mph_z_log(ZLogger* logger, LogLevel level, const char* zone_id, const char* worker_id,
                SwapResult error_code, const char* function, int line, const char* format, ...) {
+    printf("DEBUG: mph_z_log called with logger=%p\n", logger);
+    fflush(stdout);
     if (!logger || !logger->system_only) return;
     
     pthread_mutex_lock(&logger->log_lock);
@@ -1086,18 +1116,39 @@ void mph_gc_collect(MorphContext* ctx) {
 // Daemon
 void* mph_daemon_loop(void* arg) {
     MorphContext* ctx = (MorphContext*)arg;
+    printf("DEBUG: Daemon started, running=%d\n", ctx->daemon_running);
+    fflush(stdout);
+    
+    int loop_count = 0;
     while (ctx->daemon_running) {
+        loop_count++;
+        if (loop_count % 10 == 0) {  // Every 1 second (100ms * 10)
+            printf("DEBUG: Daemon loop %d\n", loop_count);
+            fflush(stdout);
+        }
+        
         usleep(DAEMON_SLEEP_MS * 1000);
+        
+        // Debug: daemon heartbeat setiap 5 detik
+        static int heartbeat_count = 0;
+        if (++heartbeat_count % (5000 / DAEMON_SLEEP_MS) == 0) {
+            printf("DEBUG: Daemon heartbeat - allocated: %zu bytes\n", ctx->allocated_bytes);
+            fflush(stdout);
+        }
         
         // Lock-free check untuk GC threshold
         size_t current_bytes = ctx->allocated_bytes;
         size_t threshold = ctx->next_gc_threshold;
         
         if (current_bytes > threshold) {
+            printf("DEBUG: GC triggered - bytes: %zu, threshold: %zu\n", current_bytes, threshold);
+            fflush(stdout);
             // Try acquire GC lock (non-blocking)
             if (pthread_mutex_trylock(&ctx->gc_lock) == 0) {
                 // Double-check setelah acquire lock
                 if (ctx->allocated_bytes > ctx->next_gc_threshold) {
+                    printf("DEBUG: Running GC collection\n");
+                    fflush(stdout);
                     mph_gc_collect(ctx);
                 }
                 pthread_mutex_unlock(&ctx->gc_lock);
@@ -1108,12 +1159,20 @@ void* mph_daemon_loop(void* arg) {
         if (pthread_mutex_trylock(&ctx->page_lock) == 0) {
             uint64_t now = mph_time_ms();
             MphPage* cur = ctx->page_head;
+            int swap_count = 0;
             while (cur) {
                 if (!(cur->flags & FLAG_SWAPPED) && 
                     (now - cur->last_access > SWAP_AGE_THRESHOLD_SEC * 1000)) {
+                    printf("DEBUG: Swapping out page (idle %llu ms)\n", now - cur->last_access);
+                    fflush(stdout);
                     mph_page_swap_out(cur);
+                    swap_count++;
                 }
                 cur = cur->next;
+            }
+            if (swap_count > 0) {
+                printf("DEBUG: Swapped out %d pages\n", swap_count);
+                fflush(stdout);
             }
             pthread_mutex_unlock(&ctx->page_lock);
         }
@@ -1123,7 +1182,14 @@ void* mph_daemon_loop(void* arg) {
 
 void mph_start_daemon(MorphContext* ctx) {
     ctx->daemon_running = 1;
-    pthread_create(&ctx->daemon_thread, NULL, mph_daemon_loop, ctx);
+    int result = pthread_create(&ctx->daemon_thread, NULL, mph_daemon_loop, ctx);
+    printf("DEBUG: pthread_create result: %d\n", result);
+    fflush(stdout);
+    
+    // Give daemon time to start
+    usleep(100000); // 100ms
+    printf("DEBUG: Daemon should be running now\n");
+    fflush(stdout);
 }
 
 void mph_stop_daemon(MorphContext* ctx) {
@@ -1829,6 +1895,7 @@ typedef struct InternalFile { mph_int fd; } InternalFile;
 void mph_init_files() { mph_file_table[0] = stdin; mph_file_table[1] = stdout; mph_file_table[2] = stderr; }
 void mph_native_print_int(MorphContext* ctx, mph_int n) { printf("%ld\n", n); }
 void mph_native_print(MorphContext* ctx, MorphString* s) {
+    write(STDERR_FILENO, "NATIVE_PRINT_CALLED\n", 20);
     mph_swap_in(ctx, s);
     mph_swap_in(ctx, s->data);
     printf("%s\n", s->data);
@@ -1943,6 +2010,8 @@ MorphTuple_Int_Error mph_conv_Atoi(MorphContext* ctx, void* _env, MorphString* s
 
 // Entry point wrapper (if not provided by generated code)
 int main() {
+    printf("DEBUG: main() called\n");
+    fflush(stdout);
     MorphContext ctx;
     mph_init_memory(&ctx);
     morph_entry_point(&ctx);

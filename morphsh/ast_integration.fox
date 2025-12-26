@@ -1,3 +1,4 @@
+ambil "io"
 # AST Integration - Simplified Version
 
 struktur Value
@@ -128,40 +129,40 @@ fungsi ValueToString(val Value) string
 akhir
 
 fungsi TestASTIntegration() void
-    native_print("=== Testing AST Integration ===")
+    io.Write(io.Stdout, "=== Testing AST Integration ===" + "\n")
     
     # Test simple literal
     var intNode = NewIntNode(42)
     var intResult = EvalASTNode(intNode)
-    native_print("AST Int 42: " + ValueToString(intResult))
+    io.Write(io.Stdout, "AST Int 42: " + ValueToString(intResult + "\n"))
     
     # Test infix expression: 10 + 5
     var leftNode = NewIntNode(10)
     var rightNode = NewIntNode(5)
     var addNode = NewInfixNode(leftNode, "+", rightNode)
     var addResult = EvalASTNode(addNode)
-    native_print("AST 10 + 5 = " + ValueToString(addResult))
+    io.Write(io.Stdout, "AST 10 + 5 = " + ValueToString(addResult + "\n"))
     
     # Test comparison: 10 > 5
     var cmpNode = NewInfixNode(leftNode, ">", rightNode)
     var cmpResult = EvalASTNode(cmpNode)
-    native_print("AST 10 > 5 = " + ValueToString(cmpResult))
+    io.Write(io.Stdout, "AST 10 > 5 = " + ValueToString(cmpResult + "\n"))
     
     # Test nested expression: (10 + 5) * 2
     var twoNode = NewIntNode(2)
     var nestedNode = NewInfixNode(addNode, "*", twoNode)
     var nestedResult = EvalASTNode(nestedNode)
-    native_print("AST (10 + 5) * 2 = " + ValueToString(nestedResult))
+    io.Write(io.Stdout, "AST (10 + 5 + "\n") * 2 = " + ValueToString(nestedResult))
     
-    native_print("=== AST Integration Works ===")
+    io.Write(io.Stdout, "=== AST Integration Works ===" + "\n")
 akhir
 
 fungsi main() void
-    native_print("=== Morph AST Integration ===")
+    io.Write(io.Stdout, "=== Morph AST Integration ===" + "\n")
     
     TestASTIntegration()
     
-    native_print("AST integration complete!")
+    io.Write(io.Stdout, "AST integration complete!" + "\n")
 akhir
 
 main()
