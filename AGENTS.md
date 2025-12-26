@@ -1,9 +1,9 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.65.0
+- **Versi**: 1.66.2
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
-- **Terakhir Diupdate**: 2025-12-26 14:13 WIB
+- **Terakhir Diupdate**: 2025-12-26 17:45 WIB
 - **Status**: Active
 
 ---
@@ -94,6 +94,25 @@ Dokumen ini adalah **single source of truth** untuk AI Agent dalam pengembangan 
 - ✅ **Full compilation pipeline working**
 
 **ACHIEVEMENT**: N1 compiler sekarang dapat menggunakan modules dan stdlib functions! Module system gap RESOLVED! 🎉
+
+## Perubahan 2025-12-26 17:01 WIB
+- **Feature**: Remove Go-based runner CLI
+- **Files**:
+  - `cmd/morph_runner/main.go` (REMOVED) - Go runner dihapus karena dependensi `pkg_legacy` tidak tersedia
+- **Status**: ✅ RUNNER CLI REMOVED
+- **Achievement**:
+  - **Self-Hosted Focus**: Runner Go dihapus untuk menjaga konsistensi self-hosted
+  - **Dependency Cleanup**: Tidak lagi bergantung pada paket `pkg_legacy` untuk runner
+
+## Perubahan 2025-12-26 17:45 WIB
+- **Feature**: Stabilize MorphSH self-hosting entrypoint
+- **Files**:
+  - `morphsh/evaluator.fox` (SHA256:85010ca245b1e2f53d1ac99b93ecca8f0c957a3f86870f36283162dd14629c65)
+  - `morphsh/main.fox` (SHA256:a1ad459f6d86cf4bc71e89144cc785723cd5eea7abf4bf88f514d11e151175d5)
+- **Status**: ✅ SELF-HOSTING ENTRYPOINT STABILIZED
+- **Achievement**:
+  - **Evaluator Smoke Test**: Added `TestEvaluator` so entrypoint has a real evaluator check.
+  - **No Double Execution**: Removed manual `main()` call to prevent duplicate runs and avoid hang-like behavior.
 
 ## Perubahan 2025-12-26 14:56 WIB
 - **Feature**: Complete Tree Walker & Compiler Pipeline Implementation

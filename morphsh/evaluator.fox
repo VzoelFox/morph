@@ -1,3 +1,5 @@
+ambil "io"
+
 # Tree Walker Evaluator untuk MorphSH
 # Full implementation untuk bootstrap interpreter
 
@@ -188,4 +190,26 @@ akhir
 
 fungsi eval_not(operand Value) Value
     kembalikan value_bool(!is_truthy(operand))
+akhir
+
+fungsi TestEvaluator() void
+    io.Write(io.Stdout, "=== Testing Evaluator ===\n")
+
+    var left = value_int(10)
+    var right = value_int(5)
+    var sum = eval_add(left, right)
+    jika sum.kind == 0 dan sum.int_val == 15
+        io.Write(io.Stdout, "10 + 5 = 15: OK\n")
+    lainnya
+        io.Write(io.Stdout, "10 + 5 = 15: FAIL\n")
+    akhir
+
+    var eq = eval_eq(left, left)
+    jika eq.kind == 2 dan eq.bool_val
+        io.Write(io.Stdout, "10 == 10: OK\n")
+    lainnya
+        io.Write(io.Stdout, "10 == 10: FAIL\n")
+    akhir
+
+    io.Write(io.Stdout, "=== Evaluator Ready ===\n")
 akhir
