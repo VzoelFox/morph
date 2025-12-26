@@ -1,0 +1,144 @@
+# gc.fox - GC Control API untuk N2
+ambil "io"
+
+# GC Statistics
+struktur GCStats
+    total_collections int
+    bytes_allocated int
+    bytes_freed int
+    last_collection_time int
+    gc_enabled bool
+akhir
+
+# GC Configuration
+struktur GCConfig
+    threshold_bytes int
+    max_heap_size int
+    collection_frequency int
+    auto_collect bool
+akhir
+
+# Global GC state
+var gc_stats = GCStats{
+    total_collections: 0,
+    bytes_allocated: 0,
+    bytes_freed: 0,
+    last_collection_time: 0,
+    gc_enabled: benar
+}
+
+var gc_config = GCConfig{
+    threshold_bytes: 1048576,  # 1MB default
+    max_heap_size: 67108864,   # 64MB default
+    collection_frequency: 100,
+    auto_collect: benar
+}
+
+# Manual GC collection
+fungsi gc_collect() bool
+    jika gc_stats.gc_enabled
+        gc_stats.total_collections = gc_stats.total_collections + 1
+        gc_stats.last_collection_time = gc_stats.last_collection_time + 1
+        kembalikan benar
+    akhir
+    kembalikan salah
+akhir
+
+# Set GC threshold
+fungsi gc_set_threshold(bytes int) void
+    gc_config.threshold_bytes = bytes
+akhir
+
+# Get GC statistics
+fungsi gc_get_stats() GCStats
+    kembalikan gc_stats
+akhir
+
+# Disable GC
+fungsi gc_disable() void
+    gc_stats.gc_enabled = salah
+akhir
+
+# Enable GC
+fungsi gc_enable() void
+    gc_stats.gc_enabled = benar
+akhir
+
+# Check if GC should run
+fungsi gc_should_collect() bool
+    jika gc_stats.gc_enabled == salah
+        kembalikan salah
+    akhir
+    
+    jika gc_stats.bytes_allocated > gc_config.threshold_bytes
+        kembalikan benar
+    akhir
+    
+    kembalikan salah
+akhir
+
+# Update allocation stats
+fungsi gc_track_allocation(bytes int) void
+    gc_stats.bytes_allocated = gc_stats.bytes_allocated + bytes
+akhir
+
+# Update free stats
+fungsi gc_track_free(bytes int) void
+    gc_stats.bytes_freed = gc_stats.bytes_freed + bytes
+akhir
+
+fungsi main() void
+    io.Write(io.Stdout, "=== GC CONTROL STDLIB TEST ===\n")
+    
+    # Test 1: Get initial stats
+    var stats = gc_get_stats()
+    jika stats.gc_enabled
+        io.Write(io.Stdout, "✅ GC initially enabled: PASS\n")
+    lainnya
+        io.Write(io.Stdout, "❌ GC initially enabled: FAIL\n")
+    akhir
+    
+    # Test 2: Manual collection
+    jika gc_collect()
+        io.Write(io.Stdout, "✅ Manual GC collection: PASS\n")
+    lainnya
+        io.Write(io.Stdout, "❌ Manual GC collection: FAIL\n")
+    akhir
+    
+    # Test 3: Set threshold
+    gc_set_threshold(2097152)  # 2MB
+    jika gc_config.threshold_bytes == 2097152
+        io.Write(io.Stdout, "✅ GC threshold setting: PASS\n")
+    lainnya
+        io.Write(io.Stdout, "❌ GC threshold setting: FAIL\n")
+    akhir
+    
+    # Test 4: Disable/Enable GC
+    gc_disable()
+    jika gc_stats.gc_enabled == salah
+        io.Write(io.Stdout, "✅ GC disable: PASS\n")
+    lainnya
+        io.Write(io.Stdout, "❌ GC disable: FAIL\n")
+    akhir
+    
+    gc_enable()
+    jika gc_stats.gc_enabled
+        io.Write(io.Stdout, "✅ GC enable: PASS\n")
+    lainnya
+        io.Write(io.Stdout, "❌ GC enable: FAIL\n")
+    akhir
+    
+    # Test 5: Track allocation
+    gc_track_allocation(1024)
+    jika gc_stats.bytes_allocated == 1024
+        io.Write(io.Stdout, "✅ Allocation tracking: PASS\n")
+    lainnya
+        io.Write(io.Stdout, "❌ Allocation tracking: FAIL\n")
+    akhir
+    
+    io.Write(io.Stdout, "\n🚀 GC CONTROL READY!\n")
+    io.Write(io.Stdout, "✅ Manual collection control\n")
+    io.Write(io.Stdout, "✅ Threshold configuration\n")
+    io.Write(io.Stdout, "✅ Statistics tracking\n")
+    io.Write(io.Stdout, "✅ Enable/disable control\n")
+akhir

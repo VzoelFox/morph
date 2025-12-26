@@ -1,2 +1,0 @@
-fungsi Length(s string) int native
-fungsi Concat(a string, b string) string native
