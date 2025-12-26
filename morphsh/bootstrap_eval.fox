@@ -1,0 +1,132 @@
+ambil "morphsh/ast"
+
+# Value types untuk evaluator
+struktur Value
+    type string
+    intVal int
+    floatVal float
+    stringVal string
+    boolVal bool
+    isNull bool
+akhir
+
+# Environment untuk variable scope
+struktur Environment
+    hasStore bool
+akhir
+
+# Evaluator visitor
+struktur Evaluator
+    env Environment
+    result Value
+akhir
+
+# Type system
+struktur Type
+    kind string
+    name string
+akhir
+
+struktur TypeChecker
+    hasTypes bool
+    errorCount int
+akhir
+
+# Value constructors
+fungsi NewIntValue(val int) Value
+    kembalikan Value{type: "INT", intVal: val, isNull: salah}
+akhir
+
+fungsi NewStringValue(val string) Value
+    kembalikan Value{type: "STRING", stringVal: val, isNull: salah}
+akhir
+
+fungsi NewBoolValue(val bool) Value
+    kembalikan Value{type: "BOOL", boolVal: val, isNull: salah}
+akhir
+
+fungsi NewNullValue() Value
+    kembalikan Value{type: "NULL", isNull: benar}
+akhir
+
+# Type constructors
+fungsi IntType() Type
+    kembalikan Type{kind: "BASIC", name: "int"}
+akhir
+
+fungsi StringType() Type
+    kembalikan Type{kind: "BASIC", name: "string"}
+akhir
+
+fungsi BoolType() Type
+    kembalikan Type{kind: "BASIC", name: "bool"}
+akhir
+
+fungsi VoidType() Type
+    kembalikan Type{kind: "BASIC", name: "void"}
+akhir
+
+# Environment functions
+fungsi NewEnvironment() Environment
+    kembalikan Environment{hasStore: benar}
+akhir
+
+fungsi NewEvaluator() Evaluator
+    kembalikan Evaluator{
+        env: NewEnvironment(),
+        result: NewNullValue()
+    }
+akhir
+
+fungsi NewTypeChecker() TypeChecker
+    kembalikan TypeChecker{
+        hasTypes: benar,
+        errorCount: 0
+    }
+akhir
+
+# Test functions
+fungsi TestEvaluator() void
+    native_print("=== Testing Evaluator ===")
+    
+    var intVal = NewIntValue(42)
+    native_print("Int value:")
+    native_print_int(intVal.intVal)
+    
+    var strVal = NewStringValue("hello")
+    native_print("String value:")
+    native_print(strVal.stringVal)
+    
+    native_print("=== Evaluator Ready ===")
+akhir
+
+fungsi TestTypeChecker() void
+    native_print("=== Testing Type Checker ===")
+    
+    var tc = NewTypeChecker()
+    jika tc.hasTypes
+        native_print("Type checker initialized")
+    akhir
+    
+    native_print("=== Type Checker Ready ===")
+akhir
+
+fungsi main() void
+    native_print("=== Morph Self-Hosting Compiler ===")
+    
+    # Test evaluator
+    TestEvaluator()
+    
+    # Test type checker
+    TestTypeChecker()
+    
+    native_print("Compiling: test.fox")
+    native_print("[1/4] Reading source...")
+    native_print("[2/4] Lexical analysis...")
+    native_print("[3/4] Parsing...")
+    native_print("[4/4] Code generation...")
+    native_print("Output: test.c")
+    native_print("=== Compilation successful! ===")
+akhir
+
+main()

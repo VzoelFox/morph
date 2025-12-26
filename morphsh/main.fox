@@ -1,5 +1,14 @@
+ambil "morphsh/evaluator"
+ambil "morphsh/typechecker"
+
 fungsi main() void
     native_print("=== Morph Self-Hosting Compiler ===")
+    
+    # Test evaluator
+    TestEvaluator()
+    
+    # Test type checker
+    TestTypeChecker()
     
     # Simulate command line args (hardcoded for bootstrap)
     var sourceFile = "test.fox"

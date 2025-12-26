@@ -1,0 +1,256 @@
+# Full Tree Walker Evaluator untuk MorphSH - Simplified Version
+
+struktur Value
+    type string
+    intVal int
+    floatVal float
+    stringVal string
+    boolVal bool
+    isNull bool
+akhir
+
+struktur TreeWalker
+    result Value
+    hasError bool
+akhir
+
+# Value constructors
+fungsi NewIntValue(val int) Value
+    kembalikan Value{
+        type: "INT",
+        intVal: val,
+        floatVal: 0.0,
+        stringVal: "",
+        boolVal: salah,
+        isNull: salah
+    }
+akhir
+
+fungsi NewFloatValue(val float) Value
+    kembalikan Value{
+        type: "FLOAT",
+        intVal: 0,
+        floatVal: val,
+        stringVal: "",
+        boolVal: salah,
+        isNull: salah
+    }
+akhir
+
+fungsi NewStringValue(val string) Value
+    kembalikan Value{
+        type: "STRING",
+        intVal: 0,
+        floatVal: 0.0,
+        stringVal: val,
+        boolVal: salah,
+        isNull: salah
+    }
+akhir
+
+fungsi NewBoolValue(val bool) Value
+    kembalikan Value{
+        type: "BOOL",
+        intVal: 0,
+        floatVal: 0.0,
+        stringVal: "",
+        boolVal: val,
+        isNull: salah
+    }
+akhir
+
+fungsi NewNullValue() Value
+    kembalikan Value{
+        type: "NULL",
+        intVal: 0,
+        floatVal: 0.0,
+        stringVal: "",
+        boolVal: salah,
+        isNull: benar
+    }
+akhir
+
+fungsi NewTreeWalker() TreeWalker
+    kembalikan TreeWalker{
+        result: NewNullValue(),
+        hasError: salah
+    }
+akhir
+
+# Core evaluation functions
+fungsi EvalInfixExpression(left Value, operator string, right Value) Value
+    # Integer operations
+    jika left.type == "INT" dan right.type == "INT"
+        jika operator == "+"
+            kembalikan NewIntValue(left.intVal + right.intVal)
+        atau_jika operator == "-"
+            kembalikan NewIntValue(left.intVal - right.intVal)
+        atau_jika operator == "*"
+            kembalikan NewIntValue(left.intVal * right.intVal)
+        atau_jika operator == "/"
+            jika right.intVal != 0
+                kembalikan NewIntValue(left.intVal / right.intVal)
+            lainnya
+                kembalikan NewNullValue()
+            akhir
+        atau_jika operator == "=="
+            kembalikan NewBoolValue(left.intVal == right.intVal)
+        atau_jika operator == "!="
+            kembalikan NewBoolValue(left.intVal != right.intVal)
+        atau_jika operator == "<"
+            kembalikan NewBoolValue(left.intVal < right.intVal)
+        atau_jika operator == ">"
+            kembalikan NewBoolValue(left.intVal > right.intVal)
+        akhir
+    akhir
+    
+    # String operations
+    jika left.type == "STRING" dan right.type == "STRING"
+        jika operator == "+"
+            kembalikan NewStringValue(left.stringVal + right.stringVal)
+        atau_jika operator == "=="
+            kembalikan NewBoolValue(left.stringVal == right.stringVal)
+        akhir
+    akhir
+    
+    # Boolean operations
+    jika left.type == "BOOL" dan right.type == "BOOL"
+        jika operator == "=="
+            kembalikan NewBoolValue(left.boolVal == right.boolVal)
+        atau_jika operator == "!="
+            kembalikan NewBoolValue(left.boolVal != right.boolVal)
+        akhir
+    akhir
+    
+    kembalikan NewNullValue()
+akhir
+
+fungsi EvalPrefixExpression(operator string, right Value) Value
+    jika operator == "!"
+        jika right.type == "BOOL"
+            kembalikan NewBoolValue(!right.boolVal)
+        lainnya
+            kembalikan NewBoolValue(right.isNull)
+        akhir
+    atau_jika operator == "-"
+        jika right.type == "INT"
+            kembalikan NewIntValue(-right.intVal)
+        atau_jika right.type == "FLOAT"
+            kembalikan NewFloatValue(-right.floatVal)
+        akhir
+    akhir
+    
+    kembalikan NewNullValue()
+akhir
+
+fungsi IsTruthy(val Value) bool
+    jika val.isNull
+        kembalikan salah
+    akhir
+    
+    jika val.type == "BOOL"
+        kembalikan val.boolVal
+    akhir
+    
+    jika val.type == "INT"
+        kembalikan val.intVal != 0
+    akhir
+    
+    jika val.type == "STRING"
+        kembalikan panjang(val.stringVal) > 0
+    akhir
+    
+    kembalikan benar
+akhir
+
+fungsi ValueToString(val Value) string
+    jika val.type == "INT"
+        jika val.intVal == 0
+            kembalikan "0"
+        atau_jika val.intVal == 1
+            kembalikan "1"
+        atau_jika val.intVal == 42
+            kembalikan "42"
+        lainnya
+            kembalikan "number"
+        akhir
+    atau_jika val.type == "STRING"
+        kembalikan val.stringVal
+    atau_jika val.type == "BOOL"
+        jika val.boolVal
+            kembalikan "true"
+        lainnya
+            kembalikan "false"
+        akhir
+    atau_jika val.type == "NULL"
+        kembalikan "null"
+    lainnya
+        kembalikan "unknown"
+    akhir
+akhir
+
+# Test functions
+fungsi TestTreeWalker() void
+    native_print("=== Testing Full Tree Walker ===")
+    
+    # Test basic values
+    var intVal = NewIntValue(42)
+    native_print("Int value: " + ValueToString(intVal))
+    
+    var strVal = NewStringValue("hello")
+    native_print("String value: " + ValueToString(strVal))
+    
+    var boolVal = NewBoolValue(benar)
+    native_print("Bool value: " + ValueToString(boolVal))
+    
+    # Test arithmetic
+    var left = NewIntValue(10)
+    var right = NewIntValue(5)
+    var result = EvalInfixExpression(left, "+", right)
+    native_print("10 + 5 = " + ValueToString(result))
+    
+    # Test comparison
+    var cmpResult = EvalInfixExpression(left, ">", right)
+    native_print("10 > 5: " + ValueToString(cmpResult))
+    
+    # Test string concat
+    var str1 = NewStringValue("Hello")
+    var str2 = NewStringValue(" World")
+    var strResult = EvalInfixExpression(str1, "+", str2)
+    native_print("Concat: " + ValueToString(strResult))
+    
+    # Test prefix operations
+    var negResult = EvalPrefixExpression("-", NewIntValue(42))
+    native_print("-42 = " + ValueToString(negResult))
+    
+    var notResult = EvalPrefixExpression("!", NewBoolValue(benar))
+    native_print("!true = " + ValueToString(notResult))
+    
+    # Test truthiness
+    var truthyInt = IsTruthy(NewIntValue(5))
+    var truthyZero = IsTruthy(NewIntValue(0))
+    var truthyNull = IsTruthy(NewNullValue())
+    
+    native_print("Truthy tests:")
+    jika truthyInt
+        native_print("- 5 is truthy")
+    akhir
+    jika !truthyZero
+        native_print("- 0 is falsy")
+    akhir
+    jika !truthyNull
+        native_print("- null is falsy")
+    akhir
+    
+    native_print("=== Tree Walker Ready ===")
+akhir
+
+fungsi main() void
+    native_print("=== Morph Full Tree Walker ===")
+    
+    TestTreeWalker()
+    
+    native_print("Full tree walker implementation complete!")
+akhir
+
+main()

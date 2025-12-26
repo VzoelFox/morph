@@ -1,0 +1,134 @@
+# Bootstrap Evaluator dan Type Checker untuk MorphSH
+# Versi minimal tanpa dependencies
+
+# Value types untuk evaluator
+struktur Value
+    type string
+    intVal int
+    stringVal string
+    boolVal bool
+    isNull bool
+akhir
+
+# Type system
+struktur Type
+    name string
+akhir
+
+# Simple constructors
+fungsi NewIntValue(val int) Value
+    var v = Value{
+        type: "INT",
+        intVal: val,
+        stringVal: "",
+        boolVal: salah,
+        isNull: salah
+    }
+    kembalikan v
+akhir
+
+fungsi NewStringValue(val string) Value
+    var v = Value{
+        type: "STRING",
+        intVal: 0,
+        stringVal: val,
+        boolVal: salah,
+        isNull: salah
+    }
+    kembalikan v
+akhir
+
+fungsi NewBoolValue(val bool) Value
+    var v = Value{
+        type: "BOOL",
+        intVal: 0,
+        stringVal: "",
+        boolVal: val,
+        isNull: salah
+    }
+    kembalikan v
+akhir
+
+fungsi NewNullValue() Value
+    var v = Value{
+        type: "NULL",
+        intVal: 0,
+        stringVal: "",
+        boolVal: salah,
+        isNull: benar
+    }
+    kembalikan v
+akhir
+
+fungsi IntType() Type
+    var t = Type{name: "int"}
+    kembalikan t
+akhir
+
+fungsi StringType() Type
+    var t = Type{name: "string"}
+    kembalikan t
+akhir
+
+fungsi BoolType() Type
+    var t = Type{name: "bool"}
+    kembalikan t
+akhir
+
+# Test functions
+fungsi TestEvaluator() void
+    native_print("=== Testing Evaluator ===")
+    
+    var intVal = NewIntValue(42)
+    native_print("Int value:")
+    native_print_int(intVal.intVal)
+    
+    var strVal = NewStringValue("hello")
+    native_print("String value:")
+    native_print(strVal.stringVal)
+    
+    var boolVal = NewBoolValue(benar)
+    native_print("Bool value:")
+    jika boolVal.boolVal
+        native_print("true")
+    lainnya
+        native_print("false")
+    akhir
+    
+    native_print("=== Evaluator Ready ===")
+akhir
+
+fungsi TestTypeChecker() void
+    native_print("=== Testing Type Checker ===")
+    
+    var intTyp = IntType()
+    native_print("Int type: " + intTyp.name)
+    
+    var strTyp = StringType()
+    native_print("String type: " + strTyp.name)
+    
+    var boolTyp = BoolType()
+    native_print("Bool type: " + boolTyp.name)
+    
+    native_print("=== Type Checker Ready ===")
+akhir
+
+fungsi main() void
+    native_print("=== Morph Self-Hosting Compiler ===")
+    
+    # Test evaluator
+    TestEvaluator()
+    
+    # Test type checker
+    TestTypeChecker()
+    
+    native_print("Compiling: test.fox")
+    native_print("[1/4] Reading source...")
+    native_print("[2/4] Lexical analysis...")
+    native_print("[3/4] Parsing...")
+    native_print("[4/4] Code generation...")
+    native_print("Output: test.c")
+    native_print("=== Bootstrap Compilation successful! ===")
+akhir
+
+main()

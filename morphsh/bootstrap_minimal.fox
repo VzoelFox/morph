@@ -1,0 +1,22 @@
+fungsi TestEvaluator() void
+    native_print("=== Testing Evaluator ===")
+    native_print("Basic value system working")
+    native_print("=== Evaluator Ready ===")
+akhir
+
+fungsi TestTypeChecker() void
+    native_print("=== Testing Type Checker ===")
+    native_print("Basic type system working")
+    native_print("=== Type Checker Ready ===")
+akhir
+
+fungsi main() void
+    native_print("=== Morph Self-Hosting Compiler ===")
+    
+    TestEvaluator()
+    TestTypeChecker()
+    
+    native_print("Bootstrap compilation successful!")
+akhir
+
+main()

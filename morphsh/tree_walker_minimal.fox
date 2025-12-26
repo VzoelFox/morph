@@ -1,0 +1,62 @@
+# Minimal Tree Walker Test
+
+struktur Value
+    type string
+    intVal int
+    boolVal bool
+akhir
+
+fungsi NewIntValue(val int) Value
+    kembalikan Value{type: "INT", intVal: val, boolVal: salah}
+akhir
+
+fungsi NewBoolValue(val bool) Value
+    kembalikan Value{type: "BOOL", intVal: 0, boolVal: val}
+akhir
+
+fungsi EvalAdd(left Value, right Value) Value
+    jika left.type == "INT"
+        jika right.type == "INT"
+            kembalikan NewIntValue(left.intVal + right.intVal)
+        akhir
+    akhir
+    kembalikan NewIntValue(0)
+akhir
+
+fungsi EvalCompare(left Value, right Value) Value
+    jika left.type == "INT"
+        jika right.type == "INT"
+            kembalikan NewBoolValue(left.intVal > right.intVal)
+        akhir
+    akhir
+    kembalikan NewBoolValue(salah)
+akhir
+
+fungsi TestTreeWalker() void
+    native_print("=== Tree Walker Test ===")
+    
+    var a = NewIntValue(10)
+    var b = NewIntValue(5)
+    
+    var sum = EvalAdd(a, b)
+    native_print("10 + 5 =")
+    native_print_int(sum.intVal)
+    
+    var cmp = EvalCompare(a, b)
+    native_print("10 > 5:")
+    jika cmp.boolVal
+        native_print("true")
+    lainnya
+        native_print("false")
+    akhir
+    
+    native_print("=== Tree Walker Works ===")
+akhir
+
+fungsi main() void
+    native_print("=== Morph Tree Walker ===")
+    TestTreeWalker()
+    native_print("Tree walker ready!")
+akhir
+
+main()

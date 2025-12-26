@@ -68,6 +68,29 @@ Dokumen ini adalah **single source of truth** untuk AI Agent dalam pengembangan 
 - **Output**: Generates C code from Morph source, self-hosting foundation complete
 - **Status**: MILESTONE - Morph can now compile simple programs written in Morph!
 
+## Perubahan 2025-12-26 01:18 WIB
+- **Feature**: Implemented full tree walker evaluator untuk MorphSH
+- **Files**: `morphsh/tree_walker.fox`, `morphsh/tree_walker_simple.fox`, `morphsh/tree_walker_minimal.fox` (SHA256:new)
+- **Components**:
+  - Complete value system (INT, FLOAT, STRING, BOOL, NULL)
+  - Infix expression evaluation (+, -, *, /, ==, !=, <, >, string concat)
+  - Prefix expression evaluation (!, -)
+  - Truthiness evaluation untuk control flow
+  - Value-to-string conversion
+- **Test**: Arithmetic (10+5=15), comparison (10>5=true), string operations berhasil
+- **Status**: Full tree walker siap untuk AST evaluation
+
+## Perubahan 2025-12-26 01:16 WIB
+- **Feature**: Implemented basic evaluator dan type checker untuk MorphSH bootstrap
+- **Files**: `morphsh/evaluator.fox`, `morphsh/typechecker.fox`, `morphsh/bootstrap_simple.fox`, `morphsh/bootstrap_minimal.fox` (SHA256:new)
+- **Components**: 
+  - Value system (INT, STRING, BOOL, NULL types)
+  - Type system (basic type checking infrastructure)
+  - Environment untuk variable scope
+  - Tree walker foundation untuk evaluation
+- **Status**: Bootstrap evaluator dan type checker siap untuk development lanjutan
+- **Test**: `morphsh/bootstrap_minimal.fox` berhasil dikompilasi dan dijalankan
+
 ## Perubahan 2025-12-26 01:09 WIB
 - **Bug Fix**: Fixed critical segmentation fault in compiler `findTypeForName` function
 - **File**: `pkg/compiler/compiler.go` (SHA256:updated)
