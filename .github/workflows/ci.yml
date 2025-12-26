@@ -1,8 +1,9 @@
-name: Morph CI
+name: Morph CI/CD
 
 on:
   push:
     branches: [ "main", "master" ]
+    tags: [ "v*" ]
   pull_request:
     branches: [ "main", "master" ]
 
@@ -28,3 +29,78 @@ jobs:
 
     - name: Build CLI
       run: go build -o morph ./cmd/morph/main.go
+
+    - name: Test N3 Compilation
+      run: |
+        echo 'fungsi main() void
+          native_print("Hello N3!")
+        akhir' > test_n3.fox
+        ./morph n3 test_n3.fox
+        cat test_n3_n3.fox
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    strategy:
+      matrix:
+        goos: [linux, windows, darwin]
+        goarch: [amd64, arm64]
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+
+    - name: Build Binary
+      env:
+        GOOS: ${{ matrix.goos }}
+        GOARCH: ${{ matrix.goarch }}
+      run: |
+        BINARY_NAME=morph
+        if [ "$GOOS" = "windows" ]; then
+          BINARY_NAME=morph.exe
+        fi
+        go build -ldflags="-s -w" -o ${BINARY_NAME} ./cmd/morph/main.go
+        
+        # Create release archive
+        ARCHIVE_NAME=morph-${GITHUB_REF#refs/tags/}-${{ matrix.goos }}-${{ matrix.goarch }}
+        if [ "$GOOS" = "windows" ]; then
+          zip ${ARCHIVE_NAME}.zip ${BINARY_NAME}
+        else
+          tar -czf ${ARCHIVE_NAME}.tar.gz ${BINARY_NAME}
+        fi
+
+    - name: Upload Release Assets
+      uses: actions/upload-artifact@v3
+      with:
+        name: morph-${{ matrix.goos }}-${{ matrix.goarch }}
+        path: morph-*
+
+  github-release:
+    needs: release
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Download All Artifacts
+      uses: actions/download-artifact@v3
+    
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          morph-linux-amd64/*
+          morph-linux-arm64/*
+          morph-windows-amd64/*
+          morph-windows-arm64/*
+          morph-darwin-amd64/*
+          morph-darwin-arm64/*
+        generate_release_notes: true
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

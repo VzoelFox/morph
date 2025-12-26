@@ -12,8 +12,8 @@
 #include <stdarg.h>
 
 // --- Constants ---
-#define GC_THRESHOLD (1 * 1024 * 1024) // 1MB for testing
-#define GC_MIN_THRESHOLD (256 * 1024) // 256KB for testing
+#define GC_THRESHOLD (64 * 1024 * 1024) // 64MB for N3 production
+#define GC_MIN_THRESHOLD (8 * 1024 * 1024) // 8MB for N3 production
 #define DAEMON_SLEEP_MS 100
 #define SWAP_AGE_THRESHOLD_SEC 10
 
