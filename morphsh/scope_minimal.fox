@@ -1,0 +1,29 @@
+# scope_minimal.fox - Minimal scope management
+ambil "io"
+
+tetapan KIND_INT = 0
+tetapan KIND_ERROR = -1
+
+struktur Variable
+    name string
+    var_type int
+akhir
+
+fungsi make_var(name string, var_type int) Variable
+    kembalikan Variable{name: name, var_type: var_type}
+akhir
+
+fungsi main() void
+    io.Write(io.Stdout, "=== SCOPE MINIMAL TEST ===\n")
+    
+    var x = make_var("x", KIND_INT)
+    io.Write(io.Stdout, "✅ Variable created\n")
+    
+    jika x.var_type == KIND_INT
+        io.Write(io.Stdout, "✅ Variable type correct\n")
+    lainnya
+        io.Write(io.Stdout, "❌ Variable type incorrect\n")
+    akhir
+    
+    io.Write(io.Stdout, "\n🎯 SCOPE MINIMAL COMPLETE!\n")
+akhir
