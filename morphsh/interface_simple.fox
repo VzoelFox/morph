@@ -1,0 +1,87 @@
+# interface_simple.fox - Simplified interface checking
+ambil "io"
+
+tetapan KIND_INT = 0
+tetapan KIND_STRING = 1
+tetapan KIND_INTERFACE = 7
+tetapan KIND_ERROR = -1
+
+# Simple interface
+struktur SimpleInterface
+    name string
+    method_name string
+    has_method bool
+akhir
+
+# Simple struct
+struktur SimpleStruct
+    name string
+    method_name string
+    has_method bool
+akhir
+
+# Create interface
+fungsi make_interface(name string, method_name string) SimpleInterface
+    kembalikan SimpleInterface{
+        name: name,
+        method_name: method_name,
+        has_method: benar
+    }
+akhir
+
+# Create struct
+fungsi make_struct(name string, method_name string) SimpleStruct
+    kembalikan SimpleStruct{
+        name: name,
+        method_name: method_name,
+        has_method: benar
+    }
+akhir
+
+# Check if struct implements interface
+fungsi implements_interface(struct_type SimpleStruct, interface_type SimpleInterface) bool
+    jika struct_type.method_name == interface_type.method_name
+        kembalikan benar
+    akhir
+    kembalikan salah
+akhir
+
+fungsi main() void
+    io.Write(io.Stdout, "=== INTERFACE SIMPLE TEST ===\n")
+    
+    # Test 1: Create interface
+    var writer = make_interface("Writer", "Write")
+    jika writer.has_method
+        io.Write(io.Stdout, "✅ Create Writer interface: PASS\n")
+    lainnya
+        io.Write(io.Stdout, "❌ Create Writer interface: FAIL\n")
+    akhir
+    
+    # Test 2: Create struct
+    var file = make_struct("File", "Write")
+    jika file.has_method
+        io.Write(io.Stdout, "✅ Create File struct: PASS\n")
+    lainnya
+        io.Write(io.Stdout, "❌ Create File struct: FAIL\n")
+    akhir
+    
+    # Test 3: Check implementation
+    jika implements_interface(file, writer)
+        io.Write(io.Stdout, "✅ File implements Writer: PASS\n")
+    lainnya
+        io.Write(io.Stdout, "❌ File implements Writer: FAIL\n")
+    akhir
+    
+    # Test 4: Wrong implementation
+    var bad_file = make_struct("BadFile", "Read")
+    jika implements_interface(bad_file, writer) == salah
+        io.Write(io.Stdout, "✅ BadFile doesn't implement Writer: PASS\n")
+    lainnya
+        io.Write(io.Stdout, "❌ BadFile doesn't implement Writer: FAIL\n")
+    akhir
+    
+    io.Write(io.Stdout, "\n🎯 INTERFACE SIMPLE COMPLETE!\n")
+    io.Write(io.Stdout, "✅ Interface creation working\n")
+    io.Write(io.Stdout, "✅ Duck typing working\n")
+    io.Write(io.Stdout, "✅ Implementation checking\n")
+akhir

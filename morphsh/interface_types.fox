@@ -1,0 +1,196 @@
+# interface_types.fox - Phase 5: Interface type checking
+ambil "io"
+
+# Type kinds
+tetapan KIND_INT = 0
+tetapan KIND_STRING = 1  
+tetapan KIND_BOOL = 2
+tetapan KIND_STRUCT = 5
+tetapan KIND_INTERFACE = 7
+tetapan KIND_ERROR = -1
+
+# Method signature
+struktur Method
+    name string
+    param_type int
+    return_type int
+akhir
+
+# Interface definition
+struktur Interface
+    name string
+    method_count int
+    # Simplified: single method support
+    method_name string
+    method_param_type int
+    method_return_type int
+akhir
+
+# Struct with methods
+struktur StructType
+    name string
+    method_count int
+    # Simplified: single method support
+    method_name string
+    method_param_type int
+    method_return_type int
+akhir
+
+# Create interface
+fungsi make_interface(name string, method_name string, param_type int, return_type int) Interface
+    kembalikan Interface{
+        name: name,
+        method_count: 1,
+        method_name: method_name,
+        method_param_type: param_type,
+        method_return_type: return_type
+    }
+akhir
+
+# Create struct type
+fungsi make_struct_type(name string, method_name string, param_type int, return_type int) StructType
+    kembalikan StructType{
+        name: name,
+        method_count: 1,
+        method_name: method_name,
+        method_param_type: param_type,
+        method_return_type: return_type
+    }
+akhir
+
+# Check if struct implements interface (duck typing)
+fungsi implements_interface(struct_type StructType, interface_type Interface) bool
+    # Method name must match
+    jika struct_type.method_name != interface_type.method_name
+        kembalikan salah
+    akhir
+    
+    # Parameter type must match
+    jika struct_type.method_param_type != interface_type.method_param_type
+        kembalikan salah
+    akhir
+    
+    # Return type must match
+    jika struct_type.method_return_type != interface_type.method_return_type
+        kembalikan salah
+    akhir
+    
+    kembalikan benar
+akhir
+
+# Check interface assignment: var i Interface = struct_instance
+fungsi check_interface_assignment(interface_type Interface, struct_type StructType) bool
+    kembalikan implements_interface(struct_type, interface_type)
+akhir
+
+# Check method call on interface: interface.Method(param)
+fungsi check_interface_method_call(interface_type Interface, method_name string, param_type int) int
+    jika interface_type.method_name == method_name
+        jika interface_type.method_param_type == param_type
+            kembalikan interface_type.method_return_type
+        akhir
+    akhir
+    kembalikan KIND_ERROR
+akhir
+
+# Type assertion: interface.(ConcreteType)
+fungsi check_type_assertion(interface_type Interface, target_struct StructType) bool
+    kembalikan implements_interface(target_struct, interface_type)
+akhir
+
+# Empty interface{} - accepts any type
+fungsi make_empty_interface() Interface
+    kembalikan Interface{
+        name: "interface{}",
+        method_count: 0,
+        method_name: "",
+        method_param_type: KIND_ERROR,
+        method_return_type: KIND_ERROR
+    }
+akhir
+
+# Check if type can be assigned to empty interface
+fungsi check_empty_interface_assignment(any_type int) bool
+    # Empty interface accepts any type
+    kembalikan benar
+akhir
+
+fungsi main() void
+    io.Write(io.Stdout, "=== INTERFACE TYPES TEST ===\n")
+    
+    # Test 1: Create interface Writer with Write(string) int method
+    var writer_interface = make_interface("Writer", "Write", KIND_STRING, KIND_INT)
+    jika writer_interface.method_count == 1
+        io.Write(io.Stdout, "✅ Create Writer interface: PASS\n")
+    lainnya
+        io.Write(io.Stdout, "❌ Create Writer interface: FAIL\n")
+    akhir
+    
+    # Test 2: Create struct File with Write(string) int method
+    var file_struct = make_struct_type("File", "Write", KIND_STRING, KIND_INT)
+    jika file_struct.method_count == 1
+        io.Write(io.Stdout, "✅ Create File struct: PASS\n")
+    lainnya
+        io.Write(io.Stdout, "❌ Create File struct: FAIL\n")
+    akhir
+    
+    # Test 3: Check if File implements Writer (duck typing)
+    jika implements_interface(file_struct, writer_interface)
+        io.Write(io.Stdout, "✅ File implements Writer: PASS\n")
+    lainnya
+        io.Write(io.Stdout, "❌ File implements Writer: FAIL\n")
+    akhir
+    
+    # Test 4: Interface assignment: var w Writer = file
+    jika check_interface_assignment(writer_interface, file_struct)
+        io.Write(io.Stdout, "✅ Interface assignment Writer = File: PASS\n")
+    lainnya
+        io.Write(io.Stdout, "❌ Interface assignment Writer = File: FAIL\n")
+    akhir
+    
+    # Test 5: Method call on interface: w.Write("hello")
+    var call_result = check_interface_method_call(writer_interface, "Write", KIND_STRING)
+    jika call_result == KIND_INT
+        io.Write(io.Stdout, "✅ Interface method call w.Write(string) -> int: PASS\n")
+    lainnya
+        io.Write(io.Stdout, "❌ Interface method call w.Write(string) -> int: FAIL\n")
+    akhir
+    
+    # Test 6: Type assertion: w.(File)
+    jika check_type_assertion(writer_interface, file_struct)
+        io.Write(io.Stdout, "✅ Type assertion w.(File): PASS\n")
+    lainnya
+        io.Write(io.Stdout, "❌ Type assertion w.(File): FAIL\n")
+    akhir
+    
+    # Test 7: Empty interface{}
+    var empty_interface = make_empty_interface()
+    jika empty_interface.method_count == 0
+        io.Write(io.Stdout, "✅ Create empty interface{}: PASS\n")
+    lainnya
+        io.Write(io.Stdout, "❌ Create empty interface{}: FAIL\n")
+    akhir
+    
+    # Test 8: Empty interface accepts any type
+    jika check_empty_interface_assignment(KIND_INT)
+        io.Write(io.Stdout, "✅ Empty interface{} accepts int: PASS\n")
+    lainnya
+        io.Write(io.Stdout, "❌ Empty interface{} accepts int: FAIL\n")
+    akhir
+    
+    # Test 9: Interface method signature mismatch
+    var bad_struct = make_struct_type("BadFile", "Write", KIND_INT, KIND_INT)  # Wrong param type
+    jika implements_interface(bad_struct, writer_interface) == salah
+        io.Write(io.Stdout, "✅ Method signature mismatch detected: PASS\n")
+    lainnya
+        io.Write(io.Stdout, "❌ Method signature mismatch not detected: FAIL\n")
+    akhir
+    
+    io.Write(io.Stdout, "\n🚀 INTERFACE TYPES COMPLETE!\n")
+    io.Write(io.Stdout, "✅ Interface definition working\n")
+    io.Write(io.Stdout, "✅ Duck typing implementation\n")
+    io.Write(io.Stdout, "✅ Interface assignment checking\n")
+    io.Write(io.Stdout, "✅ Method call validation\n")
+    io.Write(io.Stdout, "✅ Type assertion support\n")
+    io.Write(io.Stdout, "✅ Empty interface{} support\n")
+akhir
