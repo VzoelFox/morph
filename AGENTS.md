@@ -1,9 +1,9 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.65.0
+- **Versi**: 1.66.1
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
-- **Terakhir Diupdate**: 2025-12-26 14:13 WIB
+- **Terakhir Diupdate**: 2025-12-26 17:01 WIB
 - **Status**: Active
 
 ---
@@ -94,6 +94,15 @@ Dokumen ini adalah **single source of truth** untuk AI Agent dalam pengembangan 
 - ✅ **Full compilation pipeline working**
 
 **ACHIEVEMENT**: N1 compiler sekarang dapat menggunakan modules dan stdlib functions! Module system gap RESOLVED! 🎉
+
+## Perubahan 2025-12-26 17:01 WIB
+- **Feature**: Remove Go-based runner CLI
+- **Files**:
+  - `cmd/morph_runner/main.go` (REMOVED) - Go runner dihapus karena dependensi `pkg_legacy` tidak tersedia
+- **Status**: ✅ RUNNER CLI REMOVED
+- **Achievement**:
+  - **Self-Hosted Focus**: Runner Go dihapus untuk menjaga konsistensi self-hosted
+  - **Dependency Cleanup**: Tidak lagi bergantung pada paket `pkg_legacy` untuk runner
 
 ## Perubahan 2025-12-26 14:56 WIB
 - **Feature**: Complete Tree Walker & Compiler Pipeline Implementation
