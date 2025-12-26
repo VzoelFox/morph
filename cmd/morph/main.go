@@ -129,7 +129,8 @@ func runBuild(filename string) {
 
 	absPath, _ := filepath.Abs(filename)
 	rootDir := filepath.Dir(absPath)
-	searchPaths := []string{rootDir, "stdlib"}
+	currentDir, _ := os.Getwd()
+	searchPaths := []string{rootDir, currentDir, filepath.Join(currentDir, "stdlib"), "."}
 
 	c.SetImporter(&FileImporter{SearchPaths: searchPaths})
 	c.Check(prog)
@@ -211,7 +212,8 @@ func runInterpreter(filename string) {
 
 	absPath, _ := filepath.Abs(filename)
 	rootDir := filepath.Dir(absPath)
-	searchPaths := []string{rootDir, "stdlib"}
+	currentDir, _ := os.Getwd()
+	searchPaths := []string{rootDir, currentDir, filepath.Join(currentDir, "stdlib"), "."}
 
 	c.SetImporter(&FileImporter{SearchPaths: searchPaths})
 
