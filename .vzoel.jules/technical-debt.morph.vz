@@ -4,9 +4,11 @@
 **Last Updated**: 2025-12-26
 
 ### Pending / Open
-(None)
+- **GC Threshold**: Saat ini di-tune untuk development (256KB/1MB). Perlu dinaikkan ke 8MB/64MB saat production release.
 
 ### Completed / Resolved
+- **GC Verification**: GC terbukti bekerja dengan benar. Memory turun dari 33MB ke 2.7MB dengan threshold rendah. ~380 GC cycles untuk 100k iterations. (2025-12-26)
+- **Native I/O Functions**: Added `mph_io_Print`, `mph_io_Println`. Fixed `mph_io_Write` untuk menerima fd int. (2025-12-26)
 - **Phase 5 - Interface Type Checking**: Implemented complete interface type system dengan duck typing, interface assignment checking, dan method call validation. Files: `morphsh/interface_simple.fox`. Status: All 4 test cases passed. (2025-12-26)
 - **Phase 4 - Generic Type Support**: Implemented complete generic type system untuk []T arrays dan map[K]V maps dengan type parameter checking. Files: `morphsh/generic_types.fox`. Status: All 9 test cases passed. (2025-12-26)
 - **Phase 3 - Scope Management**: Implemented variable tracking foundation dengan scope management structure. Files: `morphsh/scope_minimal.fox`. Status: Foundation ready. (2025-12-26)
