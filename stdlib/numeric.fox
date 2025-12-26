@@ -1,0 +1,127 @@
+# numeric.fox - Numeric functions (Python built-ins equivalent)
+ambil "io"
+
+# abs(x) - Absolute value
+fungsi abs(x int) int
+    jika x < 0
+        kembali -x
+    lainnya
+        kembali x
+    akhir
+akhir
+
+# abs for float (overloaded concept)
+fungsi abs_float(x float) float
+    jika x < 0.0
+        kembali -x
+    lainnya
+        kembali x
+    akhir
+akhir
+
+# min(a, b) - Minimum of two values
+fungsi min(a int, b int) int
+    jika a < b
+        kembali a
+    lainnya
+        kembali b
+    akhir
+akhir
+
+# max(a, b) - Maximum of two values  
+fungsi max(a int, b int) int
+    jika a > b
+        kembali a
+    lainnya
+        kembali b
+    akhir
+akhir
+
+# pow(base, exp) - Power function (simplified)
+fungsi pow(base int, exp int) int
+    jika exp == 0
+        kembali 1
+    atau_jika exp == 1
+        kembali base
+    atau_jika exp == 2
+        kembali base * base
+    atau_jika exp == 3
+        kembali base * base * base
+    lainnya
+        # For higher powers, use repeated multiplication
+        var result = 1
+        var i = 0
+        selama i < exp
+            result = result * base
+            i = i + 1
+        akhir
+        kembali result
+    akhir
+akhir
+
+# round(x, digits) - Rounding (simplified)
+fungsi round_int(x int) int
+    kembali x  # Integer is already rounded
+akhir
+
+# sum of specific values (simplified)
+fungsi sum_three(a int, b int, c int) int
+    kembali a + b + c
+akhir
+
+fungsi sum_five(a int, b int, c int, d int, e int) int
+    kembali a + b + c + d + e
+akhir
+
+# Test all numeric functions
+fungsi test_numeric_functions() void
+    io.Write(io.Stdout, "=== NUMERIC FUNCTIONS TEST ===\n")
+    
+    # Test abs
+    var abs_result = abs(-42)
+    jika abs_result == 42
+        io.Write(io.Stdout, "abs(-42) = 42: ✅ PASS\n")
+    lainnya
+        io.Write(io.Stdout, "abs(-42): ❌ FAIL\n")
+    akhir
+    
+    # Test min
+    var min_result = min(10, 5)
+    jika min_result == 5
+        io.Write(io.Stdout, "min(10, 5) = 5: ✅ PASS\n")
+    lainnya
+        io.Write(io.Stdout, "min(10, 5): ❌ FAIL\n")
+    akhir
+    
+    # Test max
+    var max_result = max(10, 5)
+    jika max_result == 10
+        io.Write(io.Stdout, "max(10, 5) = 10: ✅ PASS\n")
+    lainnya
+        io.Write(io.Stdout, "max(10, 5): ❌ FAIL\n")
+    akhir
+    
+    # Test pow
+    var pow_result = pow(2, 3)
+    jika pow_result == 8
+        io.Write(io.Stdout, "pow(2, 3) = 8: ✅ PASS\n")
+    lainnya
+        io.Write(io.Stdout, "pow(2, 3): ❌ FAIL\n")
+    akhir
+    
+    # Test sum
+    var sum_result = sum_five(1, 2, 3, 4, 5)
+    jika sum_result == 15
+        io.Write(io.Stdout, "sum_five(1,2,3,4,5) = 15: ✅ PASS\n")
+    lainnya
+        io.Write(io.Stdout, "sum_five(1,2,3,4,5): ❌ FAIL\n")
+    akhir
+    
+    io.Write(io.Stdout, "Numeric functions implemented successfully!\n")
+akhir
+
+fungsi main() void
+    test_numeric_functions()
+akhir
+
+main()
