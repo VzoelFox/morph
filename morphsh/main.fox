@@ -43,5 +43,3 @@ fungsi main() void
     io.Write(io.Stdout, "=== Compilation successful! ===\n")
     io.Write(io.Stdout, "Self-hosting compiler ready for implementation\n")
 akhir
-
-main()
