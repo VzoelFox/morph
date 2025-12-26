@@ -1,0 +1,99 @@
+ambil "string"
+
+# FoxVM Interpreter - Basic Implementation
+
+struktur FoxVM
+    stack []int
+    locals []int
+    constants []int
+    pc int
+    bytecode []int
+akhir
+
+fungsi NewFoxVM() FoxVM
+    kembali FoxVM{
+        stack: [],
+        locals: make_array(256),
+        constants: [],
+        pc: 0,
+        bytecode: []
+    }
+akhir
+
+fungsi (vm *FoxVM) LoadBytecode(code []int) void
+    vm.bytecode = code
+    vm.pc = 0
+akhir
+
+fungsi (vm *FoxVM) Push(value int) void
+    vm.stack = append(vm.stack, value)
+akhir
+
+fungsi (vm *FoxVM) Pop() int
+    jika len(vm.stack) == 0
+        kembali 0
+    akhir
+    var value = vm.stack[len(vm.stack) - 1]
+    vm.stack = vm.stack[:len(vm.stack) - 1]
+    kembali value
+akhir
+
+fungsi (vm *FoxVM) Execute() void
+    selama vm.pc < len(vm.bytecode)
+        var instruction = vm.bytecode[vm.pc]
+        vm.pc = vm.pc + 1
+        
+        pilih instruction
+            kasus LOAD_CONST:
+                var index = vm.bytecode[vm.pc]
+                vm.pc = vm.pc + 1
+                vm.Push(vm.constants[index])
+                
+            kasus LOAD_LOCAL:
+                var index = vm.bytecode[vm.pc]
+                vm.pc = vm.pc + 1
+                vm.Push(vm.locals[index])
+                
+            kasus STORE_LOCAL:
+                var index = vm.bytecode[vm.pc]
+                vm.pc = vm.pc + 1
+                vm.locals[index] = vm.Pop()
+                
+            kasus ADD:
+                var b = vm.Pop()
+                var a = vm.Pop()
+                vm.Push(a + b)
+                
+            kasus SUB:
+                var b = vm.Pop()
+                var a = vm.Pop()
+                vm.Push(a - b)
+                
+            kasus MUL:
+                var b = vm.Pop()
+                var a = vm.Pop()
+                vm.Push(a * b)
+                
+            kasus PRINT:
+                var value = vm.Pop()
+                native_print_int(value)
+                
+            kasus HALT:
+                kembali
+                
+            lainnya:
+                native_print("Unknown instruction")
+                kembali
+        akhir
+    akhir
+akhir
+
+# Instruction constants
+tetapan LOAD_CONST = 1
+tetapan LOAD_LOCAL = 2
+tetapan STORE_LOCAL = 3
+tetapan ADD = 4
+tetapan SUB = 5
+tetapan MUL = 6
+tetapan PRINT = 7
+tetapan HALT = 8
