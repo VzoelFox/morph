@@ -1,0 +1,4 @@
+# Build test Fall script
+install build_tools
+install compiler_utils
+run build_test.fox
