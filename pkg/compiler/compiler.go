@@ -31,6 +31,7 @@ type Compiler struct {
 	moduleGlobals  map[*parser.Program]map[string]bool
 	currentGlobals map[string]bool
 	tempIndex      int
+	spawnWrappers  map[string]bool // Track generated spawn wrappers
 }
 
 type rootTemp struct {
@@ -48,6 +49,7 @@ func New(c *checker.Checker) *Compiler {
 		tupleTypes:     make(map[string]string),
 		freeVarCache:   make(map[*parser.FunctionLiteral][]string),
 		moduleGlobals:  make(map[*parser.Program]map[string]bool),
+		spawnWrappers:  make(map[string]bool),
 		currentGlobals: make(map[string]bool),
 		tempIndex:      0,
 	}
@@ -2024,6 +2026,8 @@ func (c *Compiler) mapCheckerTypeToC(t checker.Type, prefix string) string {
 		return "mph_bool"
 	case checker.KindString:
 		return "MorphString*"
+	case checker.KindChannel:
+		return "MorphChannel*"
 	case checker.KindArray:
 		return "MorphArray*"
 	case checker.KindMap:
@@ -2315,7 +2319,9 @@ func (c *Compiler) compileIndex(ie *parser.IndexExpression, prefix string, fn *p
 func (c *Compiler) compileSpawn(call *parser.CallExpression, prefix string, fn *parser.FunctionLiteral) (string, error) {
 	if len(call.Arguments) == 1 {
 		if ident, ok := call.Arguments[0].(*parser.Identifier); ok {
-			return fmt.Sprintf("mph_thread_spawn((MorphEntryFunction)mph_%s, NULL)", ident.Value), nil
+			wrapperName := fmt.Sprintf("mph_spawn_wrapper_%s", ident.Value)
+			c.generateSpawnWrapper(ident.Value, wrapperName, nil, prefix)
+			return fmt.Sprintf("mph_thread_spawn(%s, NULL)", wrapperName), nil
 		}
 	} else if len(call.Arguments) == 2 {
 		if ident, ok := call.Arguments[0].(*parser.Identifier); ok {
@@ -2325,7 +2331,8 @@ func (c *Compiler) compileSpawn(call *parser.CallExpression, prefix string, fn *
 			}
 			var roots []rootTemp
 			argRef := arg
-			if argType := c.checker.Types[call.Arguments[1]]; argType != nil && c.isPointerCheckerType(argType) {
+			argType := c.checker.Types[call.Arguments[1]]
+			if argType != nil && c.isPointerCheckerType(argType) {
 				temp := c.nextTemp("spawn_arg")
 				roots = append(roots, rootTemp{
 					cType: c.mapCheckerTypeToC(argType, prefix),
@@ -2334,11 +2341,41 @@ func (c *Compiler) compileSpawn(call *parser.CallExpression, prefix string, fn *
 				})
 				argRef = temp
 			}
-			expr := fmt.Sprintf("mph_thread_spawn((MorphEntryFunction)mph_%s, (void*)%s)", ident.Value, argRef)
+			
+			wrapperName := fmt.Sprintf("mph_spawn_wrapper_%s", ident.Value)
+			c.generateSpawnWrapper(ident.Value, wrapperName, argType, prefix)
+			expr := fmt.Sprintf("mph_thread_spawn(%s, (void*)(intptr_t)%s)", wrapperName, argRef)
 			return c.wrapWithRoots(roots, expr, "void"), nil
 		}
 	}
 	return "", fmt.Errorf("luncurkan expects named function")
+}
+
+func (c *Compiler) generateSpawnWrapper(funcName, wrapperName string, argType checker.Type, prefix string) {
+	// Check if wrapper already generated
+	if c.spawnWrappers[wrapperName] {
+		return
+	}
+	c.spawnWrappers[wrapperName] = true
+	
+	// Generate wrapper function that matches MorphEntryFunction signature
+	c.funcDefs.WriteString(fmt.Sprintf("void %s(MorphContext* ctx, void* arg) {\n", wrapperName))
+	
+	if argType != nil {
+		// Convert void* arg back to proper type
+		cType := c.mapCheckerTypeToC(argType, prefix)
+		if c.isPointerCheckerType(argType) {
+			c.funcDefs.WriteString(fmt.Sprintf("\t%s typed_arg = (%s)arg;\n", cType, cType))
+		} else {
+			// For primitive types, cast from intptr_t
+			c.funcDefs.WriteString(fmt.Sprintf("\t%s typed_arg = (%s)(intptr_t)arg;\n", cType, cType))
+		}
+		c.funcDefs.WriteString(fmt.Sprintf("\t%s%s(ctx, NULL, typed_arg);\n", prefix, funcName))
+	} else {
+		c.funcDefs.WriteString(fmt.Sprintf("\t%s%s(ctx, NULL);\n", prefix, funcName))
+	}
+	
+	c.funcDefs.WriteString("}\n\n")
 }
 
 func (c *Compiler) compileDelete(call *parser.CallExpression, prefix string, fn *parser.FunctionLiteral) (string, error) {

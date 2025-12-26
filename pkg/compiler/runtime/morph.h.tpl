@@ -182,6 +182,7 @@ void mph_gc_pop_roots(MorphContext* ctx, int count);
 
 // Allocator
 void* mph_alloc(MorphContext* ctx, size_t size, MorphTypeInfo* type_info);
+void* mph_alloc_shared(size_t size, MorphTypeInfo* type_info);
 
 // GC & Tiered Memory
 void mph_gc_collect(MorphContext* ctx);

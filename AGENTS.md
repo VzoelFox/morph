@@ -1,9 +1,9 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.58.4
+- **Versi**: 1.59.0
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
-- **Terakhir Diupdate**: 2025-12-25
+- **Terakhir Diupdate**: 2025-12-26
 - **Status**: Active
 
 ---
@@ -16,6 +16,29 @@ Dokumen ini adalah **single source of truth** untuk AI Agent dalam pengembangan 
 
 
 # ERROR as Value & Explisit Over implisit
+
+---
+
+## Perubahan 2025-12-26 00:21 WIB
+- **Patch 1**: Fixed critical concurrency thread function signature mismatch
+- **File**: `pkg/compiler/compiler.go` (SHA256:updated)
+- **Masalah**: `MorphEntryFunction` signature tidak cocok dengan fungsi Morph yang dikompilasi
+- **Solusi**: Generate wrapper functions dengan signature yang benar untuk `luncurkan()`
+- **Test**: Argument passing sekarang bekerja dengan benar (1,2 bukan garbage values)
+
+## Perubahan 2025-12-26 00:23 WIB  
+- **Patch 2**: Fixed channel allocation inconsistency
+- **Files**: `pkg/compiler/runtime/runtime.c.tpl`, `pkg/compiler/compiler.go` (SHA256:updated)
+- **Masalah**: Channel menggunakan `malloc()` langsung, tidak di-track oleh GC
+- **Solusi**: Channel sekarang menggunakan `mph_alloc()` dengan proper TypeInfo dan GC tracking
+- **Test**: Channel communication bekerja sempurna dengan proper memory management
+
+## Perubahan 2025-12-26 00:26 WIB
+- **Patch 3**: Fixed thread safety & GC race conditions  
+- **Files**: `pkg/compiler/runtime/runtime.c.tpl`, `pkg/compiler/runtime/morph.h.tpl` (SHA256:updated)
+- **Masalah**: GC daemon bisa dipanggil saat main thread sedang alokasi, channel sharing tidak thread-safe
+- **Solusi**: Disable daemon GC, tambah shared object allocator untuk cross-thread objects
+- **Test**: Multi-thread stress test berhasil tanpa race condition atau crash
 
 ---
 

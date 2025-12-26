@@ -33,6 +33,10 @@ MorphTypeInfo mph_ti_map = { "map", sizeof(MorphMap), 0, NULL, mph_gc_mark_map }
 size_t closure_ptr_offsets[] = { offsetof(MorphClosure, env) };
 MorphTypeInfo mph_ti_closure = { "closure", sizeof(MorphClosure), 1, closure_ptr_offsets, NULL };
 
+// Channel TypeInfo  
+size_t channel_ptr_offsets[] = { offsetof(MorphChannel, buffer) };
+MorphTypeInfo mph_ti_channel = { "channel", sizeof(MorphChannel), 1, channel_ptr_offsets, NULL };
+
 // --- Utils ---
 uint64_t mph_time_ms() {
     struct timespec ts;
@@ -497,13 +501,12 @@ void* mph_daemon_loop(void* arg) {
         }
         pthread_mutex_unlock(&ctx->page_lock);
 
-        // Idle GC Trigger
-        // If no allocation for 2 seconds and we have > 1MB allocated, trigger GC
-        if (ctx->allocated_bytes > 1024 * 1024 && (now - ctx->last_alloc_time > 2000)) {
-             // Reset timer to avoid loop
-             ctx->last_alloc_time = now;
-             mph_gc_collect(ctx);
-        }
+        // Idle GC Trigger - DISABLED for thread safety
+        // GC hanya dipanggil dari main thread saat threshold tercapai
+        // if (ctx->allocated_bytes > 1024 * 1024 && (now - ctx->last_alloc_time > 2000)) {
+        //      ctx->last_alloc_time = now;
+        //      mph_gc_collect(ctx);
+        // }
     }
     return NULL;
 }
@@ -1034,22 +1037,47 @@ MorphClosure* mph_closure_new(MorphContext* ctx, void* fn, void* env, int env_si
     return c;
 }
 
-// --- Channels ---
+// Global shared object pool untuk cross-thread objects
+static pthread_mutex_t global_shared_lock = PTHREAD_MUTEX_INITIALIZER;
+static ObjectHeader* global_shared_objects = NULL;
+
+void* mph_alloc_shared(size_t size, MorphTypeInfo* type_info) {
+    // Shared objects menggunakan malloc dan tidak di-track oleh per-context GC
+    size_t total_size = sizeof(ObjectHeader) + size;
+    total_size = (total_size + 7) & ~7; // Align to 8 bytes
+    
+    ObjectHeader* hdr = (ObjectHeader*)malloc(total_size);
+    hdr->type = type_info;
+    hdr->flags = 0;
+    hdr->size = size;
+    hdr->page = NULL; // No page for shared objects
+    hdr->last_access = mph_time_ms();
+    
+    pthread_mutex_lock(&global_shared_lock);
+    hdr->next = global_shared_objects;
+    global_shared_objects = hdr;
+    pthread_mutex_unlock(&global_shared_lock);
+    
+    return (void*)(hdr + 1);
+}
 MorphChannel* mph_channel_new(MorphContext* ctx) {
-    MorphChannel* c = (MorphChannel*)malloc(sizeof(MorphChannel));
+    // Channels are shared across threads, use shared allocator
+    MorphChannel* c = (MorphChannel*)mph_alloc_shared(sizeof(MorphChannel), &mph_ti_channel);
+    
     pthread_mutex_init(&c->lock, NULL);
     pthread_cond_init(&c->cond_send, NULL);
     pthread_cond_init(&c->cond_recv, NULL);
     c->capacity = 5;
-    c->buffer = (int64_t*)malloc(sizeof(int64_t) * c->capacity);
+    c->buffer = (int64_t*)mph_alloc_shared(sizeof(int64_t) * c->capacity, &mph_ti_raw);
     c->count = 0; c->head = 0; c->tail = 0;
+    
     return c;
 }
 void mph_channel_destroy(MorphContext* ctx, MorphChannel* c) {
     pthread_mutex_destroy(&c->lock);
     pthread_cond_destroy(&c->cond_send);
     pthread_cond_destroy(&c->cond_recv);
-    free(c->buffer); free(c);
+    // Buffer dan channel struct akan di-cleanup oleh GC
 }
 void mph_channel_send(MorphContext* ctx, MorphChannel* c, mph_int val) {
     pthread_mutex_lock(&c->lock);
@@ -1081,7 +1109,7 @@ void* mph_thread_wrapper(void* ptr) {
 }
 void mph_thread_spawn(MorphEntryFunction fn, void* arg) {
     pthread_t thread;
-    ThreadArgs* args = (ThreadArgs*)malloc(sizeof(ThreadArgs));
+    ThreadArgs* args = (ThreadArgs*)malloc(sizeof(ThreadArgs)); // Keep malloc for thread args (cross-context)
     args->fn = fn; args->arg = arg;
     pthread_create(&thread, NULL, mph_thread_wrapper, args);
     pthread_detach(thread);
