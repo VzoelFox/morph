@@ -1,0 +1,49 @@
+# bootstrap_types.fox - Minimal type system untuk bootstrap compiler
+ambil "io"
+
+# Core type kinds (matching Go pkg/types)
+tetapan KIND_INT = 0
+tetapan KIND_STRING = 1  
+tetapan KIND_BOOL = 2
+tetapan KIND_VOID = 3
+tetapan KIND_ARRAY = 4
+tetapan KIND_STRUCT = 5
+tetapan KIND_FUNC = 6
+tetapan KIND_ERROR = -1
+
+# Minimal Type representation
+struktur BootstrapType
+    kind int
+    name string
+akhir
+
+# Type constructors
+fungsi make_int_type() BootstrapType
+    kembalikan BootstrapType{kind: KIND_INT, name: "int"}
+akhir
+
+fungsi make_string_type() BootstrapType
+    kembalikan BootstrapType{kind: KIND_STRING, name: "string"}
+akhir
+
+fungsi make_bool_type() BootstrapType
+    kembalikan BootstrapType{kind: KIND_BOOL, name: "bool"}
+akhir
+
+fungsi make_void_type() BootstrapType
+    kembalikan BootstrapType{kind: KIND_VOID, name: "void"}
+akhir
+
+fungsi make_error_type() BootstrapType
+    kembalikan BootstrapType{kind: KIND_ERROR, name: "error"}
+akhir
+
+# Type equality
+fungsi types_equal(t1 BootstrapType, t2 BootstrapType) bool
+    kembalikan t1.kind == t2.kind
+akhir
+
+# Type compatibility for assignment
+fungsi types_assignable(from BootstrapType, to BootstrapType) bool
+    kembalikan types_equal(from, to)
+akhir

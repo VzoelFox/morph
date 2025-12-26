@@ -2,6 +2,27 @@
 
 Dokumen ini berisi saran detail untuk pengembangan masa depan, khususnya untuk `pkg/analysis`, yang ditunda hingga Type Checker utama stabil.
 
+## Next Steps Priority
+
+### 1. Parser Integration (HIGH PRIORITY)
+Integrate type checker dengan parser untuk full semantic analysis:
+- Implement AST node type annotation
+- Add semantic analysis pass setelah parsing
+- Integrate dengan existing `pkg/checker` untuk consistency
+
+### 2. Generic Types (MEDIUM PRIORITY)  
+Implement generic containers untuk flexibility:
+- `[]T` untuk generic arrays/slices
+- `map[K]V` untuk generic maps
+- Type parameter inference
+- Constraint checking
+
+### 3. Interface Checking (MEDIUM PRIORITY)
+Duck typing dan interface implementation validation:
+- Method signature matching
+- Interface satisfaction checking
+- Runtime type assertion support
+
 ## Analysis Tool Enhancements
 
 ### 1. Closure Detection

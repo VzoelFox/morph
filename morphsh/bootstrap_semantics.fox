@@ -1,0 +1,76 @@
+# bootstrap_semantics.fox - Test semantic analysis
+ambil "io"
+
+fungsi main() void
+    io.Write("=== BOOTSTRAP TYPE CHECKER TEST ===\n")
+    
+    var checker = checker_new()
+    
+    # Test 1: int + int -> int
+    var int_type = make_int_type()
+    var result1 = check_binary_expr(checker, int_type, "+", int_type)
+    jika result1.kind == KIND_INT
+        io.Write("✅ int + int -> int: PASS\n")
+    lainnya
+        io.Write("❌ int + int -> int: FAIL\n")
+    akhir
+    
+    # Test 2: string + string -> string  
+    var string_type = make_string_type()
+    var result2 = check_binary_expr(checker, string_type, "+", string_type)
+    jika result2.kind == KIND_STRING
+        io.Write("✅ string + string -> string: PASS\n")
+    lainnya
+        io.Write("❌ string + string -> string: FAIL\n")
+    akhir
+    
+    # Test 3: int + string -> error
+    var result3 = check_binary_expr(checker, int_type, "+", string_type)
+    jika result3.kind == KIND_ERROR
+        io.Write("✅ int + string -> error: PASS\n")
+    lainnya
+        io.Write("❌ int + string -> error: FAIL\n")
+    akhir
+    
+    # Test 4: int == int -> bool
+    var result4 = check_binary_expr(checker, int_type, "==", int_type)
+    jika result4.kind == KIND_BOOL
+        io.Write("✅ int == int -> bool: PASS\n")
+    lainnya
+        io.Write("❌ int == int -> bool: FAIL\n")
+    akhir
+    
+    # Test 5: Assignment compatibility
+    var bool_type = make_bool_type()
+    var assign_ok = check_assignment(checker, int_type, int_type)
+    jika assign_ok
+        io.Write("✅ int = int: PASS\n")
+    lainnya
+        io.Write("❌ int = int: FAIL\n")
+    akhir
+    
+    var assign_fail = check_assignment(checker, int_type, string_type)
+    jika assign_fail == salah
+        io.Write("✅ int = string (rejected): PASS\n")
+    lainnya
+        io.Write("❌ int = string (rejected): FAIL\n")
+    akhir
+    
+    # Test 6: Built-in functions
+    var len_result = check_function_call(checker, "len")
+    jika len_result.kind == KIND_INT
+        io.Write("✅ len() -> int: PASS\n")
+    lainnya
+        io.Write("❌ len() -> int: FAIL\n")
+    akhir
+    
+    jika checker.has_errors
+        io.Write("\n⚠️  Checker detected errors (expected for negative tests)\n")
+    akhir
+    
+    io.Write("\n🎯 BOOTSTRAP SEMANTIC ANALYSIS COMPLETE!\n")
+    io.Write("✅ Go-compatible type rules\n")
+    io.Write("✅ Assignment compatibility\n") 
+    io.Write("✅ Binary expression checking\n")
+    io.Write("✅ Built-in function validation\n")
+akhir

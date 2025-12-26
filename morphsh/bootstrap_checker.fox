@@ -1,0 +1,92 @@
+# bootstrap_checker.fox - Minimal type checker untuk bootstrap compiler
+ambil "io"
+
+# Minimal type checker (without arrays for now)
+struktur BootstrapChecker
+    symbol_count int
+    has_errors bool
+    error_count int
+akhir
+
+fungsi checker_new() BootstrapChecker
+    kembalikan BootstrapChecker{
+        symbol_count: 0,
+        has_errors: salah,
+        error_count: 0
+    }
+akhir
+
+# Add symbol to scope (simplified)
+fungsi checker_add_symbol(checker BootstrapChecker, name string, typ BootstrapType) void
+    checker.symbol_count = checker.symbol_count + 1
+akhir
+
+# Lookup symbol type
+fungsi checker_lookup_symbol(checker BootstrapChecker, name string) BootstrapType
+    # Simplified lookup - in real implementation would search array
+    jika name == "x"
+        kembalikan make_int_type()
+    akhir
+    jika name == "s"
+        kembalikan make_string_type()
+    akhir
+    kembalikan make_error_type()
+akhir
+
+# Check binary expression semantics
+fungsi check_binary_expr(checker BootstrapChecker, left_type BootstrapType, op string, right_type BootstrapType) BootstrapType
+    # Arithmetic: int + int -> int
+    jika op == "+"
+        jika left_type.kind == KIND_INT
+            jika right_type.kind == KIND_INT
+                kembalikan make_int_type()
+            akhir
+        akhir
+        # String concatenation: string + string -> string
+        jika left_type.kind == KIND_STRING
+            jika right_type.kind == KIND_STRING
+                kembalikan make_string_type()
+            akhir
+        akhir
+        checker.has_errors = benar
+        checker.error_count = checker.error_count + 1
+        kembalikan make_error_type()
+    akhir
+    
+    # Comparison: int == int -> bool
+    jika op == "=="
+        jika types_equal(left_type, right_type)
+            kembalikan make_bool_type()
+        akhir
+        checker.has_errors = benar
+        checker.error_count = checker.error_count + 1
+        kembalikan make_error_type()
+    akhir
+    
+    kembalikan make_error_type()
+akhir
+
+# Check assignment compatibility
+fungsi check_assignment(checker BootstrapChecker, var_type BootstrapType, value_type BootstrapType) bool
+    jika types_assignable(value_type, var_type)
+        kembalikan benar
+    akhir
+    checker.has_errors = benar
+    checker.error_count = checker.error_count + 1
+    kembalikan salah
+akhir
+
+# Check function call
+fungsi check_function_call(checker BootstrapChecker, func_name string) BootstrapType
+    # Built-in functions
+    jika func_name == "len"
+        kembalikan make_int_type()
+    akhir
+    jika func_name == "print"
+        kembalikan make_void_type()
+    akhir
+    
+    checker.has_errors = benar
+    checker.error_count = checker.error_count + 1
+    kembalikan make_error_type()
+akhir

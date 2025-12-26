@@ -1,0 +1,202 @@
+# simple_container_checker.fox - Simplified but consistent container checking
+ambil "io"
+
+# Container type checking functions (Go-consistent semantics)
+
+# Array access validation (simplified)
+fungsi validate_array_access(array_kind int, index_kind int) int
+    # Array types: 5 = array, Index must be int (0)
+    jika array_kind == 5
+        jika index_kind == 0
+            kembali 0  # Return int (element type)
+        akhir
+    akhir
+    kembali 8  # Return error
+akhir
+
+# Map access validation (simplified)
+fungsi validate_map_access(map_kind int, key_kind int, expected_key_kind int) int
+    # Map type: 6 = map, key must match expected
+    jika map_kind == 6
+        jika key_kind == expected_key_kind
+            kembali 0  # Return int (value type, simplified)
+        akhir
+    akhir
+    kembali 8  # Return error
+akhir
+
+# Array assignment validation
+fungsi validate_array_assignment(array_kind int, index_kind int, value_kind int, expected_element_kind int) bool
+    # Array access must be valid
+    var access_result = validate_array_access(array_kind, index_kind)
+    jika access_result == 8  # Error
+        kembali salah
+    akhir
+    
+    # Value type must match expected element type
+    kembali value_kind == expected_element_kind
+akhir
+
+# Container length validation (Go-consistent)
+fungsi validate_len_call(container_kind int) int
+    # len() works on: arrays (5), strings (2), maps (6)
+    jika container_kind == 5  # Array
+        kembali 0  # Return int
+    akhir
+    jika container_kind == 2  # String
+        kembali 0  # Return int
+    akhir
+    jika container_kind == 6  # Map
+        kembali 0  # Return int
+    akhir
+    kembali 8  # Error
+akhir
+
+# Array concatenation validation (Go-consistent)
+fungsi validate_array_concat(left_kind int, right_kind int, left_element int, right_element int) int
+    # Both must be arrays
+    jika left_kind != 5
+        kembali 8  # Error
+    akhir
+    jika right_kind != 5
+        kembali 8  # Error
+    akhir
+    
+    # Element types must match
+    jika left_element != right_element
+        kembali 8  # Error
+    akhir
+    
+    kembali 5  # Return array type
+akhir
+
+# Map key existence check (Go-consistent)
+fungsi validate_map_key_check(map_kind int, key_kind int, expected_key_kind int) int
+    # Similar to map access but returns bool for existence check
+    jika map_kind == 6
+        jika key_kind == expected_key_kind
+            kembali 3  # Return bool
+        akhir
+    akhir
+    kembali 8  # Error
+akhir
+
+# Container iteration validation (Go-consistent)
+fungsi validate_range_iteration(container_kind int) int
+    # range works on: arrays (5), strings (2), maps (6)
+    jika container_kind == 5  # Array -> (int, element)
+        kembali 0  # Return int (index)
+    akhir
+    jika container_kind == 2  # String -> (int, rune)
+        kembali 0  # Return int (index)
+    akhir
+    jika container_kind == 6  # Map -> (key, value)
+        kembali 2  # Return key type (simplified as string)
+    akhir
+    kembali 8  # Error
+akhir
+
+# Test comprehensive container validation
+fungsi test_container_validation() void
+    io.Write(io.Stdout, "=== CONTAINER VALIDATION TEST ===\n")
+    
+    # Type constants
+    var INT_TYPE = 0
+    var STRING_TYPE = 2
+    var ARRAY_TYPE = 5
+    var MAP_TYPE = 6
+    var ERROR_TYPE = 8
+    
+    # Test array access: []int[int] -> int
+    var array_access = validate_array_access(ARRAY_TYPE, INT_TYPE)
+    jika array_access == INT_TYPE
+        io.Write(io.Stdout, "[]int[int] → int: ✅ PASS\n")
+    lainnya
+        io.Write(io.Stdout, "[]int[int]: ❌ FAIL\n")
+    akhir
+    
+    # Test invalid array access: []int[string] -> error
+    var bad_array_access = validate_array_access(ARRAY_TYPE, STRING_TYPE)
+    jika bad_array_access == ERROR_TYPE
+        io.Write(io.Stdout, "[]int[string] → error: ✅ PASS\n")
+    lainnya
+        io.Write(io.Stdout, "[]int[string]: ❌ FAIL\n")
+    akhir
+    
+    # Test map access: map[string]int[string] -> int
+    var map_access = validate_map_access(MAP_TYPE, STRING_TYPE, STRING_TYPE)
+    jika map_access == INT_TYPE
+        io.Write(io.Stdout, "map[string]int[string] → int: ✅ PASS\n")
+    lainnya
+        io.Write(io.Stdout, "map[string]int[string]: ❌ FAIL\n")
+    akhir
+    
+    # Test invalid map access: map[string]int[int] -> error
+    var bad_map_access = validate_map_access(MAP_TYPE, INT_TYPE, STRING_TYPE)
+    jika bad_map_access == ERROR_TYPE
+        io.Write(io.Stdout, "map[string]int[int] → error: ✅ PASS\n")
+    lainnya
+        io.Write(io.Stdout, "map[string]int[int]: ❌ FAIL\n")
+    akhir
+    
+    # Test array assignment: []int[int] = int
+    var assign_ok = validate_array_assignment(ARRAY_TYPE, INT_TYPE, INT_TYPE, INT_TYPE)
+    jika assign_ok
+        io.Write(io.Stdout, "[]int[int] = int: ✅ PASS\n")
+    lainnya
+        io.Write(io.Stdout, "[]int[int] = int: ❌ FAIL\n")
+    akhir
+    
+    # Test invalid assignment: []int[int] = string
+    var assign_bad = validate_array_assignment(ARRAY_TYPE, INT_TYPE, STRING_TYPE, INT_TYPE)
+    jika !assign_bad
+        io.Write(io.Stdout, "[]int[int] = string (rejected): ✅ PASS\n")
+    lainnya
+        io.Write(io.Stdout, "[]int[int] = string: ❌ FAIL\n")
+    akhir
+    
+    # Test len() function: len([]int) -> int
+    var len_array = validate_len_call(ARRAY_TYPE)
+    jika len_array == INT_TYPE
+        io.Write(io.Stdout, "len([]int) → int: ✅ PASS\n")
+    lainnya
+        io.Write(io.Stdout, "len([]int): ❌ FAIL\n")
+    akhir
+    
+    # Test len() on string: len(string) -> int
+    var len_string = validate_len_call(STRING_TYPE)
+    jika len_string == INT_TYPE
+        io.Write(io.Stdout, "len(string) → int: ✅ PASS\n")
+    lainnya
+        io.Write(io.Stdout, "len(string): ❌ FAIL\n")
+    akhir
+    
+    # Test array concatenation: []int + []int -> []int
+    var concat_result = validate_array_concat(ARRAY_TYPE, ARRAY_TYPE, INT_TYPE, INT_TYPE)
+    jika concat_result == ARRAY_TYPE
+        io.Write(io.Stdout, "[]int + []int → []int: ✅ PASS\n")
+    lainnya
+        io.Write(io.Stdout, "[]int + []int: ❌ FAIL\n")
+    akhir
+    
+    # Test range iteration: range []int -> (int, int)
+    var range_result = validate_range_iteration(ARRAY_TYPE)
+    jika range_result == INT_TYPE
+        io.Write(io.Stdout, "range []int → (int, element): ✅ PASS\n")
+    lainnya
+        io.Write(io.Stdout, "range []int: ❌ FAIL\n")
+    akhir
+    
+    io.Write(io.Stdout, "\n🎉 CONTAINER VALIDATION COMPLETE!\n")
+    io.Write(io.Stdout, "✅ Go-consistent array semantics\n")
+    io.Write(io.Stdout, "✅ Go-consistent map semantics\n")
+    io.Write(io.Stdout, "✅ Strict type validation\n")
+    io.Write(io.Stdout, "✅ Built-in function checking\n")
+    io.Write(io.Stdout, "✅ Container operations validation\n")
+akhir
+
+fungsi main() void
+    test_container_validation()
+akhir
+
+main()

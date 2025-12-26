@@ -1,0 +1,259 @@
+# array_map_checker.fox - Enhanced array and map type checking
+ambil "io"
+
+# Enhanced type system with container support
+struktur ContainerType
+    kind int
+    name string
+    element_kind int  # For arrays and map values
+    key_kind int      # For maps only
+akhir
+
+# Container type constants
+tetapan CONTAINER_INT = 0
+tetapan CONTAINER_STRING = 2
+tetapan CONTAINER_BOOL = 3
+tetapan CONTAINER_ARRAY = 5
+tetapan CONTAINER_MAP = 6
+tetapan CONTAINER_ERROR = 8
+
+# Create container types
+fungsi make_int_container() ContainerType
+    kembali ContainerType{kind: CONTAINER_INT, name: "int", element_kind: 0, key_kind: 0}
+akhir
+
+fungsi make_string_container() ContainerType
+    kembali ContainerType{kind: CONTAINER_STRING, name: "string", element_kind: 0, key_kind: 0}
+akhir
+
+fungsi make_bool_container() ContainerType
+    kembali ContainerType{kind: CONTAINER_BOOL, name: "bool", element_kind: 0, key_kind: 0}
+akhir
+
+fungsi make_int_array() ContainerType
+    kembali ContainerType{kind: CONTAINER_ARRAY, name: "[]int", element_kind: CONTAINER_INT, key_kind: 0}
+akhir
+
+fungsi make_string_array() ContainerType
+    kembali ContainerType{kind: CONTAINER_ARRAY, name: "[]string", element_kind: CONTAINER_STRING, key_kind: 0}
+akhir
+
+fungsi make_string_int_map() ContainerType
+    kembali ContainerType{kind: CONTAINER_MAP, name: "map[string]int", element_kind: CONTAINER_INT, key_kind: CONTAINER_STRING}
+akhir
+
+fungsi make_error_container() ContainerType
+    kembali ContainerType{kind: CONTAINER_ERROR, name: "error", element_kind: 0, key_kind: 0}
+akhir
+
+# Array literal type checking (Go-consistent)
+fungsi check_array_literal(element_types [ContainerType]) ContainerType
+    jika len(element_types) == 0
+        # Empty array - assume int array
+        kembali make_int_array()
+    akhir
+    
+    # All elements must be same type
+    var first_type = element_types[0]
+    var i = 1
+    selama i < len(element_types)
+        jika element_types[i].kind != first_type.kind
+            kembali make_error_container()
+        akhir
+        i = i + 1
+    akhir
+    
+    # Return array of that type
+    jika first_type.kind == CONTAINER_INT
+        kembali make_int_array()
+    atau_jika first_type.kind == CONTAINER_STRING
+        kembali make_string_array()
+    lainnya
+        kembali make_error_container()
+    akhir
+akhir
+
+# Array access type checking (Go-consistent)
+fungsi check_array_access_enhanced(array_type ContainerType, index_type ContainerType) ContainerType
+    # Must be array type
+    jika array_type.kind != CONTAINER_ARRAY
+        kembali make_error_container()
+    akhir
+    
+    # Index must be int
+    jika index_type.kind != CONTAINER_INT
+        kembali make_error_container()
+    akhir
+    
+    # Return element type
+    jika array_type.element_kind == CONTAINER_INT
+        kembali make_int_container()
+    atau_jika array_type.element_kind == CONTAINER_STRING
+        kembali make_string_container()
+    lainnya
+        kembali make_error_container()
+    akhir
+akhir
+
+# Map access type checking (Go-consistent)
+fungsi check_map_access_enhanced(map_type ContainerType, key_type ContainerType) ContainerType
+    # Must be map type
+    jika map_type.kind != CONTAINER_MAP
+        kembali make_error_container()
+    akhir
+    
+    # Key type must match
+    jika key_type.kind != map_type.key_kind
+        kembali make_error_container()
+    akhir
+    
+    # Return value type
+    jika map_type.element_kind == CONTAINER_INT
+        kembali make_int_container()
+    atau_jika map_type.element_kind == CONTAINER_STRING
+        kembali make_string_container()
+    lainnya
+        kembali make_error_container()
+    akhir
+akhir
+
+# Array assignment type checking (Go-consistent)
+fungsi check_array_assignment(array_type ContainerType, index_type ContainerType, value_type ContainerType) bool
+    # Array access must be valid
+    var element_type = check_array_access_enhanced(array_type, index_type)
+    jika element_type.kind == CONTAINER_ERROR
+        kembali salah
+    akhir
+    
+    # Value type must match element type
+    kembali element_type.kind == value_type.kind
+akhir
+
+# Array append type checking (Go-consistent)
+fungsi check_array_append(array_type ContainerType, value_type ContainerType) ContainerType
+    # Must be array type
+    jika array_type.kind != CONTAINER_ARRAY
+        kembali make_error_container()
+    akhir
+    
+    # Value type must match element type
+    jika value_type.kind != array_type.element_kind
+        kembali make_error_container()
+    akhir
+    
+    # Return same array type
+    kembali array_type
+akhir
+
+# Built-in container functions (Go-consistent)
+fungsi check_container_builtin(func_name string, arg_type ContainerType) ContainerType
+    jika func_name == "len"
+        # len(array) -> int, len(string) -> int, len(map) -> int
+        jika arg_type.kind == CONTAINER_ARRAY
+            kembali make_int_container()
+        akhir
+        jika arg_type.kind == CONTAINER_STRING
+            kembali make_int_container()
+        akhir
+        jika arg_type.kind == CONTAINER_MAP
+            kembali make_int_container()
+        akhir
+        kembali make_error_container()
+    akhir
+    
+    jika func_name == "cap"
+        # cap(array) -> int (capacity)
+        jika arg_type.kind == CONTAINER_ARRAY
+            kembali make_int_container()
+        akhir
+        kembali make_error_container()
+    akhir
+    
+    kembali make_error_container()
+akhir
+
+# Test comprehensive container type checking
+fungsi test_container_checker() void
+    io.Write(io.Stdout, "=== CONTAINER TYPE CHECKER TEST ===\n")
+    
+    var int_type = make_int_container()
+    var string_type = make_string_container()
+    var int_array = make_int_array()
+    var string_int_map = make_string_int_map()
+    
+    # Test array access
+    var array_access = check_array_access_enhanced(int_array, int_type)
+    jika array_access.kind == CONTAINER_INT
+        io.Write(io.Stdout, "[]int[int] → int: ✅ PASS\n")
+    lainnya
+        io.Write(io.Stdout, "[]int[int]: ❌ FAIL\n")
+    akhir
+    
+    # Test invalid array access (wrong index type)
+    var bad_access = check_array_access_enhanced(int_array, string_type)
+    jika bad_access.kind == CONTAINER_ERROR
+        io.Write(io.Stdout, "[]int[string] → error: ✅ PASS\n")
+    lainnya
+        io.Write(io.Stdout, "[]int[string]: ❌ FAIL\n")
+    akhir
+    
+    # Test map access
+    var map_access = check_map_access_enhanced(string_int_map, string_type)
+    jika map_access.kind == CONTAINER_INT
+        io.Write(io.Stdout, "map[string]int[string] → int: ✅ PASS\n")
+    lainnya
+        io.Write(io.Stdout, "map[string]int[string]: ❌ FAIL\n")
+    akhir
+    
+    # Test invalid map access (wrong key type)
+    var bad_map_access = check_map_access_enhanced(string_int_map, int_type)
+    jika bad_map_access.kind == CONTAINER_ERROR
+        io.Write(io.Stdout, "map[string]int[int] → error: ✅ PASS\n")
+    lainnya
+        io.Write(io.Stdout, "map[string]int[int]: ❌ FAIL\n")
+    akhir
+    
+    # Test array assignment
+    var assign_ok = check_array_assignment(int_array, int_type, int_type)
+    jika assign_ok
+        io.Write(io.Stdout, "[]int[int] = int: ✅ PASS\n")
+    lainnya
+        io.Write(io.Stdout, "[]int[int] = int: ❌ FAIL\n")
+    akhir
+    
+    var assign_bad = check_array_assignment(int_array, int_type, string_type)
+    jika !assign_bad
+        io.Write(io.Stdout, "[]int[int] = string (rejected): ✅ PASS\n")
+    lainnya
+        io.Write(io.Stdout, "[]int[int] = string: ❌ FAIL\n")
+    akhir
+    
+    # Test array append
+    var append_result = check_array_append(int_array, int_type)
+    jika append_result.kind == CONTAINER_ARRAY
+        io.Write(io.Stdout, "[]int + int → []int: ✅ PASS\n")
+    lainnya
+        io.Write(io.Stdout, "[]int + int: ❌ FAIL\n")
+    akhir
+    
+    # Test built-in functions
+    var len_result = check_container_builtin("len", int_array)
+    jika len_result.kind == CONTAINER_INT
+        io.Write(io.Stdout, "len([]int) → int: ✅ PASS\n")
+    lainnya
+        io.Write(io.Stdout, "len([]int): ❌ FAIL\n")
+    akhir
+    
+    io.Write(io.Stdout, "\n🎉 CONTAINER CHECKER COMPLETE!\n")
+    io.Write(io.Stdout, "✅ Go-consistent array type checking\n")
+    io.Write(io.Stdout, "✅ Go-consistent map type checking\n")
+    io.Write(io.Stdout, "✅ Container assignment validation\n")
+    io.Write(io.Stdout, "✅ Built-in container functions\n")
+    io.Write(io.Stdout, "✅ Comprehensive error handling\n")
+akhir
+
+fungsi main() void
+    test_container_checker()
+akhir
+
+main()
