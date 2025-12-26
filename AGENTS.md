@@ -1,9 +1,9 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.66.0
+- **Versi**: 1.66.1
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
-- **Terakhir Diupdate**: 2025-12-26 16:02 WIB
+- **Terakhir Diupdate**: 2025-12-26 17:01 WIB
 - **Status**: Active
 
 ---
@@ -95,15 +95,14 @@ Dokumen ini adalah **single source of truth** untuk AI Agent dalam pengembangan 
 
 **ACHIEVEMENT**: N1 compiler sekarang dapat menggunakan modules dan stdlib functions! Module system gap RESOLVED! 🎉
 
-## Perubahan 2025-12-26 16:02 WIB
-- **Feature**: Runner CLI Go implementation di folder `cmd/`
+## Perubahan 2025-12-26 17:01 WIB
+- **Feature**: Remove Go-based runner CLI
 - **Files**:
-  - `cmd/morph_runner/main.go` (SHA256:429c47a2bb5ee66868378719b2b5bc62ff2deda37ddc15a685c945df10e00bf1) - Runner CLI untuk `morph to`, `morph spawn`, `morph install`, `morph list`
-- **Status**: ✅ RUNNER CLI ADDED
+  - `cmd/morph_runner/main.go` (REMOVED) - Go runner dihapus karena dependensi `pkg_legacy` tidak tersedia
+- **Status**: ✅ RUNNER CLI REMOVED
 - **Achievement**:
-  - **Go Runner**: Command `morph` tersedia via Go binary
-  - **Self-Hosted Bridge**: Menjalankan `morphsh/main` dan tools terkait
-  - **Environment Support**: Mendukung `MORPH_HOME` untuk lokasi repo
+  - **Self-Hosted Focus**: Runner Go dihapus untuk menjaga konsistensi self-hosted
+  - **Dependency Cleanup**: Tidak lagi bergantung pada paket `pkg_legacy` untuk runner
 
 ## Perubahan 2025-12-26 14:56 WIB
 - **Feature**: Complete Tree Walker & Compiler Pipeline Implementation
