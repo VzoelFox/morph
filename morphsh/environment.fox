@@ -1,0 +1,127 @@
+# Environment untuk Variable Storage
+# Simplified map-based environment
+
+struktur EnvEntry
+    name string
+    value_kind int
+    value_int int
+    value_bool bool
+akhir
+
+struktur Environment
+    size int
+    # Fixed size array untuk simplicity (max 100 variables)
+akhir
+
+fungsi env_new() Environment
+    kembalikan Environment(0)
+akhir
+
+# Simplified: gunakan global arrays untuk storage
+# (karena belum ada dynamic map di bootstrap)
+var env_names = ["", "", "", "", "", "", "", "", "", "",
+                 "", "", "", "", "", "", "", "", "", "",
+                 "", "", "", "", "", "", "", "", "", "",
+                 "", "", "", "", "", "", "", "", "", "",
+                 "", "", "", "", "", "", "", "", "", "",
+                 "", "", "", "", "", "", "", "", "", "",
+                 "", "", "", "", "", "", "", "", "", "",
+                 "", "", "", "", "", "", "", "", "", "",
+                 "", "", "", "", "", "", "", "", "", "",
+                 "", "", "", "", "", "", "", "", "", ""]
+
+var env_kinds = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+var env_ints = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+
+var env_bools = [salah, salah, salah, salah, salah, salah, salah, salah, salah, salah,
+                 salah, salah, salah, salah, salah, salah, salah, salah, salah, salah,
+                 salah, salah, salah, salah, salah, salah, salah, salah, salah, salah,
+                 salah, salah, salah, salah, salah, salah, salah, salah, salah, salah,
+                 salah, salah, salah, salah, salah, salah, salah, salah, salah, salah,
+                 salah, salah, salah, salah, salah, salah, salah, salah, salah, salah,
+                 salah, salah, salah, salah, salah, salah, salah, salah, salah, salah,
+                 salah, salah, salah, salah, salah, salah, salah, salah, salah, salah,
+                 salah, salah, salah, salah, salah, salah, salah, salah, salah, salah,
+                 salah, salah, salah, salah, salah, salah, salah, salah, salah, salah]
+
+fungsi env_set(env Environment, name string, kind int, int_val int, bool_val bool) Environment
+    # Find existing or add new
+    var i = 0
+    var found = -1
+    selama i < env.size
+        jika env_names[i] == name
+            found = i
+        akhir
+        i = i + 1
+    akhir
+    
+    jika found >= 0
+        # Update existing
+        env_kinds[found] = kind
+        env_ints[found] = int_val
+        env_bools[found] = bool_val
+    akhir
+    
+    jika found < 0
+        # Add new
+        env_names[env.size] = name
+        env_kinds[env.size] = kind
+        env_ints[env.size] = int_val
+        env_bools[env.size] = bool_val
+        env.size = env.size + 1
+    akhir
+    
+    kembalikan env
+akhir
+
+fungsi env_get_kind(env Environment, name string) int
+    var i = 0
+    selama i < env.size
+        jika env_names[i] == name
+            kembalikan env_kinds[i]
+        akhir
+        i = i + 1
+    akhir
+    kembalikan -1
+akhir
+
+fungsi env_get_int(env Environment, name string) int
+    var i = 0
+    selama i < env.size
+        jika env_names[i] == name
+            kembalikan env_ints[i]
+        akhir
+        i = i + 1
+    akhir
+    kembalikan 0
+akhir
+
+fungsi env_get_bool(env Environment, name string) bool
+    var i = 0
+    selama i < env.size
+        jika env_names[i] == name
+            kembalikan env_bools[i]
+        akhir
+        i = i + 1
+    akhir
+    kembalikan salah
+akhir

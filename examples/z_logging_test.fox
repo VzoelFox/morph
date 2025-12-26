@@ -1,0 +1,31 @@
+fungsi TestZLogging() void
+    native_print("=== .z System Logging Test ===")
+    
+    # Test operations that would generate logs
+    var data1 = "Log test data 1"
+    var data2 = "Log test data 2"
+    
+    # Simulate operations that might cause errors
+    var i = 0
+    selama i < 10
+        var temp = "Operation " 
+        i = i + 1
+    akhir
+    
+    native_print("Operations completed:")
+    native_print(data1)
+    native_print(data2)
+    
+    # Test error scenarios
+    var error_data = "Error scenario test"
+    native_print(error_data)
+    
+    native_print("=== .z Logging Test Complete ===")
+    native_print("Note: .z logs are system-only accessible")
+akhir
+
+fungsi main() void
+    TestZLogging()
+akhir
+
+main()

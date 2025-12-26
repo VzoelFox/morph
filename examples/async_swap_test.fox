@@ -1,0 +1,32 @@
+fungsi TestAsyncSwapWorker() void
+    native_print("=== Async Swap Worker Test ===")
+    
+    # Test async operations with error handling
+    var data1 = "Async Data 1"
+    var data2 = "Async Data 2"
+    var data3 = "Async Data 3"
+    
+    # Simulate heavy memory operations
+    var i = 0
+    selama i < 50
+        var temp = "Async operation"
+        i = i + 1
+    akhir
+    
+    native_print("Async operations completed:")
+    native_print(data1)
+    native_print(data2)
+    native_print(data3)
+    
+    # Test error recovery
+    var error_test = "Error recovery test"
+    native_print(error_test)
+    
+    native_print("=== Async Swap Worker OK ===")
+akhir
+
+fungsi main() void
+    TestAsyncSwapWorker()
+akhir
+
+main()

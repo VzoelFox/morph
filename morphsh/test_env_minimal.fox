@@ -1,0 +1,50 @@
+# Minimal Environment Test
+
+struktur Env
+    size int
+akhir
+
+var names = ["", "", "", "", ""]
+var vals = [0, 0, 0, 0, 0]
+
+fungsi env_set(e Env, name string, val int) Env
+    names[e.size] = name
+    vals[e.size] = val
+    e.size = e.size + 1
+    kembalikan e
+akhir
+
+fungsi env_get(e Env, name string) int
+    var i = 0
+    selama i < e.size
+        jika names[i] == name
+            kembalikan vals[i]
+        akhir
+        i = i + 1
+    akhir
+    kembalikan 0
+akhir
+
+fungsi main() void
+    native_print("=== ENV TEST ===")
+    
+    var e = Env(0)
+    e = env_set(e, "x", 42)
+    
+    var x = env_get(e, "x")
+    jika x == 42
+        native_print("x=42: OK")
+    akhir
+    
+    e = env_set(e, "y", 10)
+    e = env_set(e, "z", 20)
+    
+    var sum = env_get(e, "y") + env_get(e, "z")
+    jika sum == 30
+        native_print("y+z=30: OK")
+    akhir
+    
+    native_print("=== PASSED ===")
+akhir
+
+main()

@@ -91,53 +91,653 @@ void mph_init_memory(MorphContext* ctx) {
     ctx->current_alloc_page = NULL;
     ctx->free_list = NULL;
 
+    // Default zone (no isolation)
+    strcpy(ctx->zone_id, "DEFAULT");
+    ctx->clearance_level = 0;
+    ctx->zone_base_addr = NULL;
+    ctx->zone_size_limit = SIZE_MAX;
+    ctx->zone_allocated = 0;
+
+    // Initialize memory tracking (simplified)
+    ctx->total_allocations = 0;
+    ctx->active_allocations = 0;
+    ctx->debug_mode = 0;
+
     // Initialize Mark Stack (Iterative GC)
     ctx->mark_stack.head = NULL;
     ctx->mark_stack.current = NULL;
     ctx->mark_stack.count = 0;
 
+    pthread_mutex_init(&ctx->gc_lock, NULL);
     pthread_mutex_init(&ctx->memory_lock, NULL);
     pthread_mutex_init(&ctx->page_lock, NULL);
 
-    // Create directories
-    mkdir(".morph.vz", 0755);
-    mkdir(".morph.vz/swap", 0755);
-    // Create .z file
-    FILE* z = fopen(".morph.vz/.z", "a");
-    if (z) fclose(z);
+    // Create swap directory
+    mkdir("/tmp/morph_swap", 0755);
 
+    // Start GC daemon dengan proper locking
     mph_start_daemon(ctx);
 }
 
+void mph_init_memory_zone(MorphContext* ctx, const char* zone_id, int clearance, size_t zone_limit) {
+    mph_init_memory(ctx);
+    strncpy(ctx->zone_id, zone_id, 15);
+    ctx->zone_id[15] = '\0';
+    ctx->clearance_level = clearance;
+    ctx->zone_size_limit = zone_limit;
+    
+    // SIMPLIFIED: No zone memory allocation untuk avoid complexity
+    ctx->zone_base_addr = NULL;
+    
+    // DISABLE .z system logger
+    ctx->z_logger = NULL;
+    ctx->logging_enabled = 0;
+    
+    // DISABLE swap pool
+    ctx->swap_pool = NULL;
+    ctx->swap_enabled = 0;
+    strcpy(ctx->worker_id, "DEFAULT");
+}
+
+// --- Robust Swap Pool Implementation ---
+
+SwapPool* mph_swap_pool_create(size_t pool_size) {
+    SwapPool* pool = (SwapPool*)malloc(sizeof(SwapPool));
+    if (!pool) return NULL;
+    
+    // Pre-allocate entire pool
+    pool->pool_base = mmap(NULL, pool_size, PROT_READ | PROT_WRITE,
+                          MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    if (pool->pool_base == MAP_FAILED) {
+        perror("Swap pool allocation failed");
+        free(pool);
+        return NULL;
+    }
+    
+    // Initialize slot metadata
+    size_t slot_count = pool_size / SWAP_SLOT_SIZE;
+    pool->slots = (SwapSlot*)malloc(sizeof(SwapSlot) * slot_count);
+    if (!pool->slots) {
+        munmap(pool->pool_base, pool_size);
+        free(pool);
+        return NULL;
+    }
+    
+    // Build free list
+    pool->free_head = NULL;
+    pool->free_count = slot_count;
+    
+    for (size_t i = 0; i < slot_count; i++) {
+        SwapSlot* slot = &pool->slots[i];
+        slot->slot_id = i;
+        slot->is_free = 1;
+        slot->data = (uint8_t*)pool->pool_base + (i * SWAP_SLOT_SIZE);
+        slot->size = 0;
+        slot->zone_id[0] = '\0';
+        slot->next_free = pool->free_head;
+        pool->free_head = slot;
+    }
+    
+    // Initialize synchronization
+    pthread_mutex_init(&pool->pool_lock, NULL);
+    pthread_mutex_init(&pool->queue_lock, NULL);
+    pthread_cond_init(&pool->queue_cond, NULL);
+    
+    // Initialize async worker
+    pool->request_queue_head = NULL;
+    pool->request_queue_tail = NULL;
+    pool->queue_size = 0;
+    pool->max_queue_size = 1000; // Safety limit
+    pool->async_running = 0;
+    pool->error_count = 0;
+    pool->last_error = SWAP_SUCCESS;
+    
+    return pool;
+}
+
+// Async Worker Thread (Safety First)
+void* mph_swap_worker_thread(void* arg) {
+    SwapPool* pool = (SwapPool*)arg;
+    
+    while (pool->async_running) {
+        SwapRequest* req = NULL;
+        
+        // Dequeue request (thread-safe)
+        pthread_mutex_lock(&pool->queue_lock);
+        while (pool->request_queue_head == NULL && pool->async_running) {
+            pthread_cond_wait(&pool->queue_cond, &pool->queue_lock);
+        }
+        
+        if (!pool->async_running) {
+            pthread_mutex_unlock(&pool->queue_lock);
+            break;
+        }
+        
+        req = pool->request_queue_head;
+        pool->request_queue_head = req->next;
+        if (pool->request_queue_tail == req) {
+            pool->request_queue_tail = NULL;
+        }
+        pool->queue_size--;
+        pthread_mutex_unlock(&pool->queue_lock);
+        
+        // Process request with error handling
+        SwapResult result = SWAP_SUCCESS;
+        
+        if (!req) {
+            result = SWAP_ERROR_NULL_POOL;
+        } else if (req->slot_id >= SWAP_SLOTS_COUNT) {
+            result = SWAP_ERROR_INVALID_SLOT;
+        } else {
+            SwapSlot* slot = &pool->slots[req->slot_id];
+            
+            // Zone security check
+            if (strcmp(slot->zone_id, req->zone_id) != 0) {
+                result = SWAP_ERROR_ZONE_MISMATCH;
+            } else {
+                // Perform actual swap operation
+                switch (req->type) {
+                    case SWAP_IN:
+                        if (req->page_addr && slot->data) {
+                            memcpy(req->page_addr, slot->data, req->size);
+                        } else {
+                            result = SWAP_ERROR_IO_FAILED;
+                        }
+                        break;
+                    case SWAP_OUT:
+                        if (req->page_addr && slot->data) {
+                            memcpy(slot->data, req->page_addr, req->size);
+                        } else {
+                            result = SWAP_ERROR_IO_FAILED;
+                        }
+                        break;
+                    case CHECKPOINT:
+                        // Checkpoint logic here
+                        break;
+                }
+            }
+        }
+        
+        // Signal completion (Error as Value)
+        if (req && req->result) {
+            *req->result = result;
+        }
+        
+        if (req && req->done_mutex && req->done_cond) {
+            pthread_mutex_lock(req->done_mutex);
+            req->completed = 1;
+            pthread_cond_signal(req->done_cond);
+            pthread_mutex_unlock(req->done_mutex);
+        }
+        
+        // Track errors with detailed logging
+        if (result != SWAP_SUCCESS) {
+            pthread_mutex_lock(&pool->pool_lock);
+            pool->error_count++;
+            pool->last_error = result;
+            pthread_mutex_unlock(&pool->pool_lock);
+            
+            // Log detailed error if logger available (passed via thread arg)
+            // Note: In production, pass logger through thread context
+        }
+    }
+    
+    return NULL;
+}
+
+SwapResult mph_swap_start_worker(SwapPool* pool) {
+    if (!pool) return SWAP_ERROR_NULL_POOL;
+    if (pool->async_running) return SWAP_SUCCESS; // Already running
+    
+    pool->async_running = 1;
+    if (pthread_create(&pool->async_thread, NULL, mph_swap_worker_thread, pool) != 0) {
+        pool->async_running = 0;
+        return SWAP_ERROR_THREAD_FAILED;
+    }
+    
+    return SWAP_SUCCESS;
+}
+
+SwapResult mph_swap_stop_worker(SwapPool* pool) {
+    if (!pool) return SWAP_ERROR_NULL_POOL;
+    if (!pool->async_running) return SWAP_SUCCESS;
+    
+    pool->async_running = 0;
+    pthread_cond_broadcast(&pool->queue_cond);
+    pthread_join(pool->async_thread, NULL);
+    
+    return SWAP_SUCCESS;
+}
+
+SwapResult mph_swap_async_request(SwapPool* pool, int type, void* addr, size_t size, const char* zone_id) {
+    if (!pool) return SWAP_ERROR_NULL_POOL;
+    
+    // Safety check: queue size limit
+    pthread_mutex_lock(&pool->queue_lock);
+    if (pool->queue_size >= pool->max_queue_size) {
+        pthread_mutex_unlock(&pool->queue_lock);
+        return SWAP_ERROR_QUEUE_FULL;
+    }
+    
+    // Allocate slot first
+    uint64_t slot_id = mph_swap_pool_alloc_slot(pool, zone_id, size);
+    if (slot_id == 0) {
+        pthread_mutex_unlock(&pool->queue_lock);
+        return SWAP_ERROR_INVALID_SLOT;
+    }
+    
+    // Create request
+    SwapRequest* req = (SwapRequest*)malloc(sizeof(SwapRequest));
+    if (!req) {
+        mph_swap_pool_free_slot(pool, slot_id);
+        pthread_mutex_unlock(&pool->queue_lock);
+        return SWAP_ERROR_IO_FAILED;
+    }
+    
+    req->type = type;
+    req->page_addr = addr;
+    req->size = size;
+    req->slot_id = slot_id;
+    strncpy(req->zone_id, zone_id, 15);
+    req->zone_id[15] = '\0';
+    req->result = NULL;
+    req->done_mutex = NULL;
+    req->done_cond = NULL;
+    req->completed = 0;
+    req->next = NULL;
+    
+    // Enqueue request
+    if (pool->request_queue_tail) {
+        pool->request_queue_tail->next = req;
+    } else {
+        pool->request_queue_head = req;
+    }
+    pool->request_queue_tail = req;
+    pool->queue_size++;
+    
+    pthread_cond_signal(&pool->queue_cond);
+    pthread_mutex_unlock(&pool->queue_lock);
+    
+    return SWAP_SUCCESS;
+}
+
+uint64_t mph_swap_pool_alloc_slot(SwapPool* pool, const char* zone_id, size_t size) {
+    if (size > SWAP_SLOT_SIZE) return 0; // Too big
+    
+    pthread_mutex_lock(&pool->pool_lock);
+    
+    if (!pool->free_head) {
+        pthread_mutex_unlock(&pool->pool_lock);
+        return 0; // Pool full
+    }
+    
+    SwapSlot* slot = pool->free_head;
+    pool->free_head = slot->next_free;
+    pool->free_count--;
+    
+    slot->is_free = 0;
+    slot->size = size;
+    strncpy(slot->zone_id, zone_id, 15);
+    slot->zone_id[15] = '\0';
+    
+    pthread_mutex_unlock(&pool->pool_lock);
+    return slot->slot_id;
+}
+
+void mph_swap_pool_free_slot(SwapPool* pool, uint64_t slot_id) {
+    if (slot_id >= SWAP_SLOTS_COUNT) return;
+    
+    pthread_mutex_lock(&pool->pool_lock);
+    
+    SwapSlot* slot = &pool->slots[slot_id];
+    if (slot->is_free) {
+        pthread_mutex_unlock(&pool->pool_lock);
+        return; // Already free
+    }
+    
+    slot->is_free = 1;
+    slot->size = 0;
+    slot->zone_id[0] = '\0';
+    slot->next_free = pool->free_head;
+    pool->free_head = slot;
+    pool->free_count++;
+    
+    pthread_mutex_unlock(&pool->pool_lock);
+}
+
+// Worker Checkpoint Functions
+void mph_worker_set_id(MorphContext* ctx, const char* worker_id) {
+    strncpy(ctx->worker_id, worker_id, 15);
+    ctx->worker_id[15] = '\0';
+}
+
+void mph_worker_checkpoint_save(MorphContext* ctx) {
+    if (!ctx->swap_pool) return;
+    
+    // Serialize critical worker state
+    size_t checkpoint_size = sizeof(ObjectHeader*) + sizeof(size_t) * 3 + 
+                            strlen(ctx->zone_id) + strlen(ctx->worker_id) + 32;
+    
+    ctx->checkpoint_data = malloc(checkpoint_size);
+    ctx->checkpoint_size = checkpoint_size;
+    
+    // Simple serialization (can be enhanced)
+    uint8_t* ptr = (uint8_t*)ctx->checkpoint_data;
+    memcpy(ptr, &ctx->heap_head, sizeof(ObjectHeader*)); ptr += sizeof(ObjectHeader*);
+    memcpy(ptr, &ctx->allocated_bytes, sizeof(size_t)); ptr += sizeof(size_t);
+    memcpy(ptr, &ctx->zone_allocated, sizeof(size_t)); ptr += sizeof(size_t);
+    memcpy(ptr, ctx->zone_id, 16); ptr += 16;
+    memcpy(ptr, ctx->worker_id, 16); ptr += 16;
+}
+
+mph_bool mph_worker_checkpoint_restore(MorphContext* ctx) {
+    if (!ctx->checkpoint_data) return 0;
+    
+    uint8_t* ptr = (uint8_t*)ctx->checkpoint_data;
+    memcpy(&ctx->heap_head, ptr, sizeof(ObjectHeader*)); ptr += sizeof(ObjectHeader*);
+    memcpy(&ctx->allocated_bytes, ptr, sizeof(size_t)); ptr += sizeof(size_t);
+    memcpy(&ctx->zone_allocated, ptr, sizeof(size_t)); ptr += sizeof(size_t);
+    memcpy(ctx->zone_id, ptr, 16); ptr += 16;
+    memcpy(ctx->worker_id, ptr, 16); ptr += 16;
+    
+    return 1;
+}
+
+// --- .z System Logging Implementation ---
+
+mph_bool mph_z_is_system_accessible(void) {
+    // Check if running as system process (simplified check)
+    return (geteuid() == 0 || getuid() == 0);
+}
+
+ZLogger* mph_z_logger_create(const char* zone_id) {
+    // System-only access check
+    if (!mph_z_is_system_accessible()) {
+        return NULL; // Access denied
+    }
+    
+    ZLogger* logger = (ZLogger*)malloc(sizeof(ZLogger));
+    if (!logger) return NULL;
+    
+    // Create .z file with system-only permissions
+    char z_path[256];
+    snprintf(z_path, sizeof(z_path), ".morph.vz/.z_%s", zone_id);
+    
+    logger->z_file = fopen(z_path, "a");
+    if (!logger->z_file) {
+        free(logger);
+        return NULL;
+    }
+    
+    // Set system-only permissions (600)
+    chmod(z_path, S_IRUSR | S_IWUSR);
+    
+    pthread_mutex_init(&logger->log_lock, NULL);
+    logger->log_head = NULL;
+    logger->log_count = 0;
+    logger->max_entries = 10000; // Limit memory usage
+    logger->system_only = 1;
+    
+    // Write header
+    fprintf(logger->z_file, "# Morph System Log - Zone: %s\n", zone_id);
+    fprintf(logger->z_file, "# Format: [TIMESTAMP] [LEVEL] [ZONE:WORKER] [ERROR_CODE] [FUNCTION:LINE] MESSAGE\n");
+    fflush(logger->z_file);
+    
+    return logger;
+}
+
+void mph_z_log(ZLogger* logger, LogLevel level, const char* zone_id, const char* worker_id,
+               SwapResult error_code, const char* function, int line, const char* format, ...) {
+    if (!logger || !logger->system_only) return;
+    
+    pthread_mutex_lock(&logger->log_lock);
+    
+    // Get timestamp
+    uint64_t timestamp = mph_time_ms();
+    
+    // Format message
+    char message[256];
+    va_list args;
+    va_start(args, format);
+    vsnprintf(message, sizeof(message), format, args);
+    va_end(args);
+    
+    // Level strings
+    const char* level_str[] = {"DEBUG", "INFO", "WARN", "ERROR", "FATAL"};
+    const char* error_str[] = {
+        "SUCCESS", "NULL_POOL", "INVALID_SLOT", "ZONE_MISMATCH", 
+        "QUEUE_FULL", "THREAD_FAILED", "IO_FAILED"
+    };
+    
+    // Write to .z file
+    fprintf(logger->z_file, "[%lu] [%s] [%s:%s] [%s] [%s:%d] %s\n",
+            timestamp, level_str[level], zone_id, worker_id,
+            error_str[error_code], function, line, message);
+    fflush(logger->z_file);
+    
+    // Add to memory log (circular buffer)
+    if (logger->log_count >= logger->max_entries) {
+        // Remove oldest entry
+        ZLogEntry* old = logger->log_head;
+        logger->log_head = old->next;
+        free(old);
+        logger->log_count--;
+    }
+    
+    // Add new entry
+    ZLogEntry* entry = (ZLogEntry*)malloc(sizeof(ZLogEntry));
+    if (entry) {
+        entry->timestamp_ms = timestamp;
+        entry->level = level;
+        strncpy(entry->zone_id, zone_id, 15);
+        entry->zone_id[15] = '\0';
+        strncpy(entry->worker_id, worker_id, 15);
+        entry->worker_id[15] = '\0';
+        entry->error_code = error_code;
+        strncpy(entry->message, message, 255);
+        entry->message[255] = '\0';
+        strncpy(entry->function, function, 63);
+        entry->function[63] = '\0';
+        entry->line = line;
+        entry->next = logger->log_head;
+        logger->log_head = entry;
+        logger->log_count++;
+    }
+    
+    pthread_mutex_unlock(&logger->log_lock);
+}
+
+void mph_z_log_error_detail(ZLogger* logger, const char* zone_id, const char* worker_id,
+                           SwapResult error_code, const char* operation, const char* reason) {
+    if (!logger) return;
+    
+    // Detailed error analysis
+    const char* error_details[] = {
+        "Operation completed successfully",
+        "Null pointer passed to swap pool operation - check initialization",
+        "Invalid slot ID - slot may be corrupted or out of bounds",
+        "Zone security violation - worker attempted cross-zone access",
+        "Swap queue at capacity - system under heavy load",
+        "Thread creation/management failed - system resource exhaustion",
+        "I/O operation failed - disk full or permission denied"
+    };
+    
+    const char* recommendations[] = {
+        "No action required",
+        "Verify swap pool initialization and null checks",
+        "Check slot allocation logic and bounds validation",
+        "Review worker security clearance and zone assignments",
+        "Reduce swap frequency or increase queue size",
+        "Check system resources and thread limits",
+        "Check disk space and file permissions"
+    };
+    
+    Z_LOG_ERROR(logger, zone_id, worker_id, error_code,
+                "OPERATION: %s | REASON: %s | DETAIL: %s | RECOMMENDATION: %s",
+                operation, reason, error_details[error_code], recommendations[error_code]);
+}
+
+void mph_z_logger_destroy(ZLogger* logger) {
+    if (!logger) return;
+    
+    pthread_mutex_lock(&logger->log_lock);
+    
+    // Write footer
+    if (logger->z_file) {
+        fprintf(logger->z_file, "# Log session ended at %lu\n", mph_time_ms());
+        fclose(logger->z_file);
+    }
+    
+    // Free memory log
+    ZLogEntry* current = logger->log_head;
+    while (current) {
+        ZLogEntry* next = current->next;
+        free(current);
+        current = next;
+    }
+    
+    pthread_mutex_unlock(&logger->log_lock);
+    pthread_mutex_destroy(&logger->log_lock);
+    free(logger);
+}
+
+// --- Memory Safety & Validation Implementation ---
+
+void mph_memory_barrier(void) {
+    __sync_synchronize(); // GCC memory barrier
+}
+
+void mph_set_debug_mode(MorphContext* ctx, mph_bool enabled) {
+    ctx->debug_mode = enabled;
+    if (ctx->logging_enabled) {
+        Z_LOG_DEBUG(ctx->z_logger, ctx->zone_id, ctx->worker_id, SWAP_SUCCESS,
+                   "Debug mode %s", enabled ? "ENABLED" : "DISABLED");
+    }
+}
+
+mph_bool mph_is_valid_object(MorphContext* ctx, void* obj) {
+    if (!obj) return 0;
+    
+    ObjectHeader* header = ((ObjectHeader*)obj) - 1;
+    
+    // Check canary values
+    if (header->canary_start != MEMORY_CANARY_MAGIC) {
+        if (ctx->logging_enabled) {
+            Z_LOG_ERROR(ctx->z_logger, ctx->zone_id, ctx->worker_id, SWAP_ERROR_IO_FAILED,
+                       "Memory corruption detected: invalid start canary");
+        }
+        return 0;
+    }
+    
+    // Check end canary
+    uint32_t* end_canary = (uint32_t*)((uint8_t*)obj + header->size);
+    if (*end_canary != MEMORY_CANARY_MAGIC) {
+        if (ctx->logging_enabled) {
+            Z_LOG_ERROR(ctx->z_logger, ctx->zone_id, ctx->worker_id, SWAP_ERROR_IO_FAILED,
+                       "Memory corruption detected: invalid end canary");
+        }
+        return 0;
+    }
+    
+    // Check valid flag
+    if (!(header->flags & 0x4)) {
+        if (ctx->logging_enabled) {
+            Z_LOG_ERROR(ctx->z_logger, ctx->zone_id, ctx->worker_id, SWAP_ERROR_IO_FAILED,
+                       "Access to freed object detected");
+        }
+        return 0;
+    }
+    
+    // Check zone match
+    if (strcmp(header->zone_id, ctx->zone_id) != 0) {
+        if (ctx->logging_enabled) {
+            Z_LOG_ERROR(ctx->z_logger, ctx->zone_id, ctx->worker_id, SWAP_ERROR_ZONE_MISMATCH,
+                       "Cross-zone access detected: %s -> %s", ctx->zone_id, header->zone_id);
+        }
+        return 0;
+    }
+    
+    return 1;
+}
+
+void mph_track_allocation(MorphContext* ctx, void* obj, size_t size) {
+    if (!ctx->debug_mode) return;
+    
+    // Simplified tracking without separate mutex
+    ctx->total_allocations++;
+    ctx->active_allocations++;
+}
+
+void mph_untrack_allocation(MorphContext* ctx, void* obj) {
+    if (!ctx->debug_mode) return;
+    
+    // Simplified tracking
+    if (ctx->active_allocations > 0) {
+        ctx->active_allocations--;
+    }
+}
+
+mph_bool mph_validate_memory_integrity(MorphContext* ctx) {
+    if (!ctx->debug_mode) return 1;
+    
+    mph_bool valid = 1;
+    size_t checked = 0;
+    
+    pthread_mutex_lock(&ctx->memory_lock);
+    
+    ObjectHeader* obj = ctx->heap_head;
+    while (obj) {
+        if (!mph_is_valid_object(ctx, (void*)(obj + 1))) {
+            valid = 0;
+            if (ctx->logging_enabled) {
+                Z_LOG_ERROR(ctx->z_logger, ctx->zone_id, ctx->worker_id, SWAP_ERROR_IO_FAILED,
+                           "Memory integrity check failed for object %p", obj);
+            }
+        }
+        checked++;
+        obj = obj->next;
+    }
+    
+    pthread_mutex_unlock(&ctx->memory_lock);
+    
+    if (ctx->logging_enabled) {
+        Z_LOG_DEBUG(ctx->z_logger, ctx->zone_id, ctx->worker_id, SWAP_SUCCESS,
+                   "Memory integrity check: %zu objects, %s", 
+                   checked, valid ? "PASSED" : "FAILED");
+    }
+    
+    return valid;
+}
+
+size_t mph_get_memory_stats(MorphContext* ctx, size_t* active, size_t* total) {
+    if (active) *active = ctx->active_allocations;
+    if (total) *total = ctx->total_allocations;
+    return ctx->allocated_bytes;
+}
+
 void mph_destroy_memory(MorphContext* ctx) {
+    // Stop daemon first
     mph_stop_daemon(ctx);
+    
+    // Cleanup mark stack
     MarkStackBlock* block = ctx->mark_stack.head;
     while (block) {
         MarkStackBlock* next = block->next;
         free(block);
         block = next;
     }
-    ctx->mark_stack.head = NULL;
-    ctx->mark_stack.current = NULL;
-    ctx->mark_stack.count = 0;
-    ctx->free_list = NULL;
-    pthread_mutex_lock(&ctx->page_lock);
+    
+    // Cleanup pages
     MphPage* page = ctx->page_head;
     while (page) {
         MphPage* next = page->next;
-        if (page->flags & FLAG_SWAPPED) {
-            char path[256];
-            sprintf(path, ".morph.vz/swap/page_%lu.bin", page->swap_id);
-            unlink(path);
-        }
         mph_page_free(page);
         page = next;
     }
-    ctx->page_head = NULL;
-    ctx->current_alloc_page = NULL;
-    pthread_mutex_unlock(&ctx->page_lock);
-    pthread_mutex_destroy(&ctx->page_lock);
+    
+    pthread_mutex_destroy(&ctx->gc_lock);
     pthread_mutex_destroy(&ctx->memory_lock);
+    pthread_mutex_destroy(&ctx->page_lock);
 }
 
 // Helper to get header from payload
@@ -169,7 +769,7 @@ void mph_page_swap_out(MphPage* page) {
 
     page->swap_id = mph_time_ms() + (uint64_t)page;
     char path[256];
-    sprintf(path, ".morph.vz/swap/page_%lu.bin", page->swap_id);
+    sprintf(path, "/tmp/morph_swap/page_%lu.bin", page->swap_id);
 
     FILE* f = fopen(path, "wb");
     if (f) {
@@ -195,7 +795,7 @@ void mph_page_swap_in(MphPage* page) {
     }
 
     char path[256];
-    sprintf(path, ".morph.vz/swap/page_%lu.bin", page->swap_id);
+    sprintf(path, "/tmp/morph_swap/page_%lu.bin", page->swap_id);
     FILE* f = fopen(path, "rb");
     if (f) {
         fread(page->start_addr, page->size, 1, f);
@@ -228,17 +828,18 @@ MphPage* mph_find_page(MorphContext* ctx, void* addr) {
 
 void mph_swap_in(MorphContext* ctx, void* obj) {
     if (!obj) return;
-    ObjectHeader* header = mph_get_header(obj);
-    MphPage* page = header ? header->page : NULL;
-    if (!page) {
-        page = mph_find_page(ctx, obj);
+    
+    ObjectHeader* header = (ObjectHeader*)obj - 1;
+    MphPage* page = header->page;
+    
+    if (page && (page->flags & FLAG_SWAPPED)) {
+        // Swap in page
+        mph_page_swap_in(page);
     }
+    
+    // Update timestamp
     if (page) {
-        if (page->flags & FLAG_SWAPPED) {
-            mph_page_swap_in(page);
-        } else {
-            page->last_access = mph_time_ms();
-        }
+        page->last_access = mph_time_ms();
     }
 }
 
@@ -485,28 +1086,37 @@ void mph_gc_collect(MorphContext* ctx) {
 // Daemon
 void* mph_daemon_loop(void* arg) {
     MorphContext* ctx = (MorphContext*)arg;
-    int ticks = 0;
     while (ctx->daemon_running) {
         usleep(DAEMON_SLEEP_MS * 1000);
-        ticks++;
-
-        pthread_mutex_lock(&ctx->page_lock);
-        uint64_t now = mph_time_ms();
-        MphPage* cur = ctx->page_head;
-        while (cur) {
-            if (!(cur->flags & FLAG_SWAPPED) && (now - cur->last_access > SWAP_AGE_THRESHOLD_SEC * 1000)) {
-                mph_page_swap_out(cur);
+        
+        // Lock-free check untuk GC threshold
+        size_t current_bytes = ctx->allocated_bytes;
+        size_t threshold = ctx->next_gc_threshold;
+        
+        if (current_bytes > threshold) {
+            // Try acquire GC lock (non-blocking)
+            if (pthread_mutex_trylock(&ctx->gc_lock) == 0) {
+                // Double-check setelah acquire lock
+                if (ctx->allocated_bytes > ctx->next_gc_threshold) {
+                    mph_gc_collect(ctx);
+                }
+                pthread_mutex_unlock(&ctx->gc_lock);
             }
-            cur = cur->next;
         }
-        pthread_mutex_unlock(&ctx->page_lock);
-
-        // Idle GC Trigger - DISABLED for thread safety
-        // GC hanya dipanggil dari main thread saat threshold tercapai
-        // if (ctx->allocated_bytes > 1024 * 1024 && (now - ctx->last_alloc_time > 2000)) {
-        //      ctx->last_alloc_time = now;
-        //      mph_gc_collect(ctx);
-        // }
+        
+        // Swap old pages (lock-free check)
+        if (pthread_mutex_trylock(&ctx->page_lock) == 0) {
+            uint64_t now = mph_time_ms();
+            MphPage* cur = ctx->page_head;
+            while (cur) {
+                if (!(cur->flags & FLAG_SWAPPED) && 
+                    (now - cur->last_access > SWAP_AGE_THRESHOLD_SEC * 1000)) {
+                    mph_page_swap_out(cur);
+                }
+                cur = cur->next;
+            }
+            pthread_mutex_unlock(&ctx->page_lock);
+        }
     }
     return NULL;
 }
@@ -518,12 +1128,35 @@ void mph_start_daemon(MorphContext* ctx) {
 
 void mph_stop_daemon(MorphContext* ctx) {
     ctx->daemon_running = 0;
-    pthread_join(ctx->daemon_thread, NULL);
+    if (ctx->daemon_thread) {
+        pthread_join(ctx->daemon_thread, NULL);
+    }
 }
 
 // Allocation (Arena Style)
 
 void* mph_alloc(MorphContext* ctx, size_t size, MorphTypeInfo* type_info) {
+    return mph_alloc_secure(ctx, size, type_info, 0);
+}
+
+mph_bool mph_can_access_memory(MorphContext* ctx, void* ptr) {
+    if (!ptr) return 0;
+    ObjectHeader* hdr = ((ObjectHeader*)ptr) - 1;
+    return (strcmp(hdr->zone_id, ctx->zone_id) == 0 && 
+            ctx->clearance_level >= hdr->required_clearance);
+}
+
+void* mph_alloc_secure(MorphContext* ctx, size_t size, MorphTypeInfo* type_info, int required_clearance) {
+    // Security check
+    if (ctx->clearance_level < required_clearance) {
+        return NULL; // Access denied
+    }
+
+    // Zone limit check
+    if (ctx->zone_allocated + size > ctx->zone_size_limit) {
+        return NULL; // Zone full
+    }
+
     if (ctx->allocated_bytes > ctx->next_gc_threshold) {
         mph_gc_collect(ctx);
         size_t base_threshold = GC_THRESHOLD;
@@ -542,10 +1175,10 @@ void* mph_alloc(MorphContext* ctx, size_t size, MorphTypeInfo* type_info) {
 
     pthread_mutex_lock(&ctx->memory_lock);
 
-    // Reuse freed objects (exact size match)
+    // Reuse freed objects (exact size match + zone match)
     ObjectHeader* free_hdr = ctx->free_list;
     while (free_hdr) {
-        if (free_hdr->size == size) {
+        if (free_hdr->size == size && strcmp(free_hdr->zone_id, ctx->zone_id) == 0) {
             if (free_hdr->free_prev) {
                 free_hdr->free_prev->free_next = free_hdr->free_next;
             } else {
@@ -563,13 +1196,27 @@ void* mph_alloc(MorphContext* ctx, size_t size, MorphTypeInfo* type_info) {
                 free_hdr->page_free_next->page_free_prev = free_hdr->page_free_prev;
             }
             free_hdr->type = type_info;
-            free_hdr->flags = 0;
+            free_hdr->flags = 0x4; // Set valid flag
             free_hdr->size = size;
+            free_hdr->required_clearance = required_clearance;
+            free_hdr->canary_start = MEMORY_CANARY_MAGIC;
+            strcpy(free_hdr->zone_id, ctx->zone_id);
+            
+            // Set end canary
+            uint32_t* end_canary = (uint32_t*)((uint8_t*)(free_hdr + 1) + size);
+            *end_canary = MEMORY_CANARY_MAGIC;
+            
             free_hdr->next = ctx->heap_head;
             ctx->heap_head = free_hdr;
             ctx->allocated_bytes += size;
+            ctx->zone_allocated += size;
+            
+            // Track allocation
+            void* payload = (void*)(free_hdr + 1);
+            mph_track_allocation(ctx, payload, size);
+            
             pthread_mutex_unlock(&ctx->memory_lock);
-            return (void*)(free_hdr + 1);
+            return payload;
         }
         free_hdr = free_hdr->free_next;
     }
@@ -599,13 +1246,25 @@ void* mph_alloc(MorphContext* ctx, size_t size, MorphTypeInfo* type_info) {
         ObjectHeader* header = (ObjectHeader*)page->start_addr;
         memset(header, 0, total_size);
         header->type = type_info;
-        header->flags = 0;
+        header->flags = 0x4; // Set valid flag
         header->size = size;
         header->page = page;
+        header->required_clearance = required_clearance;
+        header->canary_start = MEMORY_CANARY_MAGIC;
+        strcpy(header->zone_id, ctx->zone_id);
+
+        // Set end canary
+        uint32_t* end_canary = (uint32_t*)((uint8_t*)(header + 1) + size);
+        *end_canary = MEMORY_CANARY_MAGIC;
 
         header->next = ctx->heap_head;
         ctx->heap_head = header;
         ctx->allocated_bytes += size;
+        ctx->zone_allocated += size;
+
+        // Track allocation
+        void* payload = (void*)(header + 1);
+        mph_track_allocation(ctx, payload, size);
 
         pthread_mutex_unlock(&ctx->memory_lock);
         return (void*)(header + 1);
@@ -622,14 +1281,26 @@ void* mph_alloc(MorphContext* ctx, size_t size, MorphTypeInfo* type_info) {
     ObjectHeader* header = (ObjectHeader*)addr;
     memset(header, 0, total_size);
     header->type = type_info;
-    header->flags = 0;
+    header->flags = 0x4; // Set valid flag
     header->size = size;
     header->page = ctx->current_alloc_page;
+    header->required_clearance = required_clearance;
+    header->canary_start = MEMORY_CANARY_MAGIC;
+    strcpy(header->zone_id, ctx->zone_id);
+
+    // Set end canary
+    uint32_t* end_canary = (uint32_t*)((uint8_t*)(header + 1) + size);
+    *end_canary = MEMORY_CANARY_MAGIC;
 
     // Link to heap list for GC sweeping
     header->next = ctx->heap_head;
     ctx->heap_head = header;
     ctx->allocated_bytes += size;
+    ctx->zone_allocated += size;
+
+    // Track allocation
+    void* payload = (void*)(header + 1);
+    mph_track_allocation(ctx, payload, size);
 
     pthread_mutex_unlock(&ctx->memory_lock);
 
@@ -1023,6 +1694,24 @@ void mph_map_delete(MorphContext* ctx, MorphMap* map, void* key) {
         if (idx == start) return;
     }
 }
+
+mph_bool mph_map_has(MorphContext* ctx, MorphMap* map, void* key) {
+    mph_swap_in(ctx, map);
+    mph_swap_in(ctx, map->entries);
+    uint64_t hash = mph_hash_key(ctx, key, map->key_kind);
+    size_t idx = hash % map->capacity;
+    size_t start = idx;
+    while (1) {
+        MorphMapEntry* e = &map->entries[idx];
+        if (!e->occupied) return 0;
+        if (!e->deleted && mph_key_eq(ctx, e->key, key, map->key_kind)) {
+            return 1;
+        }
+        idx = (idx + 1) % map->capacity;
+        if (idx == start) return 0;
+    }
+}
+
 mph_int mph_map_len(MorphContext* ctx, MorphMap* map) {
     mph_swap_in(ctx, map);
     return map ? map->count : 0;

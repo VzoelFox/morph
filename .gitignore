@@ -11,7 +11,7 @@
 !morphsh/**
 !pkg/**
 !stdlib/**
-!.morph.vz/**
+!.morph.vz/checksums/**
 !.vzoel.jules/**
 
 # 3. Whitelist Root Files
@@ -19,6 +19,7 @@
 !DESIGN.md
 !README.md
 !ROADMAP.md
+!ANALISIS_ARSITEKTUR.md
 !checksum_gen.go
 !go.mod
 !go.sum
@@ -48,3 +49,7 @@ examples/stress_test
 /*.c
 /*.h
 /test_*
+
+# Ignore swap directory dan runtime files
+.morph.vz/swap/
+.morph.vz/.z

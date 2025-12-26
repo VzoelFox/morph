@@ -581,6 +581,12 @@ func (c *Compiler) compileModule(prog *parser.Program, prefix string) error {
 					continue
 				}
 			}
+			// Skip top-level main() call - akan dipanggil explicit di entry point
+			if call, ok := s.Expression.(*parser.CallExpression); ok {
+				if ident, ok := call.Function.(*parser.Identifier); ok && ident.Value == "main" {
+					continue
+				}
+			}
 		}
 
 		if prefix == "mph_" {

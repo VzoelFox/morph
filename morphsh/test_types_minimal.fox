@@ -1,0 +1,37 @@
+# Minimal Type System Test
+
+struktur Type
+    kind int
+akhir
+
+fungsi type_int() Type
+    kembalikan Type(0)
+akhir
+
+fungsi type_bool() Type
+    kembalikan Type(2)
+akhir
+
+fungsi types_equal(t1 Type, t2 Type) bool
+    kembalikan t1.kind == t2.kind
+akhir
+
+fungsi main() void
+    native_print("=== TYPE SYSTEM TEST ===")
+    
+    var t1 = type_int()
+    var t2 = type_int()
+    var t3 = type_bool()
+    
+    jika types_equal(t1, t2)
+        native_print("Int == Int: OK")
+    akhir
+    
+    jika !types_equal(t1, t3)
+        native_print("Int != Bool: OK")
+    akhir
+    
+    native_print("=== TEST PASSED ===")
+akhir
+
+main()

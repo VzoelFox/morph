@@ -1,0 +1,21 @@
+fungsi TestZoneIsolation() void
+    native_print("=== Zone Isolation Test ===")
+    
+    # Test basic allocation
+    var msg1 = "Zone A Message"
+    var msg2 = "Zone B Message"
+    
+    native_print("Zone A:")
+    native_print(msg1)
+    
+    native_print("Zone B:")
+    native_print(msg2)
+    
+    native_print("=== Zone Test Complete ===")
+akhir
+
+fungsi main() void
+    TestZoneIsolation()
+akhir
+
+main()

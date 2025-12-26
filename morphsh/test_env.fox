@@ -1,0 +1,106 @@
+# Test Environment
+
+struktur Environment
+    size int
+akhir
+
+fungsi env_new() Environment
+    kembalikan Environment(0)
+akhir
+
+var env_names = ["", "", "", "", "", "", "", "", "", ""]
+var env_kinds = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+var env_ints = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+var env_bools = [salah, salah, salah, salah, salah, salah, salah, salah, salah, salah]
+
+fungsi env_set(env Environment, name string, kind int, int_val int, bool_val bool) Environment
+    var i = 0
+    var found = -1
+    selama i < env.size
+        jika env_names[i] == name
+            found = i
+        akhir
+        i = i + 1
+    akhir
+    
+    jika found >= 0
+        env_kinds[found] = kind
+        env_ints[found] = int_val
+        env_bools[found] = bool_val
+    akhir
+    
+    jika found < 0
+        env_names[env.size] = name
+        env_kinds[env.size] = kind
+        env_ints[env.size] = int_val
+        env_bools[env.size] = bool_val
+        env.size = env.size + 1
+    akhir
+    
+    kembalikan env
+akhir
+
+fungsi env_get_int(env Environment, name string) int
+    var i = 0
+    selama i < env.size
+        jika env_names[i] == name
+            kembalikan env_ints[i]
+        akhir
+        i = i + 1
+    akhir
+    kembalikan 0
+akhir
+
+fungsi env_get_bool(env Environment, name string) bool
+    var i = 0
+    selama i < env.size
+        jika env_names[i] == name
+            kembalikan env_bools[i]
+        akhir
+        i = i + 1
+    akhir
+    kembalikan salah
+akhir
+
+fungsi main() void
+    native_print("=== ENVIRONMENT TEST ===")
+    
+    var env = env_new()
+    
+    # Set variable x = 42
+    env = env_set(env, "x", 0, 42, salah)
+    
+    # Get variable x
+    var x_val = env_get_int(env, "x")
+    jika x_val == 42
+        native_print("Set/Get x=42: OK")
+    akhir
+    
+    # Update variable x = 100
+    env = env_set(env, "x", 0, 100, salah)
+    var x_val2 = env_get_int(env, "x")
+    jika x_val2 == 100
+        native_print("Update x=100: OK")
+    akhir
+    
+    # Set variable y = true
+    env = env_set(env, "y", 2, 0, benar)
+    var y_val = env_get_bool(env, "y")
+    jika y_val
+        native_print("Set/Get y=true: OK")
+    akhir
+    
+    # Multiple variables
+    env = env_set(env, "a", 0, 10, salah)
+    env = env_set(env, "b", 0, 20, salah)
+    env = env_set(env, "c", 0, 30, salah)
+    
+    var sum = env_get_int(env, "a") + env_get_int(env, "b") + env_get_int(env, "c")
+    jika sum == 60
+        native_print("Multiple vars a+b+c=60: OK")
+    akhir
+    
+    native_print("=== TEST PASSED ===")
+akhir
+
+main()

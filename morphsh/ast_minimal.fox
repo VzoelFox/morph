@@ -1,38 +1,43 @@
-struktur Program
-    functions []string
-akhir
+# Minimal AST Integration Test
 
-struktur FunctionNode
-    name string
-    params []string
-    body string
-akhir
-
-struktur ExpressionNode
+struktur SimpleAST
     type string
-    value string
+    intVal int
+    operator string
 akhir
 
-fungsi NewProgram() Program
-    kembalikan Program{functions: []string{}}
+fungsi NewIntAST(val int) SimpleAST
+    kembalikan SimpleAST{type: "INT", intVal: val, operator: ""}
 akhir
 
-fungsi NewFunction(name string) FunctionNode
-    kembalikan FunctionNode{
-        name: name,
-        params: []string{},
-        body: ""
-    }
+fungsi NewOpAST(op string) SimpleAST
+    kembalikan SimpleAST{type: "OP", intVal: 0, operator: op}
 akhir
 
-fungsi NewExpression(typ string, val string) ExpressionNode
-    kembalikan ExpressionNode{
-        type: typ,
-        value: val
-    }
+fungsi EvalSimpleAST(node SimpleAST) int
+    jika node.type == "INT"
+        kembalikan node.intVal
+    lainnya
+        kembalikan 0
+    akhir
 akhir
 
-fungsi addFunction(prog Program, funcName string) Program
-    prog.functions = append(prog.functions, funcName)
-    kembalikan prog
+fungsi TestAST() void
+    native_print("=== AST Integration Test ===")
+    
+    var node = NewIntAST(42)
+    var result = EvalSimpleAST(node)
+    
+    native_print("AST node value:")
+    native_print_int(result)
+    
+    native_print("=== AST Works ===")
 akhir
+
+fungsi main() void
+    native_print("=== Morph AST ===")
+    TestAST()
+    native_print("Done!")
+akhir
+
+main()

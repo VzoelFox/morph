@@ -1,0 +1,65 @@
+# Simple Interpreter - Combine Type System + Evaluator + Environment
+# Minimal working interpreter untuk bootstrap
+
+struktur Value
+    kind int
+    int_val int
+akhir
+
+struktur Env
+    x int
+    y int
+    result int
+akhir
+
+fungsi value_int(n int) Value
+    kembalikan Value(0, n)
+akhir
+
+fungsi eval_add(left Value, right Value) Value
+    kembalikan value_int(left.int_val + right.int_val)
+akhir
+
+fungsi eval_mul(left Value, right Value) Value
+    kembalikan value_int(left.int_val * right.int_val)
+akhir
+
+fungsi main() void
+    native_print("=== SIMPLE INTERPRETER TEST ===")
+    
+    # Simulate: var x = 10
+    var env = Env(10, 0, 0)
+    native_print("var x = 10")
+    
+    # Simulate: var y = 5
+    env.y = 5
+    native_print("var y = 5")
+    
+    # Simulate: var result = x + y
+    var v_x = value_int(env.x)
+    var v_y = value_int(env.y)
+    var v_add = eval_add(v_x, v_y)
+    env.result = v_add.int_val
+    native_print("var result = x + y")
+    
+    # Check result
+    jika env.result == 15
+        native_print("result = 15: OK")
+    akhir
+    
+    # Simulate: result = result * 2
+    var v_result = value_int(env.result)
+    var v_two = value_int(2)
+    var v_mul = eval_mul(v_result, v_two)
+    env.result = v_mul.int_val
+    native_print("result = result * 2")
+    
+    # Check result
+    jika env.result == 30
+        native_print("result = 30: OK")
+    akhir
+    
+    native_print("=== INTERPRETER WORKING ===")
+akhir
+
+main()

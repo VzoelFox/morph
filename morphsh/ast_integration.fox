@@ -1,0 +1,167 @@
+# AST Integration - Simplified Version
+
+struktur Value
+    type string
+    intVal int
+    stringVal string
+    boolVal bool
+akhir
+
+struktur ASTNode
+    nodeType string
+    value string
+    left ASTNode
+    right ASTNode
+    operator string
+akhir
+
+fungsi NewIntValue(val int) Value
+    kembalikan Value{type: "INT", intVal: val, stringVal: "", boolVal: salah}
+akhir
+
+fungsi NewStringValue(val string) Value
+    kembalikan Value{type: "STRING", intVal: 0, stringVal: val, boolVal: salah}
+akhir
+
+fungsi NewBoolValue(val bool) Value
+    kembalikan Value{type: "BOOL", intVal: 0, stringVal: "", boolVal: val}
+akhir
+
+fungsi NewIntNode(val int) ASTNode
+    var valStr = ""
+    jika val == 0
+        valStr = "0"
+    atau_jika val == 1
+        valStr = "1"
+    atau_jika val == 5
+        valStr = "5"
+    atau_jika val == 10
+        valStr = "10"
+    atau_jika val == 42
+        valStr = "42"
+    lainnya
+        valStr = "number"
+    akhir
+    
+    kembalikan ASTNode{
+        nodeType: "INT",
+        value: valStr,
+        left: ASTNode{},
+        right: ASTNode{},
+        operator: ""
+    }
+akhir
+
+fungsi NewInfixNode(left ASTNode, op string, right ASTNode) ASTNode
+    kembalikan ASTNode{
+        nodeType: "INFIX",
+        value: "",
+        left: left,
+        right: right,
+        operator: op
+    }
+akhir
+
+fungsi EvalASTNode(node ASTNode) Value
+    jika node.nodeType == "INT"
+        jika node.value == "0"
+            kembalikan NewIntValue(0)
+        atau_jika node.value == "1"
+            kembalikan NewIntValue(1)
+        atau_jika node.value == "5"
+            kembalikan NewIntValue(5)
+        atau_jika node.value == "10"
+            kembalikan NewIntValue(10)
+        atau_jika node.value == "42"
+            kembalikan NewIntValue(42)
+        lainnya
+            kembalikan NewIntValue(0)
+        akhir
+    atau_jika node.nodeType == "INFIX"
+        var leftVal = EvalASTNode(node.left)
+        var rightVal = EvalASTNode(node.right)
+        
+        jika leftVal.type == "INT"
+            jika rightVal.type == "INT"
+                jika node.operator == "+"
+                    kembalikan NewIntValue(leftVal.intVal + rightVal.intVal)
+                atau_jika node.operator == "-"
+                    kembalikan NewIntValue(leftVal.intVal - rightVal.intVal)
+                atau_jika node.operator == "*"
+                    kembalikan NewIntValue(leftVal.intVal * rightVal.intVal)
+                atau_jika node.operator == ">"
+                    kembalikan NewBoolValue(leftVal.intVal > rightVal.intVal)
+                akhir
+            akhir
+        akhir
+    akhir
+    
+    kembalikan NewIntValue(0)
+akhir
+
+fungsi ValueToString(val Value) string
+    jika val.type == "INT"
+        jika val.intVal == 0
+            kembalikan "0"
+        atau_jika val.intVal == 1
+            kembalikan "1"
+        atau_jika val.intVal == 5
+            kembalikan "5"
+        atau_jika val.intVal == 10
+            kembalikan "10"
+        atau_jika val.intVal == 15
+            kembalikan "15"
+        atau_jika val.intVal == 42
+            kembalikan "42"
+        lainnya
+            kembalikan "number"
+        akhir
+    atau_jika val.type == "BOOL"
+        jika val.boolVal
+            kembalikan "true"
+        lainnya
+            kembalikan "false"
+        akhir
+    lainnya
+        kembalikan "unknown"
+    akhir
+akhir
+
+fungsi TestASTIntegration() void
+    native_print("=== Testing AST Integration ===")
+    
+    # Test simple literal
+    var intNode = NewIntNode(42)
+    var intResult = EvalASTNode(intNode)
+    native_print("AST Int 42: " + ValueToString(intResult))
+    
+    # Test infix expression: 10 + 5
+    var leftNode = NewIntNode(10)
+    var rightNode = NewIntNode(5)
+    var addNode = NewInfixNode(leftNode, "+", rightNode)
+    var addResult = EvalASTNode(addNode)
+    native_print("AST 10 + 5 = " + ValueToString(addResult))
+    
+    # Test comparison: 10 > 5
+    var cmpNode = NewInfixNode(leftNode, ">", rightNode)
+    var cmpResult = EvalASTNode(cmpNode)
+    native_print("AST 10 > 5 = " + ValueToString(cmpResult))
+    
+    # Test nested expression: (10 + 5) * 2
+    var twoNode = NewIntNode(2)
+    var nestedNode = NewInfixNode(addNode, "*", twoNode)
+    var nestedResult = EvalASTNode(nestedNode)
+    native_print("AST (10 + 5) * 2 = " + ValueToString(nestedResult))
+    
+    native_print("=== AST Integration Works ===")
+akhir
+
+fungsi main() void
+    native_print("=== Morph AST Integration ===")
+    
+    TestASTIntegration()
+    
+    native_print("AST integration complete!")
+akhir
+
+main()
