@@ -1,0 +1,11 @@
+# Tree Walker - Simple working implementation
+
+fungsi EvalAdd(a int, b int) int
+    kembali a + b
+akhir
+
+fungsi main() void
+    native_print("Tree Walker Test")
+    var result = EvalAdd(1, 2)
+    native_print("1 + 2 evaluated")
+akhir

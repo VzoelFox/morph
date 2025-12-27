@@ -1,0 +1,20 @@
+# Map Stdlib - Helper functions untuk map operations
+# Status: Foundation - Basic map manipulation
+
+fungsi MapLength(m map[string]int) int
+    # Get map size
+    kembali panjang(m)
+akhir
+
+fungsi MapHasKey(m map[string]int, key string) bool
+    # Check if map contains key
+    # TODO: Implement proper key existence check
+    # For now, return false as placeholder
+    kembali salah
+akhir
+
+fungsi MapGet(m map[string]int, key string, defaultVal int) int
+    # Get value from map with default fallback
+    # TODO: Implement proper map get with existence check
+    kembali m[key]  # May panic if key doesn't exist
+akhir

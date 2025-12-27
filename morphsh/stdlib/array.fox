@@ -1,0 +1,35 @@
+# Array Stdlib - Helper functions untuk array operations
+# Status: Foundation - Basic array manipulation
+
+fungsi ArrayLength(arr []int) int
+    # Get array length
+    kembali panjang(arr)
+akhir
+
+fungsi ArrayAppend(arr []int, item int) []int
+    # Append item to array
+    kembali arr + [item]
+akhir
+
+fungsi ArrayGet(arr []int, index int) int
+    # Get item at index (with bounds check)
+    var len = panjang(arr)
+    jika index < 0 atau index >= len
+        kembali 0  # Out of bounds, return default
+    akhir
+    kembali arr[index]
+akhir
+
+fungsi ArraySum(arr []int) int
+    # Sum all elements in array
+    var sum = 0
+    var i = 0
+    var len = panjang(arr)
+
+    selama i < len
+        sum = sum + arr[i]
+        i = i + 1
+    akhir
+
+    kembali sum
+akhir
