@@ -776,6 +776,20 @@ GCHeap* gc_heap_create(void) {
     heap->bytes_promoted = 0;
     heap->bytes_reclaimed = 0;
 
+    // Week 11: Initialize type descriptors
+    for (int i = 0; i < MAX_TYPE_DESCRIPTORS; i++) {
+        heap->type_descriptors[i] = NULL;
+    }
+    heap->num_type_descriptors = 0;
+
+    // Week 11: Initialize heap resizing (default: no auto-resize)
+    heap->resize_config = NULL;
+    heap->young_target_size = GC_YOUNG_GEN_SIZE;
+    heap->old_target_size = GC_OLD_GEN_SIZE;
+
+    // Week 11: Compaction stats
+    heap->bytes_compacted = 0;
+
     return heap;
 }
 
@@ -792,6 +806,18 @@ void gc_heap_destroy(GCHeap* heap) {
         RememberedSetEntry* next = entry->next;
         free(entry);
         entry = next;
+    }
+
+    // Week 11: Free type descriptors
+    for (int i = 0; i < MAX_TYPE_DESCRIPTORS; i++) {
+        if (heap->type_descriptors[i]) {
+            free(heap->type_descriptors[i]);
+        }
+    }
+
+    // Week 11: Free resize config if allocated
+    if (heap->resize_config) {
+        free(heap->resize_config);
     }
 
     free(heap);
@@ -1120,6 +1146,312 @@ void gc_write_barrier(GCHeap* heap, void* old_obj, void** field_addr) {
     entry->field_addr = field_addr;
     entry->next = heap->remembered_set;
     heap->remembered_set = entry;
+}
+
+//=============================================================================
+// PRECISE TRACING - Week 11
+//=============================================================================
+
+void gc_register_type_descriptor(GCHeap* heap, const TypeDescriptor* desc) {
+    if (!heap || !desc) return;
+    if (desc->type_id >= MAX_TYPE_DESCRIPTORS) return;
+
+    // Allocate and copy descriptor
+    TypeDescriptor* copy = (TypeDescriptor*)malloc(sizeof(TypeDescriptor));
+    if (!copy) return;
+
+    memcpy(copy, desc, sizeof(TypeDescriptor));
+    heap->type_descriptors[desc->type_id] = copy;
+
+    if (heap->num_type_descriptors <= desc->type_id) {
+        heap->num_type_descriptors = desc->type_id + 1;
+    }
+}
+
+const TypeDescriptor* gc_get_type_descriptor(GCHeap* heap, uint8_t type_id) {
+    if (!heap || type_id >= MAX_TYPE_DESCRIPTORS) return NULL;
+    return heap->type_descriptors[type_id];
+}
+
+// Precise marking using type information
+static void gc_mark_object_precise(GCHeap* heap, void* ptr) {
+    if (!ptr) return;
+
+    ObjectHeader* header = morph_v2_get_header(ptr);
+    if (header->marked) return;
+
+    // Mark object
+    header->marked = 1;
+
+    // Push to gray stack
+    if (heap->gray_count >= heap->gray_capacity) {
+        heap->gray_capacity *= 2;
+        heap->gray_stack = (void**)realloc(heap->gray_stack,
+                                            sizeof(void*) * heap->gray_capacity);
+    }
+    heap->gray_stack[heap->gray_count++] = ptr;
+
+    // Get type descriptor for precise tracing
+    const TypeDescriptor* desc = gc_get_type_descriptor(heap, header->type_id);
+    if (!desc || desc->num_pointers == 0) return;
+
+    // Trace pointer fields only
+    uint8_t* obj_data = (uint8_t*)ptr;
+    for (uint8_t i = 0; i < desc->num_pointers; i++) {
+        uint16_t offset = desc->pointer_offsets[i];
+        void** field_ptr = (void**)(obj_data + offset);
+        void* child_ptr = *field_ptr;
+
+        if (child_ptr) {
+            gc_mark_object_precise(heap, child_ptr);
+        }
+    }
+}
+
+//=============================================================================
+// MARK-COMPACT - Week 11
+//=============================================================================
+
+// Compute forwarding addresses (first pass)
+static void gc_compute_forwarding_addresses(GCHeap* heap) {
+    uint8_t* scan = heap->old.start;
+    uint8_t* dest = heap->old.start;  // Compaction destination
+
+    while (scan < heap->old.start + heap->old.used) {
+        ObjectHeader* header = (ObjectHeader*)scan;
+        size_t total_size = morph_v2_total_size(header->size);
+
+        if (header->marked) {
+            // Live object - compute forwarding address
+            // Store in reserved field (temporary)
+            header->reserved = (uint16_t)(dest - scan);  // Offset to new location
+            dest += total_size;
+        }
+
+        scan += total_size;
+    }
+
+    // New used size after compaction
+    heap->old.used = dest - heap->old.start;
+}
+
+// Update all references after compaction (second pass)
+static void gc_update_references_compact(GCHeap* heap, void** roots, size_t root_count) {
+    // Update roots
+    for (size_t i = 0; i < root_count; i++) {
+        void* obj = *roots[i];
+        if (!obj) continue;
+
+        ObjectHeader* header = morph_v2_get_header(obj);
+        if (header->generation == GEN_OLD && header->marked) {
+            // Update root pointer to new location
+            uint8_t* old_addr = (uint8_t*)header;
+            uint8_t* new_addr = old_addr + header->reserved;
+            *roots[i] = morph_v2_get_payload((ObjectHeader*)new_addr);
+        }
+    }
+
+    // Update inter-object pointers (scan all live objects)
+    uint8_t* scan = heap->old.start;
+    while (scan < heap->old.start + heap->old.used) {
+        ObjectHeader* header = (ObjectHeader*)scan;
+        if (!header->marked) {
+            scan += morph_v2_total_size(header->size);
+            continue;
+        }
+
+        // Get type descriptor for precise pointer scanning
+        const TypeDescriptor* desc = gc_get_type_descriptor(heap, header->type_id);
+        if (desc && desc->num_pointers > 0) {
+            void* obj = morph_v2_get_payload(header);
+            uint8_t* obj_data = (uint8_t*)obj;
+
+            // Update each pointer field
+            for (uint8_t i = 0; i < desc->num_pointers; i++) {
+                uint16_t offset = desc->pointer_offsets[i];
+                void** field_ptr = (void**)(obj_data + offset);
+                void* child_ptr = *field_ptr;
+
+                if (child_ptr) {
+                    ObjectHeader* child_header = morph_v2_get_header(child_ptr);
+                    if (child_header->generation == GEN_OLD && child_header->marked) {
+                        // Update pointer to new location
+                        uint8_t* old_child = (uint8_t*)child_header;
+                        uint8_t* new_child = old_child + child_header->reserved;
+                        *field_ptr = morph_v2_get_payload((ObjectHeader*)new_child);
+                    }
+                }
+            }
+        }
+
+        scan += morph_v2_total_size(header->size);
+    }
+}
+
+// Move live objects to compacted locations (third pass)
+static void gc_move_objects(GCHeap* heap) {
+    uint8_t* scan = heap->old.start;
+    uint8_t* dest = heap->old.start;
+
+    while (scan < heap->old.start + heap->old.used) {
+        ObjectHeader* header = (ObjectHeader*)scan;
+        size_t total_size = morph_v2_total_size(header->size);
+
+        if (header->marked) {
+            // Move object to new location
+            if (scan != dest) {
+                memmove(dest, scan, total_size);
+            }
+
+            // Clear mark and reserved field
+            ObjectHeader* new_header = (ObjectHeader*)dest;
+            new_header->marked = 0;
+            new_header->reserved = 0;
+
+            dest += total_size;
+        }
+
+        scan += total_size;
+    }
+
+    heap->bytes_compacted += (scan - dest);
+}
+
+void gc_compact_old_generation(GCHeap* heap) {
+    if (!heap) return;
+
+    uint64_t start_time = gc_get_time_us();
+
+    // Three-pass mark-compact algorithm
+    gc_compute_forwarding_addresses(heap);  // Pass 1: Compute new addresses
+    // Note: Pass 2 needs roots, done in gc_update_references
+    gc_move_objects(heap);                   // Pass 3: Move objects
+
+    // Rebuild free list (single large free block at end)
+    heap->old.free_list = NULL;
+    if (heap->old.used < heap->old.size) {
+        GCFreeNode* free_block = (GCFreeNode*)(heap->old.start + heap->old.used);
+        free_block->size = heap->old.size - heap->old.used;
+        free_block->next = NULL;
+        heap->old.free_list = free_block;
+    }
+
+    uint64_t elapsed = gc_get_time_us() - start_time;
+    // Track compaction time (for stats)
+    (void)elapsed;  // Unused for now
+}
+
+void gc_update_references(GCHeap* heap, void** roots, size_t root_count) {
+    if (!heap) return;
+    gc_update_references_compact(heap, roots, root_count);
+}
+
+//=============================================================================
+// DYNAMIC HEAP RESIZING - Week 11
+//=============================================================================
+
+void gc_resize_young_generation(GCHeap* heap, size_t new_size) {
+    if (!heap || new_size == heap->young.size) return;
+    if (new_size < heap->young.used) return;  // Can't shrink below used
+
+    // Allocate new young generation
+    uint8_t* new_start = (uint8_t*)malloc(new_size);
+    if (!new_start) return;
+
+    // Copy live objects to new generation
+    memcpy(new_start, heap->young.start, heap->young.used);
+
+    // Free old generation
+    free(heap->young.start);
+
+    // Update pointers
+    heap->young.start = new_start;
+    heap->young.end = new_start + new_size;
+    heap->young.current = new_start + heap->young.used;
+    heap->young.size = new_size;
+}
+
+void gc_resize_old_generation(GCHeap* heap, size_t new_size) {
+    if (!heap || new_size == heap->old.size) return;
+    if (new_size < heap->old.used) return;  // Can't shrink below used
+
+    // Allocate new old generation
+    uint8_t* new_start = (uint8_t*)malloc(new_size);
+    if (!new_start) return;
+
+    // Copy old generation to new space
+    memcpy(new_start, heap->old.start, heap->old.used);
+
+    // Free old space
+    free(heap->old.start);
+
+    // Update pointers
+    ptrdiff_t offset = new_start - heap->old.start;
+    heap->old.start = new_start;
+    heap->old.end = new_start + new_size;
+    heap->old.size = new_size;
+
+    // Fix free list pointers
+    GCFreeNode* node = heap->old.free_list;
+    GCFreeNode* new_free_list = NULL;
+    GCFreeNode** prev_next = &new_free_list;
+
+    while (node) {
+        GCFreeNode* new_node = (GCFreeNode*)((uint8_t*)node + offset);
+        *prev_next = new_node;
+        prev_next = &new_node->next;
+        node = node->next;
+    }
+
+    heap->old.free_list = new_free_list;
+
+    // Add remaining space to free list
+    if (new_size > heap->old.used) {
+        GCFreeNode* extra = (GCFreeNode*)(new_start + heap->old.used);
+        extra->size = new_size - heap->old.used;
+        extra->next = heap->old.free_list;
+        heap->old.free_list = extra;
+    }
+}
+
+void gc_auto_resize_heap(GCHeap* heap, const HeapResizeConfig* config) {
+    if (!heap || !config) return;
+
+    // Check young generation
+    float young_usage = (float)heap->young.used / heap->young.size;
+    if (young_usage > config->grow_threshold && heap->young.size < config->max_young_size) {
+        // Grow young generation
+        size_t new_size = heap->young.size * 2;
+        if (new_size > config->max_young_size) {
+            new_size = config->max_young_size;
+        }
+        gc_resize_young_generation(heap, new_size);
+    } else if (young_usage < config->shrink_threshold && heap->young.size > config->min_young_size) {
+        // Shrink young generation
+        size_t new_size = heap->young.size / 2;
+        if (new_size < config->min_young_size) {
+            new_size = config->min_young_size;
+        }
+        gc_resize_young_generation(heap, new_size);
+    }
+
+    // Check old generation
+    float old_usage = (float)heap->old.used / heap->old.size;
+    if (old_usage > config->grow_threshold && heap->old.size < config->max_old_size) {
+        // Grow old generation
+        size_t new_size = heap->old.size * 2;
+        if (new_size > config->max_old_size) {
+            new_size = config->max_old_size;
+        }
+        gc_resize_old_generation(heap, new_size);
+    } else if (old_usage < config->shrink_threshold && heap->old.size > config->min_old_size) {
+        // Shrink old generation
+        size_t new_size = heap->old.size / 2;
+        if (new_size < config->min_old_size) {
+            new_size = config->min_old_size;
+        }
+        gc_resize_old_generation(heap, new_size);
+    }
 }
 
 //=============================================================================
