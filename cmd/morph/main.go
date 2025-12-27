@@ -43,10 +43,6 @@ type FileImporter struct {
 func (fi *FileImporter) Import(path string) (*parser.Program, error) {
 	// 1. Try Absolute Path
 	if filepath.IsAbs(path) {
-		// Add extension if missing
-		if filepath.Ext(path) == "" {
-			path += ".fox"
-		}
 		return fi.parseFile(path)
 	}
 
@@ -88,12 +84,20 @@ func (fi *FileImporter) parseFile(path string) (*parser.Program, error) {
 }
 
 func main() {
+	// Panic recovery to prevent crashes from internal compiler errors
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintf(os.Stderr, "❌ Internal Compiler Error (panic): %v\n", r)
+			fmt.Fprintln(os.Stderr, "This is a bug in the Morph compiler. Please report it.")
+			os.Exit(2)
+		}
+	}()
+
 	if len(os.Args) < 2 {
 		fmt.Printf("Morph Compiler\n")
 		fmt.Printf("Usage:\n")
 		fmt.Printf("  morph <filename.fox>        (Run Interpreter)\n")
 		fmt.Printf("  morph build <filename.fox>  (Compile to C)\n")
-		fmt.Printf("  morph n3 <filename.fox>     (Compile to Pure Morph - N3)\n")
 		os.Exit(1)
 	}
 
@@ -104,12 +108,6 @@ func main() {
 			os.Exit(1)
 		}
 		runBuild(os.Args[2])
-	} else if arg1 == "n3" {
-		if len(os.Args) < 3 {
-			fmt.Println("Usage: morph n3 <filename.fox>")
-			os.Exit(1)
-		}
-		runN3Build(os.Args[2])
 	} else {
 		runInterpreter(arg1)
 	}
@@ -140,15 +138,7 @@ func runBuild(filename string) {
 
 	absPath, _ := filepath.Abs(filename)
 	rootDir := filepath.Dir(absPath)
-	currentDir, _ := os.Getwd()
-	searchPaths := []string{
-		rootDir, 
-		currentDir, 
-		filepath.Join(currentDir, "stdlib"), 
-		filepath.Join(currentDir, "morphfox"),
-		filepath.Join(currentDir, "morphfox", "stdlib"),
-		".",
-	}
+	searchPaths := []string{rootDir, "stdlib"}
 
 	c.SetImporter(&FileImporter{SearchPaths: searchPaths})
 	c.Check(prog)
@@ -192,7 +182,7 @@ func runBuild(filename string) {
 
 	// 4. GCC
 	fmt.Println("🔨 Compiling with GCC...")
-	cmd := exec.Command("gcc", "-o", outExe, outC, filepath.Join(workDir, "runtime.c"), "-lpthread")
+	cmd := exec.Command("gcc", "-o", outExe, outC, filepath.Join(workDir, "runtime.c"))
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
@@ -201,63 +191,6 @@ func runBuild(filename string) {
 	}
 
 	fmt.Printf("✅ Build Success! Output: %s\n", outExe)
-}
-
-func runN3Build(filename string) {
-	// 1. Parse
-	content, err := os.ReadFile(filename)
-	if err != nil {
-		fmt.Printf("Error reading file: %v\n", err)
-		os.Exit(1)
-	}
-
-	l := lexer.New(string(content))
-	p := parser.New(l)
-	prog := p.ParseProgram()
-
-	if len(p.Errors()) > 0 {
-		fmt.Println("❌ Parser Errors:")
-		for _, err := range p.Errors() {
-			fmt.Printf("  %s\n", err)
-		}
-		os.Exit(1)
-	}
-
-	// 2. Type Check
-	rootDir := filepath.Dir(filename)
-	importer := &FileImporter{
-		SearchPaths: []string{
-			rootDir, 
-			".", 
-			"stdlib",
-			"morphfox",
-			"morphfox/stdlib",
-		},
-	}
-	c := checker.New()
-	c.SetImporter(importer)
-	c.Check(prog)
-
-	// 3. N3 Compile to Pure Morph
-	fmt.Println("🚀 Compiling to Pure Morph (N3)...")
-	n3comp := compiler.NewN3MorphCompiler(c)
-	morphCode, err := n3comp.Compile(prog)
-	if err != nil {
-		fmt.Printf("❌ N3 Compilation Error: %v\n", err)
-		os.Exit(1)
-	}
-
-	// 4. Write Pure Morph Output
-	baseName := strings.TrimSuffix(filepath.Base(filename), filepath.Ext(filename))
-	outMorph := filepath.Join(rootDir, baseName+"_n3.fox")
-	
-	if err := os.WriteFile(outMorph, []byte(morphCode), 0644); err != nil {
-		fmt.Printf("Error writing Morph output: %v\n", err)
-		os.Exit(1)
-	}
-
-	fmt.Printf("✅ N3 Build Success! Pure Morph Output: %s\n", outMorph)
-	fmt.Println("🎯 Ready for binary release compilation!")
 }
 
 func runInterpreter(filename string) {
@@ -287,15 +220,7 @@ func runInterpreter(filename string) {
 
 	absPath, _ := filepath.Abs(filename)
 	rootDir := filepath.Dir(absPath)
-	currentDir, _ := os.Getwd()
-	searchPaths := []string{
-		rootDir, 
-		currentDir, 
-		filepath.Join(currentDir, "stdlib"), 
-		filepath.Join(currentDir, "morphfox"),
-		filepath.Join(currentDir, "morphfox", "stdlib"),
-		".",
-	}
+	searchPaths := []string{rootDir, "stdlib"}
 
 	c.SetImporter(&FileImporter{SearchPaths: searchPaths})
 

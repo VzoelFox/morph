@@ -46,13 +46,6 @@ extern const MorphMemConfig MORPH_CONFIG_VM;
 extern const MorphMemConfig MORPH_CONFIG_SERVER;
 
 //=============================================================================
-// CONSTANTS (Must be before usage)
-//=============================================================================
-
-// Type descriptor registry (max 128 types)
-#define MAX_TYPE_DESCRIPTORS 128
-
-//=============================================================================
 // OBJECT HEADER V2 (16 bytes - down from V1's 72 bytes!)
 //=============================================================================
 
@@ -69,9 +62,6 @@ typedef struct ObjectHeader {
     uint8_t  generation;     // 0=young, 1=old, 2=permanent, 255=large
     uint8_t  flags;          // Custom flags (pinned, finalizable, etc)
     uint16_t reserved;       // Future use / alignment padding
-
-    // Padding to 16 bytes (8 more bytes needed)
-    uint64_t padding;        // Ensures 16-byte alignment
 } ObjectHeader;
 
 // Verify size at compile time
@@ -299,6 +289,9 @@ struct TypeDescriptor {
     uint8_t num_pointers;             // Number of pointer fields
     uint16_t pointer_offsets[16];     // Offsets of pointer fields (max 16)
 };
+
+// Type descriptor registry (max 128 types)
+#define MAX_TYPE_DESCRIPTORS 128
 
 // Register type descriptor for precise tracing
 void gc_register_type_descriptor(GCHeap* heap, const TypeDescriptor* desc);
