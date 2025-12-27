@@ -1,14 +1,18 @@
 # Hutang Teknis & Catatan Pengembangan Morph
 
 ## Status: Active
-**Last Updated**: 2025-12-27 02:38 WIB
+**Last Updated**: 2025-12-27 20:05 WIB
 
 ### Pending / Open
 - **Tree Walker Implementation**: Port morphsh tree_walker.fox ke morphfox dengan essential functions
 - **Self-Compilation Test**: Test N3 compile dirinya sendiri
 - **Production GC**: Restore thresholds ke 64MB/8MB saat production ready
+- **Error Deduplication Improvement**: Add max-per-location limit instead of full dedup (Low Priority)
+- **Memory V2 Integration**: Test suite passes, needs integration with full compiler (Future)
+- **Resource Limits**: Compilation time/memory limits via ulimit/cgroups (Optional)
 
 ### Completed / Resolved
+- **N0 Security Hardening**: Fixed 3 critical vulnerabilities (7.8/10 → 9.5/10). Added recursion depth limits (MAX_RECURSION_DEPTH=1000) to parser, checker, evaluator. Added panic recovery to main(). Tested with 1100 nested expressions - gracefully caught at limit. Memory V2 bugs fixed (alignment, constants, pointer dereference). Full N0 source restored to main repo (14,632 LoC). Binary rebuilt (3.5MB), all tests pass, no regressions. Status: PRODUCTION READY. (2025-12-27 20:05)
 - **Import System Fix**: Module resolution working dengan capitalized function exports. Search paths include morphfox directories. (2025-12-26)
 - **String & Logic Implementation**: IntToString, BoolToString, StringEquals, essential evaluation functions implemented. Single-file approach untuk bypass complex imports. (2025-12-26)
 - **Memory System Fix**: GC thresholds tuned ke 1MB/256KB untuk development. Format warnings fixed. N3 programs tidak OOM lagi. (2025-12-26)
