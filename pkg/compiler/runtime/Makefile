@@ -1,16 +1,16 @@
 # Makefile for Morph Memory V2 Testing
-# Week 3-4: Pool Allocator + Arena + Foundation
+# Week 5-6: Integration + Pool + Arena + Foundation
 
 CC = gcc
-CFLAGS = -Wall -Wextra -std=c11 -pthread -O2 -g
+CFLAGS = -Wall -Wextra -std=c11 -pthread -O2 -g -DUSE_MEMORY_V2=1
 LDFLAGS = -pthread
 
 # Targets
-.PHONY: all test test-week1 test-week2 test-week3 benchmark clean
+.PHONY: all test test-week1 test-week2 test-week3 test-bridge benchmark clean
 
 all: test
 
-test: test-week1 test-week2 test-week3
+test: test-week1 test-week2 test-week3 test-bridge
 
 test-week1: morph_mem_v2_test
 	@echo "=== Running Week 1 Foundation Tests ==="
@@ -26,7 +26,12 @@ test-week3: morph_mem_v2_pool_test
 	@echo "=== Running Week 3-4 Pool Tests ==="
 	./morph_mem_v2_pool_test
 
-benchmark: morph_mem_v2_arena_test morph_mem_v2_pool_test
+test-bridge: morph_mem_v2_bridge_test
+	@echo ""
+	@echo "=== Running Week 5-6 Bridge Integration Tests ==="
+	./morph_mem_v2_bridge_test
+
+benchmark: morph_mem_v2_arena_test morph_mem_v2_pool_test morph_mem_v2_bridge_test
 	@echo "=== Running All Benchmarks ==="
 	@echo ""
 	@echo "--- Arena Benchmarks ---"
@@ -44,7 +49,10 @@ morph_mem_v2_arena_test: morph_mem_v2_arena_test.c morph_mem_v2.c morph_mem_v2.h
 morph_mem_v2_pool_test: morph_mem_v2_pool_test.c morph_mem_v2.c morph_mem_v2.h
 	$(CC) $(CFLAGS) -o morph_mem_v2_pool_test morph_mem_v2_pool_test.c morph_mem_v2.c $(LDFLAGS)
 
+morph_mem_v2_bridge_test: morph_mem_v2_bridge_test.c morph_mem_v2_bridge.c morph_mem_v2.c morph_mem_v2.h morph_mem_v2_bridge.h
+	$(CC) $(CFLAGS) -o morph_mem_v2_bridge_test morph_mem_v2_bridge_test.c morph_mem_v2_bridge.c morph_mem_v2.c $(LDFLAGS)
+
 clean:
-	rm -f morph_mem_v2_test morph_mem_v2_arena_test morph_mem_v2_pool_test *.o /tmp/morph_mem_stats.json
+	rm -f morph_mem_v2_test morph_mem_v2_arena_test morph_mem_v2_pool_test morph_mem_v2_bridge_test *.o /tmp/morph_mem_stats.json /tmp/morph_bridge_stats.json
 
 .DEFAULT_GOAL := test
