@@ -1,0 +1,440 @@
+/*
+ * Morph Memory System V2 - Implementation
+ * Week 1: Foundation (ObjectHeader + Config + Basic Init)
+ *
+ * Design: See MEMORY_ARCHITECTURE_V2.md
+ * Roadmap: See MEMORY_V2_ROADMAP.md
+ */
+
+#include "morph_mem_v2.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <pthread.h>
+
+// Platform-specific includes for RAM detection
+#ifdef __linux__
+#include <sys/sysinfo.h>
+#elif __APPLE__
+#include <sys/types.h>
+#include <sys/sysctl.h>
+#elif _WIN32
+#include <windows.h>
+#endif
+
+//=============================================================================
+// PRESET CONFIGURATIONS
+//=============================================================================
+
+const MorphMemConfig MORPH_CONFIG_COMPILER = {
+    .mode = MORPH_MODE_COMPILER,
+    .heap_size_hint = 256 * 1024 * 1024,  // 256MB hint
+    .gc_threshold = 0,                     // No GC during compilation
+    .gc_pause_target_ms = 0,
+    .enable_generational = 0,
+    .enable_compaction = 0,
+    .enable_metrics = 0,
+    .enable_debug = 0
+};
+
+const MorphMemConfig MORPH_CONFIG_RUNTIME = {
+    .mode = MORPH_MODE_RUNTIME,
+    .heap_size_hint = 512 * 1024 * 1024,  // 512MB hint
+    .gc_threshold = 64 * 1024 * 1024,     // 64MB threshold
+    .gc_pause_target_ms = 10,              // 10ms target
+    .enable_generational = 1,
+    .enable_compaction = 0,
+    .enable_metrics = 1,
+    .enable_debug = 0
+};
+
+const MorphMemConfig MORPH_CONFIG_VM = {
+    .mode = MORPH_MODE_VM,
+    .heap_size_hint = 2ULL * 1024 * 1024 * 1024,  // 2GB hint
+    .gc_threshold = 128 * 1024 * 1024,             // 128MB threshold
+    .gc_pause_target_ms = 5,                       // 5ms target
+    .enable_generational = 1,
+    .enable_compaction = 1,
+    .enable_metrics = 1,
+    .enable_debug = 0
+};
+
+const MorphMemConfig MORPH_CONFIG_SERVER = {
+    .mode = MORPH_MODE_SERVER,
+    .heap_size_hint = 1024 * 1024 * 1024,  // 1GB bounded
+    .gc_threshold = 128 * 1024 * 1024,     // 128MB threshold
+    .gc_pause_target_ms = 5,               // 5ms target
+    .enable_generational = 1,
+    .enable_compaction = 1,
+    .enable_metrics = 1,
+    .enable_debug = 0
+};
+
+//=============================================================================
+// INTERNAL CONTEXT STRUCTURE
+//=============================================================================
+
+struct MorphContextV2 {
+    MorphMemConfig config;
+
+    // Allocator state (mode-specific, implemented in later weeks)
+    void* allocator_data;  // Points to Arena, GenHeap, etc.
+
+    // Statistics
+    MorphMemStats stats;
+
+    // Type registry
+    const char* type_names[128];
+
+    // Shadow stack for GC roots
+    void** root_stack;
+    size_t root_count;
+    size_t root_capacity;
+
+    // Thread safety
+    pthread_mutex_t lock;
+};
+
+//=============================================================================
+// UTILITY - RAM Detection
+//=============================================================================
+
+size_t morph_mem_get_available_ram(void) {
+#ifdef __linux__
+    struct sysinfo info;
+    if (sysinfo(&info) == 0) {
+        return (size_t)info.freeram * (size_t)info.mem_unit;
+    }
+#elif __APPLE__
+    uint64_t memsize;
+    size_t len = sizeof(memsize);
+    if (sysctlbyname("hw.memsize", &memsize, &len, NULL, 0) == 0) {
+        // Return 50% of total RAM as "available"
+        return (size_t)(memsize / 2);
+    }
+#elif _WIN32
+    MEMORYSTATUSEX status;
+    status.dwLength = sizeof(status);
+    if (GlobalMemoryStatusEx(&status)) {
+        return (size_t)status.ullAvailPhys;
+    }
+#endif
+
+    // Fallback: assume 1GB available
+    return 1024 * 1024 * 1024;
+}
+
+MorphMemConfig morph_mem_detect_config(void) {
+    size_t available_ram = morph_mem_get_available_ram();
+
+    // Low memory system (<512MB free)
+    if (available_ram < 512 * 1024 * 1024) {
+        MorphMemConfig config = MORPH_CONFIG_COMPILER;  // Use compiler mode (no GC)
+        config.heap_size_hint = available_ram / 4;
+        return config;
+    }
+
+    // Medium memory (512MB - 4GB free)
+    if (available_ram < 4ULL * 1024 * 1024 * 1024) {
+        MorphMemConfig config = MORPH_CONFIG_RUNTIME;
+        config.heap_size_hint = available_ram / 2;
+        config.gc_threshold = available_ram / 8;
+        return config;
+    }
+
+    // High memory (>4GB free)
+    MorphMemConfig config = MORPH_CONFIG_RUNTIME;
+    config.heap_size_hint = 2ULL * 1024 * 1024 * 1024;  // Cap at 2GB
+    config.gc_threshold = 256 * 1024 * 1024;            // 256MB threshold
+    return config;
+}
+
+//=============================================================================
+// INITIALIZATION & CLEANUP
+//=============================================================================
+
+MorphContextV2* morph_mem_init(MorphMemConfig config) {
+    MorphContextV2* ctx = (MorphContextV2*)malloc(sizeof(MorphContextV2));
+    if (!ctx) {
+        fprintf(stderr, "FATAL: Failed to allocate MorphContextV2\n");
+        abort();
+    }
+
+    // Initialize context
+    memset(ctx, 0, sizeof(MorphContextV2));
+    ctx->config = config;
+
+    // Initialize statistics
+    memset(&ctx->stats, 0, sizeof(MorphMemStats));
+
+    // Initialize type registry
+    memset(ctx->type_names, 0, sizeof(ctx->type_names));
+
+    // Initialize shadow stack for GC roots
+    ctx->root_capacity = 1024;  // Start with 1K roots
+    ctx->root_stack = (void**)malloc(sizeof(void*) * ctx->root_capacity);
+    ctx->root_count = 0;
+
+    // Initialize lock
+    pthread_mutex_init(&ctx->lock, NULL);
+
+    // TODO Week 2+: Initialize allocator based on mode
+    ctx->allocator_data = NULL;
+
+    if (config.enable_debug) {
+        printf("[MemV2] Initialized - Mode: %d, Heap Hint: %zu MB\n",
+               config.mode, config.heap_size_hint / (1024 * 1024));
+    }
+
+    return ctx;
+}
+
+MorphContextV2* morph_mem_init_auto(void) {
+    MorphMemConfig config = morph_mem_detect_config();
+    return morph_mem_init(config);
+}
+
+void morph_mem_destroy(MorphContextV2* ctx) {
+    if (!ctx) return;
+
+    if (ctx->config.enable_debug) {
+        printf("[MemV2] Destroying context - Objects allocated: %lu\n",
+               ctx->stats.object_count);
+    }
+
+    // TODO Week 2+: Destroy allocator
+    if (ctx->allocator_data) {
+        // Mode-specific cleanup
+    }
+
+    // Free shadow stack
+    free(ctx->root_stack);
+
+    // Destroy lock
+    pthread_mutex_destroy(&ctx->lock);
+
+    // Free context
+    free(ctx);
+}
+
+//=============================================================================
+// ALLOCATION (Stub - Week 2+)
+//=============================================================================
+
+void* morph_mem_alloc(MorphContextV2* ctx, size_t size, uint8_t type_id) {
+    pthread_mutex_lock(&ctx->lock);
+
+    // Week 1: Simple malloc-based allocation (temporary)
+    // Week 2+: Route to Arena/Pool/Heap based on config.mode
+
+    if (size > OBJECT_MAX_SIZE) {
+        fprintf(stderr, "ERROR: Object size %zu exceeds max %u\n",
+                size, OBJECT_MAX_SIZE);
+        pthread_mutex_unlock(&ctx->lock);
+        return NULL;
+    }
+
+    if (type_id > OBJECT_MAX_TYPE_ID) {
+        fprintf(stderr, "ERROR: Type ID %u exceeds max %u\n",
+                type_id, OBJECT_MAX_TYPE_ID);
+        pthread_mutex_unlock(&ctx->lock);
+        return NULL;
+    }
+
+    // Allocate header + payload
+    size_t total_size = morph_v2_total_size(size);
+    ObjectHeader* header = (ObjectHeader*)malloc(total_size);
+    if (!header) {
+        fprintf(stderr, "ERROR: Failed to allocate %zu bytes\n", total_size);
+        pthread_mutex_unlock(&ctx->lock);
+        return NULL;
+    }
+
+    // Initialize header
+    memset(header, 0, sizeof(ObjectHeader));
+    header->size = size;
+    header->type_id = type_id;
+    header->marked = 0;
+    header->generation = GEN_YOUNG;
+    header->flags = 0;
+    header->reserved = 0;
+
+    // Update stats
+    ctx->stats.total_allocated += size;
+    ctx->stats.current_live += size;
+    ctx->stats.object_count++;
+    ctx->stats.object_count_by_type[type_id]++;
+    ctx->stats.bytes_by_type[type_id] += size;
+
+    if (ctx->stats.current_live > ctx->stats.peak_live) {
+        ctx->stats.peak_live = ctx->stats.current_live;
+    }
+
+    pthread_mutex_unlock(&ctx->lock);
+
+    return morph_v2_get_payload(header);
+}
+
+void* morph_mem_alloc_zeroed(MorphContextV2* ctx, size_t size, uint8_t type_id) {
+    void* ptr = morph_mem_alloc(ctx, size, type_id);
+    if (ptr) {
+        memset(ptr, 0, size);
+    }
+    return ptr;
+}
+
+void morph_mem_free(MorphContextV2* ctx, void* ptr) {
+    if (!ptr) return;
+
+    pthread_mutex_lock(&ctx->lock);
+
+    ObjectHeader* header = morph_v2_get_header(ptr);
+
+    // Update stats
+    ctx->stats.total_freed += header->size;
+    ctx->stats.current_live -= header->size;
+
+    // Free memory
+    free(header);
+
+    pthread_mutex_unlock(&ctx->lock);
+}
+
+//=============================================================================
+// GC CONTROL (Stub - Week 7+)
+//=============================================================================
+
+void morph_mem_gc_collect(MorphContextV2* ctx) {
+    // Week 1: No-op
+    // Week 7+: Implement generational GC
+    if (ctx->config.enable_debug) {
+        printf("[MemV2] GC collect (not implemented yet)\n");
+    }
+}
+
+void morph_mem_gc_push_root(MorphContextV2* ctx, void** ptr) {
+    pthread_mutex_lock(&ctx->lock);
+
+    // Expand capacity if needed
+    if (ctx->root_count >= ctx->root_capacity) {
+        ctx->root_capacity *= 2;
+        ctx->root_stack = (void**)realloc(ctx->root_stack,
+                                          sizeof(void*) * ctx->root_capacity);
+    }
+
+    ctx->root_stack[ctx->root_count++] = ptr;
+
+    pthread_mutex_unlock(&ctx->lock);
+}
+
+void morph_mem_gc_pop_roots(MorphContextV2* ctx, int count) {
+    pthread_mutex_lock(&ctx->lock);
+
+    if ((size_t)count > ctx->root_count) {
+        fprintf(stderr, "ERROR: Trying to pop %d roots but only %zu exist\n",
+                count, ctx->root_count);
+        count = (int)ctx->root_count;
+    }
+
+    ctx->root_count -= count;
+
+    pthread_mutex_unlock(&ctx->lock);
+}
+
+//=============================================================================
+// TYPE REGISTRY
+//=============================================================================
+
+void morph_mem_register_type(MorphContextV2* ctx, uint8_t type_id, const char* name) {
+    if (type_id > OBJECT_MAX_TYPE_ID) {
+        fprintf(stderr, "ERROR: Type ID %u exceeds max %u\n",
+                type_id, OBJECT_MAX_TYPE_ID);
+        return;
+    }
+
+    pthread_mutex_lock(&ctx->lock);
+    ctx->type_names[type_id] = name;
+    pthread_mutex_unlock(&ctx->lock);
+}
+
+//=============================================================================
+// STATISTICS & METRICS
+//=============================================================================
+
+MorphMemStats morph_mem_get_stats(MorphContextV2* ctx) {
+    pthread_mutex_lock(&ctx->lock);
+    MorphMemStats stats = ctx->stats;
+    pthread_mutex_unlock(&ctx->lock);
+    return stats;
+}
+
+void morph_mem_print_stats(MorphContextV2* ctx) {
+    MorphMemStats stats = morph_mem_get_stats(ctx);
+
+    printf("=== Morph Memory V2 Statistics ===\n");
+    printf("Mode: ");
+    switch (ctx->config.mode) {
+        case MORPH_MODE_COMPILER: printf("COMPILER\n"); break;
+        case MORPH_MODE_RUNTIME:  printf("RUNTIME\n"); break;
+        case MORPH_MODE_VM:       printf("VM\n"); break;
+        case MORPH_MODE_SERVER:   printf("SERVER\n"); break;
+    }
+
+    printf("\nAllocations:\n");
+    printf("  Total:    %lu objects (%lu MB)\n",
+           stats.object_count, stats.total_allocated / (1024 * 1024));
+    printf("  Live:     %lu MB\n", stats.current_live / (1024 * 1024));
+    printf("  Peak:     %lu MB\n", stats.peak_live / (1024 * 1024));
+    printf("  Freed:    %lu MB\n", stats.total_freed / (1024 * 1024));
+
+    printf("\nGC:\n");
+    printf("  Collections: %lu\n", stats.gc_count);
+    printf("  Time:        %lu ms\n", stats.gc_time_us / 1000);
+
+    if (stats.gc_count > 0) {
+        printf("  Avg Pause:   %lu ms\n", stats.gc_pause_avg_us / 1000);
+        printf("  Max Pause:   %lu ms\n", stats.gc_pause_max_us / 1000);
+    }
+
+    printf("\nTop Types:\n");
+    for (int i = 0; i < 128; i++) {
+        if (stats.object_count_by_type[i] > 0) {
+            const char* name = ctx->type_names[i] ? ctx->type_names[i] : "unknown";
+            printf("  [%3d] %-20s: %lu objects (%lu KB)\n",
+                   i, name,
+                   stats.object_count_by_type[i],
+                   stats.bytes_by_type[i] / 1024);
+        }
+    }
+
+    printf("===================================\n");
+}
+
+void morph_mem_dump_stats(MorphContextV2* ctx, const char* path) {
+    FILE* f = fopen(path, "w");
+    if (!f) {
+        fprintf(stderr, "ERROR: Failed to open %s for writing\n", path);
+        return;
+    }
+
+    MorphMemStats stats = morph_mem_get_stats(ctx);
+
+    fprintf(f, "{\n");
+    fprintf(f, "  \"mode\": \"%d\",\n", ctx->config.mode);
+    fprintf(f, "  \"total_allocated\": %lu,\n", stats.total_allocated);
+    fprintf(f, "  \"total_freed\": %lu,\n", stats.total_freed);
+    fprintf(f, "  \"current_live\": %lu,\n", stats.current_live);
+    fprintf(f, "  \"peak_live\": %lu,\n", stats.peak_live);
+    fprintf(f, "  \"object_count\": %lu,\n", stats.object_count);
+    fprintf(f, "  \"gc_count\": %lu,\n", stats.gc_count);
+    fprintf(f, "  \"gc_time_us\": %lu,\n", stats.gc_time_us);
+    fprintf(f, "  \"gc_pause_max_us\": %lu,\n", stats.gc_pause_max_us);
+    fprintf(f, "  \"gc_pause_avg_us\": %lu\n", stats.gc_pause_avg_us);
+    fprintf(f, "}\n");
+
+    fclose(f);
+
+    if (ctx->config.enable_debug) {
+        printf("[MemV2] Stats dumped to %s\n", path);
+    }
+}
