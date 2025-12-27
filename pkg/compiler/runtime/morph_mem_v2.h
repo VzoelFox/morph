@@ -5,7 +5,7 @@
  * Design: See MEMORY_ARCHITECTURE_V2.md
  * Roadmap: See MEMORY_V2_ROADMAP.md
  *
- * Status: Week 1 - Foundation
+ * Status: Week 2 - Arena Allocator
  */
 
 #ifndef MORPH_MEM_V2_H
@@ -100,6 +100,37 @@ static inline void* morph_v2_get_payload(ObjectHeader* header) {
 static inline size_t morph_v2_total_size(size_t payload_size) {
     return ALIGN_UP(sizeof(ObjectHeader) + payload_size, OBJECT_ALIGNMENT);
 }
+
+//=============================================================================
+// ARENA ALLOCATOR (Week 2)
+//=============================================================================
+
+// Arena block size (2MB default - balances memory waste vs syscall overhead)
+#define ARENA_BLOCK_SIZE (2 * 1024 * 1024)  // 2MB
+
+// Arena block structure (linked list of memory blocks)
+typedef struct ArenaBlock {
+    struct ArenaBlock* next;  // Next block in chain
+    size_t capacity;          // Total capacity of this block
+    size_t used;              // Bytes used so far
+    uint8_t data[];           // Flexible array member for actual data
+} ArenaBlock;
+
+// Arena allocator (bump-pointer allocation)
+typedef struct {
+    ArenaBlock* current;      // Current allocation block
+    ArenaBlock* first;        // First block (for iteration/reset)
+    size_t block_size;        // Size of each block (default ARENA_BLOCK_SIZE)
+    size_t total_allocated;   // Total bytes allocated (stats)
+    size_t total_used;        // Total bytes used (stats)
+} Arena;
+
+// Arena API
+Arena* arena_create(size_t block_size);
+void* arena_alloc(Arena* arena, size_t size);
+void* arena_alloc_aligned(Arena* arena, size_t size, size_t alignment);
+void arena_reset(Arena* arena);  // Reset without freeing blocks
+void arena_destroy(Arena* arena); // Free all blocks
 
 //=============================================================================
 // MEMORY STATISTICS

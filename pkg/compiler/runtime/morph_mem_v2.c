@@ -1,6 +1,6 @@
 /*
  * Morph Memory System V2 - Implementation
- * Week 1: Foundation (ObjectHeader + Config + Basic Init)
+ * Week 2: Arena Allocator (Bump-pointer allocation for compilation)
  *
  * Design: See MEMORY_ARCHITECTURE_V2.md
  * Roadmap: See MEMORY_V2_ROADMAP.md
@@ -150,6 +150,125 @@ MorphMemConfig morph_mem_detect_config(void) {
 }
 
 //=============================================================================
+// ARENA ALLOCATOR - Week 2
+//=============================================================================
+
+Arena* arena_create(size_t block_size) {
+    if (block_size == 0) {
+        block_size = ARENA_BLOCK_SIZE;  // Default 2MB
+    }
+
+    Arena* arena = (Arena*)malloc(sizeof(Arena));
+    if (!arena) {
+        fprintf(stderr, "FATAL: Failed to allocate Arena\n");
+        abort();
+    }
+
+    // Allocate first block
+    ArenaBlock* block = (ArenaBlock*)malloc(sizeof(ArenaBlock) + block_size);
+    if (!block) {
+        free(arena);
+        fprintf(stderr, "FATAL: Failed to allocate ArenaBlock\n");
+        abort();
+    }
+
+    block->next = NULL;
+    block->capacity = block_size;
+    block->used = 0;
+
+    arena->current = block;
+    arena->first = block;
+    arena->block_size = block_size;
+    arena->total_allocated = block_size;
+    arena->total_used = 0;
+
+    return arena;
+}
+
+void* arena_alloc(Arena* arena, size_t size) {
+    return arena_alloc_aligned(arena, size, OBJECT_ALIGNMENT);
+}
+
+void* arena_alloc_aligned(Arena* arena, size_t size, size_t alignment) {
+    if (size == 0) return NULL;
+
+    ArenaBlock* block = arena->current;
+
+    // Calculate aligned offset
+    size_t current_ptr = (size_t)(&block->data[block->used]);
+    size_t aligned_ptr = ALIGN_UP(current_ptr, alignment);
+    size_t padding = aligned_ptr - current_ptr;
+    size_t total_needed = padding + size;
+
+    // Check if current block has enough space
+    if (block->used + total_needed > block->capacity) {
+        // Need new block
+        size_t new_block_size = arena->block_size;
+
+        // If allocation is larger than default block size, use larger block
+        if (total_needed > new_block_size) {
+            new_block_size = ALIGN_UP(total_needed, arena->block_size);
+        }
+
+        ArenaBlock* new_block = (ArenaBlock*)malloc(sizeof(ArenaBlock) + new_block_size);
+        if (!new_block) {
+            fprintf(stderr, "ERROR: Failed to allocate new ArenaBlock (%zu bytes)\n",
+                    new_block_size);
+            return NULL;
+        }
+
+        new_block->next = NULL;
+        new_block->capacity = new_block_size;
+        new_block->used = 0;
+
+        // Link to arena
+        block->next = new_block;
+        arena->current = new_block;
+        arena->total_allocated += new_block_size;
+
+        // Recalculate with new block
+        block = new_block;
+        current_ptr = (size_t)(&block->data[block->used]);
+        aligned_ptr = ALIGN_UP(current_ptr, alignment);
+        padding = aligned_ptr - current_ptr;
+        total_needed = padding + size;
+    }
+
+    // Allocate from current block (bump pointer!)
+    void* ptr = &block->data[block->used + padding];
+    block->used += total_needed;
+    arena->total_used += total_needed;
+
+    return ptr;
+}
+
+void arena_reset(Arena* arena) {
+    // Reset all blocks without freeing them
+    ArenaBlock* block = arena->first;
+    while (block) {
+        block->used = 0;
+        block = block->next;
+    }
+
+    arena->current = arena->first;
+    arena->total_used = 0;
+}
+
+void arena_destroy(Arena* arena) {
+    if (!arena) return;
+
+    // Free all blocks
+    ArenaBlock* block = arena->first;
+    while (block) {
+        ArenaBlock* next = block->next;
+        free(block);
+        block = next;
+    }
+
+    free(arena);
+}
+
+//=============================================================================
 // INITIALIZATION & CLEANUP
 //=============================================================================
 
@@ -178,8 +297,24 @@ MorphContextV2* morph_mem_init(MorphMemConfig config) {
     // Initialize lock
     pthread_mutex_init(&ctx->lock, NULL);
 
-    // TODO Week 2+: Initialize allocator based on mode
-    ctx->allocator_data = NULL;
+    // Week 2: Initialize allocator based on mode
+    if (config.mode == MORPH_MODE_COMPILER) {
+        // COMPILER mode: Use arena allocator (fast, no GC)
+        Arena* arena = arena_create(ARENA_BLOCK_SIZE);
+        ctx->allocator_data = (void*)arena;
+
+        if (config.enable_debug) {
+            printf("[MemV2] COMPILER mode - Arena allocator initialized (%zu MB blocks)\n",
+                   ARENA_BLOCK_SIZE / (1024 * 1024));
+        }
+    } else {
+        // RUNTIME/VM/SERVER: Generational GC (Week 7+)
+        ctx->allocator_data = NULL;
+
+        if (config.enable_debug) {
+            printf("[MemV2] Mode %d - GC allocator (not implemented yet)\n", config.mode);
+        }
+    }
 
     if (config.enable_debug) {
         printf("[MemV2] Initialized - Mode: %d, Heap Hint: %zu MB\n",
@@ -202,9 +337,22 @@ void morph_mem_destroy(MorphContextV2* ctx) {
                ctx->stats.object_count);
     }
 
-    // TODO Week 2+: Destroy allocator
+    // Week 2: Destroy allocator
     if (ctx->allocator_data) {
-        // Mode-specific cleanup
+        if (ctx->config.mode == MORPH_MODE_COMPILER) {
+            // Destroy arena
+            Arena* arena = (Arena*)ctx->allocator_data;
+            if (ctx->config.enable_debug) {
+                printf("[MemV2] Arena stats - Allocated: %zu KB, Used: %zu KB (%.1f%% utilization)\n",
+                       arena->total_allocated / 1024,
+                       arena->total_used / 1024,
+                       arena->total_allocated > 0 ?
+                           (100.0 * arena->total_used / arena->total_allocated) : 0.0);
+            }
+            arena_destroy(arena);
+        } else {
+            // Future: Destroy GC heap (Week 7+)
+        }
     }
 
     // Free shadow stack
@@ -218,14 +366,11 @@ void morph_mem_destroy(MorphContextV2* ctx) {
 }
 
 //=============================================================================
-// ALLOCATION (Stub - Week 2+)
+// ALLOCATION - Week 2 (Arena-based for COMPILER mode)
 //=============================================================================
 
 void* morph_mem_alloc(MorphContextV2* ctx, size_t size, uint8_t type_id) {
     pthread_mutex_lock(&ctx->lock);
-
-    // Week 1: Simple malloc-based allocation (temporary)
-    // Week 2+: Route to Arena/Pool/Heap based on config.mode
 
     if (size > OBJECT_MAX_SIZE) {
         fprintf(stderr, "ERROR: Object size %zu exceeds max %u\n",
@@ -241,9 +386,23 @@ void* morph_mem_alloc(MorphContextV2* ctx, size_t size, uint8_t type_id) {
         return NULL;
     }
 
-    // Allocate header + payload
+    ObjectHeader* header = NULL;
     size_t total_size = morph_v2_total_size(size);
-    ObjectHeader* header = (ObjectHeader*)malloc(total_size);
+
+    // Week 2: Route allocation based on mode
+    if (ctx->config.mode == MORPH_MODE_COMPILER) {
+        // COMPILER mode: Fast arena allocation (bump pointer)
+        Arena* arena = (Arena*)ctx->allocator_data;
+        header = (ObjectHeader*)arena_alloc(arena, total_size);
+
+        if (header) {
+            ctx->stats.arena_bytes += size;
+        }
+    } else {
+        // RUNTIME/VM/SERVER: Malloc fallback (Week 7+: use generational GC)
+        header = (ObjectHeader*)malloc(total_size);
+    }
+
     if (!header) {
         fprintf(stderr, "ERROR: Failed to allocate %zu bytes\n", total_size);
         pthread_mutex_unlock(&ctx->lock);
