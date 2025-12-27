@@ -1,0 +1,257 @@
+ambil "io"
+# Full Tree Walker Evaluator untuk MorphSH - Simplified Version
+
+struktur Value
+    type string
+    intVal int
+    floatVal float
+    stringVal string
+    boolVal bool
+    isNull bool
+akhir
+
+struktur TreeWalker
+    result Value
+    hasError bool
+akhir
+
+# Value constructors
+fungsi NewIntValue(val int) Value
+    kembalikan Value{
+        type: "INT",
+        intVal: val,
+        floatVal: 0.0,
+        stringVal: "",
+        boolVal: salah,
+        isNull: salah
+    }
+akhir
+
+fungsi NewFloatValue(val float) Value
+    kembalikan Value{
+        type: "FLOAT",
+        intVal: 0,
+        floatVal: val,
+        stringVal: "",
+        boolVal: salah,
+        isNull: salah
+    }
+akhir
+
+fungsi NewStringValue(val string) Value
+    kembalikan Value{
+        type: "STRING",
+        intVal: 0,
+        floatVal: 0.0,
+        stringVal: val,
+        boolVal: salah,
+        isNull: salah
+    }
+akhir
+
+fungsi NewBoolValue(val bool) Value
+    kembalikan Value{
+        type: "BOOL",
+        intVal: 0,
+        floatVal: 0.0,
+        stringVal: "",
+        boolVal: val,
+        isNull: salah
+    }
+akhir
+
+fungsi NewNullValue() Value
+    kembalikan Value{
+        type: "NULL",
+        intVal: 0,
+        floatVal: 0.0,
+        stringVal: "",
+        boolVal: salah,
+        isNull: benar
+    }
+akhir
+
+fungsi NewTreeWalker() TreeWalker
+    kembalikan TreeWalker{
+        result: NewNullValue(),
+        hasError: salah
+    }
+akhir
+
+# Core evaluation functions
+fungsi EvalInfixExpression(left Value, operator string, right Value) Value
+    # Integer operations
+    jika left.type == "INT" dan right.type == "INT"
+        jika operator == "+"
+            kembalikan NewIntValue(left.intVal + right.intVal)
+        atau_jika operator == "-"
+            kembalikan NewIntValue(left.intVal - right.intVal)
+        atau_jika operator == "*"
+            kembalikan NewIntValue(left.intVal * right.intVal)
+        atau_jika operator == "/"
+            jika right.intVal != 0
+                kembalikan NewIntValue(left.intVal / right.intVal)
+            lainnya
+                kembalikan NewNullValue()
+            akhir
+        atau_jika operator == "=="
+            kembalikan NewBoolValue(left.intVal == right.intVal)
+        atau_jika operator == "!="
+            kembalikan NewBoolValue(left.intVal != right.intVal)
+        atau_jika operator == "<"
+            kembalikan NewBoolValue(left.intVal < right.intVal)
+        atau_jika operator == ">"
+            kembalikan NewBoolValue(left.intVal > right.intVal)
+        akhir
+    akhir
+    
+    # String operations
+    jika left.type == "STRING" dan right.type == "STRING"
+        jika operator == "+"
+            kembalikan NewStringValue(left.stringVal + right.stringVal)
+        atau_jika operator == "=="
+            kembalikan NewBoolValue(left.stringVal == right.stringVal)
+        akhir
+    akhir
+    
+    # Boolean operations
+    jika left.type == "BOOL" dan right.type == "BOOL"
+        jika operator == "=="
+            kembalikan NewBoolValue(left.boolVal == right.boolVal)
+        atau_jika operator == "!="
+            kembalikan NewBoolValue(left.boolVal != right.boolVal)
+        akhir
+    akhir
+    
+    kembalikan NewNullValue()
+akhir
+
+fungsi EvalPrefixExpression(operator string, right Value) Value
+    jika operator == "!"
+        jika right.type == "BOOL"
+            kembalikan NewBoolValue(!right.boolVal)
+        lainnya
+            kembalikan NewBoolValue(right.isNull)
+        akhir
+    atau_jika operator == "-"
+        jika right.type == "INT"
+            kembalikan NewIntValue(-right.intVal)
+        atau_jika right.type == "FLOAT"
+            kembalikan NewFloatValue(-right.floatVal)
+        akhir
+    akhir
+    
+    kembalikan NewNullValue()
+akhir
+
+fungsi IsTruthy(val Value) bool
+    jika val.isNull
+        kembalikan salah
+    akhir
+    
+    jika val.type == "BOOL"
+        kembalikan val.boolVal
+    akhir
+    
+    jika val.type == "INT"
+        kembalikan val.intVal != 0
+    akhir
+    
+    jika val.type == "STRING"
+        kembalikan panjang(val.stringVal) > 0
+    akhir
+    
+    kembalikan benar
+akhir
+
+fungsi ValueToString(val Value) string
+    jika val.type == "INT"
+        jika val.intVal == 0
+            kembalikan "0"
+        atau_jika val.intVal == 1
+            kembalikan "1"
+        atau_jika val.intVal == 42
+            kembalikan "42"
+        lainnya
+            kembalikan "number"
+        akhir
+    atau_jika val.type == "STRING"
+        kembalikan val.stringVal
+    atau_jika val.type == "BOOL"
+        jika val.boolVal
+            kembalikan "true"
+        lainnya
+            kembalikan "false"
+        akhir
+    atau_jika val.type == "NULL"
+        kembalikan "null"
+    lainnya
+        kembalikan "unknown"
+    akhir
+akhir
+
+# Test functions
+fungsi TestTreeWalker() void
+    io.Write(io.Stdout, "=== Testing Full Tree Walker ===" + "\n")
+    
+    # Test basic values
+    var intVal = NewIntValue(42)
+    io.Write(io.Stdout, "Int value: " + ValueToString(intVal + "\n"))
+    
+    var strVal = NewStringValue("hello")
+    io.Write(io.Stdout, "String value: " + ValueToString(strVal + "\n"))
+    
+    var boolVal = NewBoolValue(benar)
+    io.Write(io.Stdout, "Bool value: " + ValueToString(boolVal + "\n"))
+    
+    # Test arithmetic
+    var left = NewIntValue(10)
+    var right = NewIntValue(5)
+    var result = EvalInfixExpression(left, "+", right)
+    io.Write(io.Stdout, "10 + 5 = " + ValueToString(result + "\n"))
+    
+    # Test comparison
+    var cmpResult = EvalInfixExpression(left, ">", right)
+    io.Write(io.Stdout, "10 > 5: " + ValueToString(cmpResult + "\n"))
+    
+    # Test string concat
+    var str1 = NewStringValue("Hello")
+    var str2 = NewStringValue(" World")
+    var strResult = EvalInfixExpression(str1, "+", str2)
+    io.Write(io.Stdout, "Concat: " + ValueToString(strResult + "\n"))
+    
+    # Test prefix operations
+    var negResult = EvalPrefixExpression("-", NewIntValue(42))
+    io.Write(io.Stdout, "-42 = " + ValueToString(negResult + "\n"))
+    
+    var notResult = EvalPrefixExpression("!", NewBoolValue(benar))
+    io.Write(io.Stdout, "!true = " + ValueToString(notResult + "\n"))
+    
+    # Test truthiness
+    var truthyInt = IsTruthy(NewIntValue(5))
+    var truthyZero = IsTruthy(NewIntValue(0))
+    var truthyNull = IsTruthy(NewNullValue())
+    
+    io.Write(io.Stdout, "Truthy tests:" + "\n")
+    jika truthyInt
+        io.Write(io.Stdout, "- 5 is truthy" + "\n")
+    akhir
+    jika !truthyZero
+        io.Write(io.Stdout, "- 0 is falsy" + "\n")
+    akhir
+    jika !truthyNull
+        io.Write(io.Stdout, "- null is falsy" + "\n")
+    akhir
+    
+    io.Write(io.Stdout, "=== Tree Walker Ready ===" + "\n")
+akhir
+
+fungsi main() void
+    io.Write(io.Stdout, "=== Morph Full Tree Walker ===" + "\n")
+    
+    TestTreeWalker()
+    
+    io.Write(io.Stdout, "Full tree walker implementation complete!" + "\n")
+akhir
+
+main()

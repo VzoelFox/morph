@@ -1,0 +1,24 @@
+#!/bin/bash
+# Morph Self-Hosted Runner
+
+MORPH_HOME="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if [ "$1" = "to" ] && [ -n "$2" ]; then
+    echo "🚀 Running: $2"
+    ./morphsh/main "$2"
+elif [ "$1" = "spawn" ] && [ -n "$2" ]; then
+    echo "⭐ Spawning Fall script: $2"
+    ./star_spawn "$2"
+elif [ "$1" = "install" ] && [ -n "$2" ]; then
+    echo "📦 Installing package: $2"
+    ./morph_package_manager install "$2"
+elif [ "$1" = "list" ]; then
+    ./morph_package_manager list
+else
+    echo "Morph Self-Hosted Runner"
+    echo "Usage:"
+    echo "  morph to <file.fox>      # Run Morph file"
+    echo "  morph spawn <file.fall>  # Run Fall script"
+    echo "  morph install <package>  # Install package"
+    echo "  morph list              # List packages"
+fi

@@ -1,0 +1,188 @@
+# object.fox - Runtime object system for evaluator
+ambil "io"
+
+# Object type constants
+tetapan OBJ_INTEGER = 1
+tetapan OBJ_FLOAT = 2
+tetapan OBJ_STRING = 3
+tetapan OBJ_BOOLEAN = 4
+tetapan OBJ_NULL = 5
+tetapan OBJ_ERROR = 6
+tetapan OBJ_FUNCTION = 7
+
+# Base object interface (simplified as struct)
+struktur Object
+    obj_type int
+    value_int int
+    value_float float
+    value_string string
+    value_bool bool
+akhir
+
+# Create integer object
+fungsi create_integer_object(value int) Object
+    var obj = Object{
+        obj_type: OBJ_INTEGER,
+        value_int: value,
+        value_float: 0.0,
+        value_string: "",
+        value_bool: false
+    }
+    kembali obj
+akhir
+
+# Create string object
+fungsi create_string_object(value string) Object
+    var obj = Object{
+        obj_type: OBJ_STRING,
+        value_int: 0,
+        value_float: 0.0,
+        value_string: value,
+        value_bool: false
+    }
+    kembali obj
+akhir
+
+# Create boolean object
+fungsi create_boolean_object(value bool) Object
+    var obj = Object{
+        obj_type: OBJ_BOOLEAN,
+        value_int: 0,
+        value_float: 0.0,
+        value_string: "",
+        value_bool: value
+    }
+    kembali obj
+akhir
+
+# Create null object
+fungsi create_null_object() Object
+    var obj = Object{
+        obj_type: OBJ_NULL,
+        value_int: 0,
+        value_float: 0.0,
+        value_string: "",
+        value_bool: false
+    }
+    kembali obj
+akhir
+
+# Create error object
+fungsi create_error_object(message string) Object
+    var obj = Object{
+        obj_type: OBJ_ERROR,
+        value_int: 0,
+        value_float: 0.0,
+        value_string: message,
+        value_bool: false
+    }
+    kembali obj
+akhir
+
+# Object type checking
+fungsi is_integer_object(obj Object) bool
+    kembali obj.obj_type == OBJ_INTEGER
+akhir
+
+fungsi is_string_object(obj Object) bool
+    kembali obj.obj_type == OBJ_STRING
+akhir
+
+fungsi is_boolean_object(obj Object) bool
+    kembali obj.obj_type == OBJ_BOOLEAN
+akhir
+
+fungsi is_null_object(obj Object) bool
+    kembali obj.obj_type == OBJ_NULL
+akhir
+
+fungsi is_error_object(obj Object) bool
+    kembali obj.obj_type == OBJ_ERROR
+akhir
+
+# Object value extraction
+fungsi get_integer_value(obj Object) int
+    jika is_integer_object(obj)
+        kembali obj.value_int
+    akhir
+    kembali 0
+akhir
+
+fungsi get_string_value(obj Object) string
+    jika is_string_object(obj)
+        kembali obj.value_string
+    akhir
+    kembali ""
+akhir
+
+fungsi get_boolean_value(obj Object) bool
+    jika is_boolean_object(obj)
+        kembali obj.value_bool
+    akhir
+    kembali false
+akhir
+
+# Object inspection (simplified)
+fungsi inspect_object(obj Object) string
+    jika is_integer_object(obj)
+        kembali "integer"
+    atau_jika is_string_object(obj)
+        kembali "string"
+    atau_jika is_boolean_object(obj)
+        kembali "boolean"
+    atau_jika is_null_object(obj)
+        kembali "null"
+    atau_jika is_error_object(obj)
+        kembali "error"
+    lainnya
+        kembali "unknown"
+    akhir
+akhir
+
+fungsi main() void
+    io.Write(io.Stdout, "=== OBJECT SYSTEM TEST ===\n")
+    
+    # Test integer object
+    var int_obj = create_integer_object(42)
+    jika is_integer_object(int_obj)
+        io.Write(io.Stdout, "Integer object: OK\n")
+    lainnya
+        io.Write(io.Stdout, "Integer object: ERROR\n")
+    akhir
+    
+    # Test string object
+    var str_obj = create_string_object("hello")
+    jika is_string_object(str_obj)
+        io.Write(io.Stdout, "String object: OK\n")
+    lainnya
+        io.Write(io.Stdout, "String object: ERROR\n")
+    akhir
+    
+    # Test boolean object
+    var bool_obj = create_boolean_object(true)
+    jika is_boolean_object(bool_obj)
+        io.Write(io.Stdout, "Boolean object: OK\n")
+    lainnya
+        io.Write(io.Stdout, "Boolean object: ERROR\n")
+    akhir
+    
+    # Test null object
+    var null_obj = create_null_object()
+    jika is_null_object(null_obj)
+        io.Write(io.Stdout, "Null object: OK\n")
+    lainnya
+        io.Write(io.Stdout, "Null object: ERROR\n")
+    akhir
+    
+    # Test value extraction
+    var int_val = get_integer_value(int_obj)
+    jika int_val == 42
+        io.Write(io.Stdout, "Integer value extraction: OK\n")
+    lainnya
+        io.Write(io.Stdout, "Integer value extraction: ERROR\n")
+    akhir
+    
+    io.Write(io.Stdout, "Object system implemented successfully!\n")
+akhir
+
+main()

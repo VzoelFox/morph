@@ -1,7 +1,5 @@
 ambil "io"
 
 fungsi main() void
-    io.Write(io.Stdout, "Hello World from Morph!\n")
+    io.Print("Hello World from Morph!")
 akhir
-
-main()

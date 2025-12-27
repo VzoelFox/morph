@@ -11,7 +11,7 @@
 !morphsh/**
 !pkg/**
 !stdlib/**
-!.morph.vz/**
+!.morph.vz/checksums/**
 !.vzoel.jules/**
 
 # 3. Whitelist Root Files
@@ -40,7 +40,7 @@ morph
 out.c
 *_out.c
 
-# Ignore Generated C/H files in examples/ but keep .fox files
+# Ignore Generated C/H files in examples/ and root but keep .fox files
 examples/*.c
 examples/*.h
 examples/function_type_test

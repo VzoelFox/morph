@@ -1,0 +1,47 @@
+ambil "morphsh/token"
+ambil "morphsh/lexer_minimal"
+
+struktur Parser
+    lexer Lexer
+    curToken Token
+    peekToken Token
+akhir
+
+fungsi NewParser(lexer Lexer) Parser
+    var p = Parser{lexer: lexer}
+    p.lexer, p.curToken = NextToken(p.lexer)
+    p.lexer, p.peekToken = NextToken(p.lexer)
+    kembalikan p
+akhir
+
+fungsi nextToken(p Parser) Parser
+    p.curToken = p.peekToken
+    p.lexer, p.peekToken = NextToken(p.lexer)
+    kembalikan p
+akhir
+
+fungsi curTokenIs(p Parser, t string) bool
+    kembalikan p.curToken.Type == t
+akhir
+
+fungsi parseSimple(p Parser) (Parser, string)
+    var result = "PARSED: "
+    
+    selama tidak curTokenIs(p, EOF)
+        jika curTokenIs(p, FUNGSI)
+            result = result + "FUNCTION "
+        atau_jika curTokenIs(p, IDENT)
+            result = result + p.curToken.Literal + " "
+        atau_jika curTokenIs(p, LPAREN)
+            result = result + "( "
+        atau_jika curTokenIs(p, RPAREN)
+            result = result + ") "
+        atau_jika curTokenIs(p, AKHIR)
+            result = result + "END "
+        akhir
+        
+        p = nextToken(p)
+    akhir
+    
+    kembalikan p, result
+akhir

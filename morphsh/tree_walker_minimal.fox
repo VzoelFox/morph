@@ -1,0 +1,64 @@
+ambil "io"
+
+# Minimal Tree Walker Test
+
+struktur Value
+    type string
+    intVal int
+    boolVal bool
+akhir
+
+fungsi NewIntValue(val int) Value
+    kembalikan Value{type: "INT", intVal: val, boolVal: salah}
+akhir
+
+fungsi NewBoolValue(val bool) Value
+    kembalikan Value{type: "BOOL", intVal: 0, boolVal: val}
+akhir
+
+fungsi EvalAdd(left Value, right Value) Value
+    jika left.type == "INT"
+        jika right.type == "INT"
+            kembalikan NewIntValue(left.intVal + right.intVal)
+        akhir
+    akhir
+    kembalikan NewIntValue(0)
+akhir
+
+fungsi EvalCompare(left Value, right Value) Value
+    jika left.type == "INT"
+        jika right.type == "INT"
+            kembalikan NewBoolValue(left.intVal > right.intVal)
+        akhir
+    akhir
+    kembalikan NewBoolValue(salah)
+akhir
+
+fungsi TestTreeWalker() void
+    io.Write(io.Stdout, "=== Tree Walker Test ===" + "\n")
+    
+    var a = NewIntValue(10)
+    var b = NewIntValue(5)
+    
+    var sum = EvalAdd(a, b)
+    io.Write(io.Stdout, "10 + 5 =" + "\n")
+    native_print_int(sum.intVal)
+    
+    var cmp = EvalCompare(a, b)
+    io.Write(io.Stdout, "10 > 5:" + "\n")
+    jika cmp.boolVal
+        io.Write(io.Stdout, "true" + "\n")
+    lainnya
+        io.Write(io.Stdout, "false" + "\n")
+    akhir
+    
+    io.Write(io.Stdout, "=== Tree Walker Works ===" + "\n")
+akhir
+
+fungsi main() void
+    io.Write(io.Stdout, "=== Morph Tree Walker ===\n")
+    TestTreeWalker()
+    io.Write(io.Stdout, "Tree walker ready!\n")
+akhir
+
+main()

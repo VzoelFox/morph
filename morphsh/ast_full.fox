@@ -1,0 +1,237 @@
+// AST Node types
+struktur Program
+    statements []Statement
+akhir
+
+struktur Statement
+    type string
+    data string
+akhir
+
+struktur Expression
+    type string
+    value string
+    left Expression
+    right Expression
+    operator string
+akhir
+
+struktur FunctionDeclaration
+    name string
+    parameters []string
+    body BlockStatement
+    returnType string
+akhir
+
+struktur VariableDeclaration
+    name string
+    value Expression
+    varType string
+akhir
+
+struktur BlockStatement
+    statements []Statement
+akhir
+
+struktur IfStatement
+    condition Expression
+    consequence BlockStatement
+    alternative BlockStatement
+akhir
+
+struktur ReturnStatement
+    value Expression
+akhir
+
+struktur ExpressionStatement
+    expression Expression
+akhir
+
+struktur CallExpression
+    function Expression
+    arguments []Expression
+akhir
+
+struktur BinaryExpression
+    left Expression
+    operator string
+    right Expression
+akhir
+
+struktur UnaryExpression
+    operator string
+    operand Expression
+akhir
+
+struktur Identifier
+    name string
+akhir
+
+struktur IntegerLiteral
+    value int
+akhir
+
+struktur FloatLiteral
+    value float
+akhir
+
+struktur StringLiteral
+    value string
+akhir
+
+struktur BooleanLiteral
+    value bool
+akhir
+
+// Constructor functions
+fungsi NewProgram() Program
+    kembalikan Program{statements: []Statement{}}
+akhir
+
+fungsi NewStatement(typ string, data string) Statement
+    kembalikan Statement{type: typ, data: data}
+akhir
+
+fungsi NewExpression(typ string, val string) Expression
+    kembalikan Expression{
+        type: typ,
+        value: val,
+        operator: ""
+    }
+akhir
+
+fungsi NewBinaryExpression(left Expression, op string, right Expression) Expression
+    kembalikan Expression{
+        type: "BINARY",
+        left: left,
+        operator: op,
+        right: right
+    }
+akhir
+
+fungsi NewUnaryExpression(op string, operand Expression) Expression
+    kembalikan Expression{
+        type: "UNARY",
+        operator: op,
+        right: operand
+    }
+akhir
+
+fungsi NewFunctionDeclaration(name string, params []string, body BlockStatement) FunctionDeclaration
+    kembalikan FunctionDeclaration{
+        name: name,
+        parameters: params,
+        body: body,
+        returnType: ""
+    }
+akhir
+
+fungsi NewVariableDeclaration(name string, val Expression) VariableDeclaration
+    kembalikan VariableDeclaration{
+        name: name,
+        value: val,
+        varType: ""
+    }
+akhir
+
+fungsi NewBlockStatement() BlockStatement
+    kembalikan BlockStatement{statements: []Statement{}}
+akhir
+
+fungsi NewIfStatement(cond Expression, cons BlockStatement) IfStatement
+    kembalikan IfStatement{
+        condition: cond,
+        consequence: cons
+    }
+akhir
+
+fungsi NewReturnStatement(val Expression) ReturnStatement
+    kembalikan ReturnStatement{value: val}
+akhir
+
+fungsi NewCallExpression(fn Expression, args []Expression) CallExpression
+    kembalikan CallExpression{
+        function: fn,
+        arguments: args
+    }
+akhir
+
+fungsi NewIdentifier(name string) Identifier
+    kembalikan Identifier{name: name}
+akhir
+
+fungsi NewIntegerLiteral(val int) IntegerLiteral
+    kembalikan IntegerLiteral{value: val}
+akhir
+
+fungsi NewFloatLiteral(val float) FloatLiteral
+    kembalikan FloatLiteral{value: val}
+akhir
+
+fungsi NewStringLiteral(val string) StringLiteral
+    kembalikan StringLiteral{value: val}
+akhir
+
+fungsi NewBooleanLiteral(val bool) BooleanLiteral
+    kembalikan BooleanLiteral{value: val}
+akhir
+
+// Helper functions
+fungsi addStatement(prog Program, stmt Statement) Program
+    prog.statements = append(prog.statements, stmt)
+    kembalikan prog
+akhir
+
+fungsi addStatementToBlock(block BlockStatement, stmt Statement) BlockStatement
+    block.statements = append(block.statements, stmt)
+    kembalikan block
+akhir
+
+fungsi addParameter(fn FunctionDeclaration, param string) FunctionDeclaration
+    fn.parameters = append(fn.parameters, param)
+    kembalikan fn
+akhir
+
+fungsi addArgument(call CallExpression, arg Expression) CallExpression
+    call.arguments = append(call.arguments, arg)
+    kembalikan call
+akhir
+
+// String representation functions
+fungsi expressionToString(expr Expression) string
+    jika expr.type == "IDENTIFIER"
+        kembalikan expr.value
+    atau_jika expr.type == "INTEGER"
+        kembalikan expr.value
+    atau_jika expr.type == "FLOAT"
+        kembalikan expr.value
+    atau_jika expr.type == "STRING"
+        kembalikan "\"" + expr.value + "\""
+    atau_jika expr.type == "BOOLEAN"
+        kembalikan expr.value
+    atau_jika expr.type == "BINARY"
+        var left = expressionToString(expr.left)
+        var right = expressionToString(expr.right)
+        kembalikan "(" + left + " " + expr.operator + " " + right + ")"
+    atau_jika expr.type == "UNARY"
+        var operand = expressionToString(expr.right)
+        kembalikan "(" + expr.operator + operand + ")"
+    lainnya
+        kembalikan "UNKNOWN_EXPR"
+    akhir
+akhir
+
+fungsi statementToString(stmt Statement) string
+    kembalikan stmt.type + ": " + stmt.data
+akhir
+
+fungsi programToString(prog Program) string
+    var result = "Program{\n"
+    var i = 0
+    selama i < panjang(prog.statements)
+        result = result + "  " + statementToString(prog.statements[i]) + "\n"
+        i = i + 1
+    akhir
+    result = result + "}"
+    kembalikan result
+akhir

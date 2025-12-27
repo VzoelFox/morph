@@ -1,0 +1,44 @@
+ambil "io"
+# Minimal AST Integration Test
+
+struktur SimpleAST
+    type string
+    intVal int
+    operator string
+akhir
+
+fungsi NewIntAST(val int) SimpleAST
+    kembalikan SimpleAST{type: "INT", intVal: val, operator: ""}
+akhir
+
+fungsi NewOpAST(op string) SimpleAST
+    kembalikan SimpleAST{type: "OP", intVal: 0, operator: op}
+akhir
+
+fungsi EvalSimpleAST(node SimpleAST) int
+    jika node.type == "INT"
+        kembalikan node.intVal
+    lainnya
+        kembalikan 0
+    akhir
+akhir
+
+fungsi TestAST() void
+    io.Write(io.Stdout, "=== AST Integration Test ===" + "\n")
+    
+    var node = NewIntAST(42)
+    var result = EvalSimpleAST(node)
+    
+    io.Write(io.Stdout, "AST node value:" + "\n")
+    native_print_int(result)
+    
+    io.Write(io.Stdout, "=== AST Works ===" + "\n")
+akhir
+
+fungsi main() void
+    io.Write(io.Stdout, "=== Morph AST ===" + "\n")
+    TestAST()
+    io.Write(io.Stdout, "Done!" + "\n")
+akhir
+
+main()

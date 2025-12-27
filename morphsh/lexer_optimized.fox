@@ -1,0 +1,283 @@
+ambil "morphsh/token"
+ambil "string"
+
+struktur Lexer
+    input string
+    position int
+    readPosition int
+    ch string
+    line int
+    column int
+akhir
+
+fungsi NewLexer(input string) Lexer
+    var l = Lexer{input: input, position: 0, readPosition: 0, ch: "", line: 1, column: 0}
+    l.readChar()
+    kembali l
+akhir
+
+# OPTIMIZED: Switch case flattening untuk NextToken
+fungsi (l *Lexer) NextToken() Token
+    var tok Token
+    var hasLeadingSpace = l.skipWhitespace()
+    var tokLine = l.line
+    var tokCol = l.column
+
+    # Multi-case switch untuk single character tokens
+    pilih l.ch
+        kasus "+":
+            tok = Token{Type: PLUS, Literal: "+", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+        kasus "-":
+            tok = Token{Type: MINUS, Literal: "-", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+        kasus "*":
+            tok = Token{Type: ASTERISK, Literal: "*", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+        kasus "/":
+            tok = Token{Type: SLASH, Literal: "/", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+        kasus "%":
+            tok = Token{Type: PERCENT, Literal: "%", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+        kasus "&":
+            tok = Token{Type: AND, Literal: "&", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+        kasus "|":
+            tok = Token{Type: OR, Literal: "|", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+        kasus "^":
+            tok = Token{Type: XOR, Literal: "^", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+        kasus "~":
+            tok = Token{Type: TILDE, Literal: "~", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+        kasus ",":
+            tok = Token{Type: COMMA, Literal: ",", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+        kasus ";":
+            tok = Token{Type: SEMICOLON, Literal: ";", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+        kasus ":":
+            tok = Token{Type: COLON, Literal: ":", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+        kasus ".":
+            tok = Token{Type: DOT, Literal: ".", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+        kasus "(":
+            tok = Token{Type: LPAREN, Literal: "(", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+        kasus ")":
+            tok = Token{Type: RPAREN, Literal: ")", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+        kasus "{":
+            tok = Token{Type: LBRACE, Literal: "{", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+        kasus "}":
+            tok = Token{Type: RBRACE, Literal: "}", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+        kasus "[":
+            tok = Token{Type: LBRACKET, Literal: "[", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+        kasus "]":
+            tok = Token{Type: RBRACKET, Literal: "]", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+        
+        # Complex cases dengan lookahead
+        kasus "=":
+            tok = l.handleEquals(tokLine, tokCol, hasLeadingSpace)
+        kasus "!":
+            tok = l.handleBang(tokLine, tokCol, hasLeadingSpace)
+        kasus "<":
+            tok = l.handleLess(tokLine, tokCol, hasLeadingSpace)
+        kasus ">":
+            tok = l.handleGreater(tokLine, tokCol, hasLeadingSpace)
+        kasus "#":
+            tok = l.handleHash(tokLine, tokCol, hasLeadingSpace)
+        kasus "\"":
+            tok = l.handleString(tokLine, tokCol, hasLeadingSpace)
+        kasus "'":
+            tok = l.handleChar(tokLine, tokCol, hasLeadingSpace)
+        kasus "":
+            tok = Token{Type: EOF, Literal: "", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
+        
+        # Default case untuk identifiers dan numbers
+        lainnya:
+            tok = l.handleDefault(tokLine, tokCol, hasLeadingSpace)
+    akhir
+
+    l.readChar()
+    kembali tok
+akhir
+
+# Helper functions untuk complex cases
+fungsi (l *Lexer) handleEquals(line int, col int, hasSpace bool) Token
+    jika l.peekChar() == "="
+        l.readChar()
+        kembali Token{Type: EQ, Literal: "==", Line: line, Column: col, HasLeadingSpace: hasSpace}
+    akhir
+    kembali Token{Type: ASSIGN, Literal: "=", Line: line, Column: col, HasLeadingSpace: hasSpace}
+akhir
+
+fungsi (l *Lexer) handleBang(line int, col int, hasSpace bool) Token
+    jika l.peekChar() == "="
+        l.readChar()
+        kembali Token{Type: NOT_EQ, Literal: "!=", Line: line, Column: col, HasLeadingSpace: hasSpace}
+    akhir
+    kembali Token{Type: BANG, Literal: "!", Line: line, Column: col, HasLeadingSpace: hasSpace}
+akhir
+
+fungsi (l *Lexer) handleLess(line int, col int, hasSpace bool) Token
+    pilih l.peekChar()
+        kasus "=":
+            l.readChar()
+            kembali Token{Type: LTE, Literal: "<=", Line: line, Column: col, HasLeadingSpace: hasSpace}
+        kasus "<":
+            l.readChar()
+            kembali Token{Type: LSHIFT, Literal: "<<", Line: line, Column: col, HasLeadingSpace: hasSpace}
+        lainnya:
+            kembali Token{Type: LT, Literal: "<", Line: line, Column: col, HasLeadingSpace: hasSpace}
+    akhir
+akhir
+
+fungsi (l *Lexer) handleGreater(line int, col int, hasSpace bool) Token
+    pilih l.peekChar()
+        kasus "=":
+            l.readChar()
+            kembali Token{Type: GTE, Literal: ">=", Line: line, Column: col, HasLeadingSpace: hasSpace}
+        kasus ">":
+            l.readChar()
+            kembali Token{Type: RSHIFT, Literal: ">>", Line: line, Column: col, HasLeadingSpace: hasSpace}
+        lainnya:
+            kembali Token{Type: GT, Literal: ">", Line: line, Column: col, HasLeadingSpace: hasSpace}
+    akhir
+akhir
+
+fungsi (l *Lexer) handleHash(line int, col int, hasSpace bool) Token
+    jika l.peekChar() == "{"
+        l.readChar()
+        kembali Token{Type: INTERP_START, Literal: "#{", Line: line, Column: col, HasLeadingSpace: hasSpace}
+    akhir
+    # Handle comment
+    var content = l.readComment()
+    kembali Token{Type: COMMENT, Literal: content, Line: line, Column: col, HasLeadingSpace: hasSpace}
+akhir
+
+fungsi (l *Lexer) handleString(line int, col int, hasSpace bool) Token
+    var content = l.readString()
+    kembali Token{Type: STRING, Literal: content, Line: line, Column: col, HasLeadingSpace: hasSpace}
+akhir
+
+fungsi (l *Lexer) handleChar(line int, col int, hasSpace bool) Token
+    var content = l.readChar()
+    kembali Token{Type: CHAR, Literal: content, Line: line, Column: col, HasLeadingSpace: hasSpace}
+akhir
+
+fungsi (l *Lexer) handleDefault(line int, col int, hasSpace bool) Token
+    jika l.isLetter(l.ch)
+        var literal = l.readIdentifier()
+        var tokenType = l.lookupIdent(literal)
+        kembali Token{Type: tokenType, Literal: literal, Line: line, Column: col, HasLeadingSpace: hasSpace}
+    lain jika l.isDigit(l.ch)
+        var literal = l.readNumber()
+        kembali Token{Type: INT, Literal: literal, Line: line, Column: col, HasLeadingSpace: hasSpace}
+    akhir
+    kembali Token{Type: ILLEGAL, Literal: l.ch, Line: line, Column: col, HasLeadingSpace: hasSpace}
+akhir
+
+# Utility functions
+fungsi (l *Lexer) readChar()
+    jika l.readPosition >= panjang(l.input)
+        l.ch = ""
+    lain
+        l.ch = substring(l.input, l.readPosition, l.readPosition + 1)
+    akhir
+    l.position = l.readPosition
+    l.readPosition = l.readPosition + 1
+    l.column = l.column + 1
+akhir
+
+fungsi (l *Lexer) peekChar() string
+    jika l.readPosition >= panjang(l.input)
+        kembali ""
+    akhir
+    kembali substring(l.input, l.readPosition, l.readPosition + 1)
+akhir
+
+fungsi (l *Lexer) skipWhitespace() bool
+    var hasSpace = salah
+    selama l.ch == " " atau l.ch == "\t" atau l.ch == "\n" atau l.ch == "\r"
+        jika l.ch == "\n"
+            l.line = l.line + 1
+            l.column = 0
+        akhir
+        hasSpace = benar
+        l.readChar()
+    akhir
+    kembali hasSpace
+akhir
+
+fungsi (l *Lexer) isLetter(ch string) bool
+    kembali (ch >= "a" dan ch <= "z") atau (ch >= "A" dan ch <= "Z") atau ch == "_"
+akhir
+
+fungsi (l *Lexer) isDigit(ch string) bool
+    kembali ch >= "0" dan ch <= "9"
+akhir
+
+fungsi (l *Lexer) readIdentifier() string
+    var position = l.position
+    selama l.isLetter(l.ch) atau l.isDigit(l.ch)
+        l.readChar()
+    akhir
+    kembali substring(l.input, position, l.position)
+akhir
+
+fungsi (l *Lexer) readNumber() string
+    var position = l.position
+    selama l.isDigit(l.ch)
+        l.readChar()
+    akhir
+    kembali substring(l.input, position, l.position)
+akhir
+
+fungsi (l *Lexer) readString() string
+    var position = l.position + 1
+    l.readChar()
+    selama l.ch != "\"" dan l.ch != ""
+        l.readChar()
+    akhir
+    kembali substring(l.input, position, l.position)
+akhir
+
+fungsi (l *Lexer) readComment() string
+    var position = l.position
+    selama l.ch != "\n" dan l.ch != ""
+        l.readChar()
+    akhir
+    kembali substring(l.input, position, l.position)
+akhir
+
+fungsi (l *Lexer) lookupIdent(ident string) int
+    pilih ident
+        kasus "var", "tetapan":
+            kembali VAR
+        kasus "fungsi":
+            kembali FUNCTION
+        kasus "jika":
+            kembali IF
+        kasus "lain":
+            kembali ELSE
+        kasus "atau_jika":
+            kembali ELSEIF
+        kasus "kembali":
+            kembali RETURN
+        kasus "benar":
+            kembali TRUE
+        kasus "salah":
+            kembali FALSE
+        kasus "kosong":
+            kembali NULL
+        kasus "selama":
+            kembali WHILE
+        kasus "untuk":
+            kembali FOR
+        kasus "pilih":
+            kembali SWITCH
+        kasus "kasus":
+            kembali CASE
+        kasus "lainnya":
+            kembali DEFAULT
+        kasus "akhir":
+            kembali END
+        kasus "struktur":
+            kembali STRUCT
+        kasus "antarmuka":
+            kembali INTERFACE
+        kasus "ambil":
+            kembali IMPORT
+        lainnya:
+            kembali IDENT
+    akhir
+akhir

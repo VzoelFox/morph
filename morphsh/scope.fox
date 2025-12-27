@@ -1,0 +1,162 @@
+# scope.fox - Scope management for type checker
+ambil "io"
+
+# SymbolInfo struct equivalent
+struktur SymbolInfo
+    type_name string
+    is_const bool
+    line int
+    column int
+    used bool
+akhir
+
+# Scope struct equivalent  
+struktur Scope
+    # In real implementation, these would be maps
+    # For now, using simple arrays as placeholders
+    variable_names [string]
+    variable_infos [SymbolInfo]
+    type_names [string]
+    type_values [string]  # Simplified type storage
+    has_outer bool
+    # outer *Scope - would need pointer support
+akhir
+
+# Create new scope
+fungsi new_scope(has_outer bool) Scope
+    var scope = Scope{
+        variable_names: [],
+        variable_infos: [],
+        type_names: [],
+        type_values: [],
+        has_outer: has_outer
+    }
+    kembali scope
+akhir
+
+# Define variable in scope
+fungsi scope_define_variable(scope Scope, name string, type_name string, is_const bool, line int, col int) Scope
+    # Create symbol info
+    var symbol = SymbolInfo{
+        type_name: type_name,
+        is_const: is_const,
+        line: line,
+        column: col,
+        used: false
+    }
+    
+    # Add to scope (simplified - no shadowing check for now)
+    var new_names = scope.variable_names + [name]
+    var new_infos = scope.variable_infos + [symbol]
+    
+    var updated_scope = Scope{
+        variable_names: new_names,
+        variable_infos: new_infos,
+        type_names: scope.type_names,
+        type_values: scope.type_values,
+        has_outer: scope.has_outer
+    }
+    
+    kembali updated_scope
+akhir
+
+# Lookup variable in scope
+fungsi scope_lookup_variable(scope Scope, name string) bool
+    var i = 0
+    selama i < len(scope.variable_names)
+        jika scope.variable_names[i] == name
+            kembali true
+        akhir
+        i = i + 1
+    akhir
+    kembali false
+akhir
+
+# Mark variable as used
+fungsi scope_mark_used(scope Scope, name string) Scope
+    var i = 0
+    var new_infos = scope.variable_infos
+    selama i < len(scope.variable_names)
+        jika scope.variable_names[i] == name
+            var old_info = scope.variable_infos[i]
+            var updated_info = SymbolInfo{
+                type_name: old_info.type_name,
+                is_const: old_info.is_const,
+                line: old_info.line,
+                column: old_info.column,
+                used: true
+            }
+            # In real implementation, would update array element
+            # For now, just return original scope
+            kembali scope
+        akhir
+        i = i + 1
+    akhir
+    kembali scope
+akhir
+
+# Define type in scope
+fungsi scope_define_type(scope Scope, name string, type_value string) Scope
+    var new_type_names = scope.type_names + [name]
+    var new_type_values = scope.type_values + [type_value]
+    
+    var updated_scope = Scope{
+        variable_names: scope.variable_names,
+        variable_infos: scope.variable_infos,
+        type_names: new_type_names,
+        type_values: new_type_values,
+        has_outer: scope.has_outer
+    }
+    
+    kembali updated_scope
+akhir
+
+# Lookup type in scope
+fungsi scope_lookup_type(scope Scope, name string) bool
+    var i = 0
+    selama i < len(scope.type_names)
+        jika scope.type_names[i] == name
+            kembali true
+        akhir
+        i = i + 1
+    akhir
+    kembali false
+akhir
+
+fungsi main() void
+    io.Write(io.Stdout, "=== SCOPE SYSTEM TEST ===\n")
+    
+    # Test scope creation
+    var scope = new_scope(false)
+    io.Write(io.Stdout, "Created scope: OK\n")
+    
+    # Test variable definition
+    scope = scope_define_variable(scope, "x", "int", false, 1, 1)
+    io.Write(io.Stdout, "Defined variable: OK\n")
+    
+    # Test variable lookup
+    var found = scope_lookup_variable(scope, "x")
+    io.Write(io.Stdout, "Variable lookup: ")
+    jika found
+        io.Write(io.Stdout, "OK\n")
+    lainnya
+        io.Write(io.Stdout, "ERROR\n")
+    akhir
+    
+    # Test type definition
+    scope = scope_define_type(scope, "MyType", "struct")
+    io.Write(io.Stdout, "Defined type: OK\n")
+    
+    # Test type lookup
+    var type_found = scope_lookup_type(scope, "MyType")
+    io.Write(io.Stdout, "Type lookup: ")
+    jika type_found
+        io.Write(io.Stdout, "OK\n")
+    lainnya
+        io.Write(io.Stdout, "ERROR\n")
+    akhir
+    
+    io.Write(io.Stdout, "Scope system implemented successfully!\n")
+akhir
+
+main()

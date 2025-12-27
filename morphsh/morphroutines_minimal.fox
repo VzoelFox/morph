@@ -1,0 +1,71 @@
+ambil "io"
+
+# Morphroutines Minimal - Security Clearance System
+
+struktur Worker
+    id int
+    clearance int
+    zone string
+akhir
+
+struktur Unit
+    id int
+    secLevel int
+    memZone string
+akhir
+
+fungsi NewWorker(id int, clearance int, zone string) Worker
+    kembalikan Worker{id: id, clearance: clearance, zone: zone}
+akhir
+
+fungsi NewUnit(id int, secLevel int, memZone string) Unit
+    kembalikan Unit{id: id, secLevel: secLevel, memZone: memZone}
+akhir
+
+fungsi CanMigrate(worker Worker, unit Unit) bool
+    jika worker.clearance >= unit.secLevel
+        jika worker.zone == unit.memZone
+            kembalikan benar
+        akhir
+    akhir
+    kembalikan salah
+akhir
+
+fungsi TestMorphroutines() void
+    io.Write(io.Stdout, "=== Morphroutines Security Test ===")
+    
+    var worker1 = NewWorker(1, 1, "ZONE_A")
+    var worker2 = NewWorker(2, 2, "ZONE_B")
+    
+    var unit1 = NewUnit(1, 1, "ZONE_A")
+    var unit2 = NewUnit(2, 2, "ZONE_B")
+    
+    # Test migrations
+    jika CanMigrate(worker1, unit1)
+        io.Write(io.Stdout, "Worker 1 → Unit 1: ALLOWED")
+    lainnya
+        io.Write(io.Stdout, "Worker 1 → Unit 1: DENIED")
+    akhir
+    
+    jika CanMigrate(worker1, unit2)
+        io.Write(io.Stdout, "Worker 1 → Unit 2: ALLOWED")
+    lainnya
+        io.Write(io.Stdout, "Worker 1 → Unit 2: DENIED (Security)\n")
+    akhir
+    
+    jika CanMigrate(worker2, unit2)
+        io.Write(io.Stdout, "Worker 2 → Unit 2: ALLOWED")
+    lainnya
+        io.Write(io.Stdout, "Worker 2 → Unit 2: DENIED")
+    akhir
+    
+    io.Write(io.Stdout, "=== Security System Works ===")
+akhir
+
+fungsi main() void
+    io.Write(io.Stdout, "=== Morphroutines Security ===")
+    TestMorphroutines()
+    io.Write(io.Stdout, "Security clearance ready!")
+akhir
+
+main()

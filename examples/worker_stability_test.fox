@@ -1,0 +1,28 @@
+fungsi TestWorkerStability() void
+    native_print("=== Worker Stability Test ===")
+    
+    # Simulate worker operations
+    var data1 = "Worker Data 1"
+    var data2 = "Worker Data 2"
+    var data3 = "Worker Data 3"
+    
+    # Test memory allocation under stress
+    var i = 0
+    selama i < 100
+        var temp = "Temp allocation"
+        i = i + 1
+    akhir
+    
+    native_print("Worker operations completed:")
+    native_print(data1)
+    native_print(data2) 
+    native_print(data3)
+    
+    native_print("=== Worker Stability OK ===")
+akhir
+
+fungsi main() void
+    TestWorkerStability()
+akhir
+
+main()

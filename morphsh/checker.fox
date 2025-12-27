@@ -1,0 +1,120 @@
+# Type Checker untuk MorphSH
+# Minimal semantic analysis untuk bootstrap
+
+struktur TypeChecker
+    has_errors bool
+    error_count int
+akhir
+
+fungsi checker_new() TypeChecker
+    kembalikan TypeChecker(benar, 0)
+akhir
+
+# Check binary expression
+fungsi check_binary(checker TypeChecker, left_type Type, op string, right_type Type) Type
+    # Arithmetic operators
+    jika op == "+"
+        jika left_type.kind == 0
+            jika right_type.kind == 0
+                kembalikan type_int()
+            akhir
+        akhir
+        jika left_type.kind == 1
+            jika right_type.kind == 1
+                kembalikan type_string()
+            akhir
+        akhir
+        checker.has_errors = benar
+        checker.error_count = checker.error_count + 1
+        kembalikan type_error()
+    akhir
+    
+    jika op == "-"
+        jika left_type.kind == 0
+            jika right_type.kind == 0
+                kembalikan type_int()
+            akhir
+        akhir
+        checker.has_errors = benar
+        checker.error_count = checker.error_count + 1
+        kembalikan type_error()
+    akhir
+    
+    jika op == "*"
+        jika left_type.kind == 0
+            jika right_type.kind == 0
+                kembalikan type_int()
+            akhir
+        akhir
+        checker.has_errors = benar
+        checker.error_count = checker.error_count + 1
+        kembalikan type_error()
+    akhir
+    
+    jika op == "/"
+        jika left_type.kind == 0
+            jika right_type.kind == 0
+                kembalikan type_int()
+            akhir
+        akhir
+        checker.has_errors = benar
+        checker.error_count = checker.error_count + 1
+        kembalikan type_error()
+    akhir
+    
+    # Comparison operators
+    jika op == "=="
+        kembalikan type_bool()
+    akhir
+    
+    jika op == "!="
+        kembalikan type_bool()
+    akhir
+    
+    jika op == "<"
+        jika left_type.kind == 0
+            jika right_type.kind == 0
+                kembalikan type_bool()
+            akhir
+        akhir
+        checker.has_errors = benar
+        checker.error_count = checker.error_count + 1
+        kembalikan type_error()
+    akhir
+    
+    jika op == ">"
+        jika left_type.kind == 0
+            jika right_type.kind == 0
+                kembalikan type_bool()
+            akhir
+        akhir
+        checker.has_errors = benar
+        checker.error_count = checker.error_count + 1
+        kembalikan type_error()
+    akhir
+    
+    # Default: error
+    checker.has_errors = benar
+    checker.error_count = checker.error_count + 1
+    kembalikan type_error()
+akhir
+
+# Check unary expression
+fungsi check_unary(checker TypeChecker, op string, operand_type Type) Type
+    jika op == "-"
+        jika operand_type.kind == 0
+            kembalikan type_int()
+        akhir
+        checker.has_errors = benar
+        checker.error_count = checker.error_count + 1
+        kembalikan type_error()
+    akhir
+    
+    jika op == "!"
+        kembalikan type_bool()
+    akhir
+    
+    checker.has_errors = benar
+    checker.error_count = checker.error_count + 1
+    kembalikan type_error()
+akhir

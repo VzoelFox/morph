@@ -1,0 +1,122 @@
+ambil "morphsh/token"
+ambil "morphsh/lexer_minimal"
+
+struktur Parser
+    lexer Lexer
+    curToken Token
+    peekToken Token
+    errors []string
+akhir
+
+fungsi NewParser(lexer Lexer) Parser
+    var p = Parser{
+        lexer: lexer,
+        errors: []string{}
+    }
+    
+    # Read two tokens untuk current dan peek
+    p.lexer, p.curToken = NextToken(p.lexer)
+    p.lexer, p.peekToken = NextToken(p.lexer)
+    
+    kembalikan p
+akhir
+
+fungsi nextToken(p Parser) Parser
+    p.curToken = p.peekToken
+    p.lexer, p.peekToken = NextToken(p.lexer)
+    kembalikan p
+akhir
+
+fungsi curTokenIs(p Parser, t string) bool
+    kembalikan p.curToken.Type == t
+akhir
+
+fungsi peekTokenIs(p Parser, t string) bool
+    kembalikan p.peekToken.Type == t
+akhir
+
+fungsi expectPeek(p Parser, t string) (Parser, bool)
+    jika peekTokenIs(p, t)
+        p = nextToken(p)
+        kembalikan p, benar
+    lainnya
+        kembalikan p, salah
+    akhir
+akhir
+
+# Simple expression parsing (minimal)
+fungsi parseExpression(p Parser) (Parser, string)
+    jika curTokenIs(p, IDENT)
+        var literal = p.curToken.Literal
+        kembalikan p, literal
+    atau_jika curTokenIs(p, INT)
+        var literal = p.curToken.Literal
+        kembalikan p, literal
+    atau_jika curTokenIs(p, STRING)
+        var literal = p.curToken.Literal
+        kembalikan p, literal
+    lainnya
+        kembalikan p, "UNKNOWN"
+    akhir
+akhir
+
+# Parse function declaration (minimal)
+fungsi parseFunction(p Parser) (Parser, string)
+    jika tidak curTokenIs(p, FUNGSI)
+        kembalikan p, "ERROR: expected FUNGSI"
+    akhir
+    
+    p = nextToken(p)
+    
+    jika tidak curTokenIs(p, IDENT)
+        kembalikan p, "ERROR: expected function name"
+    akhir
+    
+    var funcName = p.curToken.Literal
+    p = nextToken(p)  # move to (
+    
+    jika tidak curTokenIs(p, LPAREN)
+        kembalikan p, "ERROR: expected ("
+    akhir
+    
+    p = nextToken(p)  # move past (
+    
+    jika tidak curTokenIs(p, RPAREN)
+        kembalikan p, "ERROR: expected )"
+    akhir
+    
+    p = nextToken(p)  # move past )
+    
+    # Skip type for now
+    jika curTokenIs(p, IDENT)
+        p = nextToken(p)
+    akhir
+    
+    # Skip to akhir
+    selama tidak curTokenIs(p, AKHIR) dan tidak curTokenIs(p, EOF)
+        p = nextToken(p)
+    akhir
+    
+    jika curTokenIs(p, AKHIR)
+        p = nextToken(p)  # consume akhir
+    akhir
+    
+    kembalikan p, funcName
+akhir
+
+# Parse program (minimal)
+fungsi parseProgram(p Parser) (Parser, []string)
+    var functions = []string{}
+    
+    selama tidak curTokenIs(p, EOF)
+        jika curTokenIs(p, FUNGSI)
+            var funcName string
+            p, funcName = parseFunction(p)
+            functions = append(functions, funcName)
+        lainnya
+            p = nextToken(p)
+        akhir
+    akhir
+    
+    kembalikan p, functions
+akhir

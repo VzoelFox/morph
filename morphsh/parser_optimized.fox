@@ -1,0 +1,437 @@
+ambil "morphsh/ast"
+ambil "morphsh/lexer"
+ambil "morphsh/token"
+
+struktur Parser
+    lexer Lexer
+    current Token
+    peek Token
+    errors []string
+akhir
+
+fungsi NewParser(l Lexer) Parser
+    var p = Parser{lexer: l, current: Token{Type: ILLEGAL}, peek: Token{Type: ILLEGAL}, errors: []}
+    p.nextToken()
+    p.nextToken()
+    kembali p
+akhir
+
+fungsi (p *Parser) Errors() []string
+    kembali p.errors
+akhir
+
+fungsi (p *Parser) addError(msg string) void
+    p.errors = p.errors + [msg]
+akhir
+
+fungsi (p *Parser) nextToken() void
+    p.current = p.peek
+    p.peek = p.lexer.NextToken()
+akhir
+
+fungsi (p *Parser) ParseProgram() Program
+    var program = Program{token: p.current, statements: NewNodeList()}
+
+    selama p.current.Type != EOF
+        var stmt = p.parseStatement()
+        jika stmt != kosong
+            program.statements = AddNode(program.statements, stmt)
+        akhir
+        p.nextToken()
+    akhir
+
+    kembali program
+akhir
+
+# OPTIMIZED: Switch case flattening untuk statement parsing
+fungsi (p *Parser) parseStatement() Node
+    pilih p.current.Type
+        kasus VAR, TETAPAN:
+            kembali p.parseVarStatement()
+        kasus KEMBALIKAN:
+            kembali p.parseReturnStatement()
+        kasus JIKA:
+            kembali p.parseIfStatement()
+        kasus SELAMA:
+            kembali p.parseWhileStatement()
+        kasus UNTUK:
+            kembali p.parseForStatement()
+        kasus PILIH:
+            kembali p.parseSwitchStatement()
+        kasus FUNGSI:
+            kembali p.parseFunctionStatement()
+        kasus STRUKTUR:
+            kembali p.parseStructStatement()
+        kasus ANTARMUKA:
+            kembali p.parseInterfaceStatement()
+        kasus AMBIL:
+            kembali p.parseImportStatement()
+        kasus LBRACE:
+            kembali p.parseBlockStatement()
+        lainnya:
+            kembali p.parseExpressionStatement()
+    akhir
+akhir
+
+# OPTIMIZED: Switch case untuk expression parsing
+fungsi (p *Parser) parseExpression() Node
+    pilih p.current.Type
+        kasus IDENT:
+            kembali p.parseIdentifier()
+        kasus INT:
+            kembali p.parseIntegerLiteral()
+        kasus STRING:
+            kembali p.parseStringLiteral()
+        kasus BENAR, SALAH:
+            kembali p.parseBooleanLiteral()
+        kasus KOSONG:
+            kembali p.parseNullLiteral()
+        kasus BANG, MINUS:
+            kembali p.parsePrefixExpression()
+        kasus LPAREN:
+            kembali p.parseGroupedExpression()
+        kasus LBRACKET:
+            kembali p.parseArrayLiteral()
+        kasus LBRACE:
+            kembali p.parseHashLiteral()
+        kasus FUNGSI:
+            kembali p.parseFunctionLiteral()
+        lainnya:
+            p.addError("Unexpected token: " + p.current.Literal)
+            kembali kosong
+    akhir
+akhir
+
+# OPTIMIZED: Multi-case precedence lookup
+fungsi (p *Parser) getPrecedence(tokenType int) int
+    pilih tokenType
+        kasus EQ, NOT_EQ:
+            kembali PREC_EQUALS
+        kasus LT, LTE, GT, GTE:
+            kembali PREC_COMPARE
+        kasus PLUS, MINUS:
+            kembali PREC_SUM
+        kasus ASTERISK, SLASH, PERCENT:
+            kembali PREC_PRODUCT
+        kasus LPAREN:
+            kembali PREC_CALL
+        lainnya:
+            kembali PREC_LOWEST
+    akhir
+akhir
+
+# Statement parsers
+fungsi (p *Parser) parseVarStatement() Node
+    var stmt = VarStatement{token: p.current, name: Identifier{token: Token{}, value: ""}, value: kosong, isConst: p.current.Type == TETAPAN}
+    
+    jika p.peek.Type != IDENT
+        p.addError("Expected identifier after var/tetapan")
+        kembali kosong
+    akhir
+    
+    p.nextToken()
+    stmt.name = Identifier{token: p.current, value: p.current.Literal}
+    
+    jika p.peek.Type != ASSIGN
+        p.addError("Expected = after variable name")
+        kembali kosong
+    akhir
+    
+    p.nextToken()
+    p.nextToken()
+    stmt.value = p.parseExpression()
+    
+    jika p.peek.Type == SEMICOLON
+        p.nextToken()
+    akhir
+    
+    kembali stmt
+akhir
+
+fungsi (p *Parser) parseReturnStatement() Node
+    var stmt = ReturnStatement{token: p.current, value: kosong}
+
+    jika p.peek.Type == SEMICOLON atau p.peek.Type == AKHIR
+        p.nextToken()
+        kembali stmt
+    akhir
+
+    p.nextToken()
+    stmt.value = p.parseExpression()
+
+    jika p.peek.Type == SEMICOLON
+        p.nextToken()
+    akhir
+
+    kembali stmt
+akhir
+
+fungsi (p *Parser) parseIfStatement() Node
+    var stmt = IfStatement{token: p.current, condition: kosong, consequence: kosong, alternative: kosong}
+    
+    p.nextToken()
+    stmt.condition = p.parseExpression()
+    
+    jika p.peek.Type != LBRACE
+        p.addError("Expected { after if condition")
+        kembali kosong
+    akhir
+    
+    p.nextToken()
+    stmt.consequence = p.parseBlockStatement()
+    
+    jika p.peek.Type == LAIN
+        p.nextToken()
+        jika p.peek.Type == JIKA
+            p.nextToken()
+            stmt.alternative = p.parseIfStatement()
+        lain
+            jika p.peek.Type != LBRACE
+                p.addError("Expected { after else")
+                kembali kosong
+            akhir
+            p.nextToken()
+            stmt.alternative = p.parseBlockStatement()
+        akhir
+    akhir
+    
+    kembali stmt
+akhir
+
+fungsi (p *Parser) parseWhileStatement() Node
+    var stmt = WhileStatement{token: p.current, condition: kosong, body: kosong}
+    
+    p.nextToken()
+    stmt.condition = p.parseExpression()
+    
+    jika p.peek.Type != LBRACE
+        p.addError("Expected { after while condition")
+        kembali kosong
+    akhir
+    
+    p.nextToken()
+    stmt.body = p.parseBlockStatement()
+    
+    kembali stmt
+akhir
+
+fungsi (p *Parser) parseBlockStatement() Node
+    var stmt = BlockStatement{token: p.current, statements: NewNodeList()}
+    
+    p.nextToken()
+    
+    selama p.current.Type != RBRACE dan p.current.Type != EOF dan p.current.Type != AKHIR
+        var s = p.parseStatement()
+        jika s != kosong
+            stmt.statements = AddNode(stmt.statements, s)
+        akhir
+        p.nextToken()
+    akhir
+    
+    kembali stmt
+akhir
+
+fungsi (p *Parser) parseExpressionStatement() Node
+    var stmt = ExpressionStatement{token: p.current, expression: kosong}
+    stmt.expression = p.parseExpression()
+    
+    jika p.peek.Type == SEMICOLON
+        p.nextToken()
+    akhir
+    
+    kembali stmt
+akhir
+
+# Expression parsers
+fungsi (p *Parser) parseIdentifier() Node
+    kembali Identifier{token: p.current, value: p.current.Literal}
+akhir
+
+fungsi (p *Parser) parseIntegerLiteral() Node
+    var lit = IntegerLiteral{token: p.current, value: 0}
+    # TODO: Convert string to int
+    kembali lit
+akhir
+
+fungsi (p *Parser) parseStringLiteral() Node
+    kembali StringLiteral{token: p.current, value: p.current.Literal}
+akhir
+
+fungsi (p *Parser) parseBooleanLiteral() Node
+    kembali BooleanLiteral{token: p.current, value: p.current.Type == BENAR}
+akhir
+
+fungsi (p *Parser) parseNullLiteral() Node
+    kembali NullLiteral{token: p.current}
+akhir
+
+fungsi (p *Parser) parsePrefixExpression() Node
+    var expr = PrefixExpression{token: p.current, operator: p.current.Literal, right: kosong}
+    
+    p.nextToken()
+    expr.right = p.parseExpression()
+    
+    kembali expr
+akhir
+
+fungsi (p *Parser) parseGroupedExpression() Node
+    p.nextToken()
+    var exp = p.parseExpression()
+    
+    jika p.peek.Type != RPAREN
+        p.addError("Expected ) after grouped expression")
+        kembali kosong
+    akhir
+    
+    p.nextToken()
+    kembali exp
+akhir
+
+fungsi (p *Parser) parseArrayLiteral() Node
+    var arr = ArrayLiteral{token: p.current, elements: NewNodeList()}
+    
+    jika p.peek.Type == RBRACKET
+        p.nextToken()
+        kembali arr
+    akhir
+    
+    p.nextToken()
+    arr.elements = AddNode(arr.elements, p.parseExpression())
+    
+    selama p.peek.Type == COMMA
+        p.nextToken()
+        p.nextToken()
+        arr.elements = AddNode(arr.elements, p.parseExpression())
+    akhir
+    
+    jika p.peek.Type != RBRACKET
+        p.addError("Expected ] after array elements")
+        kembali kosong
+    akhir
+    
+    p.nextToken()
+    kembali arr
+akhir
+
+fungsi (p *Parser) parseHashLiteral() Node
+    var hash = HashLiteral{token: p.current, pairs: NewPairList()}
+    
+    jika p.peek.Type == RBRACE
+        p.nextToken()
+        kembali hash
+    akhir
+    
+    p.nextToken()
+    var key = p.parseExpression()
+    
+    jika p.peek.Type != COLON
+        p.addError("Expected : after hash key")
+        kembali kosong
+    akhir
+    
+    p.nextToken()
+    p.nextToken()
+    var value = p.parseExpression()
+    
+    hash.pairs = AddPair(hash.pairs, key, value)
+    
+    selama p.peek.Type == COMMA
+        p.nextToken()
+        p.nextToken()
+        key = p.parseExpression()
+        
+        jika p.peek.Type != COLON
+            p.addError("Expected : after hash key")
+            kembali kosong
+        akhir
+        
+        p.nextToken()
+        p.nextToken()
+        value = p.parseExpression()
+        
+        hash.pairs = AddPair(hash.pairs, key, value)
+    akhir
+    
+    jika p.peek.Type != RBRACE
+        p.addError("Expected } after hash pairs")
+        kembali kosong
+    akhir
+    
+    p.nextToken()
+    kembali hash
+akhir
+
+fungsi (p *Parser) parseFunctionLiteral() Node
+    var lit = FunctionLiteral{token: p.current, parameters: NewParameterList(), body: kosong}
+    
+    jika p.peek.Type != LPAREN
+        p.addError("Expected ( after fungsi")
+        kembali kosong
+    akhir
+    
+    p.nextToken()
+    lit.parameters = p.parseFunctionParameters()
+    
+    jika p.peek.Type != LBRACE
+        p.addError("Expected { after function parameters")
+        kembali kosong
+    akhir
+    
+    p.nextToken()
+    lit.body = p.parseBlockStatement()
+    
+    kembali lit
+akhir
+
+fungsi (p *Parser) parseFunctionParameters() ParameterList
+    var params = NewParameterList()
+    
+    jika p.peek.Type == RPAREN
+        p.nextToken()
+        kembali params
+    akhir
+    
+    p.nextToken()
+    var param = Parameter{name: Identifier{token: p.current, value: p.current.Literal}}
+    params = AddParameter(params, param)
+    
+    selama p.peek.Type == COMMA
+        p.nextToken()
+        p.nextToken()
+        param = Parameter{name: Identifier{token: p.current, value: p.current.Literal}}
+        params = AddParameter(params, param)
+    akhir
+    
+    jika p.peek.Type != RPAREN
+        p.addError("Expected ) after function parameters")
+        kembali params
+    akhir
+    
+    p.nextToken()
+    kembali params
+akhir
+
+# Stub implementations untuk statement parsers yang belum diimplementasi
+fungsi (p *Parser) parseForStatement() Node
+    kembali kosong
+akhir
+
+fungsi (p *Parser) parseSwitchStatement() Node
+    kembali kosong
+akhir
+
+fungsi (p *Parser) parseFunctionStatement() Node
+    kembali kosong
+akhir
+
+fungsi (p *Parser) parseStructStatement() Node
+    kembali kosong
+akhir
+
+fungsi (p *Parser) parseInterfaceStatement() Node
+    kembali kosong
+akhir
+
+fungsi (p *Parser) parseImportStatement() Node
+    kembali kosong
+akhir

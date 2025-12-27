@@ -1,0 +1,320 @@
+# consistent_checker.fox - More consistent type checker with Go semantics
+ambil "io"
+
+# Simplified but consistent type system
+struktur SimpleType
+    kind int
+    name string
+akhir
+
+# Type constants (matching Go implementation)
+tetapan TYPE_INT = 0
+tetapan TYPE_FLOAT = 1
+tetapan TYPE_STRING = 2
+tetapan TYPE_BOOL = 3
+tetapan TYPE_VOID = 4
+tetapan TYPE_ARRAY = 5
+tetapan TYPE_ERROR = 8
+
+# Consistent checker structure
+struktur ConsistentChecker
+    error_count int
+    warning_count int
+    has_builtin_len bool
+    has_builtin_print bool
+akhir
+
+# Initialize checker with Go-like built-ins
+fungsi init_consistent_checker() ConsistentChecker
+    var checker = ConsistentChecker{
+        error_count: 0,
+        warning_count: 0,
+        has_builtin_len: benar,
+        has_builtin_print: benar
+    }
+    kembali checker
+akhir
+
+# Create type helpers (consistent with Go)
+fungsi make_int_type() SimpleType
+    kembali SimpleType{kind: TYPE_INT, name: "int"}
+akhir
+
+fungsi make_string_type() SimpleType
+    kembali SimpleType{kind: TYPE_STRING, name: "string"}
+akhir
+
+fungsi make_bool_type() SimpleType
+    kembali SimpleType{kind: TYPE_BOOL, name: "bool"}
+akhir
+
+fungsi make_error_type() SimpleType
+    kembali SimpleType{kind: TYPE_ERROR, name: "error"}
+akhir
+
+# Binary operation type checking (Go-consistent)
+fungsi check_binary_op(left SimpleType, op string, right SimpleType) SimpleType
+    # Arithmetic: int op int -> int
+    jika op == "+"
+        jika left.kind == TYPE_INT
+            jika right.kind == TYPE_INT
+                kembali make_int_type()
+            akhir
+        akhir
+        # String concatenation: string + string -> string
+        jika left.kind == TYPE_STRING
+            jika right.kind == TYPE_STRING
+                kembali make_string_type()
+            akhir
+        akhir
+        kembali make_error_type()
+    akhir
+    
+    jika op == "-"
+        jika left.kind == TYPE_INT
+            jika right.kind == TYPE_INT
+                kembali make_int_type()
+            akhir
+        akhir
+        kembali make_error_type()
+    akhir
+    
+    jika op == "*"
+        jika left.kind == TYPE_INT
+            jika right.kind == TYPE_INT
+                kembali make_int_type()
+            akhir
+        akhir
+        kembali make_error_type()
+    akhir
+    
+    jika op == "/"
+        jika left.kind == TYPE_INT
+            jika right.kind == TYPE_INT
+                kembali make_int_type()
+            akhir
+        akhir
+        kembali make_error_type()
+    akhir
+    
+    # Comparison: T op T -> bool (where T is same type)
+    jika op == "=="
+        jika left.kind == right.kind
+            kembali make_bool_type()
+        akhir
+        kembali make_error_type()
+    akhir
+    
+    jika op == "!="
+        jika left.kind == right.kind
+            kembali make_bool_type()
+        akhir
+        kembali make_error_type()
+    akhir
+    
+    jika op == "<"
+        jika left.kind == right.kind
+            kembali make_bool_type()
+        akhir
+        kembali make_error_type()
+    akhir
+    
+    jika op == ">"
+        jika left.kind == right.kind
+            kembali make_bool_type()
+        akhir
+        kembali make_error_type()
+    akhir
+    
+    kembali make_error_type()
+akhir
+
+# Unary operation type checking (Go-consistent)
+fungsi check_unary_op(op string, operand SimpleType) SimpleType
+    jika op == "-"
+        jika operand.kind == TYPE_INT
+            kembali make_int_type()
+        akhir
+        kembali make_error_type()
+    akhir
+    
+    jika op == "!"
+        jika operand.kind == TYPE_BOOL
+            kembali make_bool_type()
+        akhir
+        kembali make_error_type()
+    akhir
+    
+    kembali make_error_type()
+akhir
+
+# Array access type checking (Go-consistent)
+fungsi check_array_index(array_type SimpleType, index_type SimpleType) SimpleType
+    # Array access requires int index
+    jika index_type.kind != TYPE_INT
+        kembali make_error_type()
+    akhir
+    
+    # For now, assume array elements are int (simplified)
+    jika array_type.kind == TYPE_ARRAY
+        kembali make_int_type()
+    akhir
+    
+    # String indexing also returns int (char code)
+    jika array_type.kind == TYPE_STRING
+        kembali make_int_type()
+    akhir
+    
+    kembali make_error_type()
+akhir
+
+# Built-in function type checking (Go-consistent)
+fungsi check_builtin_call(checker ConsistentChecker, func_name string, arg_type SimpleType) SimpleType
+    jika func_name == "len"
+        # len(string) -> int, len(array) -> int
+        jika arg_type.kind == TYPE_STRING
+            kembali make_int_type()
+        akhir
+        jika arg_type.kind == TYPE_ARRAY
+            kembali make_int_type()
+        akhir
+        kembali make_error_type()
+    akhir
+    
+    jika func_name == "print"
+        # print(any) -> void
+        kembali SimpleType{kind: TYPE_VOID, name: "void"}
+    akhir
+    
+    jika func_name == "native_print"
+        # native_print(any) -> void
+        kembali SimpleType{kind: TYPE_VOID, name: "void"}
+    akhir
+    
+    jika func_name == "parse_int"
+        # parse_int(string) -> int (simplified, Go returns (int, error))
+        jika arg_type.kind == TYPE_STRING
+            kembali make_int_type()
+        akhir
+        kembali make_error_type()
+    akhir
+    
+    # Unknown function
+    kembali make_error_type()
+akhir
+
+# Variable assignment type checking (Go-consistent)
+fungsi check_assignment(var_type SimpleType, value_type SimpleType) bool
+    # Must be exact type match (Go is strict)
+    kembali var_type.kind == value_type.kind
+akhir
+
+# Control flow type checking (Go-consistent)
+fungsi check_if_condition(condition_type SimpleType) bool
+    # If condition must be bool
+    kembali condition_type.kind == TYPE_BOOL
+akhir
+
+fungsi check_while_condition(condition_type SimpleType) bool
+    # While condition must be bool
+    kembali condition_type.kind == TYPE_BOOL
+akhir
+
+# Test comprehensive type checking
+fungsi test_consistent_checker() void
+    io.Write(io.Stdout, "=== CONSISTENT TYPE CHECKER TEST ===\n")
+    
+    var checker = init_consistent_checker()
+    var int_type = make_int_type()
+    var string_type = make_string_type()
+    var bool_type = make_bool_type()
+    
+    # Test binary operations
+    var add_result = check_binary_op(int_type, "+", int_type)
+    jika add_result.kind == TYPE_INT
+        io.Write(io.Stdout, "int + int → int: ✅ PASS\n")
+    lainnya
+        io.Write(io.Stdout, "int + int: ❌ FAIL\n")
+    akhir
+    
+    var concat_result = check_binary_op(string_type, "+", string_type)
+    jika concat_result.kind == TYPE_STRING
+        io.Write(io.Stdout, "string + string → string: ✅ PASS\n")
+    lainnya
+        io.Write(io.Stdout, "string + string: ❌ FAIL\n")
+    akhir
+    
+    var compare_result = check_binary_op(int_type, "==", int_type)
+    jika compare_result.kind == TYPE_BOOL
+        io.Write(io.Stdout, "int == int → bool: ✅ PASS\n")
+    lainnya
+        io.Write(io.Stdout, "int == int: ❌ FAIL\n")
+    akhir
+    
+    # Test type mismatch (should error)
+    var mismatch_result = check_binary_op(int_type, "+", string_type)
+    jika mismatch_result.kind == TYPE_ERROR
+        io.Write(io.Stdout, "int + string → error: ✅ PASS\n")
+    lainnya
+        io.Write(io.Stdout, "int + string: ❌ FAIL\n")
+    akhir
+    
+    # Test unary operations
+    var neg_result = check_unary_op("-", int_type)
+    jika neg_result.kind == TYPE_INT
+        io.Write(io.Stdout, "-int → int: ✅ PASS\n")
+    lainnya
+        io.Write(io.Stdout, "-int: ❌ FAIL\n")
+    akhir
+    
+    var not_result = check_unary_op("!", bool_type)
+    jika not_result.kind == TYPE_BOOL
+        io.Write(io.Stdout, "!bool → bool: ✅ PASS\n")
+    lainnya
+        io.Write(io.Stdout, "!bool: ❌ FAIL\n")
+    akhir
+    
+    # Test built-in functions
+    var len_result = check_builtin_call(checker, "len", string_type)
+    jika len_result.kind == TYPE_INT
+        io.Write(io.Stdout, "len(string) → int: ✅ PASS\n")
+    lainnya
+        io.Write(io.Stdout, "len(string): ❌ FAIL\n")
+    akhir
+    
+    # Test assignment compatibility
+    var assign_ok = check_assignment(int_type, int_type)
+    jika assign_ok
+        io.Write(io.Stdout, "int = int: ✅ PASS\n")
+    lainnya
+        io.Write(io.Stdout, "int = int: ❌ FAIL\n")
+    akhir
+    
+    var assign_bad = check_assignment(int_type, string_type)
+    jika !assign_bad
+        io.Write(io.Stdout, "int = string (rejected): ✅ PASS\n")
+    lainnya
+        io.Write(io.Stdout, "int = string: ❌ FAIL\n")
+    akhir
+    
+    # Test control flow
+    var if_ok = check_if_condition(bool_type)
+    jika if_ok
+        io.Write(io.Stdout, "if(bool): ✅ PASS\n")
+    lainnya
+        io.Write(io.Stdout, "if(bool): ❌ FAIL\n")
+    akhir
+    
+    io.Write(io.Stdout, "\n🎉 CONSISTENT CHECKER COMPLETE!\n")
+    io.Write(io.Stdout, "✅ Go-consistent type rules\n")
+    io.Write(io.Stdout, "✅ Strict type checking\n")
+    io.Write(io.Stdout, "✅ Built-in function validation\n")
+    io.Write(io.Stdout, "✅ Assignment compatibility\n")
+    io.Write(io.Stdout, "✅ Control flow validation\n")
+akhir
+
+fungsi main() void
+    test_consistent_checker()
+akhir
+
+main()

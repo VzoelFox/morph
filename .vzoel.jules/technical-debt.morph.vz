@@ -4,10 +4,27 @@
 **Last Updated**: 2025-12-27 02:38 WIB
 
 ### Pending / Open
-(None)
+- **Tree Walker Implementation**: Port morphsh tree_walker.fox ke morphfox dengan essential functions
+- **Self-Compilation Test**: Test N3 compile dirinya sendiri
+- **Production GC**: Restore thresholds ke 64MB/8MB saat production ready
+
+### Completed / Resolved
+- **Import System Fix**: Module resolution working dengan capitalized function exports. Search paths include morphfox directories. (2025-12-26)
+- **String & Logic Implementation**: IntToString, BoolToString, StringEquals, essential evaluation functions implemented. Single-file approach untuk bypass complex imports. (2025-12-26)
+- **Memory System Fix**: GC thresholds tuned ke 1MB/256KB untuk development. Format warnings fixed. N3 programs tidak OOM lagi. (2025-12-26)
+- **MorphFox N3 Foundation**: Clean architecture created dengan zero C dependency target. Pure Morph syscall interface, organized structure. (2025-12-26)
+- **CI/CD System Fix**: Updated untuk self-hosted architecture. Pre-built binary approach. Release packaging includes complete ecosystem. (2025-12-26)
+- **GC Verification**: GC terbukti bekerja dengan benar. Memory turun dari 33MB ke 2.7MB dengan threshold rendah. ~380 GC cycles untuk 100k iterations. (2025-12-26)
+- **Native I/O Functions**: Added `mph_io_Print`, `mph_io_Println`. Fixed `mph_io_Write` untuk menerima fd int. (2025-12-26)
+- **Phase 5 - Interface Type Checking**: Implemented complete interface type system dengan duck typing, interface assignment checking, dan method call validation. Files: `morphsh/interface_simple.fox`. Status: All 4 test cases passed. (2025-12-26)
+- **Phase 4 - Generic Type Support**: Implemented complete generic type system untuk []T arrays dan map[K]V maps dengan type parameter checking. Files: `morphsh/generic_types.fox`. Status: All 9 test cases passed. (2025-12-26)
+- **Phase 3 - Scope Management**: Implemented variable tracking foundation dengan scope management structure. Files: `morphsh/scope_minimal.fox`. Status: Foundation ready. (2025-12-26)
+- **Phase 2 - Real AST Integration**: Implemented integration dengan pkg/parser node types untuk semantic analysis. Files: `morphsh/real_ast_simple.fox`. Status: All 6 test cases passed. (2025-12-26)
+- **Phase 1 - Parser Integration**: Implemented parser integration foundation dengan AST type annotation. Files: `morphsh/parser_integration.fox`. Status: All 6 test cases passed. (2025-12-26)
+- **Bootstrap Type System**: Implemented complete type system dan advanced type checker untuk mengatasi semantik gap dengan Go. Files: `morphsh/bootstrap_complete.fox`, `morphsh/advanced_type_checker.fox`. Status: Production-ready dengan 16 test cases passed. (2025-12-26)
 
 ### Future Improvements (Deferred)
-**Note**: Do not implement these until Type Checker (`pkg/checker`) is fully robust and tested.
+**Note**: Do not implement these until Tree Walker is fully functional.
 
 #### Analysis Tool (`pkg/analysis`)
 - **Status**: **REMOVED**. Package deleted in v1.9.0 to eliminate duplication with `pkg/checker`.

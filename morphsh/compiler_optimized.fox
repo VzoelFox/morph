@@ -1,0 +1,375 @@
+ambil "morphsh/ast"
+ambil "morphsh/token"
+ambil "string"
+
+struktur Compiler
+    output string
+    indent int
+akhir
+
+fungsi NewCompiler() Compiler
+    kembali Compiler{output: "", indent: 0}
+akhir
+
+fungsi (c *Compiler) Compile(program Program) string
+    c.output = ""
+    c.indent = 0
+    
+    c.writeHeader()
+    c.compileProgram(program)
+    
+    kembali c.output
+akhir
+
+fungsi (c *Compiler) writeHeader() void
+    c.output = c.output + "#include <stdio.h>\n"
+    c.output = c.output + "#include <stdlib.h>\n"
+    c.output = c.output + "#include <string.h>\n\n"
+    c.output = c.output + "int main() {\n"
+akhir
+
+# OPTIMIZED: Switch case flattening untuk node compilation
+fungsi (c *Compiler) compileNode(node Node) void
+    jika node == kosong
+        kembali
+    akhir
+    
+    pilih node.NodeType()
+        kasus "Program":
+            c.compileProgram(node)
+        kasus "BlockStatement":
+            c.compileBlockStatement(node)
+        kasus "ExpressionStatement":
+            c.compileExpressionStatement(node)
+        kasus "VarStatement":
+            c.compileVarStatement(node)
+        kasus "ReturnStatement":
+            c.compileReturnStatement(node)
+        kasus "IfStatement":
+            c.compileIfStatement(node)
+        kasus "WhileStatement":
+            c.compileWhileStatement(node)
+        kasus "FunctionLiteral":
+            c.compileFunctionLiteral(node)
+        
+        # Expression nodes
+        kasus "Identifier":
+            c.compileIdentifier(node)
+        kasus "IntegerLiteral":
+            c.compileIntegerLiteral(node)
+        kasus "StringLiteral":
+            c.compileStringLiteral(node)
+        kasus "BooleanLiteral":
+            c.compileBooleanLiteral(node)
+        kasus "NullLiteral":
+            c.compileNullLiteral(node)
+        kasus "ArrayLiteral":
+            c.compileArrayLiteral(node)
+        kasus "HashLiteral":
+            c.compileHashLiteral(node)
+        kasus "PrefixExpression":
+            c.compilePrefixExpression(node)
+        kasus "InfixExpression":
+            c.compileInfixExpression(node)
+        kasus "CallExpression":
+            c.compileCallExpression(node)
+        kasus "IndexExpression":
+            c.compileIndexExpression(node)
+        kasus "MemberExpression":
+            c.compileMemberExpression(node)
+        
+        lainnya:
+            c.output = c.output + "/* Unsupported node type: " + node.NodeType() + " */\n"
+    akhir
+akhir
+
+# OPTIMIZED: Multi-case operator handling
+fungsi (c *Compiler) compileInfixExpression(node Node) void
+    var expr = node.(InfixExpression)
+    
+    pilih expr.operator
+        kasus "+", "-", "*", "/", "%":
+            c.compileArithmeticExpression(expr)
+        kasus "==", "!=", "<", "<=", ">", ">=":
+            c.compileComparisonExpression(expr)
+        kasus "&&", "||":
+            c.compileLogicalExpression(expr)
+        kasus "&", "|", "^", "<<", ">>":
+            c.compileBitwiseExpression(expr)
+        lainnya:
+            c.output = c.output + "/* Unsupported operator: " + expr.operator + " */"
+    akhir
+akhir
+
+# OPTIMIZED: Switch case untuk built-in functions
+fungsi (c *Compiler) compileCallExpression(node Node) void
+    var call = node.(CallExpression)
+    
+    jika call.function.NodeType() == "Identifier"
+        var ident = call.function.(Identifier)
+        
+        pilih ident.value
+            kasus "native_print":
+                c.compileNativePrint(call)
+            kasus "native_print_int":
+                c.compileNativePrintInt(call)
+            kasus "len", "panjang":
+                c.compileLen(call)
+            kasus "append":
+                c.compileAppend(call)
+            kasus "make":
+                c.compileMake(call)
+            kasus "delete", "hapus":
+                c.compileDelete(call)
+            lainnya:
+                c.compileFunctionCall(call)
+        akhir
+    lain
+        c.compileFunctionCall(call)
+    akhir
+akhir
+
+# Statement compilers
+fungsi (c *Compiler) compileProgram(program Program) void
+    var statements = program.statements
+    var i = 0
+    selama i < NodeListLength(statements)
+        var stmt = GetNode(statements, i)
+        c.compileNode(stmt)
+        i = i + 1
+    akhir
+    c.output = c.output + "    return 0;\n}\n"
+akhir
+
+fungsi (c *Compiler) compileBlockStatement(node Node) void
+    var block = node.(BlockStatement)
+    c.output = c.output + "{\n"
+    c.indent = c.indent + 1
+    
+    var statements = block.statements
+    var i = 0
+    selama i < NodeListLength(statements)
+        var stmt = GetNode(statements, i)
+        c.writeIndent()
+        c.compileNode(stmt)
+        i = i + 1
+    akhir
+    
+    c.indent = c.indent - 1
+    c.writeIndent()
+    c.output = c.output + "}\n"
+akhir
+
+fungsi (c *Compiler) compileExpressionStatement(node Node) void
+    var stmt = node.(ExpressionStatement)
+    c.compileNode(stmt.expression)
+    c.output = c.output + ";\n"
+akhir
+
+fungsi (c *Compiler) compileVarStatement(node Node) void
+    var stmt = node.(VarStatement)
+    c.output = c.output + "int " + stmt.name.value + " = "
+    c.compileNode(stmt.value)
+    c.output = c.output + ";\n"
+akhir
+
+fungsi (c *Compiler) compileReturnStatement(node Node) void
+    var stmt = node.(ReturnStatement)
+    c.output = c.output + "return"
+    jika stmt.value != kosong
+        c.output = c.output + " "
+        c.compileNode(stmt.value)
+    akhir
+    c.output = c.output + ";\n"
+akhir
+
+fungsi (c *Compiler) compileIfStatement(node Node) void
+    var stmt = node.(IfStatement)
+    c.output = c.output + "if ("
+    c.compileNode(stmt.condition)
+    c.output = c.output + ") "
+    c.compileNode(stmt.consequence)
+    
+    jika stmt.alternative != kosong
+        c.writeIndent()
+        c.output = c.output + "else "
+        c.compileNode(stmt.alternative)
+    akhir
+akhir
+
+fungsi (c *Compiler) compileWhileStatement(node Node) void
+    var stmt = node.(WhileStatement)
+    c.output = c.output + "while ("
+    c.compileNode(stmt.condition)
+    c.output = c.output + ") "
+    c.compileNode(stmt.body)
+akhir
+
+# Expression compilers
+fungsi (c *Compiler) compileIdentifier(node Node) void
+    var ident = node.(Identifier)
+    c.output = c.output + ident.value
+akhir
+
+fungsi (c *Compiler) compileIntegerLiteral(node Node) void
+    var lit = node.(IntegerLiteral)
+    # TODO: Convert int to string
+    c.output = c.output + "42" # Placeholder
+akhir
+
+fungsi (c *Compiler) compileStringLiteral(node Node) void
+    var lit = node.(StringLiteral)
+    c.output = c.output + "\"" + lit.value + "\""
+akhir
+
+fungsi (c *Compiler) compileBooleanLiteral(node Node) void
+    var lit = node.(BooleanLiteral)
+    jika lit.value
+        c.output = c.output + "1"
+    lain
+        c.output = c.output + "0"
+    akhir
+akhir
+
+fungsi (c *Compiler) compileNullLiteral(node Node) void
+    c.output = c.output + "NULL"
+akhir
+
+# Arithmetic operations
+fungsi (c *Compiler) compileArithmeticExpression(expr InfixExpression) void
+    c.output = c.output + "("
+    c.compileNode(expr.left)
+    c.output = c.output + " " + expr.operator + " "
+    c.compileNode(expr.right)
+    c.output = c.output + ")"
+akhir
+
+# Comparison operations
+fungsi (c *Compiler) compileComparisonExpression(expr InfixExpression) void
+    c.output = c.output + "("
+    c.compileNode(expr.left)
+    c.output = c.output + " " + expr.operator + " "
+    c.compileNode(expr.right)
+    c.output = c.output + ")"
+akhir
+
+# Logical operations
+fungsi (c *Compiler) compileLogicalExpression(expr InfixExpression) void
+    c.output = c.output + "("
+    c.compileNode(expr.left)
+    jika expr.operator == "&&"
+        c.output = c.output + " && "
+    lain jika expr.operator == "||"
+        c.output = c.output + " || "
+    akhir
+    c.compileNode(expr.right)
+    c.output = c.output + ")"
+akhir
+
+# Bitwise operations
+fungsi (c *Compiler) compileBitwiseExpression(expr InfixExpression) void
+    c.output = c.output + "("
+    c.compileNode(expr.left)
+    c.output = c.output + " " + expr.operator + " "
+    c.compileNode(expr.right)
+    c.output = c.output + ")"
+akhir
+
+# Built-in function compilers
+fungsi (c *Compiler) compileNativePrint(call CallExpression) void
+    c.output = c.output + "printf(\"%s\\n\", "
+    jika NodeListLength(call.arguments) > 0
+        var arg = GetNode(call.arguments, 0)
+        c.compileNode(arg)
+    lain
+        c.output = c.output + "\"\""
+    akhir
+    c.output = c.output + ")"
+akhir
+
+fungsi (c *Compiler) compileNativePrintInt(call CallExpression) void
+    c.output = c.output + "printf(\"%d\\n\", "
+    jika NodeListLength(call.arguments) > 0
+        var arg = GetNode(call.arguments, 0)
+        c.compileNode(arg)
+    lain
+        c.output = c.output + "0"
+    akhir
+    c.output = c.output + ")"
+akhir
+
+fungsi (c *Compiler) compileLen(call CallExpression) void
+    c.output = c.output + "strlen("
+    jika NodeListLength(call.arguments) > 0
+        var arg = GetNode(call.arguments, 0)
+        c.compileNode(arg)
+    akhir
+    c.output = c.output + ")"
+akhir
+
+# Utility functions
+fungsi (c *Compiler) writeIndent() void
+    var i = 0
+    selama i < c.indent
+        c.output = c.output + "    "
+        i = i + 1
+    akhir
+akhir
+
+# Stub implementations
+fungsi (c *Compiler) compileFunctionLiteral(node Node) void
+    c.output = c.output + "/* Function literal not implemented */"
+akhir
+
+fungsi (c *Compiler) compileArrayLiteral(node Node) void
+    c.output = c.output + "/* Array literal not implemented */"
+akhir
+
+fungsi (c *Compiler) compileHashLiteral(node Node) void
+    c.output = c.output + "/* Hash literal not implemented */"
+akhir
+
+fungsi (c *Compiler) compilePrefixExpression(node Node) void
+    var expr = node.(PrefixExpression)
+    c.output = c.output + "(" + expr.operator
+    c.compileNode(expr.right)
+    c.output = c.output + ")"
+akhir
+
+fungsi (c *Compiler) compileFunctionCall(call CallExpression) void
+    c.compileNode(call.function)
+    c.output = c.output + "("
+    
+    var args = call.arguments
+    var i = 0
+    selama i < NodeListLength(args)
+        jika i > 0
+            c.output = c.output + ", "
+        akhir
+        var arg = GetNode(args, i)
+        c.compileNode(arg)
+        i = i + 1
+    akhir
+    
+    c.output = c.output + ")"
+akhir
+
+fungsi (c *Compiler) compileIndexExpression(node Node) void
+    c.output = c.output + "/* Index expression not implemented */"
+akhir
+
+fungsi (c *Compiler) compileMemberExpression(node Node) void
+    c.output = c.output + "/* Member expression not implemented */"
+akhir
+
+fungsi (c *Compiler) compileAppend(call CallExpression) void
+    c.output = c.output + "/* Append not implemented */"
+akhir
+
+fungsi (c *Compiler) compileMake(call CallExpression) void
+    c.output = c.output + "/* Make not implemented */"
+akhir
+
+fungsi (c *Compiler) compileDelete(call CallExpression) void
+    c.output = c.output + "/* Delete not implemented */"
+akhir

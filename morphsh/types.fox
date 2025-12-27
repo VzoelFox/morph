@@ -1,0 +1,53 @@
+# Type System untuk MorphSH
+# Minimal type representation untuk bootstrap compiler
+
+struktur Type
+    kind int      # 0=int, 1=string, 2=bool, 3=void, 4=array, 5=struct
+    name string   # Nama type (untuk struct)
+akhir
+
+# Type constants
+fungsi type_int() Type
+    kembalikan Type(0, "int")
+akhir
+
+fungsi type_string() Type
+    kembalikan Type(1, "string")
+akhir
+
+fungsi type_bool() Type
+    kembalikan Type(2, "bool")
+akhir
+
+fungsi type_void() Type
+    kembalikan Type(3, "void")
+akhir
+
+fungsi type_error() Type
+    kembalikan Type(-1, "error")
+akhir
+
+# Type equality check
+fungsi types_equal(t1 Type, t2 Type) bool
+    kembalikan t1.kind == t2.kind
+akhir
+
+# Type to string
+fungsi type_to_string(t Type) string
+    jika t.kind == 0
+        kembalikan "int"
+    akhir
+    jika t.kind == 1
+        kembalikan "string"
+    akhir
+    jika t.kind == 2
+        kembalikan "bool"
+    akhir
+    jika t.kind == 3
+        kembalikan "void"
+    akhir
+    jika t.kind == -1
+        kembalikan "error"
+    akhir
+    kembalikan "unknown"
+akhir

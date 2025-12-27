@@ -1,0 +1,11 @@
+var numbers = [1, 2, 3, 4, 5]
+var total = 0
+var i = 0
+
+selama i < 5
+    total = total + numbers[i]
+    i = i + 1
+akhir
+
+native_print("Total sum:")
+native_print_int(total)

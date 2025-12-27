@@ -1,0 +1,41 @@
+fungsi TestMemoryLeaks() void
+    native_print("=== Memory Leak Detection Test ===")
+    
+    # Test multiple allocations
+    var i = 0
+    selama i < 1000
+        var temp = "Memory test data"
+        i = i + 1
+    akhir
+    
+    # Test large allocations
+    var large_data1 = "Large allocation 1 with lots of data to test memory management"
+    var large_data2 = "Large allocation 2 with lots of data to test memory management"
+    var large_data3 = "Large allocation 3 with lots of data to test memory management"
+    
+    native_print("Memory allocations completed:")
+    native_print(large_data1)
+    native_print(large_data2)
+    native_print(large_data3)
+    
+    # Test nested allocations
+    var j = 0
+    selama j < 100
+        var nested = "Nested allocation"
+        var k = 0
+        selama k < 10
+            var deep = "Deep nested"
+            k = k + 1
+        akhir
+        j = j + 1
+    akhir
+    
+    native_print("=== Memory Test Complete ===")
+    native_print("Check for memory leaks in system logs")
+akhir
+
+fungsi main() void
+    TestMemoryLeaks()
+akhir
+
+main()

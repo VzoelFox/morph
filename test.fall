@@ -1,0 +1,4 @@
+# Package installation test
+install math_utils
+install string_helpers
+run test.fox

@@ -1,0 +1,163 @@
+# types_alias.fox - Type aliases for checker package
+ambil "io"
+
+# Type kind constants (equivalent to Go constants)
+tetapan KIND_INT = 1
+tetapan KIND_FLOAT = 2
+tetapan KIND_STRING = 3
+tetapan KIND_BOOL = 4
+tetapan KIND_VOID = 5
+tetapan KIND_FUNCTION = 6
+tetapan KIND_STRUCT = 7
+tetapan KIND_INTERFACE = 8
+tetapan KIND_ARRAY = 9
+tetapan KIND_MAP = 10
+tetapan KIND_POINTER = 11
+tetapan KIND_MULTI = 12
+tetapan KIND_UNKNOWN = 13
+tetapan KIND_ERROR = 14
+tetapan KIND_NULL = 15
+tetapan KIND_USER_ERROR = 16
+tetapan KIND_MODULE = 17
+tetapan KIND_CHANNEL = 18
+
+# Basic type struct
+struktur BasicType
+    kind int
+    name string
+akhir
+
+# Array type struct
+struktur ArrayType
+    element_type BasicType
+    size int
+akhir
+
+# Map type struct
+struktur MapType
+    key_type BasicType
+    value_type BasicType
+akhir
+
+# Function type struct
+struktur FunctionType
+    param_types [BasicType]
+    return_type BasicType
+akhir
+
+# Struct field
+struktur StructField
+    name string
+    field_type BasicType
+akhir
+
+# Struct type struct
+struktur StructType
+    name string
+    fields [StructField]
+akhir
+
+# Create basic types
+fungsi create_int_type() BasicType
+    var t = BasicType{
+        kind: KIND_INT,
+        name: "int"
+    }
+    kembali t
+akhir
+
+fungsi create_float_type() BasicType
+    var t = BasicType{
+        kind: KIND_FLOAT,
+        name: "float"
+    }
+    kembali t
+akhir
+
+fungsi create_string_type() BasicType
+    var t = BasicType{
+        kind: KIND_STRING,
+        name: "string"
+    }
+    kembali t
+akhir
+
+fungsi create_bool_type() BasicType
+    var t = BasicType{
+        kind: KIND_BOOL,
+        name: "bool"
+    }
+    kembali t
+akhir
+
+fungsi create_void_type() BasicType
+    var t = BasicType{
+        kind: KIND_VOID,
+        name: "void"
+    }
+    kembali t
+akhir
+
+# Type checking functions
+fungsi is_int_type(t BasicType) bool
+    kembali t.kind == KIND_INT
+akhir
+
+fungsi is_string_type(t BasicType) bool
+    kembali t.kind == KIND_STRING
+akhir
+
+fungsi is_bool_type(t BasicType) bool
+    kembali t.kind == KIND_BOOL
+akhir
+
+fungsi is_void_type(t BasicType) bool
+    kembali t.kind == KIND_VOID
+akhir
+
+# Type compatibility checking
+fungsi types_compatible(t1 BasicType, t2 BasicType) bool
+    kembali t1.kind == t2.kind
+akhir
+
+fungsi main() void
+    io.Write(io.Stdout, "=== TYPE ALIAS SYSTEM TEST ===\n")
+    
+    # Test basic type creation
+    var int_type = create_int_type()
+    var string_type = create_string_type()
+    var bool_type = create_bool_type()
+    
+    io.Write(io.Stdout, "Created basic types: OK\n")
+    
+    # Test type checking
+    jika is_int_type(int_type)
+        io.Write(io.Stdout, "Int type check: OK\n")
+    lainnya
+        io.Write(io.Stdout, "Int type check: ERROR\n")
+    akhir
+    
+    jika is_string_type(string_type)
+        io.Write(io.Stdout, "String type check: OK\n")
+    lainnya
+        io.Write(io.Stdout, "String type check: ERROR\n")
+    akhir
+    
+    # Test type compatibility
+    var int_type2 = create_int_type()
+    jika types_compatible(int_type, int_type2)
+        io.Write(io.Stdout, "Type compatibility: OK\n")
+    lainnya
+        io.Write(io.Stdout, "Type compatibility: ERROR\n")
+    akhir
+    
+    jika !types_compatible(int_type, string_type)
+        io.Write(io.Stdout, "Type incompatibility: OK\n")
+    lainnya
+        io.Write(io.Stdout, "Type incompatibility: ERROR\n")
+    akhir
+    
+    io.Write(io.Stdout, "Type alias system implemented successfully!\n")
+akhir
+
+main()

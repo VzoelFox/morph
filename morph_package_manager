@@ -1,0 +1,103 @@
+#!/bin/bash
+# Morph Package Manager - Git-style folder installation
+
+PACKAGES_DIR="packages"
+PACKAGE_REGISTRY="https://github.com/morph-packages"
+
+install_package() {
+    local PACKAGE_NAME="$1"
+    local PACKAGE_DIR="$PACKAGES_DIR/$PACKAGE_NAME"
+    
+    echo "📦 Installing package: $PACKAGE_NAME"
+    
+    # Create package directory structure (Git-style)
+    mkdir -p "$PACKAGE_DIR"/{src,lib,bin,docs}
+    
+    # Create package manifest
+    cat > "$PACKAGE_DIR/package.morph" << EOF
+name: $PACKAGE_NAME
+version: 1.0.0
+description: Morph package $PACKAGE_NAME
+author: Morph Community
+dependencies: []
+EOF
+    
+    # Create sample source file
+    cat > "$PACKAGE_DIR/src/main.fox" << EOF
+# $PACKAGE_NAME package
+fungsi init() void
+    native_print("Package $PACKAGE_NAME initialized")
+akhir
+EOF
+    
+    # Create lib symlink for easy import
+    ln -sf "../$PACKAGE_NAME" "$PACKAGES_DIR/lib/$PACKAGE_NAME" 2>/dev/null || true
+    
+    echo "✅ Package $PACKAGE_NAME installed successfully"
+    echo "📁 Location: $PACKAGE_DIR"
+    echo "📋 Structure:"
+    echo "   src/     - Source files"
+    echo "   lib/     - Library files" 
+    echo "   bin/     - Binaries"
+    echo "   docs/    - Documentation"
+}
+
+list_packages() {
+    echo "📦 Installed packages:"
+    if [ -d "$PACKAGES_DIR" ]; then
+        for pkg in "$PACKAGES_DIR"/*; do
+            if [ -d "$pkg" ] && [ "$(basename "$pkg")" != "lib" ]; then
+                PACKAGE_NAME=$(basename "$pkg")
+                if [ -f "$pkg/package.morph" ]; then
+                    VERSION=$(grep "version:" "$pkg/package.morph" | cut -d' ' -f2)
+                    echo "  ✅ $PACKAGE_NAME ($VERSION)"
+                else
+                    echo "  ⚠️  $PACKAGE_NAME (no manifest)"
+                fi
+            fi
+        done
+    else
+        echo "  (no packages installed)"
+    fi
+}
+
+remove_package() {
+    local PACKAGE_NAME="$1"
+    local PACKAGE_DIR="$PACKAGES_DIR/$PACKAGE_NAME"
+    
+    if [ -d "$PACKAGE_DIR" ]; then
+        echo "🗑️  Removing package: $PACKAGE_NAME"
+        rm -rf "$PACKAGE_DIR"
+        rm -f "$PACKAGES_DIR/lib/$PACKAGE_NAME"
+        echo "✅ Package $PACKAGE_NAME removed"
+    else
+        echo "❌ Package $PACKAGE_NAME not found"
+    fi
+}
+
+case "$1" in
+    "install")
+        if [ -z "$2" ]; then
+            echo "Usage: morph_package_manager install <package_name>"
+            exit 1
+        fi
+        install_package "$2"
+        ;;
+    "list")
+        list_packages
+        ;;
+    "remove")
+        if [ -z "$2" ]; then
+            echo "Usage: morph_package_manager remove <package_name>"
+            exit 1
+        fi
+        remove_package "$2"
+        ;;
+    *)
+        echo "Morph Package Manager"
+        echo "Usage:"
+        echo "  morph_package_manager install <package>  # Install package"
+        echo "  morph_package_manager list              # List packages"
+        echo "  morph_package_manager remove <package>  # Remove package"
+        ;;
+esac

@@ -1,0 +1,328 @@
+ambil "io"
+# Test Type System dan Evaluator (Single File Version)
+
+# ===== TYPE SYSTEM =====
+struktur Type
+    kind int
+    name string
+akhir
+
+fungsi type_int() Type
+    kembalikan Type(0, "int")
+akhir
+
+fungsi type_string() Type
+    kembalikan Type(1, "string")
+akhir
+
+fungsi type_bool() Type
+    kembalikan Type(2, "bool")
+akhir
+
+fungsi type_void() Type
+    kembalikan Type(3, "void")
+akhir
+
+fungsi type_error() Type
+    kembalikan Type(-1, "error")
+akhir
+
+fungsi types_equal(t1 Type, t2 Type) bool
+    kembalikan t1.kind == t2.kind
+akhir
+
+# ===== TYPE CHECKER =====
+struktur TypeChecker
+    has_errors bool
+    error_count int
+akhir
+
+fungsi checker_new() TypeChecker
+    kembalikan TypeChecker(salah, 0)
+akhir
+
+fungsi check_binary(checker TypeChecker, left_type Type, op string, right_type Type) Type
+    jika op == "+"
+        jika left_type.kind == 0
+            jika right_type.kind == 0
+                kembalikan type_int()
+            akhir
+        akhir
+        jika left_type.kind == 1
+            jika right_type.kind == 1
+                kembalikan type_string()
+            akhir
+        akhir
+        kembalikan type_error()
+    akhir
+    
+    jika op == "<"
+        jika left_type.kind == 0
+            jika right_type.kind == 0
+                kembalikan type_bool()
+            akhir
+        akhir
+        kembalikan type_error()
+    akhir
+    
+    kembalikan type_error()
+akhir
+
+fungsi check_unary(checker TypeChecker, op string, operand_type Type) Type
+    jika op == "-"
+        jika operand_type.kind == 0
+            kembalikan type_int()
+        akhir
+        kembalikan type_error()
+    akhir
+    
+    jika op == "!"
+        kembalikan type_bool()
+    akhir
+    
+    kembalikan type_error()
+akhir
+
+# ===== EVALUATOR =====
+struktur Value
+    kind int
+    int_val int
+    str_val string
+    bool_val bool
+akhir
+
+fungsi value_int(n int) Value
+    kembalikan Value(0, n, "", salah)
+akhir
+
+fungsi value_bool(b bool) Value
+    kembalikan Value(2, 0, "", b)
+akhir
+
+fungsi is_truthy(v Value) bool
+    jika v.kind == 3
+        kembalikan salah
+    akhir
+    jika v.kind == 2
+        kembalikan v.bool_val
+    akhir
+    jika v.kind == 0
+        kembalikan v.int_val != 0
+    akhir
+    kembalikan benar
+akhir
+
+fungsi eval_add(left Value, right Value) Value
+    jika left.kind == 0
+        jika right.kind == 0
+            kembalikan value_int(left.int_val + right.int_val)
+        akhir
+    akhir
+    kembalikan Value(3, 0, "", salah)
+akhir
+
+fungsi eval_sub(left Value, right Value) Value
+    jika left.kind == 0
+        jika right.kind == 0
+            kembalikan value_int(left.int_val - right.int_val)
+        akhir
+    akhir
+    kembalikan Value(3, 0, "", salah)
+akhir
+
+fungsi eval_mul(left Value, right Value) Value
+    jika left.kind == 0
+        jika right.kind == 0
+            kembalikan value_int(left.int_val * right.int_val)
+        akhir
+    akhir
+    kembalikan Value(3, 0, "", salah)
+akhir
+
+fungsi eval_div(left Value, right Value) Value
+    jika left.kind == 0
+        jika right.kind == 0
+            jika right.int_val != 0
+                kembalikan value_int(left.int_val / right.int_val)
+            akhir
+        akhir
+    akhir
+    kembalikan Value(3, 0, "", salah)
+akhir
+
+fungsi eval_eq(left Value, right Value) Value
+    jika left.kind == 0
+        jika right.kind == 0
+            kembalikan value_bool(left.int_val == right.int_val)
+        akhir
+    akhir
+    kembalikan value_bool(salah)
+akhir
+
+fungsi eval_lt(left Value, right Value) Value
+    jika left.kind == 0
+        jika right.kind == 0
+            kembalikan value_bool(left.int_val < right.int_val)
+        akhir
+    akhir
+    kembalikan value_bool(salah)
+akhir
+
+fungsi eval_gt(left Value, right Value) Value
+    jika left.kind == 0
+        jika right.kind == 0
+            kembalikan value_bool(left.int_val > right.int_val)
+        akhir
+    akhir
+    kembalikan value_bool(salah)
+akhir
+
+fungsi eval_negate(operand Value) Value
+    jika operand.kind == 0
+        kembalikan value_int(0 - operand.int_val)
+    akhir
+    kembalikan Value(3, 0, "", salah)
+akhir
+
+fungsi eval_not(operand Value) Value
+    kembalikan value_bool(!is_truthy(operand))
+akhir
+
+# ===== TESTS =====
+fungsi main() void
+    io.Write(io.Stdout, "=== TYPE SYSTEM TEST ===" + "\n")
+    
+    var t_int = type_int()
+    var t_str = type_string()
+    var t_bool = type_bool()
+    
+    io.Write(io.Stdout, "Types created" + "\n")
+    
+    var t_int2 = type_int()
+    jika types_equal(t_int, t_int2)
+        io.Write(io.Stdout, "Type equality: OK" + "\n")
+    akhir
+    
+    io.Write(io.Stdout, "=== TYPE CHECKER TEST ===" + "\n")
+    
+    var checker = checker_new()
+    
+    var result_add = check_binary(checker, t_int, "+", t_int)
+    jika result_add.kind == 0
+        io.Write(io.Stdout, "Int + Int = Int: OK" + "\n")
+    akhir
+    
+    var result_str_concat = check_binary(checker, t_str, "+", t_str)
+    jika result_str_concat.kind == 1
+        io.Write(io.Stdout, "String + String = String: OK" + "\n")
+    akhir
+    
+    var result_cmp = check_binary(checker, t_int, "<", t_int)
+    jika result_cmp.kind == 2
+        io.Write(io.Stdout, "Int < Int = Bool: OK" + "\n")
+    akhir
+    
+    var result_neg = check_unary(checker, "-", t_int)
+    jika result_neg.kind == 0
+        io.Write(io.Stdout, "Unary - Int = Int: OK" + "\n")
+    akhir
+    
+    var result_not = check_unary(checker, "!", t_bool)
+    jika result_not.kind == 2
+        io.Write(io.Stdout, "Unary ! Bool = Bool: OK" + "\n")
+    akhir
+    
+    io.Write(io.Stdout, "=== EVALUATOR TEST ===" + "\n")
+    
+    var v1 = value_int(10)
+    var v2 = value_int(5)
+    var v_true = value_bool(benar)
+    var v_false = value_bool(salah)
+    
+    io.Write(io.Stdout, "Values created" + "\n")
+    
+    var add_result = eval_add(v1, v2)
+    jika add_result.kind == 0
+        jika add_result.int_val == 15
+            io.Write(io.Stdout, "10 + 5 = 15: OK" + "\n")
+        akhir
+    akhir
+    
+    var sub_result = eval_sub(v1, v2)
+    jika sub_result.kind == 0
+        jika sub_result.int_val == 5
+            io.Write(io.Stdout, "10 - 5 = 5: OK" + "\n")
+        akhir
+    akhir
+    
+    var mul_result = eval_mul(v1, v2)
+    jika mul_result.kind == 0
+        jika mul_result.int_val == 50
+            io.Write(io.Stdout, "10 * 5 = 50: OK" + "\n")
+        akhir
+    akhir
+    
+    var div_result = eval_div(v1, v2)
+    jika div_result.kind == 0
+        jika div_result.int_val == 2
+            io.Write(io.Stdout, "10 / 5 = 2: OK" + "\n")
+        akhir
+    akhir
+    
+    var eq_result = eval_eq(v1, v1)
+    jika eq_result.kind == 2
+        jika eq_result.bool_val
+            io.Write(io.Stdout, "10 == 10 = true: OK" + "\n")
+        akhir
+    akhir
+    
+    var lt_result = eval_lt(v2, v1)
+    jika lt_result.kind == 2
+        jika lt_result.bool_val
+            io.Write(io.Stdout, "5 < 10 = true: OK" + "\n")
+        akhir
+    akhir
+    
+    var gt_result = eval_gt(v1, v2)
+    jika gt_result.kind == 2
+        jika gt_result.bool_val
+            io.Write(io.Stdout, "10 > 5 = true: OK" + "\n")
+        akhir
+    akhir
+    
+    var neg_result = eval_negate(v2)
+    jika neg_result.kind == 0
+        jika neg_result.int_val == -5
+            io.Write(io.Stdout, "-(5 + "\n") = -5: OK")
+        akhir
+    akhir
+    
+    var not_result = eval_not(v_true)
+    jika not_result.kind == 2
+        jika !not_result.bool_val
+            io.Write(io.Stdout, "!(true + "\n") = false: OK")
+        akhir
+    akhir
+    
+    jika is_truthy(v_true)
+        io.Write(io.Stdout, "Truthiness true: OK" + "\n")
+    akhir
+    
+    jika !is_truthy(v_false)
+        io.Write(io.Stdout, "Truthiness false: OK" + "\n")
+    akhir
+    
+    var v_zero = value_int(0)
+    jika !is_truthy(v_zero)
+        io.Write(io.Stdout, "Truthiness 0: OK" + "\n")
+    akhir
+    
+    var v_nonzero = value_int(42)
+    jika is_truthy(v_nonzero)
+        io.Write(io.Stdout, "Truthiness 42: OK" + "\n")
+    akhir
+    
+    io.Write(io.Stdout, "=== ALL TESTS PASSED ===" + "\n")
+akhir
+
+main()

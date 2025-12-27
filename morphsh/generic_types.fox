@@ -1,0 +1,195 @@
+# generic_types.fox - Phase 4: Generic type support
+ambil "io"
+
+# Basic type kinds
+tetapan KIND_INT = 0
+tetapan KIND_STRING = 1  
+tetapan KIND_BOOL = 2
+tetapan KIND_ARRAY = 4
+tetapan KIND_MAP = 5
+tetapan KIND_GENERIC = 6
+tetapan KIND_ERROR = -1
+
+# Generic type structure
+struktur GenericType
+    base_kind int        # KIND_ARRAY, KIND_MAP, etc
+    element_kind int     # For []T - element type
+    key_kind int         # For map[K]V - key type  
+    value_kind int       # For map[K]V - value type
+    is_generic bool      # True if contains type parameters
+akhir
+
+# Create generic array type []T
+fungsi make_array_type(element_type int) GenericType
+    kembalikan GenericType{
+        base_kind: KIND_ARRAY,
+        element_kind: element_type,
+        key_kind: KIND_ERROR,
+        value_kind: KIND_ERROR,
+        is_generic: benar
+    }
+akhir
+
+# Create generic map type map[K]V
+fungsi make_map_type(key_type int, value_type int) GenericType
+    kembalikan GenericType{
+        base_kind: KIND_MAP,
+        element_kind: KIND_ERROR,
+        key_kind: key_type,
+        value_kind: value_type,
+        is_generic: benar
+    }
+akhir
+
+# Check if two generic types are compatible
+fungsi types_compatible(t1 GenericType, t2 GenericType) bool
+    # Base kinds must match
+    jika t1.base_kind != t2.base_kind
+        kembalikan salah
+    akhir
+    
+    # For arrays: element types must match
+    jika t1.base_kind == KIND_ARRAY
+        kembalikan t1.element_kind == t2.element_kind
+    akhir
+    
+    # For maps: key and value types must match
+    jika t1.base_kind == KIND_MAP
+        jika t1.key_kind == t2.key_kind
+            kembalikan t1.value_kind == t2.value_kind
+        akhir
+        kembalikan salah
+    akhir
+    
+    kembalikan benar
+akhir
+
+# Generic array access: []T[int] -> T
+fungsi check_array_access(array_type GenericType, index_type int) int
+    jika array_type.base_kind == KIND_ARRAY
+        jika index_type == KIND_INT
+            kembalikan array_type.element_kind
+        akhir
+    akhir
+    kembalikan KIND_ERROR
+akhir
+
+# Generic map access: map[K]V[K] -> V
+fungsi check_map_access(map_type GenericType, key_type int) int
+    jika map_type.base_kind == KIND_MAP
+        jika key_type == map_type.key_kind
+            kembalikan map_type.value_kind
+        akhir
+    akhir
+    kembalikan KIND_ERROR
+akhir
+
+# Generic function: len([]T) -> int, len(map[K]V) -> int
+fungsi check_len_function(arg_type GenericType) int
+    jika arg_type.base_kind == KIND_ARRAY
+        kembalikan KIND_INT
+    akhir
+    jika arg_type.base_kind == KIND_MAP
+        kembalikan KIND_INT
+    akhir
+    kembalikan KIND_ERROR
+akhir
+
+# Generic function: append([]T, T) -> []T
+fungsi check_append_function(array_type GenericType, element_type int) GenericType
+    jika array_type.base_kind == KIND_ARRAY
+        jika element_type == array_type.element_kind
+            kembalikan array_type  # Return same array type
+        akhir
+    akhir
+    kembalikan GenericType{
+        base_kind: KIND_ERROR,
+        element_kind: KIND_ERROR,
+        key_kind: KIND_ERROR,
+        value_kind: KIND_ERROR,
+        is_generic: salah
+    }
+akhir
+
+fungsi main() void
+    io.Write(io.Stdout, "=== GENERIC TYPES TEST ===\n")
+    
+    # Test 1: Create []int type
+    var int_array = make_array_type(KIND_INT)
+    jika int_array.base_kind == KIND_ARRAY
+        io.Write(io.Stdout, "✅ Create []int type: PASS\n")
+    lainnya
+        io.Write(io.Stdout, "❌ Create []int type: FAIL\n")
+    akhir
+    
+    # Test 2: Create map[string]int type
+    var string_int_map = make_map_type(KIND_STRING, KIND_INT)
+    jika string_int_map.base_kind == KIND_MAP
+        io.Write(io.Stdout, "✅ Create map[string]int type: PASS\n")
+    lainnya
+        io.Write(io.Stdout, "❌ Create map[string]int type: FAIL\n")
+    akhir
+    
+    # Test 3: Array access []int[int] -> int
+    var access_result = check_array_access(int_array, KIND_INT)
+    jika access_result == KIND_INT
+        io.Write(io.Stdout, "✅ Array access []int[int] -> int: PASS\n")
+    lainnya
+        io.Write(io.Stdout, "❌ Array access []int[int] -> int: FAIL\n")
+    akhir
+    
+    # Test 4: Map access map[string]int[string] -> int
+    var map_access_result = check_map_access(string_int_map, KIND_STRING)
+    jika map_access_result == KIND_INT
+        io.Write(io.Stdout, "✅ Map access map[string]int[string] -> int: PASS\n")
+    lainnya
+        io.Write(io.Stdout, "❌ Map access map[string]int[string] -> int: FAIL\n")
+    akhir
+    
+    # Test 5: len([]int) -> int
+    var len_result = check_len_function(int_array)
+    jika len_result == KIND_INT
+        io.Write(io.Stdout, "✅ len([]int) -> int: PASS\n")
+    lainnya
+        io.Write(io.Stdout, "❌ len([]int) -> int: FAIL\n")
+    akhir
+    
+    # Test 6: append([]int, int) -> []int
+    var append_result = check_append_function(int_array, KIND_INT)
+    jika append_result.base_kind == KIND_ARRAY
+        io.Write(io.Stdout, "✅ append([]int, int) -> []int: PASS\n")
+    lainnya
+        io.Write(io.Stdout, "❌ append([]int, int) -> []int: FAIL\n")
+    akhir
+    
+    # Test 7: Type compatibility []int == []int
+    var int_array2 = make_array_type(KIND_INT)
+    jika types_compatible(int_array, int_array2)
+        io.Write(io.Stdout, "✅ Type compatibility []int == []int: PASS\n")
+    lainnya
+        io.Write(io.Stdout, "❌ Type compatibility []int == []int: FAIL\n")
+    akhir
+    
+    # Test 8: Type incompatibility []int != []string
+    var string_array = make_array_type(KIND_STRING)
+    jika types_compatible(int_array, string_array) == salah
+        io.Write(io.Stdout, "✅ Type incompatibility []int != []string: PASS\n")
+    lainnya
+        io.Write(io.Stdout, "❌ Type incompatibility []int != []string: FAIL\n")
+    akhir
+    
+    # Test 9: Generic type error - wrong key type
+    var wrong_key_access = check_map_access(string_int_map, KIND_INT)
+    jika wrong_key_access == KIND_ERROR
+        io.Write(io.Stdout, "✅ Wrong key type error detected: PASS\n")
+    lainnya
+        io.Write(io.Stdout, "❌ Wrong key type error not detected: FAIL\n")
+    akhir
+    
+    io.Write(io.Stdout, "\n🚀 GENERIC TYPES COMPLETE!\n")
+    io.Write(io.Stdout, "✅ Generic array types working\n")
+    io.Write(io.Stdout, "✅ Generic map types working\n")
+    io.Write(io.Stdout, "✅ Generic function checking\n")
+    io.Write(io.Stdout, "✅ Type compatibility checking\n")
+    io.Write(io.Stdout, "✅ Error detection functional\n")
+akhir

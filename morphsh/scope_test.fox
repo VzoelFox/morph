@@ -1,0 +1,13 @@
+# scope_test.fox - Minimal scope test
+ambil "io"
+
+struktur Scope
+    level int
+    count int
+akhir
+
+fungsi main() void
+    io.Write(io.Stdout, "=== SCOPE TEST ===\n")
+    var s = Scope{level: 0, count: 1}
+    io.Write(io.Stdout, "✅ Scope created\n")
+akhir

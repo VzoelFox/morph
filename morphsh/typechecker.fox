@@ -1,0 +1,204 @@
+ambil "io"
+ambil "morphsh/ast"
+
+# Type system untuk bootstrap compiler
+struktur Type
+    kind string
+    name string
+akhir
+
+struktur TypeChecker
+    types map[string]Type
+    errors []string
+akhir
+
+# Built-in types
+fungsi IntType() Type
+    kembalikan Type{kind: "BASIC", name: "int"}
+akhir
+
+fungsi FloatType() Type
+    kembalikan Type{kind: "BASIC", name: "float"}
+akhir
+
+fungsi StringType() Type
+    kembalikan Type{kind: "BASIC", name: "string"}
+akhir
+
+fungsi BoolType() Type
+    kembalikan Type{kind: "BASIC", name: "bool"}
+akhir
+
+fungsi VoidType() Type
+    kembalikan Type{kind: "BASIC", name: "void"}
+akhir
+
+fungsi NullType() Type
+    kembalikan Type{kind: "BASIC", name: "null"}
+akhir
+
+fungsi NewTypeChecker() TypeChecker
+    var tc = TypeChecker{
+        types: map[string]Type{},
+        errors: []string{}
+    }
+    
+    # Register built-in types
+    tc.types["int"] = IntType()
+    tc.types["float"] = FloatType()
+    tc.types["string"] = StringType()
+    tc.types["bool"] = BoolType()
+    tc.types["void"] = VoidType()
+    tc.types["null"] = NullType()
+    
+    kembalikan tc
+akhir
+
+fungsi GetType(tc TypeChecker, name string) (Type, bool)
+    var typ = tc.types[name]
+    jika typ.name != ""
+        kembalikan typ, benar
+    akhir
+    kembalikan NullType(), salah
+akhir
+
+fungsi AddError(tc TypeChecker, msg string) TypeChecker
+    tc.errors = append(tc.errors, msg)
+    kembalikan tc
+akhir
+
+fungsi CheckExpression(tc TypeChecker, expr Node) (TypeChecker, Type)
+    # Integer literals
+    jika expr.TokenLiteral() == "INT"
+        kembalikan tc, IntType()
+        
+    # Float literals
+    atau_jika expr.TokenLiteral() == "FLOAT"
+        kembalikan tc, FloatType()
+        
+    # String literals
+    atau_jika expr.TokenLiteral() == "STRING"
+        kembalikan tc, StringType()
+        
+    # Boolean literals
+    atau_jika expr.TokenLiteral() == "benar" atau expr.TokenLiteral() == "salah"
+        kembalikan tc, BoolType()
+        
+    # Null literal
+    atau_jika expr.TokenLiteral() == "kosong"
+        kembalikan tc, NullType()
+        
+    # Identifiers - lookup in symbol table (simplified)
+    atau_jika expr.TokenLiteral() != "" dan expr.TokenLiteral()[0] >= 97 dan expr.TokenLiteral()[0] <= 122
+        # For now, assume all identifiers are int (bootstrap)
+        kembalikan tc, IntType()
+        
+    lainnya
+        tc = AddError(tc, "unknown expression type")
+        kembalikan tc, NullType()
+    akhir
+akhir
+
+fungsi CheckInfixExpression(tc TypeChecker, left Type, operator string, right Type) (TypeChecker, Type)
+    # Arithmetic operators
+    jika operator == "+" atau operator == "-" atau operator == "*" atau operator == "/"
+        jika left.name == "int" dan right.name == "int"
+            kembalikan tc, IntType()
+        atau_jika left.name == "float" atau right.name == "float"
+            kembalikan tc, FloatType()
+        lainnya
+            tc = AddError(tc, "type mismatch in arithmetic")
+            kembalikan tc, NullType()
+        akhir
+        
+    # Comparison operators
+    atau_jika operator == "==" atau operator == "!=" atau operator == "<" atau operator == ">" atau operator == "<=" atau operator == ">="
+        jika left.name == right.name
+            kembalikan tc, BoolType()
+        lainnya
+            tc = AddError(tc, "type mismatch in comparison")
+            kembalikan tc, BoolType()  # Still return bool even with error
+        akhir
+        
+    # Logical operators
+    atau_jika operator == "&&" atau operator == "||"
+        jika left.name == "bool" dan right.name == "bool"
+            kembalikan tc, BoolType()
+        lainnya
+            tc = AddError(tc, "logical operators require bool")
+            kembalikan tc, BoolType()
+        akhir
+        
+    lainnya
+        tc = AddError(tc, "unknown operator: " + operator)
+        kembalikan tc, NullType()
+    akhir
+akhir
+
+fungsi CheckStatement(tc TypeChecker, stmt Node) TypeChecker
+    # Variable declaration
+    jika stmt.TokenLiteral() == "var" atau stmt.TokenLiteral() == "tetapan"
+        var varStmt = stmt.(VarStatement)
+        var exprType Type
+        tc, exprType = CheckExpression(tc, varStmt.value)
+        
+        # Store variable type (simplified - no symbol table yet)
+        tc.types[varStmt.name.value] = exprType
+        kembalikan tc
+        
+    # Return statement
+    atau_jika stmt.TokenLiteral() == "kembalikan"
+        var retStmt = stmt.(ReturnStatement)
+        tc, _ = CheckExpression(tc, retStmt.value)
+        kembalikan tc
+        
+    # Expression statement
+    lainnya
+        var exprStmt = stmt.(ExpressionStatement)
+        tc, _ = CheckExpression(tc, exprStmt.expression)
+        kembalikan tc
+    akhir
+akhir
+
+fungsi CheckProgram(tc TypeChecker, prog Program) TypeChecker
+    var i = 0
+    selama i < prog.statements.count
+        var stmt = prog.statements.items[i]
+        tc = CheckStatement(tc, stmt)
+        i = i + 1
+    akhir
+    kembalikan tc
+akhir
+
+fungsi PrintErrors(tc TypeChecker) void
+    jika panjang(tc.errors) > 0
+        io.Write(io.Stdout, "Type errors:" + "\n")
+        var i = 0
+        selama i < panjang(tc.errors)
+            io.Write(io.Stdout, "- " + tc.errors[i] + "\n")
+            i = i + 1
+        akhir
+    lainnya
+        io.Write(io.Stdout, "No type errors" + "\n")
+    akhir
+akhir
+
+# Test function
+fungsi TestTypeChecker() void
+    io.Write(io.Stdout, "=== Testing Type Checker ===" + "\n")
+    
+    var tc = NewTypeChecker()
+    
+    # Test built-in types
+    var intTyp, ok = GetType(tc, "int")
+    jika ok
+        io.Write(io.Stdout, "Found int type: " + intTyp.name + "\n")
+    akhir
+    
+    var strTyp, ok2 = GetType(tc, "string")
+    jika ok2
+        io.Write(io.Stdout, "Found string type: " + strTyp.name + "\n")
+    akhir
+    
+    io.Write(io.Stdout, "=== Type Checker Ready ===" + "\n")
+akhir

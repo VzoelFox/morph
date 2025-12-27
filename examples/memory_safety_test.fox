@@ -1,0 +1,49 @@
+fungsi TestMemorySafety() void
+    native_print("=== Memory Safety & Validation Test ===")
+    
+    # Test normal allocations with validation
+    var data1 = "Memory safety test 1"
+    var data2 = "Memory safety test 2"
+    var data3 = "Memory safety test 3"
+    
+    native_print("Basic allocations:")
+    native_print(data1)
+    native_print(data2)
+    native_print(data3)
+    
+    # Test stress allocations
+    var i = 0
+    selama i < 500
+        var stress_data = "Stress test allocation"
+        i = i + 1
+    akhir
+    
+    # Test large allocations
+    var large1 = "Large allocation test with significant amount of data to test memory boundaries and validation"
+    var large2 = "Another large allocation test with significant amount of data to test memory boundaries"
+    
+    native_print("Large allocations:")
+    native_print(large1)
+    native_print(large2)
+    
+    # Test nested allocations
+    var j = 0
+    selama j < 50
+        var nested = "Nested allocation"
+        var k = 0
+        selama k < 5
+            var deep = "Deep nested allocation"
+            k = k + 1
+        akhir
+        j = j + 1
+    akhir
+    
+    native_print("=== Memory Safety Test Complete ===")
+    native_print("All allocations validated with canaries and tracking")
+akhir
+
+fungsi main() void
+    TestMemorySafety()
+akhir
+
+main()

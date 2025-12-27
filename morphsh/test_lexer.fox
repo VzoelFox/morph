@@ -1,0 +1,32 @@
+ambil "io"
+ambil "morphsh/lexer_minimal"
+ambil "morphsh/token"
+
+fungsi main() void
+    var input = "fungsi main() void kembalikan 42 akhir"
+    var lexer = NewLexer(input)
+    
+    io.Write(io.Stdout, "=== Testing Lexer Minimal ===" + "\n")
+    
+    var i = 0
+    selama i < 10
+        var tok Token
+        lexer, tok = NextToken(lexer)
+        
+        io.Write(io.Stdout, "Token:" + "\n")
+        io.Write(io.Stdout, tok.Type + "\n")
+        io.Write(io.Stdout, "Literal:" + "\n")
+        io.Write(io.Stdout, tok.Literal + "\n")
+        
+        jika tok.Type == EOF
+            io.Write(io.Stdout, "EOF reached" + "\n")
+            kembalikan
+        akhir
+        
+        i = i + 1
+    akhir
+    
+    io.Write(io.Stdout, "=== Test completed ===" + "\n")
+akhir
+
+main()

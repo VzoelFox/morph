@@ -1,0 +1,70 @@
+ambil "io"
+
+# Minimal Evaluator Test
+
+struktur Value
+    kind int
+    int_val int
+    bool_val bool
+akhir
+
+fungsi value_int(n int) Value
+    kembalikan Value(0, n, salah)
+akhir
+
+fungsi value_bool(b bool) Value
+    kembalikan Value(2, 0, b)
+akhir
+
+fungsi eval_add(left Value, right Value) Value
+    jika left.kind == 0
+        jika right.kind == 0
+            kembalikan value_int(left.int_val + right.int_val)
+        akhir
+    akhir
+    kembalikan Value(3, 0, salah)
+akhir
+
+fungsi eval_mul(left Value, right Value) Value
+    jika left.kind == 0
+        jika right.kind == 0
+            kembalikan value_int(left.int_val * right.int_val)
+        akhir
+    akhir
+    kembalikan Value(3, 0, salah)
+akhir
+
+fungsi eval_lt(left Value, right Value) Value
+    jika left.kind == 0
+        jika right.kind == 0
+            kembalikan value_bool(left.int_val < right.int_val)
+        akhir
+    akhir
+    kembalikan value_bool(salah)
+akhir
+
+fungsi main() void
+    io.Write(io.Stdout, "=== EVALUATOR TEST ===\n")
+    
+    var v1 = value_int(10)
+    var v2 = value_int(5)
+    
+    var add_result = eval_add(v1, v2)
+    jika add_result.int_val == 15
+        io.Write(io.Stdout, "10 + 5 = 15: OK\n")
+    akhir
+    
+    var mul_result = eval_mul(v1, v2)
+    jika mul_result.int_val == 50
+        io.Write(io.Stdout, "10 * 5 = 50: OK\n")
+    akhir
+    
+    var lt_result = eval_lt(v2, v1)
+    jika lt_result.bool_val
+        io.Write(io.Stdout, "5 < 10 = true: OK\n")
+    akhir
+    
+    io.Write(io.Stdout, "=== TEST PASSED ===\n")
+akhir
+
+main()

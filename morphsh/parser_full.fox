@@ -1,0 +1,277 @@
+ambil "morphsh/token"
+ambil "morphsh/lexer_full"
+
+struktur Parser
+    lexer Lexer
+    curToken Token
+    peekToken Token
+    errors []string
+akhir
+
+fungsi NewParser(lexer Lexer) Parser
+    var p = Parser{lexer: lexer, errors: []string{}}
+    p.lexer, p.curToken = NextToken(p.lexer)
+    p.lexer, p.peekToken = NextToken(p.lexer)
+    kembalikan p
+akhir
+
+fungsi nextToken(p Parser) Parser
+    p.curToken = p.peekToken
+    p.lexer, p.peekToken = NextToken(p.lexer)
+    kembalikan p
+akhir
+
+fungsi curTokenIs(p Parser, t string) bool
+    kembalikan p.curToken.Type == t
+akhir
+
+fungsi peekTokenIs(p Parser, t string) bool
+    kembalikan p.peekToken.Type == t
+akhir
+
+fungsi expectPeek(p Parser, t string) (Parser, bool)
+    jika peekTokenIs(p, t)
+        p = nextToken(p)
+        kembalikan p, true
+    lainnya
+        p.errors = append(p.errors, "expected " + t + " got " + p.peekToken.Type)
+        kembalikan p, false
+    akhir
+akhir
+
+// Precedence levels
+fungsi tokenPrecedence(tokenType string) int
+    jika tokenType == EQ atau tokenType == NOT_EQ
+        kembalikan 1
+    atau_jika tokenType == LT atau tokenType == GT atau tokenType == LTE atau tokenType == GTE
+        kembalikan 2
+    atau_jika tokenType == PLUS atau tokenType == MINUS
+        kembalikan 3
+    atau_jika tokenType == SLASH atau tokenType == ASTERISK atau tokenType == MODULO
+        kembalikan 4
+    lainnya
+        kembalikan 0
+    akhir
+akhir
+
+fungsi curPrecedence(p Parser) int
+    kembalikan tokenPrecedence(p.curToken.Type)
+akhir
+
+fungsi peekPrecedence(p Parser) int
+    kembalikan tokenPrecedence(p.peekToken.Type)
+akhir
+
+// Parse expressions with precedence
+fungsi parseExpression(p Parser, precedence int) (Parser, string)
+    var left = ""
+    
+    // Prefix parsing
+    jika curTokenIs(p, IDENT)
+        left = p.curToken.Literal
+        p = nextToken(p)
+    atau_jika curTokenIs(p, INT)
+        left = p.curToken.Literal
+        p = nextToken(p)
+    atau_jika curTokenIs(p, FLOAT)
+        left = p.curToken.Literal
+        p = nextToken(p)
+    atau_jika curTokenIs(p, STRING)
+        left = "\"" + p.curToken.Literal + "\""
+        p = nextToken(p)
+    atau_jika curTokenIs(p, TRUE)
+        left = "true"
+        p = nextToken(p)
+    atau_jika curTokenIs(p, FALSE)
+        left = "false"
+        p = nextToken(p)
+    atau_jika curTokenIs(p, LPAREN)
+        p = nextToken(p)
+        var expr = ""
+        p, expr = parseExpression(p, 0)
+        var ok = false
+        p, ok = expectPeek(p, RPAREN)
+        jika tidak ok
+            kembalikan p, ""
+        akhir
+        left = "(" + expr + ")"
+    lainnya
+        p.errors = append(p.errors, "no prefix parse function for " + p.curToken.Type)
+        kembalikan p, ""
+    akhir
+    
+    // Infix parsing
+    selama tidak curTokenIs(p, SEMICOLON) dan precedence < peekPrecedence(p)
+        var operator = p.peekToken.Type
+        p = nextToken(p)
+        p = nextToken(p)
+        
+        var right = ""
+        p, right = parseExpression(p, curPrecedence(p))
+        left = left + " " + operator + " " + right
+    akhir
+    
+    kembalikan p, left
+akhir
+
+// Parse statements
+fungsi parseStatement(p Parser) (Parser, string)
+    jika curTokenIs(p, VAR)
+        kembalikan parseVarStatement(p)
+    atau_jika curTokenIs(p, KEMBALIKAN)
+        kembalikan parseReturnStatement(p)
+    atau_jika curTokenIs(p, JIKA)
+        kembalikan parseIfStatement(p)
+    lainnya
+        kembalikan parseExpressionStatement(p)
+    akhir
+akhir
+
+fungsi parseVarStatement(p Parser) (Parser, string)
+    var ok = false
+    p, ok = expectPeek(p, IDENT)
+    jika tidak ok
+        kembalikan p, ""
+    akhir
+    
+    var name = p.curToken.Literal
+    p, ok = expectPeek(p, ASSIGN)
+    jika tidak ok
+        kembalikan p, ""
+    akhir
+    
+    p = nextToken(p)
+    var value = ""
+    p, value = parseExpression(p, 0)
+    
+    kembalikan p, "var " + name + " = " + value
+akhir
+
+fungsi parseReturnStatement(p Parser) (Parser, string)
+    p = nextToken(p)
+    var value = ""
+    p, value = parseExpression(p, 0)
+    kembalikan p, "return " + value
+akhir
+
+fungsi parseIfStatement(p Parser) (Parser, string)
+    var ok = false
+    p, ok = expectPeek(p, LPAREN)
+    jika tidak ok
+        kembalikan p, ""
+    akhir
+    
+    p = nextToken(p)
+    var condition = ""
+    p, condition = parseExpression(p, 0)
+    
+    p, ok = expectPeek(p, RPAREN)
+    jika tidak ok
+        kembalikan p, ""
+    akhir
+    
+    p, ok = expectPeek(p, LBRACE)
+    jika tidak ok
+        kembalikan p, ""
+    akhir
+    
+    var consequence = ""
+    p, consequence = parseBlockStatement(p)
+    
+    kembalikan p, "if (" + condition + ") " + consequence
+akhir
+
+fungsi parseExpressionStatement(p Parser) (Parser, string)
+    var expr = ""
+    p, expr = parseExpression(p, 0)
+    kembalikan p, expr
+akhir
+
+fungsi parseBlockStatement(p Parser) (Parser, string)
+    var statements = "{ "
+    p = nextToken(p)
+    
+    selama tidak curTokenIs(p, RBRACE) dan tidak curTokenIs(p, EOF)
+        var stmt = ""
+        p, stmt = parseStatement(p)
+        statements = statements + stmt + "; "
+        p = nextToken(p)
+    akhir
+    
+    statements = statements + "}"
+    kembalikan p, statements
+akhir
+
+// Parse function declaration
+fungsi parseFunction(p Parser) (Parser, string)
+    var ok = false
+    p, ok = expectPeek(p, IDENT)
+    jika tidak ok
+        kembalikan p, ""
+    akhir
+    
+    var name = p.curToken.Literal
+    p, ok = expectPeek(p, LPAREN)
+    jika tidak ok
+        kembalikan p, ""
+    akhir
+    
+    var params = ""
+    p, params = parseParameters(p)
+    
+    p, ok = expectPeek(p, LBRACE)
+    jika tidak ok
+        kembalikan p, ""
+    akhir
+    
+    var body = ""
+    p, body = parseBlockStatement(p)
+    
+    kembalikan p, "function " + name + "(" + params + ") " + body
+akhir
+
+fungsi parseParameters(p Parser) (Parser, string)
+    var params = ""
+    
+    jika peekTokenIs(p, RPAREN)
+        p = nextToken(p)
+        kembalikan p, params
+    akhir
+    
+    p = nextToken(p)
+    params = p.curToken.Literal
+    
+    selama peekTokenIs(p, COMMA)
+        p = nextToken(p)
+        p = nextToken(p)
+        params = params + ", " + p.curToken.Literal
+    akhir
+    
+    var ok = false
+    p, ok = expectPeek(p, RPAREN)
+    jika tidak ok
+        kembalikan p, ""
+    akhir
+    
+    kembalikan p, params
+akhir
+
+// Main parse function
+fungsi parseProgram(p Parser) (Parser, string)
+    var program = "PROGRAM: "
+    
+    selama tidak curTokenIs(p, EOF)
+        jika curTokenIs(p, FUNGSI)
+            var fn = ""
+            p, fn = parseFunction(p)
+            program = program + fn + " "
+        lainnya
+            var stmt = ""
+            p, stmt = parseStatement(p)
+            program = program + stmt + " "
+        akhir
+        p = nextToken(p)
+    akhir
+    
+    kembalikan p, program
+akhir

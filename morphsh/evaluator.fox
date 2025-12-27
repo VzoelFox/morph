@@ -1,0 +1,215 @@
+ambil "io"
+
+# Tree Walker Evaluator untuk MorphSH
+# Full implementation untuk bootstrap interpreter
+
+struktur Value
+    kind int      # 0=int, 1=string, 2=bool, 3=null
+    int_val int
+    str_val string
+    bool_val bool
+akhir
+
+# Value constructors
+fungsi value_int(n int) Value
+    kembalikan Value(0, n, "", salah)
+akhir
+
+fungsi value_string(s string) Value
+    kembalikan Value(1, 0, s, salah)
+akhir
+
+fungsi value_bool(b bool) Value
+    kembalikan Value(2, 0, "", b)
+akhir
+
+fungsi value_null() Value
+    kembalikan Value(3, 0, "", salah)
+akhir
+
+# Value to string
+fungsi value_to_string(v Value) string
+    jika v.kind == 0
+        # Int to string (simplified)
+        kembalikan "int"
+    akhir
+    jika v.kind == 1
+        kembalikan v.str_val
+    akhir
+    jika v.kind == 2
+        jika v.bool_val
+            kembalikan "benar"
+        akhir
+        kembalikan "salah"
+    akhir
+    kembalikan "kosong"
+akhir
+
+# Truthiness check
+fungsi is_truthy(v Value) bool
+    jika v.kind == 3
+        kembalikan salah
+    akhir
+    jika v.kind == 2
+        kembalikan v.bool_val
+    akhir
+    jika v.kind == 0
+        kembalikan v.int_val != 0
+    akhir
+    kembalikan benar
+akhir
+
+# Binary operations
+fungsi eval_add(left Value, right Value) Value
+    jika left.kind == 0
+        jika right.kind == 0
+            kembalikan value_int(left.int_val + right.int_val)
+        akhir
+    akhir
+    jika left.kind == 1
+        jika right.kind == 1
+            # String concat (simplified - just return left for now)
+            kembalikan left
+        akhir
+    akhir
+    kembalikan value_null()
+akhir
+
+fungsi eval_sub(left Value, right Value) Value
+    jika left.kind == 0
+        jika right.kind == 0
+            kembalikan value_int(left.int_val - right.int_val)
+        akhir
+    akhir
+    kembalikan value_null()
+akhir
+
+fungsi eval_mul(left Value, right Value) Value
+    jika left.kind == 0
+        jika right.kind == 0
+            kembalikan value_int(left.int_val * right.int_val)
+        akhir
+    akhir
+    kembalikan value_null()
+akhir
+
+fungsi eval_div(left Value, right Value) Value
+    jika left.kind == 0
+        jika right.kind == 0
+            jika right.int_val != 0
+                kembalikan value_int(left.int_val / right.int_val)
+            akhir
+        akhir
+    akhir
+    kembalikan value_null()
+akhir
+
+fungsi eval_mod(left Value, right Value) Value
+    jika left.kind == 0
+        jika right.kind == 0
+            jika right.int_val != 0
+                kembalikan value_int(left.int_val % right.int_val)
+            akhir
+        akhir
+    akhir
+    kembalikan value_null()
+akhir
+
+# Comparison operations
+fungsi eval_eq(left Value, right Value) Value
+    jika left.kind == 0
+        jika right.kind == 0
+            kembalikan value_bool(left.int_val == right.int_val)
+        akhir
+    akhir
+    jika left.kind == 2
+        jika right.kind == 2
+            kembalikan value_bool(left.bool_val == right.bool_val)
+        akhir
+    akhir
+    kembalikan value_bool(salah)
+akhir
+
+fungsi eval_ne(left Value, right Value) Value
+    jika left.kind == 0
+        jika right.kind == 0
+            kembalikan value_bool(left.int_val != right.int_val)
+        akhir
+    akhir
+    jika left.kind == 2
+        jika right.kind == 2
+            kembalikan value_bool(left.bool_val != right.bool_val)
+        akhir
+    akhir
+    kembalikan value_bool(benar)
+akhir
+
+fungsi eval_lt(left Value, right Value) Value
+    jika left.kind == 0
+        jika right.kind == 0
+            kembalikan value_bool(left.int_val < right.int_val)
+        akhir
+    akhir
+    kembalikan value_bool(salah)
+akhir
+
+fungsi eval_gt(left Value, right Value) Value
+    jika left.kind == 0
+        jika right.kind == 0
+            kembalikan value_bool(left.int_val > right.int_val)
+        akhir
+    akhir
+    kembalikan value_bool(salah)
+akhir
+
+fungsi eval_le(left Value, right Value) Value
+    jika left.kind == 0
+        jika right.kind == 0
+            kembalikan value_bool(left.int_val <= right.int_val)
+        akhir
+    akhir
+    kembalikan value_bool(salah)
+akhir
+
+fungsi eval_ge(left Value, right Value) Value
+    jika left.kind == 0
+        jika right.kind == 0
+            kembalikan value_bool(left.int_val >= right.int_val)
+        akhir
+    akhir
+    kembalikan value_bool(salah)
+akhir
+
+# Unary operations
+fungsi eval_negate(operand Value) Value
+    jika operand.kind == 0
+        kembalikan value_int(0 - operand.int_val)
+    akhir
+    kembalikan value_null()
+akhir
+
+fungsi eval_not(operand Value) Value
+    kembalikan value_bool(!is_truthy(operand))
+akhir
+
+fungsi TestEvaluator() void
+    io.Write(io.Stdout, "=== Testing Evaluator ===\n")
+
+    var left = value_int(10)
+    var right = value_int(5)
+    var sum = eval_add(left, right)
+    jika sum.kind == 0 dan sum.int_val == 15
+        io.Write(io.Stdout, "10 + 5 = 15: OK\n")
+    lainnya
+        io.Write(io.Stdout, "10 + 5 = 15: FAIL\n")
+    akhir
+
+    var eq = eval_eq(left, left)
+    jika eq.kind == 2 dan eq.bool_val
+        io.Write(io.Stdout, "10 == 10: OK\n")
+    lainnya
+        io.Write(io.Stdout, "10 == 10: FAIL\n")
+    akhir
+
+    io.Write(io.Stdout, "=== Evaluator Ready ===\n")
+akhir

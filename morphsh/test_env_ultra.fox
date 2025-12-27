@@ -1,0 +1,51 @@
+ambil "io"
+# Ultra Minimal Environment Test
+# Hardcoded variables untuk avoid string comparison overhead
+
+struktur Env
+    x int
+    y int
+    z int
+akhir
+
+fungsi env_new() Env
+    kembalikan Env(0, 0, 0)
+akhir
+
+fungsi env_set_x(e Env, val int) Env
+    e.x = val
+    kembalikan e
+akhir
+
+fungsi env_set_y(e Env, val int) Env
+    e.y = val
+    kembalikan e
+akhir
+
+fungsi env_set_z(e Env, val int) Env
+    e.z = val
+    kembalikan e
+akhir
+
+fungsi main() void
+    io.Write(io.Stdout, "=== ENV TEST ===" + "\n")
+    
+    var e = env_new()
+    e = env_set_x(e, 42)
+    
+    jika e.x == 42
+        io.Write(io.Stdout, "x=42: OK" + "\n")
+    akhir
+    
+    e = env_set_y(e, 10)
+    e = env_set_z(e, 20)
+    
+    var sum = e.y + e.z
+    jika sum == 30
+        io.Write(io.Stdout, "y+z=30: OK" + "\n")
+    akhir
+    
+    io.Write(io.Stdout, "=== PASSED ===" + "\n")
+akhir
+
+main()

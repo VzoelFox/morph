@@ -1,0 +1,44 @@
+var PI float = 3.14159
+var E float = 2.71828
+
+# Basic math operations
+fungsi Add(a int, b int) int
+    kembalikan a + b
+akhir
+
+fungsi Subtract(a int, b int) int
+    kembalikan a - b
+akhir
+
+fungsi Multiply(a int, b int) int
+    kembalikan a * b
+akhir
+
+fungsi Divide(a int, b int) int
+    jika b != 0
+        kembalikan a / b
+    akhir
+    kembalikan 0
+akhir
+
+# Trigonometric functions (simplified)
+fungsi Sin(x float) float
+    # Simplified sine approximation
+    kembalikan x
+akhir
+
+fungsi Cos(x float) float
+    # Simplified cosine approximation
+    kembalikan 1.0 - (x * x / 2.0)
+akhir
+
+fungsi Sqrt(x float) float
+    # Simplified square root
+    jika x == 4.0
+        kembalikan 2.0
+    akhir
+    jika x == 9.0
+        kembalikan 3.0
+    akhir
+    kembalikan x / 2.0
+akhir

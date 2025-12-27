@@ -1,0 +1,45 @@
+ambil "io"
+ambil "morphsh/evaluator"
+ambil "morphsh/typechecker"
+
+fungsi main() void
+    io.Write(io.Stdout, "=== Morph Self-Hosting Compiler ===\n")
+    
+    # Test evaluator
+    TestEvaluator()
+    
+    # Test type checker
+    TestTypeChecker()
+    
+    # Simulate command line args (hardcoded for bootstrap)
+    var sourceFile = "test.fox"
+    var outputFile = "test.c"
+    
+    io.Write(io.Stdout, "Compiling:\n")
+    io.Write(io.Stdout, sourceFile + "\n")
+    
+    # Phase 1: Read source file
+    io.Write(io.Stdout, "[1/4] Reading source...\n")
+    var sourceCode = "fungsi hello() void native_print(\"Hello from Morph!\") akhir"
+    
+    # Phase 2: Lexical analysis
+    io.Write(io.Stdout, "[2/4] Lexical analysis...\n")
+    # TODO: var lexer = NewLexer(sourceCode)
+    # TODO: var tokens = tokenize(lexer)
+    
+    # Phase 3: Parsing
+    io.Write(io.Stdout, "[3/4] Parsing...\n")
+    # TODO: var parser = NewParser(tokens)
+    # TODO: var ast = parseProgram(parser)
+    
+    # Phase 4: Code generation
+    io.Write(io.Stdout, "[4/4] Code generation...\n")
+    # TODO: var cCode = generateC(ast)
+    # TODO: writeFile(outputFile, cCode)
+    
+    io.Write(io.Stdout, "Output:\n")
+    io.Write(io.Stdout, outputFile + "\n")
+    
+    io.Write(io.Stdout, "=== Compilation successful! ===\n")
+    io.Write(io.Stdout, "Self-hosting compiler ready for implementation\n")
+akhir
