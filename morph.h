@@ -6,8 +6,8 @@
 #include <pthread.h>
 
 // --- Constants ---
-#define GC_THRESHOLD (64 * 1024 * 1024) // 64MB
-#define GC_MIN_THRESHOLD (8 * 1024 * 1024) // 8MB
+#define GC_THRESHOLD (8UL * 1024 * 1024 * 1024) // 8GB (optimized for 32GB RAM)
+#define GC_MIN_THRESHOLD (512 * 1024 * 1024) // 512MB
 #define DAEMON_SLEEP_MS 100
 #define SWAP_AGE_THRESHOLD_SEC 10
 
@@ -28,209 +28,173 @@ typedef struct MorphContext MorphContext; // Pre-declare context
 typedef struct MorphTypeInfo {
     const char* name;
     size_t size;            // Size of payload
-    int num_pointers;       // How many pointers in payload
-    size_t* pointer_offsets; // Offsets of pointers relative to payload start
-    void (*mark_fn)(MorphContext*, void*); // Custom marking function (e.g. for Containers)
+    int is_ref_type;        // Pointer semantics
 } MorphTypeInfo;
 
+// Object header for GC
 typedef struct ObjectHeader {
-    struct ObjectHeader* next;  // Global GC list
-    MorphTypeInfo* type;        // RTTI
-    uint8_t flags;              // 0x1: Marked, 0x2: Swapped
-    uint64_t last_access;       // Timestamp (ms) for LRU Eviction
-    uint64_t swap_id;           // ID for swap file
-    size_t size;                // Payload size
-    struct MphPage* page;       // Owning page (fast lookup)
+    struct ObjectHeader* next;       // Link in GC list
+    MorphTypeInfo* type;
+    uint8_t flags;
+    uint64_t last_access;           // Timestamp untuk LRU daemon
+    uint64_t swap_id;               // Offset di .z file
+    size_t size;                    // Size in bytes
+
+    struct MphPage* page;           // Page tempat object ini berada
+
+    // Free-list linking (for this size class)
     struct ObjectHeader* free_next;
     struct ObjectHeader* free_prev;
+
+    // Per-page free-list linking (untuk partial pages)
     struct ObjectHeader* page_free_next;
     struct ObjectHeader* page_free_prev;
 } ObjectHeader;
 
+#define MEMORY_CANARY_MAGIC 0xDEADBEEF
+#define MEMORY_FREE_MAGIC   0xFEEDFACE
+
+// Page = 4KB container
+#define PAGE_SIZE (4 * 1024)
+
 typedef struct MphPage {
-    void* start_addr;
-    size_t used_offset;
-    int flags; // 0=RAM, 1=DISK
-    uint64_t last_access;
-    struct MphPage* next;
-    uint64_t swap_id;
-    size_t live_bytes;
-    size_t size;
-    ObjectHeader* free_list;
+    void* memory;                     // malloc(PAGE_SIZE)
+    size_t used_bytes;                // Berapa bytes yang sudah dialokasi
+    struct MphPage* next;             // Link to next page
+
+    // Per-page free list
+    ObjectHeader* free_head;
+    size_t free_count;                // Berapa objects free di page ini
 } MphPage;
 
-// Shadow Stack for Roots
-typedef struct StackRoot {
-    void** ptr; // Pointer to the local variable (which is a pointer to object)
-    struct StackRoot* next;
-} StackRoot;
+typedef struct MorphContext {
+    ObjectHeader* gc_head;          // Start GC list
+    ObjectHeader* gc_tail;          // End GC list (untuk append cepat)
+    size_t allocated_bytes;
+    size_t next_gc_threshold;
 
-// Iterative GC Mark Stack
-#define MARK_STACK_BLOCK_SIZE 1024
+    // Stack untuk GC marking
+    void** stack_top;               // Simpan stack pointer untuk scan roots
 
-typedef struct MarkStackBlock {
-    void* items[MARK_STACK_BLOCK_SIZE];
-    size_t count;
-    struct MarkStackBlock* next;
-    struct MarkStackBlock* prev;
-} MarkStackBlock;
-
-typedef struct MarkStack {
-    MarkStackBlock* head;
-    MarkStackBlock* current;
-    size_t count;
-} MarkStack;
-
-struct MorphContext {
-    ObjectHeader* heap_head;    // Linked list of all allocated objects
-    size_t allocated_bytes;     // Total bytes currently allocated
-    size_t next_gc_threshold;   // When to trigger next GC
-
-    StackRoot* stack_top;       // Top of Shadow Stack
-    MarkStack mark_stack;       // Stack for iterative GC marking
-
-    MphPage* page_head;         // Head of page list (per-context)
-    MphPage* current_alloc_page; // Current page used for allocations
-    pthread_mutex_t page_lock;  // Lock for page list/swap operations
-    ObjectHeader* free_list;    // Reusable freed objects (exact size)
-
-    pthread_t daemon_thread;    // GC/Swap Daemon
+    // LRU daemon state
     int daemon_running;
-    pthread_mutex_t memory_lock; // Lock for heap access (Daemon vs Main)
-    uint64_t last_alloc_time;
+    pthread_t daemon_thread;
+    pthread_mutex_t alloc_mutex;
 
-    void* scheduler;            // Placeholder
-};
+    // Page management
+    MphPage* page_head;             // Linked list of pages
+    size_t page_count;              // Jumlah pages
 
-typedef void (*MorphEntryFunction)(MorphContext* ctx, void* arg);
+    // Free-list per size class (powers of 2)
+    ObjectHeader* free_lists[32];   // free_lists[k] = free blocks of size ~2^k
+    size_t free_counts[32];
+} MorphContext;
 
-typedef struct MorphChannel {
-    pthread_mutex_t lock;
-    pthread_cond_t cond_send;
-    pthread_cond_t cond_recv;
+// --- Core API ---
+MorphContext* mph_context_new();
+void* mph_alloc(MorphContext* ctx, size_t bytes, MorphTypeInfo* type);
+void mph_gc_collect(MorphContext* ctx);
 
-    int64_t* buffer;
-    int capacity;
-    int count;
-    int head;
-    int tail;
-} MorphChannel;
-
-// --- Object Structures ---
-
+// --- String Type ---
 typedef struct MorphString {
-    char* data;    // Pointer to C string
+    char* data;
     size_t length;
+    size_t capacity;
 } MorphString;
 
+// String functions (declarations only, defined in runtime.c)
+MorphString* mph_string_new(MorphContext* ctx, const char* data);
+MorphString* mph_string_concat(MorphContext* ctx, MorphString* a, MorphString* b);
+MorphString* mph_string_from_int(MorphContext* ctx, mph_int value);
+mph_int mph_string_index(MorphContext* ctx, MorphString* s, MorphString* sub);
+MorphString* mph_string_trim(MorphContext* ctx, MorphString* s, MorphString* cut);
+MorphString* mph_string_substr(MorphContext* ctx, MorphString* s, mph_int start, mph_int len);
+int mph_string_eq(MorphString* a, MorphString* b);
+
+// --- Array Type ---
 typedef struct MorphArray {
-    void* data;    // Pointer to data block
+    void** elements;
     size_t length;
     size_t capacity;
-    size_t element_size;
-    mph_bool elements_are_pointers; // Flag for GC
+    MorphTypeInfo* element_type;
 } MorphArray;
 
-typedef enum {
-    MPH_KEY_INT,
-    MPH_KEY_STRING,
-    MPH_KEY_PTR
-} MorphKeyKind;
+MorphArray* mph_array_new(MorphContext* ctx, MorphTypeInfo* elem_type);
+void mph_array_push(MorphContext* ctx, MorphArray* arr, void* elem);
+void* mph_array_get(MorphArray* arr, mph_int index);
 
-typedef struct MorphMapEntry {
-    void* key;
+// Split function
+MorphArray* mph_string_split(MorphContext* ctx, MorphString* s, MorphString* sep);
+
+// --- Map Type ---
+typedef struct MorphMapBucket {
+    MorphString* key;
     void* value;
-    mph_bool occupied;
-    mph_bool deleted;
-} MorphMapEntry;
+    struct MorphMapBucket* next;
+} MorphMapBucket;
 
 typedef struct MorphMap {
-    MorphMapEntry* entries;
-    size_t capacity;
-    size_t count;
-    size_t deleted_count;
-    MorphKeyKind key_kind;
-    mph_bool values_are_pointers; // Flag for GC
+    MorphMapBucket** buckets;
+    size_t bucket_count;
+    size_t size;
+    MorphTypeInfo* key_type;
+    MorphTypeInfo* value_type;
 } MorphMap;
 
-typedef struct MorphInterface {
-    void* instance;
-    void** vtable;
-    mph_int type_id;
-} MorphInterface;
+MorphMap* mph_map_new(MorphContext* ctx, MorphTypeInfo* key_type, MorphTypeInfo* value_type);
+void mph_map_set(MorphContext* ctx, MorphMap* map, MorphString* key, void* value);
+void* mph_map_get(MorphMap* map, MorphString* key);
 
-typedef struct MorphClosure {
-    void* function;
-    void* env;
-} MorphClosure;
-
-typedef void* (*MorphClosureFunc)(MorphContext*, void*, ...);
-
+// --- Error Type (Error as Value) ---
 typedef struct MorphError {
     MorphString* message;
+    int code;
 } MorphError;
 
-// --- API ---
+MorphError* mph_error_new(MorphContext* ctx, const char* msg, int code);
 
-// Memory
-void mph_init_memory(MorphContext* ctx);
-void mph_destroy_memory(MorphContext* ctx);
+// --- Result Type ---
+typedef struct MorphResult {
+    void* value;
+    MorphError* error;
+    int is_error;
+} MorphResult;
 
-// Shadow Stack
-void mph_gc_push_root(MorphContext* ctx, void** ptr);
-void mph_gc_pop_roots(MorphContext* ctx, int count);
+MorphResult mph_result_ok(void* value);
+MorphResult mph_result_err(MorphError* error);
 
-// Allocator
-void* mph_alloc(MorphContext* ctx, size_t size, MorphTypeInfo* type_info);
+// --- Morphroutines (Green Threads) ---
+typedef struct MorphUnit {
+    void* (*func)(void*);
+    void* arg;
+    void* result;
+    int done;
+    pthread_t thread;
+} MorphUnit;
 
-// GC & Tiered Memory
-void mph_gc_collect(MorphContext* ctx);
-void mph_start_daemon(MorphContext* ctx);
-void mph_stop_daemon(MorphContext* ctx);
-void mph_swap_in(MorphContext* ctx, void* obj); // Ensure object is in RAM
+MorphUnit* mph_spawn(void* (*func)(void*), void* arg);
+void* mph_wait(MorphUnit* unit);
 
-// Strings
-MorphString* mph_string_new(MorphContext* ctx, const char* literal);
-MorphString* mph_string_concat(MorphContext* ctx, MorphString* a, MorphString* b);
-mph_bool mph_string_eq(MorphContext* ctx, MorphString* a, MorphString* b);
+// --- Channel (untuk komunikasi antar morphroutines) ---
+typedef struct MorphChannel {
+    void** buffer;
+    size_t capacity;
+    size_t size;
+    size_t read_pos;
+    size_t write_pos;
+    pthread_mutex_t mutex;
+    pthread_cond_t not_empty;
+    pthread_cond_t not_full;
+} MorphChannel;
 
-// Arrays
-MorphArray* mph_array_new(MorphContext* ctx, size_t capacity, size_t element_size, mph_bool is_ptr);
-void* mph_array_at(MorphContext* ctx, MorphArray* arr, mph_int index);
-MorphArray* mph_array_concat(MorphContext* ctx, MorphArray* a, MorphArray* b);
+MorphChannel* mph_channel_new(size_t capacity);
+void mph_channel_send(MorphChannel* ch, void* value);
+void* mph_channel_receive(MorphChannel* ch);
 
-// Maps
-MorphMap* mph_map_new(MorphContext* ctx, MorphKeyKind kind, mph_bool val_is_ptr);
-void mph_map_set(MorphContext* ctx, MorphMap* map, void* key, void* value);
-void* mph_map_get(MorphContext* ctx, MorphMap* map, void* key);
-void mph_map_delete(MorphContext* ctx, MorphMap* map, void* key);
-mph_int mph_map_len(MorphContext* ctx, MorphMap* map);
-
-// Interfaces
-void* mph_assert_type(MorphContext* ctx, MorphInterface iface, mph_int expected_id);
-
-// Closures
-MorphClosure* mph_closure_new(MorphContext* ctx, void* fn, void* env, int env_size);
-
-// Error
-MorphError* mph_error_new(MorphContext* ctx, MorphString* msg);
-
-// Time
-mph_int mph_time_Now(MorphContext* ctx, void* _env);
-void mph_time_Sleep(MorphContext* ctx, void* _env, mph_int ms);
-
-// Debug
+// --- Native Functions (linked dari generated C) ---
+void mph_native_print(MorphContext* ctx, MorphString* s);
 void mph_native_print_int(MorphContext* ctx, mph_int n);
-void mph_native_print_error(MorphContext* ctx, MorphError* err);
-
-// Concurrency
-MorphChannel* mph_channel_new(MorphContext* ctx);
-void mph_channel_destroy(MorphContext* ctx, MorphChannel* c);
-void mph_channel_send(MorphContext* ctx, MorphChannel* c, mph_int val);
-mph_int mph_channel_recv(MorphContext* ctx, MorphChannel* c);
-void mph_thread_spawn(MorphEntryFunction fn, void* arg);
-
-// Entry Point
-void morph_entry_point(MorphContext* ctx);
+mph_int mph_native_readInt();
+MorphString* mph_native_readString(MorphContext* ctx);
 
 #endif // MORPH_H
