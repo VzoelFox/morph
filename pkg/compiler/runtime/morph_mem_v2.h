@@ -5,7 +5,7 @@
  * Design: See MEMORY_ARCHITECTURE_V2.md
  * Roadmap: See MEMORY_V2_ROADMAP.md
  *
- * Status: Week 7-8 - Generational GC
+ * Status: Week 9-10 - GC Optimization (Precise Tracing, Compaction, Resizing)
  */
 
 #ifndef MORPH_MEM_V2_H
@@ -195,6 +195,10 @@ int pool_get_size_class(size_t size);
 // GENERATIONAL GC (Week 7-8)
 //=============================================================================
 
+// Forward declarations for Week 9-10 features
+typedef struct TypeDescriptor TypeDescriptor;
+typedef struct HeapResizeConfig HeapResizeConfig;
+
 // GC generation sizes
 #define GC_YOUNG_GEN_SIZE (2 * 1024 * 1024)   // 2MB young generation
 #define GC_OLD_GEN_SIZE   (32 * 1024 * 1024)  // 32MB old generation
@@ -245,6 +249,15 @@ typedef struct {
     size_t gray_count;
     size_t gray_capacity;
 
+    // Week 9-10: Type descriptors for precise tracing
+    TypeDescriptor* type_descriptors[MAX_TYPE_DESCRIPTORS];  // Type registry
+    uint8_t num_type_descriptors;                             // Number registered
+
+    // Week 9-10: Heap resizing
+    HeapResizeConfig* resize_config;      // Resizing configuration
+    size_t young_target_size;             // Target young gen size
+    size_t old_target_size;               // Target old gen size
+
     // Statistics
     uint64_t total_minor_collections;
     uint64_t total_major_collections;
@@ -252,6 +265,7 @@ typedef struct {
     uint64_t major_gc_time_us;
     uint64_t bytes_promoted;
     uint64_t bytes_reclaimed;
+    uint64_t bytes_compacted;              // Week 9-10: Compaction stats
 } GCHeap;
 
 // GC API (internal - used by morph_mem_* functions)
@@ -262,6 +276,61 @@ void* gc_alloc_old(GCHeap* heap, size_t size, uint8_t type_id);
 void gc_minor_collect(GCHeap* heap, void** roots, size_t root_count);
 void gc_major_collect(GCHeap* heap, void** roots, size_t root_count);
 void gc_write_barrier(GCHeap* heap, void* old_obj, void** field_addr);
+
+//=============================================================================
+// PRECISE TRACING (Week 9-10)
+//=============================================================================
+
+// Type descriptor for precise GC tracing
+struct TypeDescriptor {
+    uint8_t type_id;                  // Type ID (matches ObjectHeader.type_id)
+    const char* name;                 // Type name (for debugging)
+    size_t size;                      // Object size in bytes
+    uint8_t num_pointers;             // Number of pointer fields
+    uint16_t pointer_offsets[16];     // Offsets of pointer fields (max 16)
+};
+
+// Type descriptor registry (max 128 types)
+#define MAX_TYPE_DESCRIPTORS 128
+
+// Register type descriptor for precise tracing
+void gc_register_type_descriptor(GCHeap* heap, const TypeDescriptor* desc);
+
+// Get type descriptor by type_id
+const TypeDescriptor* gc_get_type_descriptor(GCHeap* heap, uint8_t type_id);
+
+//=============================================================================
+// MARK-COMPACT GC (Week 9-10)
+//=============================================================================
+
+// Compact old generation (eliminate fragmentation)
+void gc_compact_old_generation(GCHeap* heap);
+
+// Update pointers after compaction
+void gc_update_references(GCHeap* heap, void** roots, size_t root_count);
+
+//=============================================================================
+// DYNAMIC HEAP RESIZING (Week 9-10)
+//=============================================================================
+
+// Heap resizing configuration
+struct HeapResizeConfig {
+    size_t min_young_size;      // Minimum young gen size (default 2MB)
+    size_t max_young_size;      // Maximum young gen size (default 8MB)
+    size_t min_old_size;        // Minimum old gen size (default 32MB)
+    size_t max_old_size;        // Maximum old gen size (default 128MB)
+    float grow_threshold;       // Grow when >X% full (default 0.8)
+    float shrink_threshold;     // Shrink when <X% used (default 0.3)
+};
+
+// Resize young generation
+void gc_resize_young_generation(GCHeap* heap, size_t new_size);
+
+// Resize old generation
+void gc_resize_old_generation(GCHeap* heap, size_t new_size);
+
+// Auto-adjust heap sizes based on usage
+void gc_auto_resize_heap(GCHeap* heap, const HeapResizeConfig* config);
 
 //=============================================================================
 // MEMORY STATISTICS
