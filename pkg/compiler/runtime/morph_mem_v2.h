@@ -5,7 +5,7 @@
  * Design: See MEMORY_ARCHITECTURE_V2.md
  * Roadmap: See MEMORY_V2_ROADMAP.md
  *
- * Status: Week 2 - Arena Allocator
+ * Status: Week 3-4 - Pool Allocator
  */
 
 #ifndef MORPH_MEM_V2_H
@@ -131,6 +131,65 @@ void* arena_alloc(Arena* arena, size_t size);
 void* arena_alloc_aligned(Arena* arena, size_t size, size_t alignment);
 void arena_reset(Arena* arena);  // Reset without freeing blocks
 void arena_destroy(Arena* arena); // Free all blocks
+
+//=============================================================================
+// POOL ALLOCATOR (Week 3-4)
+//=============================================================================
+
+// Pool size classes (power-of-2 for alignment)
+#define POOL_SIZE_16   16
+#define POOL_SIZE_32   32
+#define POOL_SIZE_64   64
+#define POOL_SIZE_128  128
+#define POOL_SIZE_256  256
+#define POOL_NUM_SIZES 5
+
+// Objects per slab (tuned for 64KB slabs)
+#define POOL_OBJECTS_PER_SLAB_16   4000   // 64KB / 16
+#define POOL_OBJECTS_PER_SLAB_32   2000   // 64KB / 32
+#define POOL_OBJECTS_PER_SLAB_64   1000   // 64KB / 64
+#define POOL_OBJECTS_PER_SLAB_128  500    // 64KB / 128
+#define POOL_OBJECTS_PER_SLAB_256  250    // 64KB / 256
+
+// Free list node (embedded in free objects)
+typedef struct PoolFreeNode {
+    struct PoolFreeNode* next;
+} PoolFreeNode;
+
+// Pool slab (chunk of pre-allocated objects)
+typedef struct PoolSlab {
+    struct PoolSlab* next;      // Next slab in chain
+    size_t object_size;         // Size of each object
+    size_t num_objects;         // Total objects in slab
+    size_t num_free;            // Free objects remaining
+    uint8_t data[];             // Flexible array for objects
+} PoolSlab;
+
+// Pool allocator (one per size class)
+typedef struct {
+    size_t object_size;         // Size class
+    size_t objects_per_slab;    // Objects per slab
+    PoolSlab* slabs;            // Linked list of slabs
+    PoolFreeNode* free_list;    // Free list head
+    size_t total_allocated;     // Total bytes allocated (stats)
+    size_t total_free;          // Free objects count (stats)
+    size_t total_used;          // Used objects count (stats)
+} Pool;
+
+// Pool allocator manager (manages all size classes)
+typedef struct {
+    Pool pools[POOL_NUM_SIZES]; // One pool per size class
+    size_t size_classes[POOL_NUM_SIZES];
+} PoolManager;
+
+// Pool API
+PoolManager* pool_manager_create(void);
+void* pool_alloc(PoolManager* mgr, size_t size);
+void pool_free(PoolManager* mgr, void* ptr, size_t size);
+void pool_manager_destroy(PoolManager* mgr);
+
+// Helper: Get pool index for size
+int pool_get_size_class(size_t size);
 
 //=============================================================================
 // MEMORY STATISTICS

@@ -1,6 +1,6 @@
 /*
  * Morph Memory System V2 - Implementation
- * Week 2: Arena Allocator (Bump-pointer allocation for compilation)
+ * Week 3-4: Pool Allocator (Fixed-size slab allocation)
  *
  * Design: See MEMORY_ARCHITECTURE_V2.md
  * Roadmap: See MEMORY_V2_ROADMAP.md
@@ -77,8 +77,10 @@ const MorphMemConfig MORPH_CONFIG_SERVER = {
 struct MorphContextV2 {
     MorphMemConfig config;
 
-    // Allocator state (mode-specific, implemented in later weeks)
-    void* allocator_data;  // Points to Arena, GenHeap, etc.
+    // Allocator state (Week 3-4: Arena + Pool)
+    Arena* arena;              // Arena allocator (COMPILER mode)
+    PoolManager* pool_manager; // Pool allocator (small objects)
+    void* gc_heap;             // GC heap (RUNTIME/VM mode, Week 7+)
 
     // Statistics
     MorphMemStats stats;
@@ -269,6 +271,144 @@ void arena_destroy(Arena* arena) {
 }
 
 //=============================================================================
+// POOL ALLOCATOR - Week 3-4
+//=============================================================================
+
+// Helper: Get pool index for size class
+int pool_get_size_class(size_t size) {
+    if (size <= POOL_SIZE_16)  return 0;
+    if (size <= POOL_SIZE_32)  return 1;
+    if (size <= POOL_SIZE_64)  return 2;
+    if (size <= POOL_SIZE_128) return 3;
+    if (size <= POOL_SIZE_256) return 4;
+    return -1;  // Too large for pool
+}
+
+// Initialize a single pool
+static void pool_init(Pool* pool, size_t object_size, size_t objects_per_slab) {
+    pool->object_size = object_size;
+    pool->objects_per_slab = objects_per_slab;
+    pool->slabs = NULL;
+    pool->free_list = NULL;
+    pool->total_allocated = 0;
+    pool->total_free = 0;
+    pool->total_used = 0;
+}
+
+// Allocate a new slab for a pool
+static PoolSlab* pool_alloc_slab(Pool* pool) {
+    size_t slab_data_size = pool->object_size * pool->objects_per_slab;
+    PoolSlab* slab = (PoolSlab*)malloc(sizeof(PoolSlab) + slab_data_size);
+    if (!slab) {
+        fprintf(stderr, "ERROR: Failed to allocate pool slab (%zu bytes)\n",
+                sizeof(PoolSlab) + slab_data_size);
+        return NULL;
+    }
+
+    slab->next = pool->slabs;
+    slab->object_size = pool->object_size;
+    slab->num_objects = pool->objects_per_slab;
+    slab->num_free = pool->objects_per_slab;
+
+    // Build free list from slab objects
+    for (size_t i = 0; i < pool->objects_per_slab; i++) {
+        uint8_t* obj = &slab->data[i * pool->object_size];
+        PoolFreeNode* node = (PoolFreeNode*)obj;
+        node->next = pool->free_list;
+        pool->free_list = node;
+    }
+
+    pool->slabs = slab;
+    pool->total_allocated += slab_data_size;
+    pool->total_free += pool->objects_per_slab;
+
+    return slab;
+}
+
+PoolManager* pool_manager_create(void) {
+    PoolManager* mgr = (PoolManager*)malloc(sizeof(PoolManager));
+    if (!mgr) {
+        fprintf(stderr, "FATAL: Failed to allocate PoolManager\n");
+        abort();
+    }
+
+    // Initialize size classes
+    mgr->size_classes[0] = POOL_SIZE_16;
+    mgr->size_classes[1] = POOL_SIZE_32;
+    mgr->size_classes[2] = POOL_SIZE_64;
+    mgr->size_classes[3] = POOL_SIZE_128;
+    mgr->size_classes[4] = POOL_SIZE_256;
+
+    // Initialize pools
+    pool_init(&mgr->pools[0], POOL_SIZE_16,  POOL_OBJECTS_PER_SLAB_16);
+    pool_init(&mgr->pools[1], POOL_SIZE_32,  POOL_OBJECTS_PER_SLAB_32);
+    pool_init(&mgr->pools[2], POOL_SIZE_64,  POOL_OBJECTS_PER_SLAB_64);
+    pool_init(&mgr->pools[3], POOL_SIZE_128, POOL_OBJECTS_PER_SLAB_128);
+    pool_init(&mgr->pools[4], POOL_SIZE_256, POOL_OBJECTS_PER_SLAB_256);
+
+    return mgr;
+}
+
+void* pool_alloc(PoolManager* mgr, size_t size) {
+    int idx = pool_get_size_class(size);
+    if (idx < 0) {
+        return NULL;  // Too large, use arena/malloc
+    }
+
+    Pool* pool = &mgr->pools[idx];
+
+    // If free list empty, allocate new slab
+    if (pool->free_list == NULL) {
+        if (!pool_alloc_slab(pool)) {
+            return NULL;
+        }
+    }
+
+    // Pop from free list (O(1)!)
+    PoolFreeNode* node = pool->free_list;
+    pool->free_list = node->next;
+    pool->total_free--;
+    pool->total_used++;
+
+    return (void*)node;
+}
+
+void pool_free(PoolManager* mgr, void* ptr, size_t size) {
+    if (!ptr) return;
+
+    int idx = pool_get_size_class(size);
+    if (idx < 0) {
+        return;  // Not a pool object
+    }
+
+    Pool* pool = &mgr->pools[idx];
+
+    // Push to free list (O(1)!)
+    PoolFreeNode* node = (PoolFreeNode*)ptr;
+    node->next = pool->free_list;
+    pool->free_list = node;
+    pool->total_free++;
+    pool->total_used--;
+}
+
+void pool_manager_destroy(PoolManager* mgr) {
+    if (!mgr) return;
+
+    // Free all slabs in all pools
+    for (int i = 0; i < POOL_NUM_SIZES; i++) {
+        Pool* pool = &mgr->pools[i];
+        PoolSlab* slab = pool->slabs;
+        while (slab) {
+            PoolSlab* next = slab->next;
+            free(slab);
+            slab = next;
+        }
+    }
+
+    free(mgr);
+}
+
+//=============================================================================
 // INITIALIZATION & CLEANUP
 //=============================================================================
 
@@ -297,19 +437,23 @@ MorphContextV2* morph_mem_init(MorphMemConfig config) {
     // Initialize lock
     pthread_mutex_init(&ctx->lock, NULL);
 
-    // Week 2: Initialize allocator based on mode
+    // Week 3-4: Initialize allocators based on mode
     if (config.mode == MORPH_MODE_COMPILER) {
-        // COMPILER mode: Use arena allocator (fast, no GC)
-        Arena* arena = arena_create(ARENA_BLOCK_SIZE);
-        ctx->allocator_data = (void*)arena;
+        // COMPILER mode: Arena + Pool
+        ctx->arena = arena_create(ARENA_BLOCK_SIZE);
+        ctx->pool_manager = pool_manager_create();
+        ctx->gc_heap = NULL;
 
         if (config.enable_debug) {
-            printf("[MemV2] COMPILER mode - Arena allocator initialized (%zu MB blocks)\n",
-                   ARENA_BLOCK_SIZE / (1024 * 1024));
+            printf("[MemV2] COMPILER mode initialized:\n");
+            printf("  - Arena: %zu MB blocks\n", ARENA_BLOCK_SIZE / (1024 * 1024));
+            printf("  - Pool: 5 size classes (16, 32, 64, 128, 256 bytes)\n");
         }
     } else {
         // RUNTIME/VM/SERVER: Generational GC (Week 7+)
-        ctx->allocator_data = NULL;
+        ctx->arena = NULL;
+        ctx->pool_manager = NULL;
+        ctx->gc_heap = NULL;
 
         if (config.enable_debug) {
             printf("[MemV2] Mode %d - GC allocator (not implemented yet)\n", config.mode);
@@ -337,21 +481,41 @@ void morph_mem_destroy(MorphContextV2* ctx) {
                ctx->stats.object_count);
     }
 
-    // Week 2: Destroy allocator
-    if (ctx->allocator_data) {
-        if (ctx->config.mode == MORPH_MODE_COMPILER) {
-            // Destroy arena
-            Arena* arena = (Arena*)ctx->allocator_data;
+    // Week 3-4: Destroy allocators
+    if (ctx->config.mode == MORPH_MODE_COMPILER) {
+        // Destroy arena
+        if (ctx->arena) {
             if (ctx->config.enable_debug) {
                 printf("[MemV2] Arena stats - Allocated: %zu KB, Used: %zu KB (%.1f%% utilization)\n",
-                       arena->total_allocated / 1024,
-                       arena->total_used / 1024,
-                       arena->total_allocated > 0 ?
-                           (100.0 * arena->total_used / arena->total_allocated) : 0.0);
+                       ctx->arena->total_allocated / 1024,
+                       ctx->arena->total_used / 1024,
+                       ctx->arena->total_allocated > 0 ?
+                           (100.0 * ctx->arena->total_used / ctx->arena->total_allocated) : 0.0);
             }
-            arena_destroy(arena);
-        } else {
-            // Future: Destroy GC heap (Week 7+)
+            arena_destroy(ctx->arena);
+        }
+
+        // Destroy pool manager
+        if (ctx->pool_manager) {
+            if (ctx->config.enable_debug) {
+                printf("[MemV2] Pool stats:\n");
+                for (int i = 0; i < POOL_NUM_SIZES; i++) {
+                    Pool* pool = &ctx->pool_manager->pools[i];
+                    if (pool->total_allocated > 0) {
+                        printf("  - %zu bytes: %zu KB allocated, %zu used, %zu free\n",
+                               pool->object_size,
+                               pool->total_allocated / 1024,
+                               pool->total_used,
+                               pool->total_free);
+                    }
+                }
+            }
+            pool_manager_destroy(ctx->pool_manager);
+        }
+    } else {
+        // Future: Destroy GC heap (Week 7+)
+        if (ctx->gc_heap) {
+            // TODO
         }
     }
 
@@ -389,14 +553,23 @@ void* morph_mem_alloc(MorphContextV2* ctx, size_t size, uint8_t type_id) {
     ObjectHeader* header = NULL;
     size_t total_size = morph_v2_total_size(size);
 
-    // Week 2: Route allocation based on mode
+    // Week 3-4: Hybrid pool+arena allocation
     if (ctx->config.mode == MORPH_MODE_COMPILER) {
-        // COMPILER mode: Fast arena allocation (bump pointer)
-        Arena* arena = (Arena*)ctx->allocator_data;
-        header = (ObjectHeader*)arena_alloc(arena, total_size);
+        // Strategy: Small objects (≤256B) use pool, larger use arena
+        if (total_size <= POOL_SIZE_256 && ctx->pool_manager) {
+            // Try pool allocation (O(1) alloc/free, cache-friendly)
+            header = (ObjectHeader*)pool_alloc(ctx->pool_manager, total_size);
+            if (header) {
+                ctx->stats.pool_bytes += size;
+            }
+        }
 
-        if (header) {
-            ctx->stats.arena_bytes += size;
+        // Fallback to arena if pool failed or object too large
+        if (!header && ctx->arena) {
+            header = (ObjectHeader*)arena_alloc(ctx->arena, total_size);
+            if (header) {
+                ctx->stats.arena_bytes += size;
+            }
         }
     } else {
         // RUNTIME/VM/SERVER: Malloc fallback (Week 7+: use generational GC)
@@ -448,13 +621,25 @@ void morph_mem_free(MorphContextV2* ctx, void* ptr) {
     pthread_mutex_lock(&ctx->lock);
 
     ObjectHeader* header = morph_v2_get_header(ptr);
+    size_t total_size = morph_v2_total_size(header->size);
 
     // Update stats
     ctx->stats.total_freed += header->size;
     ctx->stats.current_live -= header->size;
 
-    // Free memory
-    free(header);
+    // Week 3-4: Route free to pool if small object
+    if (ctx->config.mode == MORPH_MODE_COMPILER && ctx->pool_manager) {
+        if (total_size <= POOL_SIZE_256) {
+            // Return to pool (O(1)!)
+            pool_free(ctx->pool_manager, header, total_size);
+            pthread_mutex_unlock(&ctx->lock);
+            return;
+        }
+        // Note: Arena objects are not individually freed (bulk free at end)
+    } else {
+        // RUNTIME/VM/SERVER: Free individual objects
+        free(header);
+    }
 
     pthread_mutex_unlock(&ctx->lock);
 }
