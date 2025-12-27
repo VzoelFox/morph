@@ -1,9 +1,9 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.66.2
+- **Versi**: 1.66.3
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
-- **Terakhir Diupdate**: 2025-12-26 17:45 WIB
+- **Terakhir Diupdate**: 2025-12-27 15:00 WIB
 - **Status**: Active
 
 ---
@@ -103,6 +103,15 @@ Dokumen ini adalah **single source of truth** untuk AI Agent dalam pengembangan 
 - **Achievement**:
   - **Self-Hosted Focus**: Runner Go dihapus untuk menjaga konsistensi self-hosted
   - **Dependency Cleanup**: Tidak lagi bergantung pada paket `pkg_legacy` untuk runner
+
+## Perubahan 2025-12-27 15:00 WIB
+- **Feature**: Update import paths after pkg_legacy removal
+- **Files**:
+  - `cmd/morph/main.go` (SHA256:081c129d93976e8825ed0c8e3e86621f2e839ea03bec79aaccb7969612d7ea2a) - Replace `pkg_legacy/*` imports with `pkg/*` paths.
+  - `AGENTS.md` (SHA256:44ccb01a036b31907866035fecc03a7b4cb80f704b5cc96e0efb2b4d4bd53379) - Document import path update.
+- **Status**: ✅ IMPORT PATHS UPDATED
+- **Achievement**:
+  - **Build Alignment**: CLI now targets the non-legacy package namespace.
 
 ## Perubahan 2025-12-26 17:45 WIB
 - **Feature**: Stabilize MorphSH self-hosting entrypoint
