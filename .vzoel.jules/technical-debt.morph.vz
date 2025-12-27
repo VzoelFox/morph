@@ -1,7 +1,7 @@
 # Hutang Teknis & Catatan Pengembangan Morph
 
 ## Status: Active
-**Last Updated**: 2025-12-26 14:46
+**Last Updated**: 2025-12-27 02:38 WIB
 
 ### Pending / Open
 - **Tree Walker Implementation**: Port morphsh tree_walker.fox ke morphfox dengan essential functions
@@ -31,6 +31,7 @@
 - Future context generation should reuse `pkg/checker` logic.
 
 ### Resolved / Closed
+- **N0 Resurrection**: Successfully resurrected N0 (Go Compiler) from commit f2e51c4. Built 3.5MB binary (13,028 LoC), validated all components, created comprehensive documentation (N0_ARCHITECTURE.md + N0_RESURRECTION_SUMMARY.md), and established n0-resurrection-backup branch for bootstrap independence. (2025-12-27)
 - **Type Refactoring**: Refactored all primitive types to lowercase (`int`, `string`, `bool`, `void`, `float`). Updated all source, tests, and examples. (2025-12-23)
 - **Concurrency**: Implemented `Channel` type and built-in functions (`saluran_baru`, `kirim`, `terima`, `luncurkan`) in Checker and C Runtime (Pthreads). (2025-12-23)
 - **String Interpolation**: Implemented `InterpolatedString` support in `pkg/checker` (validates all parts are Strings) and `pkg/compiler` (nested `mph_string_concat` generation). (2025-12-23)

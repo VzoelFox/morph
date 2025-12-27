@@ -1,0 +1,7 @@
+# Test N0 Compiler Resurrection - Simple Expression Test
+fungsi main() void
+    var x = 10 + 20
+    var result = x * 2
+akhir
+
+main()

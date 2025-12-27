@@ -19,7 +19,8 @@
 !DESIGN.md
 !README.md
 !ROADMAP.md
-!ANALISIS_ARSITEKTUR.md
+!MEMORY_*.md
+!N0_*.md
 !checksum_gen.go
 !go.mod
 !go.sum
@@ -44,12 +45,3 @@ examples/*.c
 examples/*.h
 examples/function_type_test
 examples/stress_test
-
-# Ignore C artifacts in root directory
-/*.c
-/*.h
-/test_*
-
-# Ignore swap directory dan runtime files
-.morph.vz/swap/
-.morph.vz/.z

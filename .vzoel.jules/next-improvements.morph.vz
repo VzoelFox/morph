@@ -1,33 +1,75 @@
 # Rekomendasi Pengembangan Lanjutan
 
-Dokumen ini berisi saran detail untuk pengembangan masa depan.
+**Last Updated**: 2025-12-27 02:38 WIB
 
-## Current Status (2025-12-26 14:46)
+Dokumen ini berisi saran detail untuk pengembangan masa depan, khususnya untuk `pkg/analysis`, yang ditunda hingga Type Checker utama stabil.
 
-### ✅ COMPLETED
-- **Phase 1-7**: Full self-hosting achieved, GO compiler retired
-- **Memory System**: Fixed GC thresholds (1MB/256KB) untuk development
-- **Import System**: Working dengan capitalized function exports
-- **String & Logic**: Essential functions implemented untuk tree walker
-- **MorphFox N3**: Clean architecture dengan zero C dependency target
+---
 
-### 🎯 N3 TREE WALKER PRIORITY (HIGH)
+## N0 (Go Compiler) Utilization Strategy
 
-#### 1. Tree Walker Implementation
-- Port morphsh tree_walker.fox ke morphfox
-- Use essential functions: IntToString, BoolToString, StringEquals
-- Implement single-file approach untuk bypass import complexity
-- Test dengan basic AST evaluation
+### 1. Parallel Development Model
+**Status**: Recommended Post-Resurrection
+**Priority**: HIGH
 
-#### 2. Self-Compilation Test
-- Test N3 compile dirinya sendiri
-- Verify pure Morph output generation
-- Benchmark performance vs N1 compiler
+Gunakan N0 untuk rapid prototyping dan N1 untuk production:
+- **Feature Development**: Prototype features in N0 (Go) first untuk fast iteration
+- **Testing**: Run N0's 47 comprehensive test files as conformance suite
+- **Port to N1**: Implement proven features in MorphSH
+- **Cross-Validation**: Compare N0 ↔ N1 output untuk consistency
 
-#### 3. Production Readiness
-- Restore GC thresholds ke production values (64MB/8MB)
-- Remove DEBUG prints
-- Performance optimization
+**Benefits**:
+- Fast iteration dengan Go tooling
+- Comprehensive test coverage (47 test files)
+- Independent bootstrap capability
+- Reference implementation for semantic validation
+
+### 2. Test Suite Execution
+**Status**: Not Run Yet
+**Priority**: HIGH
+
+Execute N0's full test suite:
+```bash
+cd /home/ubuntu/morph
+git checkout n0-resurrection-backup
+export PATH=$PATH:/usr/local/go/bin
+go test ./pkg/... -v
+```
+
+**Expected Coverage**:
+- Lexer: String interpolation, token recognition
+- Parser: AST building, error recovery
+- Checker: Type checking, scope management, dead code detection
+- Compiler: C code generation
+- Evaluator: Runtime behavior
+
+### 3. N0↔N1 Validation
+**Status**: Pending
+**Priority**: MEDIUM
+
+Create validation framework:
+- Compile same .fox programs dengan N0 dan N1
+- Compare generated C code
+- Verify behavior consistency
+- Report discrepancies
+
+**Implementation**: Create validation script yang:
+1. Runs test programs through N0 (Go compiler)
+2. Runs same programs through N1 (MorphSH)
+3. Compares outputs
+4. Generates conformance report
+
+### 4. Bootstrap Independence Testing
+**Status**: Recommended
+**Priority**: MEDIUM
+
+Verify N0 can compile stdlib modules:
+- Test compilation of all 32 stdlib modules
+- Verify output matches N1 compilation
+- Document any differences
+- Ensure bootstrap chain works: N0 → stdlib → N1
+
+---
 
 ## Analysis Tool Enhancements
 
