@@ -7,12 +7,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/VzoelFox/morph/pkg_legacy/checker"
-	"github.com/VzoelFox/morph/pkg_legacy/compiler"
-	cruntime "github.com/VzoelFox/morph/pkg_legacy/compiler/runtime"
-	"github.com/VzoelFox/morph/pkg_legacy/evaluator"
-	"github.com/VzoelFox/morph/pkg_legacy/lexer"
-	"github.com/VzoelFox/morph/pkg_legacy/parser"
+	"github.com/VzoelFox/morph/pkg/checker"
+	"github.com/VzoelFox/morph/pkg/compiler"
+	cruntime "github.com/VzoelFox/morph/pkg/compiler/runtime"
+	"github.com/VzoelFox/morph/pkg/evaluator"
+	"github.com/VzoelFox/morph/pkg/lexer"
+	"github.com/VzoelFox/morph/pkg/parser"
 )
 
 // EvalImporter implements evaluator.Importer
