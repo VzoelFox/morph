@@ -19,6 +19,8 @@
 !DESIGN.md
 !README.md
 !ROADMAP.md
+!MEMORY_*.md
+!N0_*.md
 !checksum_gen.go
 !go.mod
 !go.sum
@@ -43,5 +45,3 @@ examples/*.c
 examples/*.h
 examples/function_type_test
 examples/stress_test
-.morph.vz/
-.morph.vz/
