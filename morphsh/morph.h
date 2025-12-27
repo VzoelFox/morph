@@ -14,8 +14,8 @@
 // --- Constants ---
 #define GC_THRESHOLD (8UL * 1024 * 1024 * 1024) // 8GB (optimized for 32GB RAM)
 #define GC_MIN_THRESHOLD (512 * 1024 * 1024) // 512MB
-#define DAEMON_SLEEP_MS 100
-#define SWAP_AGE_THRESHOLD_SEC 10
+#define DAEMON_SLEEP_MS 50  // More frequent checks (2x faster)
+#define SWAP_AGE_THRESHOLD_SEC 1  // Aggressive swap: 1 second (was 10)
 
 // --- Types ---
 typedef int64_t mph_int;

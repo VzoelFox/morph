@@ -928,7 +928,7 @@ static void gc_mark_object(GCHeap* heap, void* ptr) {
 static void gc_mark_from_roots(GCHeap* heap, void** roots, size_t root_count) {
     // Mark all root objects
     for (size_t i = 0; i < root_count; i++) {
-        void* root_ptr = *roots[i];
+        void* root_ptr = roots[i];  // roots[i] is already void*
         if (root_ptr) {
             gc_mark_object(heap, root_ptr);
         }
@@ -1239,7 +1239,7 @@ static void gc_compute_forwarding_addresses(GCHeap* heap) {
 static void gc_update_references_compact(GCHeap* heap, void** roots, size_t root_count) {
     // Update roots
     for (size_t i = 0; i < root_count; i++) {
-        void* obj = *roots[i];
+        void* obj = roots[i];  // roots[i] is already void*
         if (!obj) continue;
 
         ObjectHeader* header = morph_v2_get_header(obj);
@@ -1247,7 +1247,7 @@ static void gc_update_references_compact(GCHeap* heap, void** roots, size_t root
             // Update root pointer to new location
             uint8_t* old_addr = (uint8_t*)header;
             uint8_t* new_addr = old_addr + header->reserved;
-            *roots[i] = morph_v2_get_payload((ObjectHeader*)new_addr);
+            roots[i] = morph_v2_get_payload((ObjectHeader*)new_addr);
         }
     }
 
