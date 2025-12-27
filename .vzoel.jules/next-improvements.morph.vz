@@ -1,6 +1,75 @@
 # Rekomendasi Pengembangan Lanjutan
 
+**Last Updated**: 2025-12-27 02:38 WIB
+
 Dokumen ini berisi saran detail untuk pengembangan masa depan, khususnya untuk `pkg/analysis`, yang ditunda hingga Type Checker utama stabil.
+
+---
+
+## N0 (Go Compiler) Utilization Strategy
+
+### 1. Parallel Development Model
+**Status**: Recommended Post-Resurrection
+**Priority**: HIGH
+
+Gunakan N0 untuk rapid prototyping dan N1 untuk production:
+- **Feature Development**: Prototype features in N0 (Go) first untuk fast iteration
+- **Testing**: Run N0's 47 comprehensive test files as conformance suite
+- **Port to N1**: Implement proven features in MorphSH
+- **Cross-Validation**: Compare N0 ↔ N1 output untuk consistency
+
+**Benefits**:
+- Fast iteration dengan Go tooling
+- Comprehensive test coverage (47 test files)
+- Independent bootstrap capability
+- Reference implementation for semantic validation
+
+### 2. Test Suite Execution
+**Status**: Not Run Yet
+**Priority**: HIGH
+
+Execute N0's full test suite:
+```bash
+cd /home/ubuntu/morph
+git checkout n0-resurrection-backup
+export PATH=$PATH:/usr/local/go/bin
+go test ./pkg/... -v
+```
+
+**Expected Coverage**:
+- Lexer: String interpolation, token recognition
+- Parser: AST building, error recovery
+- Checker: Type checking, scope management, dead code detection
+- Compiler: C code generation
+- Evaluator: Runtime behavior
+
+### 3. N0↔N1 Validation
+**Status**: Pending
+**Priority**: MEDIUM
+
+Create validation framework:
+- Compile same .fox programs dengan N0 dan N1
+- Compare generated C code
+- Verify behavior consistency
+- Report discrepancies
+
+**Implementation**: Create validation script yang:
+1. Runs test programs through N0 (Go compiler)
+2. Runs same programs through N1 (MorphSH)
+3. Compares outputs
+4. Generates conformance report
+
+### 4. Bootstrap Independence Testing
+**Status**: Recommended
+**Priority**: MEDIUM
+
+Verify N0 can compile stdlib modules:
+- Test compilation of all 32 stdlib modules
+- Verify output matches N1 compilation
+- Document any differences
+- Ensure bootstrap chain works: N0 → stdlib → N1
+
+---
 
 ## Analysis Tool Enhancements
 

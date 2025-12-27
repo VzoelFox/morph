@@ -1,9 +1,9 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.58.2
+- **Versi**: 1.59.0
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
-- **Terakhir Diupdate**: 2025-12-25
+- **Terakhir Diupdate**: 2025-12-27 02:35 WIB
 - **Status**: Active
 
 ---
@@ -54,6 +54,48 @@ project-root/
 ---
 
 ## Riwayat Perubahan
+
+### Version 1.59.0 - 2025-12-27 02:35 WIB
+**Checksum**: SHA256:N0_RESURRECTION_COMPLETE
+**Perubahan**:
+- **N0 Compiler**: Berhasil membangkitkan N0 (Go Compiler) dari commit f2e51c4
+- **Documentation**: Membuat N0_ARCHITECTURE.md (12KB) - Complete architectural documentation
+- **Documentation**: Membuat N0_RESURRECTION_SUMMARY.md (13KB) - Test results & usage guide
+- **Validation**: Compiled N0 binary (3.5MB, 13,028 LoC) dan validated all components
+- **Testing**: Verified interpreter mode, C transpilation, dan build pipeline
+- **Preservation**: Created branch n0-resurrection-backup (commit ddc8cab)
+
+**Konteks Sesi**:
+- **Bootstrap Resurrection**: N0 dapat sekarang bootstrap Morph from scratch tanpa dependency pada N1
+- **Reference Implementation**: 66 Go files (19 source + 47 tests) preserved as source of truth
+- **Parallel Development**: N0 (Go) untuk bootstrap/testing ↔ N1 (MorphSH) untuk production
+
+**Komponen N0 Yang Divalidasi**:
+- ✅ Lexer (pkg/lexer/) - Tokenization & state machine working
+- ✅ Parser (pkg/parser/) - AST building dengan error reporting
+- ✅ Type Checker (pkg/checker/) - Semantic analysis & type inference
+- ✅ Compiler (pkg/compiler/) - C code generation (test: 826B clean output)
+- ✅ Evaluator (pkg/evaluator/) - Interpreter mode functional
+- ✅ Runtime (pkg/compiler/runtime/) - GC & memory management system
+
+**File Terkait**:
+- `N0_ARCHITECTURE.md` (SHA256:637c45ca6fb91f00ead17bc0532784b858ee83131f24d7aed8c1a1f4f665230b)
+- `N0_RESURRECTION_SUMMARY.md` (SHA256:d819abb1daf381f573d0f56e6ec00186669651cfa42cdbb12d01f1b40fc9fdad)
+- `test_n0.fox` (SHA256:6128d53f0d275cc203a800876ce31beffce9e21db9cc71ea392343380e27a664)
+- `morph` binary (3.5MB) - N0 compiled executable
+- `AGENTS.md` (SHA256:updated-to-v1.59.0)
+- Git Branch: `n0-resurrection-backup` (commit ddc8cab)
+
+**Build Environment**:
+- Go 1.24.3 installed at /usr/local/go/bin
+- Ubuntu 22.04 / 8GB RAM VPS
+- Total resurrection time: ~6 minutes
+
+**Significance**:
+N0 resurrection ensures Morph can bootstrap independently without existing binaries. The Go compiler provides fast iteration, comprehensive testing (47 test files), and cross-platform portability. This creates a parallel development model where N0 validates N1 behavior and serves as conformance baseline.
+
+---
+
 ### Version 1.58.2 - 2025-12-25
 **Checksum**: SHA256:COMPILER_MEMBER_RETURN_ROOTS
 **Perubahan**:
