@@ -1,6 +1,6 @@
 /*
  * Morph Memory System V2 - Implementation
- * Week 3-4: Pool Allocator (Fixed-size slab allocation)
+ * Week 7-8: Generational GC (Young + Old generations)
  *
  * Design: See MEMORY_ARCHITECTURE_V2.md
  * Roadmap: See MEMORY_V2_ROADMAP.md
@@ -450,13 +450,16 @@ MorphContextV2* morph_mem_init(MorphMemConfig config) {
             printf("  - Pool: 5 size classes (16, 32, 64, 128, 256 bytes)\n");
         }
     } else {
-        // RUNTIME/VM/SERVER: Generational GC (Week 7+)
+        // RUNTIME/VM/SERVER: Generational GC (Week 7-8)
         ctx->arena = NULL;
         ctx->pool_manager = NULL;
-        ctx->gc_heap = NULL;
+        ctx->gc_heap = gc_heap_create();
 
         if (config.enable_debug) {
-            printf("[MemV2] Mode %d - GC allocator (not implemented yet)\n", config.mode);
+            printf("[MemV2] Mode %d - Generational GC allocator\n", config.mode);
+            printf("  - Young gen: %zu MB (bump-pointer)\n", GC_YOUNG_GEN_SIZE / (1024 * 1024));
+            printf("  - Old gen: %zu MB (free-list)\n", GC_OLD_GEN_SIZE / (1024 * 1024));
+            printf("  - Promotion age: %d\n", GC_PROMOTION_AGE);
         }
     }
 
@@ -513,9 +516,25 @@ void morph_mem_destroy(MorphContextV2* ctx) {
             pool_manager_destroy(ctx->pool_manager);
         }
     } else {
-        // Future: Destroy GC heap (Week 7+)
+        // Destroy GC heap (Week 7-8)
         if (ctx->gc_heap) {
-            // TODO
+            GCHeap* heap = (GCHeap*)ctx->gc_heap;
+
+            if (ctx->config.enable_debug) {
+                printf("[MemV2] GC heap stats:\n");
+                printf("  - Young gen: %zu KB used\n", heap->young.used / 1024);
+                printf("  - Old gen: %zu KB used\n", heap->old.used / 1024);
+                printf("  - Minor GCs: %lu (%lu ms total)\n",
+                       heap->total_minor_collections,
+                       heap->minor_gc_time_us / 1000);
+                printf("  - Major GCs: %lu (%lu ms total)\n",
+                       heap->total_major_collections,
+                       heap->major_gc_time_us / 1000);
+                printf("  - Bytes promoted: %zu KB\n", heap->bytes_promoted / 1024);
+                printf("  - Bytes reclaimed: %zu KB\n", heap->bytes_reclaimed / 1024);
+            }
+
+            gc_heap_destroy(heap);
         }
     }
 
@@ -572,8 +591,47 @@ void* morph_mem_alloc(MorphContextV2* ctx, size_t size, uint8_t type_id) {
             }
         }
     } else {
-        // RUNTIME/VM/SERVER: Malloc fallback (Week 7+: use generational GC)
-        header = (ObjectHeader*)malloc(total_size);
+        // RUNTIME/VM/SERVER: Generational GC (Week 7-8)
+        if (ctx->gc_heap) {
+            GCHeap* heap = (GCHeap*)ctx->gc_heap;
+
+            // Try young generation first
+            void* payload = gc_alloc_young(heap, size, type_id);
+
+            if (!payload) {
+                // Young gen full - trigger minor GC and retry
+                gc_minor_collect(heap, ctx->root_stack, ctx->root_count);
+                ctx->stats.gc_count++;
+
+                payload = gc_alloc_young(heap, size, type_id);
+
+                if (!payload) {
+                    // Still full - try old generation
+                    payload = gc_alloc_old(heap, size, type_id);
+
+                    if (!payload) {
+                        // Old gen full too - trigger major GC and retry
+                        gc_major_collect(heap, ctx->root_stack, ctx->root_count);
+                        ctx->stats.gc_count++;
+
+                        payload = gc_alloc_old(heap, size, type_id);
+
+                        if (!payload) {
+                            fprintf(stderr, "ERROR: GC heap exhausted (young + old full)\n");
+                            pthread_mutex_unlock(&ctx->lock);
+                            return NULL;
+                        }
+                    }
+                }
+            }
+
+            // GC allocation succeeded - payload already has header
+            pthread_mutex_unlock(&ctx->lock);
+            return payload;
+        } else {
+            // Fallback to malloc (shouldn't happen if initialized correctly)
+            header = (ObjectHeader*)malloc(total_size);
+        }
     }
 
     if (!header) {
@@ -645,15 +703,483 @@ void morph_mem_free(MorphContextV2* ctx, void* ptr) {
 }
 
 //=============================================================================
-// GC CONTROL (Stub - Week 7+)
+// GENERATIONAL GC - Week 7-8
+//=============================================================================
+
+#include <time.h>
+#include <sys/time.h>
+
+// Helper: Get current time in microseconds
+static uint64_t gc_get_time_us(void) {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return (uint64_t)tv.tv_sec * 1000000 + (uint64_t)tv.tv_usec;
+}
+
+//-----------------------------------------------------------------------------
+// GC Heap Creation & Destruction
+//-----------------------------------------------------------------------------
+
+GCHeap* gc_heap_create(void) {
+    GCHeap* heap = (GCHeap*)malloc(sizeof(GCHeap));
+    if (!heap) {
+        fprintf(stderr, "FATAL: Failed to allocate GCHeap\n");
+        abort();
+    }
+
+    // Initialize young generation (2MB, bump-pointer allocation)
+    heap->young.size = GC_YOUNG_GEN_SIZE;
+    heap->young.start = (uint8_t*)malloc(GC_YOUNG_GEN_SIZE);
+    if (!heap->young.start) {
+        free(heap);
+        fprintf(stderr, "FATAL: Failed to allocate young generation (%zu MB)\n",
+                GC_YOUNG_GEN_SIZE / (1024 * 1024));
+        abort();
+    }
+    heap->young.end = heap->young.start + GC_YOUNG_GEN_SIZE;
+    heap->young.current = heap->young.start;
+    heap->young.used = 0;
+    heap->young.gc_count = 0;
+
+    // Initialize old generation (32MB, free-list allocation)
+    heap->old.size = GC_OLD_GEN_SIZE;
+    heap->old.start = (uint8_t*)malloc(GC_OLD_GEN_SIZE);
+    if (!heap->old.start) {
+        free(heap->young.start);
+        free(heap);
+        fprintf(stderr, "FATAL: Failed to allocate old generation (%zu MB)\n",
+                GC_OLD_GEN_SIZE / (1024 * 1024));
+        abort();
+    }
+    heap->old.end = heap->old.start + GC_OLD_GEN_SIZE;
+    heap->old.used = 0;
+    heap->old.gc_count = 0;
+
+    // Initialize free list with entire old generation
+    heap->old.free_list = (GCFreeNode*)heap->old.start;
+    heap->old.free_list->size = GC_OLD_GEN_SIZE;
+    heap->old.free_list->next = NULL;
+
+    // Initialize remembered set (empty)
+    heap->remembered_set = NULL;
+
+    // Initialize gray stack for marking
+    heap->gray_capacity = 1024;
+    heap->gray_stack = (void**)malloc(sizeof(void*) * heap->gray_capacity);
+    heap->gray_count = 0;
+
+    // Initialize statistics
+    heap->total_minor_collections = 0;
+    heap->total_major_collections = 0;
+    heap->minor_gc_time_us = 0;
+    heap->major_gc_time_us = 0;
+    heap->bytes_promoted = 0;
+    heap->bytes_reclaimed = 0;
+
+    return heap;
+}
+
+void gc_heap_destroy(GCHeap* heap) {
+    if (!heap) return;
+
+    free(heap->young.start);
+    free(heap->old.start);
+    free(heap->gray_stack);
+
+    // Free remembered set
+    RememberedSetEntry* entry = heap->remembered_set;
+    while (entry) {
+        RememberedSetEntry* next = entry->next;
+        free(entry);
+        entry = next;
+    }
+
+    free(heap);
+}
+
+//-----------------------------------------------------------------------------
+// Young Generation Allocation (Bump-Pointer)
+//-----------------------------------------------------------------------------
+
+void* gc_alloc_young(GCHeap* heap, size_t size, uint8_t type_id) {
+    size_t total_size = morph_v2_total_size(size);
+
+    // Check if young generation has space
+    if (heap->young.current + total_size > heap->young.end) {
+        // Young generation full - trigger minor GC
+        return NULL;  // Caller will trigger GC and retry
+    }
+
+    // Allocate header + payload (bump-pointer)
+    ObjectHeader* header = (ObjectHeader*)heap->young.current;
+    heap->young.current += total_size;
+    heap->young.used += total_size;
+
+    // Initialize header
+    header->size = size;
+    header->type_id = type_id;
+    header->marked = 0;
+    header->generation = GEN_YOUNG;
+    header->flags = 0;
+    header->reserved = 0;
+
+    return morph_v2_get_payload(header);
+}
+
+//-----------------------------------------------------------------------------
+// Old Generation Allocation (First-Fit Free-List)
+//-----------------------------------------------------------------------------
+
+void* gc_alloc_old(GCHeap* heap, size_t size, uint8_t type_id) {
+    size_t total_size = morph_v2_total_size(size);
+
+    // Search free list for first-fit block
+    GCFreeNode** prev_next_ptr = &heap->old.free_list;
+    GCFreeNode* node = heap->old.free_list;
+
+    while (node) {
+        if (node->size >= total_size) {
+            // Found suitable block
+            ObjectHeader* header = (ObjectHeader*)node;
+
+            // If block is much larger, split it
+            if (node->size >= total_size + sizeof(GCFreeNode) + 64) {
+                // Split block: [allocated][remaining free block]
+                GCFreeNode* remaining = (GCFreeNode*)((uint8_t*)node + total_size);
+                remaining->size = node->size - total_size;
+                remaining->next = node->next;
+                *prev_next_ptr = remaining;
+            } else {
+                // Use entire block (no split)
+                *prev_next_ptr = node->next;
+            }
+
+            // Initialize header
+            header->size = size;
+            header->type_id = type_id;
+            header->marked = 0;
+            header->generation = GEN_OLD;
+            header->flags = 0;
+            header->reserved = 0;
+
+            heap->old.used += total_size;
+
+            return morph_v2_get_payload(header);
+        }
+
+        prev_next_ptr = &node->next;
+        node = node->next;
+    }
+
+    // No suitable block found - need major GC or heap expansion
+    return NULL;
+}
+
+//-----------------------------------------------------------------------------
+// GC Marking Phase
+//-----------------------------------------------------------------------------
+
+static void gc_mark_object(GCHeap* heap, void* ptr) {
+    if (!ptr) return;
+
+    ObjectHeader* header = morph_v2_get_header(ptr);
+
+    // Already marked? Skip
+    if (header->marked) return;
+
+    // Mark object
+    header->marked = 1;
+
+    // Push to gray stack for further processing
+    if (heap->gray_count >= heap->gray_capacity) {
+        heap->gray_capacity *= 2;
+        heap->gray_stack = (void**)realloc(heap->gray_stack,
+                                            sizeof(void*) * heap->gray_capacity);
+    }
+    heap->gray_stack[heap->gray_count++] = ptr;
+}
+
+static void gc_mark_from_roots(GCHeap* heap, void** roots, size_t root_count) {
+    // Mark all root objects
+    for (size_t i = 0; i < root_count; i++) {
+        void* root_ptr = *roots[i];
+        if (root_ptr) {
+            gc_mark_object(heap, root_ptr);
+        }
+    }
+
+    // Process gray stack (trace object graph)
+    while (heap->gray_count > 0) {
+        void* obj = heap->gray_stack[--heap->gray_count];
+
+        // TODO: Trace pointers within object
+        // For now, this is a conservative collector (marks but doesn't trace fields)
+        // Week 8+: Add pointer tracing using type information
+    }
+}
+
+//-----------------------------------------------------------------------------
+// GC Sweeping Phase (Young Generation)
+//-----------------------------------------------------------------------------
+
+static size_t gc_sweep_young(GCHeap* heap) {
+    size_t reclaimed = 0;
+    uint8_t* scan = heap->young.start;
+
+    // Compact young generation: Move live objects to front
+    uint8_t* dest = heap->young.start;
+
+    while (scan < heap->young.current) {
+        ObjectHeader* header = (ObjectHeader*)scan;
+        size_t total_size = morph_v2_total_size(header->size);
+
+        if (header->marked) {
+            // Object survived - move to front (if needed)
+            if (dest != scan) {
+                memmove(dest, scan, total_size);
+            }
+
+            // Update header metadata
+            ObjectHeader* new_header = (ObjectHeader*)dest;
+            new_header->marked = 0;  // Clear mark for next GC
+
+            // Increment age
+            new_header->flags++;
+
+            dest += total_size;
+        } else {
+            // Object dead - reclaim
+            reclaimed += total_size;
+        }
+
+        scan += total_size;
+    }
+
+    // Update young generation pointer
+    heap->young.current = dest;
+    heap->young.used = dest - heap->young.start;
+
+    return reclaimed;
+}
+
+//-----------------------------------------------------------------------------
+// GC Promotion (Young → Old)
+//-----------------------------------------------------------------------------
+
+static size_t gc_promote_survivors(GCHeap* heap) {
+    size_t promoted = 0;
+    uint8_t* scan = heap->young.start;
+    uint8_t* dest = heap->young.start;
+
+    while (scan < heap->young.current) {
+        ObjectHeader* header = (ObjectHeader*)scan;
+        size_t total_size = morph_v2_total_size(header->size);
+
+        // Promote if object is old enough
+        if (header->flags >= GC_PROMOTION_AGE) {
+            // Allocate in old generation
+            void* old_ptr = gc_alloc_old(heap, header->size, header->type_id);
+
+            if (old_ptr) {
+                // Copy object data to old generation
+                memcpy(old_ptr, morph_v2_get_payload(header), header->size);
+                promoted += total_size;
+            } else {
+                // Old gen full - keep in young gen
+                if (dest != scan) {
+                    memmove(dest, scan, total_size);
+                }
+                dest += total_size;
+            }
+        } else {
+            // Keep in young generation
+            if (dest != scan) {
+                memmove(dest, scan, total_size);
+            }
+            dest += total_size;
+        }
+
+        scan += total_size;
+    }
+
+    heap->young.current = dest;
+    heap->young.used = dest - heap->young.start;
+
+    return promoted;
+}
+
+//-----------------------------------------------------------------------------
+// Minor GC (Young Generation Only)
+//-----------------------------------------------------------------------------
+
+void gc_minor_collect(GCHeap* heap, void** roots, size_t root_count) {
+    uint64_t start_time = gc_get_time_us();
+
+    // Clear gray stack
+    heap->gray_count = 0;
+
+    // Mark phase: Mark reachable objects from roots
+    gc_mark_from_roots(heap, roots, root_count);
+
+    // Also mark objects referenced from old generation (remembered set)
+    RememberedSetEntry* entry = heap->remembered_set;
+    while (entry) {
+        void* old_to_young_ptr = *entry->field_addr;
+        if (old_to_young_ptr) {
+            gc_mark_object(heap, old_to_young_ptr);
+        }
+        entry = entry->next;
+    }
+
+    // Sweep phase: Reclaim unmarked objects
+    size_t reclaimed = gc_sweep_young(heap);
+    heap->bytes_reclaimed += reclaimed;
+
+    // Promotion: Move old survivors to old generation
+    size_t promoted = gc_promote_survivors(heap);
+    heap->bytes_promoted += promoted;
+
+    // Update statistics
+    heap->young.gc_count++;
+    heap->total_minor_collections++;
+    uint64_t elapsed = gc_get_time_us() - start_time;
+    heap->minor_gc_time_us += elapsed;
+}
+
+//-----------------------------------------------------------------------------
+// Major GC (Full Heap Collection)
+//-----------------------------------------------------------------------------
+
+void gc_major_collect(GCHeap* heap, void** roots, size_t root_count) {
+    uint64_t start_time = gc_get_time_us();
+
+    // Clear gray stack
+    heap->gray_count = 0;
+
+    // Mark phase: Mark all reachable objects (young + old)
+    gc_mark_from_roots(heap, roots, root_count);
+
+    // Sweep young generation
+    size_t young_reclaimed = gc_sweep_young(heap);
+
+    // Sweep old generation: Rebuild free list from unmarked objects
+    GCFreeNode* new_free_list = NULL;
+    uint8_t* scan = heap->old.start;
+    uint8_t* end_of_used = heap->old.start + heap->old.used;
+    size_t old_reclaimed = 0;
+
+    while (scan < end_of_used) {
+        ObjectHeader* header = (ObjectHeader*)scan;
+        size_t total_size = morph_v2_total_size(header->size);
+
+        if (!header->marked) {
+            // Dead object - add to free list
+            GCFreeNode* node = (GCFreeNode*)scan;
+            node->size = total_size;
+            node->next = new_free_list;
+            new_free_list = node;
+            old_reclaimed += total_size;
+        } else {
+            // Live object - clear mark for next GC
+            header->marked = 0;
+        }
+
+        scan += total_size;
+    }
+
+    heap->old.free_list = new_free_list;
+    heap->bytes_reclaimed += young_reclaimed + old_reclaimed;
+
+    // Update statistics
+    heap->old.gc_count++;
+    heap->total_major_collections++;
+    uint64_t elapsed = gc_get_time_us() - start_time;
+    heap->major_gc_time_us += elapsed;
+}
+
+//-----------------------------------------------------------------------------
+// Write Barrier (Old Object → Young Object Reference)
+//-----------------------------------------------------------------------------
+
+void gc_write_barrier(GCHeap* heap, void* old_obj, void** field_addr) {
+    if (!old_obj) return;
+
+    ObjectHeader* header = morph_v2_get_header(old_obj);
+
+    // Only track old → young references
+    if (header->generation != GEN_OLD) return;
+
+    void* pointed_obj = *field_addr;
+    if (!pointed_obj) return;
+
+    ObjectHeader* pointed_header = morph_v2_get_header(pointed_obj);
+    if (pointed_header->generation != GEN_YOUNG) return;
+
+    // Add to remembered set
+    RememberedSetEntry* entry = (RememberedSetEntry*)malloc(sizeof(RememberedSetEntry));
+    entry->field_addr = field_addr;
+    entry->next = heap->remembered_set;
+    heap->remembered_set = entry;
+}
+
+//=============================================================================
+// GC CONTROL (Week 7-8 Implementation)
 //=============================================================================
 
 void morph_mem_gc_collect(MorphContextV2* ctx) {
-    // Week 1: No-op
-    // Week 7+: Implement generational GC
-    if (ctx->config.enable_debug) {
-        printf("[MemV2] GC collect (not implemented yet)\n");
+    if (!ctx->gc_heap) {
+        // No GC heap (COMPILER mode) - no-op
+        if (ctx->config.enable_debug) {
+            printf("[MemV2] GC collect skipped (COMPILER mode)\n");
+        }
+        return;
     }
+
+    pthread_mutex_lock(&ctx->lock);
+
+    GCHeap* heap = (GCHeap*)ctx->gc_heap;
+
+    // Decide: Minor or Major GC?
+    if (heap->old.used > heap->old.size * 0.8) {
+        // Old generation >80% full - trigger major GC
+        if (ctx->config.enable_debug) {
+            printf("[MemV2] Triggering MAJOR GC (old gen %zu/%zu MB)\n",
+                   heap->old.used / (1024 * 1024),
+                   heap->old.size / (1024 * 1024));
+        }
+
+        gc_major_collect(heap, ctx->root_stack, ctx->root_count);
+
+        // Update stats
+        ctx->stats.gc_count++;
+        ctx->stats.gc_time_us += heap->major_gc_time_us;
+
+        if (ctx->config.enable_debug) {
+            printf("[MemV2] Major GC complete - Reclaimed %zu KB\n",
+                   heap->bytes_reclaimed / 1024);
+        }
+    } else {
+        // Trigger minor GC (young generation only)
+        if (ctx->config.enable_debug) {
+            printf("[MemV2] Triggering MINOR GC (young gen %zu/%zu MB)\n",
+                   heap->young.used / (1024 * 1024),
+                   heap->young.size / (1024 * 1024));
+        }
+
+        gc_minor_collect(heap, ctx->root_stack, ctx->root_count);
+
+        // Update stats
+        ctx->stats.gc_count++;
+        ctx->stats.gc_time_us += heap->minor_gc_time_us;
+
+        if (ctx->config.enable_debug) {
+            printf("[MemV2] Minor GC complete - Reclaimed %zu KB, Promoted %zu KB\n",
+                   heap->bytes_reclaimed / 1024,
+                   heap->bytes_promoted / 1024);
+        }
+    }
+
+    pthread_mutex_unlock(&ctx->lock);
 }
 
 void morph_mem_gc_push_root(MorphContextV2* ctx, void** ptr) {

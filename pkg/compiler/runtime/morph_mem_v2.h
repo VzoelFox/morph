@@ -5,7 +5,7 @@
  * Design: See MEMORY_ARCHITECTURE_V2.md
  * Roadmap: See MEMORY_V2_ROADMAP.md
  *
- * Status: Week 3-4 - Pool Allocator
+ * Status: Week 7-8 - Generational GC
  */
 
 #ifndef MORPH_MEM_V2_H
@@ -190,6 +190,78 @@ void pool_manager_destroy(PoolManager* mgr);
 
 // Helper: Get pool index for size
 int pool_get_size_class(size_t size);
+
+//=============================================================================
+// GENERATIONAL GC (Week 7-8)
+//=============================================================================
+
+// GC generation sizes
+#define GC_YOUNG_GEN_SIZE (2 * 1024 * 1024)   // 2MB young generation
+#define GC_OLD_GEN_SIZE   (32 * 1024 * 1024)  // 32MB old generation
+
+// GC promotion threshold (age in minor collections)
+#define GC_PROMOTION_AGE 3
+
+// Remembered set entry (for write barriers)
+typedef struct RememberedSetEntry {
+    void** field_addr;                    // Address of pointer field in old object
+    struct RememberedSetEntry* next;      // Next entry in set
+} RememberedSetEntry;
+
+// Free list node for old generation
+typedef struct GCFreeNode {
+    size_t size;                          // Size of this free block
+    struct GCFreeNode* next;              // Next free block
+} GCFreeNode;
+
+// Young generation (bump-pointer allocation)
+typedef struct {
+    uint8_t* start;                       // Start of young gen memory
+    uint8_t* end;                         // End of young gen memory
+    uint8_t* current;                     // Current allocation pointer
+    size_t size;                          // Total size (2MB)
+    size_t used;                          // Bytes used
+    uint32_t gc_count;                    // Number of minor collections
+} YoungGen;
+
+// Old generation (free-list allocation)
+typedef struct {
+    uint8_t* start;                       // Start of old gen memory
+    uint8_t* end;                         // End of old gen memory
+    size_t size;                          // Total size (32MB)
+    size_t used;                          // Bytes used
+    GCFreeNode* free_list;                // Free list head
+    uint32_t gc_count;                    // Number of major collections
+} OldGen;
+
+// Generational GC heap
+typedef struct {
+    YoungGen young;                       // Young generation
+    OldGen old;                           // Old generation
+    RememberedSetEntry* remembered_set;   // Write barrier tracking
+
+    // GC metadata
+    void** gray_stack;                    // Gray objects during marking
+    size_t gray_count;
+    size_t gray_capacity;
+
+    // Statistics
+    uint64_t total_minor_collections;
+    uint64_t total_major_collections;
+    uint64_t minor_gc_time_us;
+    uint64_t major_gc_time_us;
+    uint64_t bytes_promoted;
+    uint64_t bytes_reclaimed;
+} GCHeap;
+
+// GC API (internal - used by morph_mem_* functions)
+GCHeap* gc_heap_create(void);
+void gc_heap_destroy(GCHeap* heap);
+void* gc_alloc_young(GCHeap* heap, size_t size, uint8_t type_id);
+void* gc_alloc_old(GCHeap* heap, size_t size, uint8_t type_id);
+void gc_minor_collect(GCHeap* heap, void** roots, size_t root_count);
+void gc_major_collect(GCHeap* heap, void** roots, size_t root_count);
+void gc_write_barrier(GCHeap* heap, void* old_obj, void** field_addr);
 
 //=============================================================================
 // MEMORY STATISTICS
