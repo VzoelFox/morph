@@ -1,0 +1,55 @@
+# N1 Type System - Minimal Test
+# Testing basic type operations step by step
+
+# TypeKind constants (initialized with values)
+var KIND_INT = 0
+var KIND_FLOAT = 1
+var KIND_STRING = 2
+var KIND_BOOL = 3
+var KIND_VOID = 4
+
+# Type structure
+struktur Type
+    kind int
+    name string
+akhir
+
+# Type creation
+fungsi make_type(k int, n string) Type
+    kembalikan Type{kind: k, name: n}
+akhir
+
+# Type equality
+fungsi type_equals(t1 Type, t2 Type) bool
+    kembalikan t1.kind == t2.kind
+akhir
+
+# Main test
+fungsi main() void
+    # Create types
+    var int_type = make_type(KIND_INT, "int")
+    var float_type = make_type(KIND_FLOAT, "float")
+
+    # Test equality
+    var same = type_equals(int_type, int_type)
+    var diff = type_equals(int_type, float_type)
+
+    native_print("N1 Type System - Minimal Test\n")
+    native_print("================================\n")
+    native_print("int == int: ")
+    jika same
+        native_print("PASS\n")
+    lainnya
+        native_print("FAIL\n")
+    akhir
+
+    native_print("int == float: ")
+    jika diff
+        native_print("FAIL (should be false)\n")
+    lainnya
+        native_print("PASS (correctly false)\n")
+    akhir
+
+    native_print("================================\n")
+    native_print("Type system foundation working!\n")
+akhir
