@@ -429,7 +429,7 @@ akhir
 fungsi lexer_read_identifier(l Lexer) string
     var position = l.position
     var done = salah
-    selama tidak done
+    selama done == salah
         jika is_letter(l.ch)
             lexer_read_char(l)
         lainnya
@@ -480,122 +480,122 @@ akhir
 # ============================================================================
 # Main Tokenization Function
 # ============================================================================
-fungsi lexer_next_token(l Lexer) Token
+fungsi lexer_next_token(l Lexer) token.Token
     lexer_skip_whitespace(l)
     
-    var tok = make_token(TOKEN_ILLEGAL, "-", l.line, l.column)
+    var tok = token.MakeToken(token.TOKEN_ILLEGAL, "-", l.line, l.column)
     
     # Single character tokens
     jika l.ch == 61  # =
         jika lexer_peek_char(l) == 61  # ==
             var ch = l.ch
             lexer_read_char(l)
-            tok = make_token(TOKEN_EQ, "==", l.line, l.column)
+            tok = token.MakeToken(token.TOKEN_EQ, "==", l.line, l.column)
         lainnya
-            tok = make_token(TOKEN_ASSIGN, "=", l.line, l.column)
+            tok = token.MakeToken(token.TOKEN_ASSIGN, "=", l.line, l.column)
         akhir
     atau_jika l.ch == 43  # +
-        tok = make_token(TOKEN_PLUS, "+", l.line, l.column)
+        tok = token.MakeToken(token.TOKEN_PLUS, "+", l.line, l.column)
     atau_jika l.ch == 45  # -
         jika lexer_peek_char(l) == 62  # ->
             lexer_read_char(l)
-            tok = make_token(TOKEN_ARROW, "->", l.line, l.column)
+            tok = token.MakeToken(token.TOKEN_ARROW, "->", l.line, l.column)
         lainnya
-            tok = make_token(TOKEN_MINUS, "-", l.line, l.column)
+            tok = token.MakeToken(token.TOKEN_MINUS, "-", l.line, l.column)
         akhir
     atau_jika l.ch == 33  # !
         jika lexer_peek_char(l) == 61  # !=
             lexer_read_char(l)
-            tok = make_token(TOKEN_NOT_EQ, "!=", l.line, l.column)
+            tok = token.MakeToken(token.TOKEN_NOT_EQ, "!=", l.line, l.column)
         lainnya
-            tok = make_token(TOKEN_BANG, "!", l.line, l.column)
+            tok = token.MakeToken(token.TOKEN_BANG, "!", l.line, l.column)
         akhir
     atau_jika l.ch == 42  # *
-        tok = make_token(TOKEN_ASTERISK, "*", l.line, l.column)
+        tok = token.MakeToken(token.TOKEN_ASTERISK, "*", l.line, l.column)
     atau_jika l.ch == 47  # /
-        tok = make_token(TOKEN_SLASH, "/", l.line, l.column)
+        tok = token.MakeToken(token.TOKEN_SLASH, "/", l.line, l.column)
     atau_jika l.ch == 37  # %
-        tok = make_token(TOKEN_PERCENT, "%", l.line, l.column)
+        tok = token.MakeToken(token.TOKEN_PERCENT, "%", l.line, l.column)
     atau_jika l.ch == 60  # <
         jika lexer_peek_char(l) == 61  # <=
             lexer_read_char(l)
-            tok = make_token(TOKEN_LE, "<=", l.line, l.column)
+            tok = token.MakeToken(token.TOKEN_LE, "<=", l.line, l.column)
         lainnya
             jika lexer_peek_char(l) == 60  # <<
                 lexer_read_char(l)
-                tok = make_token(TOKEN_LSHIFT, "<<", l.line, l.column)
+                tok = token.MakeToken(token.TOKEN_LSHIFT, "<<", l.line, l.column)
             lainnya
-                tok = make_token(TOKEN_LT, "<", l.line, l.column)
+                tok = token.MakeToken(token.TOKEN_LT, "<", l.line, l.column)
             akhir
         akhir
     atau_jika l.ch == 62  # >
         jika lexer_peek_char(l) == 61  # >=
             lexer_read_char(l)
-            tok = make_token(TOKEN_GE, ">=", l.line, l.column)
+            tok = token.MakeToken(token.TOKEN_GE, ">=", l.line, l.column)
         lainnya
             jika lexer_peek_char(l) == 62  # >>
                 lexer_read_char(l)
-                tok = make_token(TOKEN_RSHIFT, ">>", l.line, l.column)
+                tok = token.MakeToken(token.TOKEN_RSHIFT, ">>", l.line, l.column)
             lainnya
-                tok = make_token(TOKEN_GT, ">", l.line, l.column)
+                tok = token.MakeToken(token.TOKEN_GT, ">", l.line, l.column)
             akhir
         akhir
     atau_jika l.ch == 38  # &
         jika lexer_peek_char(l) == 38  # &&
             lexer_read_char(l)
-            tok = make_token(TOKEN_AND, "&&", l.line, l.column)
+            tok = token.MakeToken(token.TOKEN_AND, "&&", l.line, l.column)
         lainnya
-            tok = make_token(TOKEN_BIT_AND, "&", l.line, l.column)
+            tok = token.MakeToken(token.TOKEN_BIT_AND, "&", l.line, l.column)
         akhir
     atau_jika l.ch == 124  # |
         jika lexer_peek_char(l) == 124  # ||
             lexer_read_char(l)
-            tok = make_token(TOKEN_OR, "||", l.line, l.column)
+            tok = token.MakeToken(token.TOKEN_OR, "||", l.line, l.column)
         lainnya
-            tok = make_token(TOKEN_BIT_OR, "|", l.line, l.column)
+            tok = token.MakeToken(token.TOKEN_BIT_OR, "|", l.line, l.column)
         akhir
     atau_jika l.ch == 94  # ^
-        tok = make_token(TOKEN_BIT_XOR, "^", l.line, l.column)
+        tok = token.MakeToken(token.TOKEN_BIT_XOR, "^", l.line, l.column)
     atau_jika l.ch == 126  # ~
-        tok = make_token(TOKEN_BIT_NOT, "~", l.line, l.column)
+        tok = token.MakeToken(token.TOKEN_BIT_NOT, "~", l.line, l.column)
     atau_jika l.ch == 44  # ,
-        tok = make_token(TOKEN_COMMA, ",", l.line, l.column)
+        tok = token.MakeToken(token.TOKEN_COMMA, ",", l.line, l.column)
     atau_jika l.ch == 59  # ;
-        tok = make_token(TOKEN_SEMICOLON, ";", l.line, l.column)
+        tok = token.MakeToken(token.TOKEN_SEMICOLON, ";", l.line, l.column)
     atau_jika l.ch == 58  # :
-        tok = make_token(TOKEN_COLON, ":", l.line, l.column)
+        tok = token.MakeToken(token.TOKEN_COLON, ":", l.line, l.column)
     atau_jika l.ch == 40  # (
-        tok = make_token(TOKEN_LPAREN, "(", l.line, l.column)
+        tok = token.MakeToken(token.TOKEN_LPAREN, "(", l.line, l.column)
     atau_jika l.ch == 41  # )
-        tok = make_token(TOKEN_RPAREN, ")", l.line, l.column)
+        tok = token.MakeToken(token.TOKEN_RPAREN, ")", l.line, l.column)
     atau_jika l.ch == 123  # {
-        tok = make_token(TOKEN_LBRACE, "{", l.line, l.column)
+        tok = token.MakeToken(token.TOKEN_LBRACE, "{", l.line, l.column)
     atau_jika l.ch == 125  # }
-        tok = make_token(TOKEN_RBRACE, "}", l.line, l.column)
+        tok = token.MakeToken(token.TOKEN_RBRACE, "}", l.line, l.column)
     atau_jika l.ch == 91  # [
-        tok = make_token(TOKEN_LBRACKET, "[", l.line, l.column)
+        tok = token.MakeToken(token.TOKEN_LBRACKET, "[", l.line, l.column)
     atau_jika l.ch == 93  # ]
-        tok = make_token(TOKEN_RBRACKET, "]", l.line, l.column)
+        tok = token.MakeToken(token.TOKEN_RBRACKET, "]", l.line, l.column)
     atau_jika l.ch == 46  # .
-        tok = make_token(TOKEN_DOT, ".", l.line, l.column)
+        tok = token.MakeToken(token.TOKEN_DOT, ".", l.line, l.column)
     atau_jika l.ch == 34  # "
         var str_literal = lexer_read_string(l)
-        tok = make_token(TOKEN_STRING, str_literal, l.line, l.column)
+        tok = token.MakeToken(token.TOKEN_STRING, str_literal, l.line, l.column)
     atau_jika l.ch == 0  # EOF
-        tok = make_token(TOKEN_EOF, "-", l.line, l.column)
+        tok = token.MakeToken(token.TOKEN_EOF, "-", l.line, l.column)
     lainnya
         jika is_letter(l.ch)
             var literal = lexer_read_identifier(l)
-            var token_type = lookup_keyword(literal)
-            tok = make_token(token_type, literal, l.line, l.column)
+            var token_type = token.LookupKeyword(literal)
+            tok = token.MakeToken(token_type, literal, l.line, l.column)
             kembalikan tok  # Don't advance character, already done in read_identifier
         lainnya
             jika is_digit(l.ch)
                 var literal = lexer_read_number(l)
-                tok = make_token(TOKEN_INT, literal, l.line, l.column)
+                tok = token.MakeToken(token.TOKEN_INT, literal, l.line, l.column)
                 kembalikan tok  # Don't advance character, already done in read_number
             lainnya
-                tok = make_token(TOKEN_ILLEGAL, "-", l.line, l.column)
+                tok = token.MakeToken(token.TOKEN_ILLEGAL, "-", l.line, l.column)
             akhir
         akhir
     akhir

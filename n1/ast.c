@@ -12,31 +12,31 @@ MorphArray* mph_string_split(MorphContext* ctx, MorphString* s, MorphString* sep
 // RTTI Definitions
 
 // Type IDs
-#define MPH_TYPE_mph_InfixExpression 14
-#define MPH_TYPE_mph_MemberExpression 18
-#define MPH_TYPE_mph_WhileStatement 21
-#define MPH_TYPE_mph_Node 1
 #define MPH_TYPE_mph_VarStatement 3
 #define MPH_TYPE_mph_FunctionStatement 4
+#define MPH_TYPE_mph_ReturnStatement 5
 #define MPH_TYPE_mph_BlockStatement 7
+#define MPH_TYPE_mph_FloatLiteral 10
+#define MPH_TYPE_mph_IfExpression 15
+#define MPH_TYPE_mph_ImportStatement 23
+#define MPH_TYPE_mph_Identifier 8
+#define MPH_TYPE_mph_IntegerLiteral 9
+#define MPH_TYPE_mph_InfixExpression 14
+#define MPH_TYPE_mph_MemberExpression 18
+#define MPH_TYPE_mph_CaseClause 19
+#define MPH_TYPE_mph_BreakStatement 24
+#define MPH_TYPE_mph_PrefixExpression 13
+#define MPH_TYPE_mph_ExpressionStatement 6
+#define MPH_TYPE_mph_StringLiteral 11
 #define MPH_TYPE_mph_CallExpression 16
+#define MPH_TYPE_mph_WhileStatement 21
+#define MPH_TYPE_mph_ContinueStatement 25
+#define MPH_TYPE_mph_Program 2
+#define MPH_TYPE_mph_BooleanLiteral 12
 #define MPH_TYPE_mph_IndexExpression 17
 #define MPH_TYPE_mph_SwitchStatement 20
 #define MPH_TYPE_mph_StructStatement 22
-#define MPH_TYPE_mph_Program 2
-#define MPH_TYPE_mph_BooleanLiteral 12
-#define MPH_TYPE_mph_IfExpression 15
-#define MPH_TYPE_mph_CaseClause 19
-#define MPH_TYPE_mph_ImportStatement 23
-#define MPH_TYPE_mph_ReturnStatement 5
-#define MPH_TYPE_mph_ExpressionStatement 6
-#define MPH_TYPE_mph_FloatLiteral 10
-#define MPH_TYPE_mph_BreakStatement 24
-#define MPH_TYPE_mph_ContinueStatement 25
-#define MPH_TYPE_mph_Identifier 8
-#define MPH_TYPE_mph_IntegerLiteral 9
-#define MPH_TYPE_mph_StringLiteral 11
-#define MPH_TYPE_mph_PrefixExpression 13
+#define MPH_TYPE_mph_Node 1
 
 // Struct Definitions (Env & Types)
 typedef struct mph_Node mph_Node;
@@ -284,14 +284,14 @@ void mph_print_boolean_literal(MorphContext* ctx, void* _env_void, mph_BooleanLi
 // Function Definitions
 mph_Node* mph_make_node(MorphContext* ctx, void* _env_void, mph_int node_type, MorphString* literal, mph_int line, mph_int column) {
 	mph_gc_push_root(ctx, (void**)&literal);
-	return ({ mph_Node* _t = (mph_Node*)mph_alloc(ctx, sizeof(mph_Node), &mph_ti_mph_Node); mph_gc_push_root(ctx, (void**)&_t); _t->token_literal = literal; _t->line = line; _t->column = column; _t->node_type = node_type; mph_gc_pop_roots(ctx, 1); _t; });
+	return ({ mph_Node* _t = (mph_Node*)mph_alloc(ctx, sizeof(mph_Node), &mph_ti_mph_Node); mph_gc_push_root(ctx, (void**)&_t); _t->node_type = node_type; _t->token_literal = literal; _t->line = line; _t->column = column; mph_gc_pop_roots(ctx, 1); _t; });
 	mph_gc_pop_roots(ctx, 1);
 }
 
 mph_Program* mph_make_program(MorphContext* ctx, void* _env_void) {
 	mph_Node* base = ({ MorphString* _arg_1 = mph_string_new(ctx, "program"); mph_gc_push_root(ctx, (void**)&_arg_1); mph_Node* _ret_2 = mph_make_node(ctx, NULL, mph_NODE_PROGRAM, _arg_1, 1, 1); mph_gc_pop_roots(ctx, 1); _ret_2; });
 	mph_gc_push_root(ctx, (void**)&base);
-	return ({ mph_Program* _t = (mph_Program*)mph_alloc(ctx, sizeof(mph_Program), &mph_ti_mph_Program); mph_gc_push_root(ctx, (void**)&_t); _t->base = base; _t->statements_count = 0; mph_gc_pop_roots(ctx, 1); _t; });
+	return ({ mph_Program* _t = (mph_Program*)mph_alloc(ctx, sizeof(mph_Program), &mph_ti_mph_Program); mph_gc_push_root(ctx, (void**)&_t); _t->statements_count = 0; _t->base = base; mph_gc_pop_roots(ctx, 1); _t; });
 	mph_gc_pop_roots(ctx, 1);
 }
 
@@ -299,7 +299,7 @@ mph_Identifier* mph_make_identifier(MorphContext* ctx, void* _env_void, MorphStr
 	mph_gc_push_root(ctx, (void**)&name);
 	mph_Node* base = ({ MorphString* _arg_3 = name; mph_gc_push_root(ctx, (void**)&_arg_3); mph_Node* _ret_4 = mph_make_node(ctx, NULL, mph_NODE_IDENTIFIER, _arg_3, line, column); mph_gc_pop_roots(ctx, 1); _ret_4; });
 	mph_gc_push_root(ctx, (void**)&base);
-	return ({ mph_Identifier* _t = (mph_Identifier*)mph_alloc(ctx, sizeof(mph_Identifier), &mph_ti_mph_Identifier); mph_gc_push_root(ctx, (void**)&_t); _t->base = base; _t->value = name; mph_gc_pop_roots(ctx, 1); _t; });
+	return ({ mph_Identifier* _t = (mph_Identifier*)mph_alloc(ctx, sizeof(mph_Identifier), &mph_ti_mph_Identifier); mph_gc_push_root(ctx, (void**)&_t); _t->value = name; _t->base = base; mph_gc_pop_roots(ctx, 1); _t; });
 	mph_gc_pop_roots(ctx, 1);
 	mph_gc_pop_roots(ctx, 1);
 }
@@ -354,7 +354,7 @@ mph_InfixExpression* mph_make_infix_expression(MorphContext* ctx, void* _env_voi
 	mph_gc_push_root(ctx, (void**)&operator);
 	mph_Node* base = ({ MorphString* _arg_15 = operator; mph_gc_push_root(ctx, (void**)&_arg_15); mph_Node* _ret_16 = mph_make_node(ctx, NULL, mph_NODE_INFIX_EXPRESSION, _arg_15, line, column); mph_gc_pop_roots(ctx, 1); _ret_16; });
 	mph_gc_push_root(ctx, (void**)&base);
-	return ({ mph_InfixExpression* _t = (mph_InfixExpression*)mph_alloc(ctx, sizeof(mph_InfixExpression), &mph_ti_mph_InfixExpression); mph_gc_push_root(ctx, (void**)&_t); _t->operator = operator; _t->base = base; mph_gc_pop_roots(ctx, 1); _t; });
+	return ({ mph_InfixExpression* _t = (mph_InfixExpression*)mph_alloc(ctx, sizeof(mph_InfixExpression), &mph_ti_mph_InfixExpression); mph_gc_push_root(ctx, (void**)&_t); _t->base = base; _t->operator = operator; mph_gc_pop_roots(ctx, 1); _t; });
 	mph_gc_pop_roots(ctx, 1);
 	mph_gc_pop_roots(ctx, 1);
 }
@@ -362,7 +362,7 @@ mph_InfixExpression* mph_make_infix_expression(MorphContext* ctx, void* _env_voi
 mph_CaseClause* mph_make_case_clause(MorphContext* ctx, void* _env_void, mph_int line, mph_int column) {
 	mph_Node* base = ({ MorphString* _arg_17 = mph_string_new(ctx, "kasus"); mph_gc_push_root(ctx, (void**)&_arg_17); mph_Node* _ret_18 = mph_make_node(ctx, NULL, mph_NODE_CASE_CLAUSE, _arg_17, line, column); mph_gc_pop_roots(ctx, 1); _ret_18; });
 	mph_gc_push_root(ctx, (void**)&base);
-	return ({ mph_CaseClause* _t = (mph_CaseClause*)mph_alloc(ctx, sizeof(mph_CaseClause), &mph_ti_mph_CaseClause); mph_gc_push_root(ctx, (void**)&_t); _t->v2 = 0; _t->v3 = 0; _t->has_body = 0; _t->base = base; _t->values_count = 0; _t->v0 = 0; _t->v1 = 0; mph_gc_pop_roots(ctx, 1); _t; });
+	return ({ mph_CaseClause* _t = (mph_CaseClause*)mph_alloc(ctx, sizeof(mph_CaseClause), &mph_ti_mph_CaseClause); mph_gc_push_root(ctx, (void**)&_t); _t->base = base; _t->values_count = 0; _t->v0 = 0; _t->v1 = 0; _t->v2 = 0; _t->v3 = 0; _t->has_body = 0; mph_gc_pop_roots(ctx, 1); _t; });
 	mph_gc_pop_roots(ctx, 1);
 }
 
@@ -396,7 +396,7 @@ mph_CaseClause* mph_case_add_value(MorphContext* ctx, void* _env_void, mph_CaseC
 mph_SwitchStatement* mph_make_switch_statement(MorphContext* ctx, void* _env_void, mph_int line, mph_int column) {
 	mph_Node* base = ({ MorphString* _arg_34 = mph_string_new(ctx, "pilih"); mph_gc_push_root(ctx, (void**)&_arg_34); mph_Node* _ret_35 = mph_make_node(ctx, NULL, mph_NODE_SWITCH_STATEMENT, _arg_34, line, column); mph_gc_pop_roots(ctx, 1); _ret_35; });
 	mph_gc_push_root(ctx, (void**)&base);
-	return ({ mph_SwitchStatement* _t = (mph_SwitchStatement*)mph_alloc(ctx, sizeof(mph_SwitchStatement), &mph_ti_mph_SwitchStatement); mph_gc_push_root(ctx, (void**)&_t); _t->base = base; _t->cases_count = 0; _t->has_default = 0; mph_gc_pop_roots(ctx, 1); _t; });
+	return ({ mph_SwitchStatement* _t = (mph_SwitchStatement*)mph_alloc(ctx, sizeof(mph_SwitchStatement), &mph_ti_mph_SwitchStatement); mph_gc_push_root(ctx, (void**)&_t); _t->cases_count = 0; _t->has_default = 0; _t->base = base; mph_gc_pop_roots(ctx, 1); _t; });
 	mph_gc_pop_roots(ctx, 1);
 }
 

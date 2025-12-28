@@ -94,18 +94,18 @@ mph_int mph_TOKEN_DOT;
 mph_int mph_TOKEN_ARROW;
 
 // Function Prototypes
-mph_Token* mph_make_token(MorphContext* ctx, void* _env_void, mph_int t_type, MorphString* lit, mph_int ln, mph_int col);
-MorphString* mph_token_type_string(MorphContext* ctx, void* _env_void, mph_int t_type);
-mph_int mph_lookup_keyword(MorphContext* ctx, void* _env_void, MorphString* ident);
+mph_Token* mph_MakeToken(MorphContext* ctx, void* _env_void, mph_int t_type, MorphString* lit, mph_int ln, mph_int col);
+MorphString* mph_TokenTypeString(MorphContext* ctx, void* _env_void, mph_int t_type);
+mph_int mph_LookupKeyword(MorphContext* ctx, void* _env_void, MorphString* ident);
 
 // Function Definitions
-mph_Token* mph_make_token(MorphContext* ctx, void* _env_void, mph_int t_type, MorphString* lit, mph_int ln, mph_int col) {
+mph_Token* mph_MakeToken(MorphContext* ctx, void* _env_void, mph_int t_type, MorphString* lit, mph_int ln, mph_int col) {
 	mph_gc_push_root(ctx, (void**)&lit);
 	return ({ mph_Token* _t = (mph_Token*)mph_alloc(ctx, sizeof(mph_Token), &mph_ti_mph_Token); mph_gc_push_root(ctx, (void**)&_t); _t->token_type = t_type; _t->literal = lit; _t->line = ln; _t->column = col; mph_gc_pop_roots(ctx, 1); _t; });
 	mph_gc_pop_roots(ctx, 1);
 }
 
-MorphString* mph_token_type_string(MorphContext* ctx, void* _env_void, mph_int t_type) {
+MorphString* mph_TokenTypeString(MorphContext* ctx, void* _env_void, mph_int t_type) {
 	if ((t_type == mph_TOKEN_ILLEGAL)) {
 {
 	return mph_string_new(ctx, "ILLEGAL");
@@ -439,7 +439,7 @@ MorphString* mph_token_type_string(MorphContext* ctx, void* _env_void, mph_int t
 	return mph_string_new(ctx, "UNKNOWN");
 }
 
-mph_int mph_lookup_keyword(MorphContext* ctx, void* _env_void, MorphString* ident) {
+mph_int mph_LookupKeyword(MorphContext* ctx, void* _env_void, MorphString* ident) {
 	mph_gc_push_root(ctx, (void**)&ident);
 	if (mph_string_eq(ctx, ident, mph_string_new(ctx, "fungsi"))) {
 {

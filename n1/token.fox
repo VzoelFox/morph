@@ -100,14 +100,14 @@ akhir
 # ============================================================================
 # Token Constructor
 # ============================================================================
-fungsi make_token(t_type int, lit string, ln int, col int) Token
+fungsi MakeToken(t_type int, lit string, ln int, col int) Token
     kembalikan Token{token_type: t_type, literal: lit, line: ln, column: col}
 akhir
 
 # ============================================================================
 # Token Type to String
 # ============================================================================
-fungsi token_type_string(t_type int) string
+fungsi TokenTypeString(t_type int) string
     jika t_type == TOKEN_ILLEGAL
         kembalikan "ILLEGAL"
     akhir
@@ -312,7 +312,7 @@ akhir
 # ============================================================================
 # Keyword Lookup
 # ============================================================================
-fungsi lookup_keyword(ident string) int
+fungsi LookupKeyword(ident string) int
     jika ident == "fungsi"
         kembalikan TOKEN_FUNGSI
     akhir
