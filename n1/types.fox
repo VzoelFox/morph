@@ -559,6 +559,107 @@ fungsi kind_to_string(k int) string
 akhir
 
 # ============================================================================
+# Uppercase Export Wrappers (for module imports)
+# ============================================================================
+# Type Constructors
+fungsi IntType() Type
+    kembalikan int_type()
+akhir
+
+fungsi FloatType() Type
+    kembalikan float_type()
+akhir
+
+fungsi StringType() Type
+    kembalikan string_type()
+akhir
+
+fungsi BoolType() Type
+    kembalikan bool_type()
+akhir
+
+fungsi VoidType() Type
+    kembalikan void_type()
+akhir
+
+fungsi NullType() Type
+    kembalikan null_type()
+akhir
+
+fungsi UnknownType() Type
+    kembalikan unknown_type()
+akhir
+
+fungsi ErrorType() Type
+    kembalikan error_type()
+akhir
+
+fungsi UserErrorType() Type
+    kembalikan user_error_type()
+akhir
+
+fungsi ChannelType() Type
+    kembalikan channel_type()
+akhir
+
+fungsi ArrayType() Type
+    kembalikan array_type()
+akhir
+
+fungsi MapType() Type
+    kembalikan map_type()
+akhir
+
+fungsi StructType(n string) Type
+    kembalikan struct_type(n)
+akhir
+
+fungsi InterfaceType(n string) Type
+    kembalikan interface_type(n)
+akhir
+
+fungsi FunctionType() Type
+    kembalikan function_type()
+akhir
+
+fungsi PointerType() Type
+    kembalikan pointer_type()
+akhir
+
+fungsi MultiType() Type
+    kembalikan multi_type()
+akhir
+
+fungsi ModuleType(n string) Type
+    kembalikan module_type(n)
+akhir
+
+# Type Operations
+fungsi TypeEquals(t1 Type, t2 Type) bool
+    kembalikan type_equals(t1, t2)
+akhir
+
+fungsi TypeAssignableTo(source Type, target Type) bool
+    kembalikan type_assignable_to(source, target)
+akhir
+
+fungsi TypeIsComparable(t Type) bool
+    kembalikan type_is_comparable(t)
+akhir
+
+fungsi TypeBinaryOp(left Type, op string, right Type) TypeResult
+    kembalikan type_binary_op(left, op, right)
+akhir
+
+fungsi TypePrefixOp(t Type, op string) TypeResult
+    kembalikan type_prefix_op(t, op)
+akhir
+
+fungsi KindToString(k int) string
+    kembalikan kind_to_string(k)
+akhir
+
+# ============================================================================
 # Main - Test Suite
 # ============================================================================
 fungsi main() void
