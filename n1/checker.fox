@@ -255,3 +255,30 @@ fungsi infer_type_from_literal(literal string, token_type int) types.Type
     akhir
     kembalikan types.UnknownType()
 akhir
+
+# ============================================================================
+# Uppercase Export Wrappers (for module imports)
+# ============================================================================
+fungsi NewChecker() Checker
+    kembalikan new_checker()
+akhir
+
+fungsi CheckIntegerLiteral(c Checker, lit ast.IntegerLiteral) types.Type
+    kembalikan check_integer_literal(c, lit)
+akhir
+
+fungsi CheckStringLiteral(c Checker, lit ast.StringLiteral) types.Type
+    kembalikan check_string_literal(c, lit)
+akhir
+
+fungsi CheckBooleanLiteral(c Checker, lit ast.BooleanLiteral) types.Type
+    kembalikan check_boolean_literal(c, lit)
+akhir
+
+fungsi CheckBuiltinFunction(c Checker, name string, args_count int) types.Type
+    kembalikan check_builtin_function(c, name, args_count)
+akhir
+
+fungsi CheckAssignmentCompatibility(c Checker, target_type types.Type, value_type types.Type) bool
+    kembalikan check_assignment_compatibility(c, target_type, value_type)
+akhir

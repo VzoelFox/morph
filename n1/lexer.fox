@@ -478,6 +478,13 @@ fungsi lexer_read_string(l Lexer) string
 akhir
 
 # ============================================================================
+# Uppercase Export Wrappers (for module imports)
+# ============================================================================
+fungsi NewLexer(input string) Lexer
+    kembalikan new_lexer(input)
+akhir
+
+# ============================================================================
 # Main Tokenization Function
 # ============================================================================
 fungsi LexerNextToken(l Lexer) token.Token
