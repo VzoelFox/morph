@@ -2,9 +2,9 @@
 # Port dari N0 pkg/parser/parser.go
 
 # Import dependencies
-ambil "n1/lexer"
-ambil "n1/token"
-ambil "n1/ast"
+ambil "lexer"
+ambil "token"
+ambil "ast"
 
 # ============================================================================
 # Precedence Constants

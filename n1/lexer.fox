@@ -2,7 +2,7 @@
 # Port dari N0 pkg/lexer/lexer.go
 
 # Import token definitions
-ambil "n1/token"
+ambil "token"
 
 # ============================================================================
 # Lexer Structure

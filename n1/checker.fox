@@ -2,9 +2,9 @@
 # Port dari N0 pkg/checker/checker.go
 
 # Import dependencies
-ambil "n1/types"
-ambil "n1/ast"
-ambil "n1/parser"
+ambil "types"
+ambil "ast"
+ambil "parser"
 
 # ============================================================================
 # Checker Structure
