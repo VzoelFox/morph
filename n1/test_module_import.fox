@@ -2,11 +2,12 @@
 # Verifies that all N1 modules can be imported and used together
 # This catches export/import issues that standalone tests miss
 
-# Import all N1 modules (excluding parser - has current_token type bug)
+# Import all N1 modules
 ambil "token"
 ambil "ast"
 ambil "types"
 ambil "lexer"
+ambil "parser"
 ambil "checker"
 
 # ============================================================================
@@ -174,8 +175,39 @@ akhir
 # ============================================================================
 # Test 5: Parser Module
 # ============================================================================
-# SKIPPED: parser.fox has current_token type bug (int vs token.Token*)
-# TODO: Fix parser.fox before adding parser module tests
+fungsi test_parser_module() void
+    native_print("\n[Test 5] Parser Module Import\n")
+
+    # Test Parser module accessible (constants only)
+    # Note: Parser has N0 codegen issue with current_token field access
+    # Testing constants only to verify module imports correctly
+
+    # Verify precedence constants accessible
+    var lowest = parser.PRECEDENCE_LOWEST
+    var sum = parser.PRECEDENCE_SUM
+    var prod = parser.PRECEDENCE_PRODUCT
+
+    jika lowest == 1
+        test_pass("parser.PRECEDENCE_LOWEST accessible")
+    lainnya
+        test_fail("parser.PRECEDENCE_LOWEST not accessible")
+    akhir
+
+    jika sum == 4
+        test_pass("parser.PRECEDENCE_SUM accessible")
+    lainnya
+        test_fail("parser.PRECEDENCE_SUM not accessible")
+    akhir
+
+    jika prod == 5
+        test_pass("parser.PRECEDENCE_PRODUCT accessible")
+    lainnya
+        test_fail("parser.PRECEDENCE_PRODUCT not accessible")
+    akhir
+
+    # Module import verified by successful compilation
+    test_pass("parser module imports successfully")
+akhir
 
 # ============================================================================
 # Test 6: Checker Module
@@ -257,7 +289,7 @@ fungsi main() void
     test_types_module()
     test_ast_module()
     test_lexer_module()
-    # test_parser_module() # SKIPPED - parser.fox has bugs
+    test_parser_module()
     test_checker_module()
     test_integration()
 
