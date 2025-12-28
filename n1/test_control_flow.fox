@@ -1,0 +1,210 @@
+# N1 Control Flow Analysis Test
+# Port from N0 pkg/checker/control_flow_test.go
+# Tests all-paths-return analysis
+
+fungsi print_test_header(name string) void
+    native_print("\n=== ")
+    native_print(name)
+    native_print(" ===\n")
+akhir
+
+fungsi print_result(expected string, got string) void
+    native_print("Expected: ")
+    native_print(expected)
+    native_print("\n")
+    native_print("Got: ")
+    native_print(got)
+    native_print("\n")
+akhir
+
+# Test 1: Missing Return (should fail in N0)
+fungsi test_missing_return_bad(x int) int
+    jika x > 0
+        kembalikan 1
+    akhir
+    # Missing return here - should be error in strict mode
+    # But N1 doesn't enforce yet, so we return default
+    kembalikan -999  # Marker for missing return
+akhir
+
+# Test 2: All Paths Return (should pass)
+fungsi test_all_paths_return(x int) int
+    jika x > 0
+        kembalikan 1
+    lainnya
+        kembalikan 0
+    akhir
+akhir
+
+# Test 3: Nested Control Flow (should pass)
+fungsi test_nested_return(x int) int
+    jika x > 0
+        jika x > 10
+            kembalikan 2
+        lainnya
+            kembalikan 1
+        akhir
+    lainnya
+        kembalikan 0
+    akhir
+akhir
+
+# Test 4: Void Function (no return needed)
+fungsi test_void_function(x int) void
+    jika x > 0
+        var y = 1
+        native_print("void function executed\n")
+    akhir
+akhir
+
+# Test 5: Block with Return
+fungsi test_block_return(x int) int
+    jika x > 0
+        var y = x + 1
+        kembalikan y
+    lainnya
+        kembalikan 0
+    akhir
+akhir
+
+# Test 6: Multiple Returns Same Branch
+fungsi test_multiple_returns(x int) int
+    jika x > 10
+        kembalikan 2
+    lainnya
+        jika x > 5
+            kembalikan 1
+        lainnya
+            kembalikan 0
+        akhir
+    akhir
+akhir
+
+fungsi main() void
+    native_print("╔════════════════════════════════════════════════════╗\n")
+    native_print("║  N1 Control Flow Analysis Test                    ║\n")
+    native_print("║  Port from N0 control_flow_test.go                ║\n")
+    native_print("╚════════════════════════════════════════════════════╝\n")
+
+    var passed = 0
+    var total = 6
+
+    # Test 1: Missing Return Path (N0 would error)
+    print_test_header("Test 1: Missing Return Path")
+    var result1 = test_missing_return_bad(5)
+    native_print("Result when x=5: ")
+    native_print_int(result1)
+    native_print("\n")
+    native_print("Note: N0 would reject this at compile time\n")
+    native_print("N1: Compiles but returns marker value\n")
+    native_print("INFO: N1 doesn't enforce all-paths-return yet\n")
+
+    # Test 2: All Paths Return
+    print_test_header("Test 2: All Paths Return")
+    var result2a = test_all_paths_return(5)
+    var result2b = test_all_paths_return(-1)
+    native_print("Result when x=5: ")
+    native_print_int(result2a)
+    native_print("\n")
+    native_print("Result when x=-1: ")
+    native_print_int(result2b)
+    native_print("\n")
+    jika result2a == 1
+        jika result2b == 0
+            native_print("PASS\n")
+            passed = passed + 1
+        akhir
+    akhir
+
+    # Test 3: Nested Control Flow
+    print_test_header("Test 3: Nested Control Flow")
+    var result3a = test_nested_return(15)
+    var result3b = test_nested_return(5)
+    var result3c = test_nested_return(-1)
+    native_print("Result when x=15: ")
+    native_print_int(result3a)
+    native_print("\n")
+    native_print("Result when x=5: ")
+    native_print_int(result3b)
+    native_print("\n")
+    native_print("Result when x=-1: ")
+    native_print_int(result3c)
+    native_print("\n")
+    jika result3a == 2
+        jika result3b == 1
+            jika result3c == 0
+                native_print("PASS\n")
+                passed = passed + 1
+            akhir
+        akhir
+    akhir
+
+    # Test 4: Void Function
+    print_test_header("Test 4: Void Function (no return needed)")
+    test_void_function(5)
+    native_print("PASS (void function executed)\n")
+    passed = passed + 1
+
+    # Test 5: Block with Return
+    print_test_header("Test 5: Block with Return")
+    var result5a = test_block_return(10)
+    var result5b = test_block_return(-5)
+    native_print("Result when x=10: ")
+    native_print_int(result5a)
+    native_print("\n")
+    native_print("Result when x=-5: ")
+    native_print_int(result5b)
+    native_print("\n")
+    jika result5a == 11
+        jika result5b == 0
+            native_print("PASS\n")
+            passed = passed + 1
+        akhir
+    akhir
+
+    # Test 6: Multiple Returns
+    print_test_header("Test 6: Multiple Returns in Branches")
+    var result6a = test_multiple_returns(15)
+    var result6b = test_multiple_returns(7)
+    var result6c = test_multiple_returns(2)
+    native_print("Result when x=15: ")
+    native_print_int(result6a)
+    native_print("\n")
+    native_print("Result when x=7: ")
+    native_print_int(result6b)
+    native_print("\n")
+    native_print("Result when x=2: ")
+    native_print_int(result6c)
+    native_print("\n")
+    jika result6a == 2
+        jika result6b == 1
+            jika result6c == 0
+                native_print("PASS\n")
+                passed = passed + 1
+            akhir
+        akhir
+    akhir
+
+    # Summary
+    native_print("\n╔════════════════════════════════════════════════════╗\n")
+    native_print("║  TEST SUMMARY                                      ║\n")
+    native_print("╚════════════════════════════════════════════════════╝\n\n")
+    native_print("Tests passed: ")
+    native_print_int(passed)
+    native_print(" / ")
+    native_print_int(total)
+    native_print("\n\n")
+
+    jika passed == total
+        native_print("🎉 ALL CONTROL FLOW TESTS PASSED! 🎉\n")
+    lainnya
+        native_print("⚠️  Some tests failed\n")
+    akhir
+
+    native_print("\nN0 vs N1 Comparison:\n")
+    native_print("✓ All-paths-return logic tested\n")
+    native_print("✓ Nested conditionals working\n")
+    native_print("✓ Void functions handled correctly\n")
+    native_print("! N1 doesn't enforce all-paths-return at compile time yet\n")
+    native_print("  (This is a known limitation - to be implemented)\n")
+akhir

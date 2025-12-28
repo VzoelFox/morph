@@ -1,0 +1,70 @@
+# N1 Simple Regression Test
+# Compare N0 vs N1 basic behavior
+
+fungsi test_arithmetic() int
+    var a = 10
+    var b = 20
+    var sum = a + b
+    kembalikan sum
+akhir
+
+fungsi test_conditional(x int) bool
+    jika x == 5
+        kembalikan benar
+    lainnya
+        kembalikan salah
+    akhir
+akhir
+
+fungsi main() void
+    native_print("=== N1 Regression Test - Simple ===\n\n")
+
+    # Test 1: Arithmetic
+    native_print("Test 1: Arithmetic (10 + 20)\n")
+    var result = test_arithmetic()
+    native_print("Result: ")
+    native_print_int(result)
+    native_print("\n")
+    native_print("Expected: 30\n")
+    jika result == 30
+        native_print("PASS\n\n")
+    lainnya
+        native_print("FAIL\n\n")
+    akhir
+
+    # Test 2: Conditional True
+    native_print("Test 2: Conditional (x == 5)\n")
+    var cond1 = test_conditional(5)
+    native_print("Result: ")
+    jika cond1
+        native_print("true\n")
+    lainnya
+        native_print("false\n")
+    akhir
+    native_print("Expected: true\n")
+    jika cond1
+        native_print("PASS\n\n")
+    lainnya
+        native_print("FAIL\n\n")
+    akhir
+
+    # Test 3: Conditional False
+    native_print("Test 3: Conditional (x == 10 when x=5)\n")
+    var cond2 = test_conditional(10)
+    native_print("Result: ")
+    jika cond2
+        native_print("true\n")
+    lainnya
+        native_print("false\n")
+    akhir
+    native_print("Expected: false\n")
+    jika cond2 == salah
+        native_print("PASS\n\n")
+    lainnya
+        native_print("FAIL\n\n")
+    akhir
+
+    native_print("=== Summary ===\n")
+    native_print("All basic tests completed.\n")
+    native_print("Compare with N0 compiler output.\n")
+akhir
