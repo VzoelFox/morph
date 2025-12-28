@@ -1,9 +1,9 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.70.0
+- **Versi**: 1.71.0
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
-- **Terakhir Diupdate**: 2025-12-28 12:52 UTC
+- **Terakhir Diupdate**: 2025-12-28 14:25 UTC
 - **Status**: Active
 
 ---
@@ -4152,3 +4152,87 @@ b47b53a8da0a30a19893d39294d2fad30f7f7e32a065f14116884be01a75267a  N0_COMPILER_BU
 - Full self-hosting: Realistic with systematic workaround application
 
 ---
+
+---
+
+## 🔧 N0 COMPILER BUG #3 FIXED! (2025-12-28 14:20 UTC)
+
+**CRITICAL FIX**: N0 now transpiles Fox logical operators correctly!
+
+### ✅ Bug #3: "dan"/"atau" Operators - FIXED IN N0
+
+**What was broken**: Fox keywords `dan`, `atau`, `tidak` were output as-is to C code.
+**Example error**: `error: expected ')' before 'dan'`
+
+**Fix applied**: Modified `pkg/compiler/compiler.go`:
+```go
+// Map Fox operators to C operators
+operator := ie.Operator
+switch operator {
+case "dan":    operator = "&&"
+case "atau":   operator = "||"
+case "tidak":  operator = "!"
+}
+return fmt.Sprintf("(%s %s %s)", left, operator, right), nil
+```
+
+**Testing**:
+```fox
+# ✅ Now WORKS in N0!
+fungsi test_dan(a bool, b bool) bool
+    kembalikan a dan b  # Transpiles to: return a && b
+akhir
+
+fungsi test_atau(a bool, b bool) bool
+    kembalikan a atau b  # Transpiles to: return a || b
+akhir
+```
+
+**Impact**:
+- **types.fox**: Still works (25/25 tests) - used nested ifs workaround
+- **All future code**: Can use `dan`/`atau` directly
+- **Code savings**: ~55 lines from nested if workarounds no longer needed
+
+### Bug Status Summary:
+1. ❌ **Bug #1**: Struct assignment pattern - Not fixed (complex)
+2. ❌ **Bug #2**: Empty string timeout - Not fixed (complex)
+3. ✅ **Bug #3**: dan/atau operators - **FIXED IN N0** ✅
+4. ⏸️ **Bug #4**: lainnya jika - Attempted fix caused regression, reverted
+
+### Files Modified:
+- **N0 Source**: `pkg/compiler/compiler.go`
+- **Binary**: `morph` recompiled with fix
+- **Documentation**: `N0_COMPILER_BUGS.md` updated
+
+**Recompiled**: 2025-12-28 14:17 UTC
+**Tested**: ✅ types.fox, checker.fox, parser.fox
+
+---
+
+## 📊 N1 Current Checksums (2025-12-28 14:25 UTC)
+
+### Working Files:
+```
+fa69dc64d1233e6750891ac1e308ddd7519a3adb5448121b265edd680d60734f  n1/types.fox (896 lines, 25/25 tests ✅)
+667950ceac2c40ecc77a23a12f8fe7f2eeb05b561570fcfdc80e9a385bbd61d9  n1/token.fox (compiles ✅)
+13881209fae0eb2ea9d6c41ecf15f3449b011aa1325b7cfe2f967a1b858e346e  n1/ast.fox (compiles ✅)
+e38c32ca123f0f2be92c370d54201c6ba82d30c9080c534326171b4dcae19e19  n1/parser.fox (syntax clean ✅)
+e805251dd22b42e10e2e1d7a6685ef37db7d7105287234d561f4233a5622612e  n1/checker.fox (syntax clean ✅)
+```
+
+### Blocked:
+```
+853457c531837c395e127c9c8b47adc409ea11d83a2dcc18ccb731b2b30e0715  n1/lexer.fox (605 lines, blocked - 25+ lainnya jika)
+```
+
+### Backups:
+```
+0d5bf62e8f9f47b895a047dea81a46035d16d38586c78e3b20c3dffcc8547cd4  n1/types.fox.backup (original)
+f52efd9a45eef732b3298ceb2386c96f6fcc78731f3e3df1fcab42a352784f89  n1/types.fox.pre_dan_fix
+e4aecded4e23813e7e23ac24e81bfa5e601f6126635832c02a90b6988be6c3b2  n1/lexer.fox.backup
+58ed1ef214638da9319196421ba77ab3360e45b3f87963cfaa104e9f990fc5af  n1/parser.fox.backup
+23ec13f40da748849478241ed0c403432a8c6116bc26f24fb98ced0139b78268  n1/checker.fox.backup
+```
+
+**Progress**: 45% → **50%** (N0 fix unlocks future work)
+
