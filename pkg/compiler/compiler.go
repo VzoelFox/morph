@@ -1992,7 +1992,19 @@ func (c *Compiler) compileInfix(ie *parser.InfixExpression, prefix string, fn *p
 			return fmt.Sprintf("mph_string_eq(ctx, %s, %s)", left, right), nil
 		}
 	}
-	return fmt.Sprintf("(%s %s %s)", left, ie.Operator, right), nil
+
+	// Map Fox logical operators to C operators
+	operator := ie.Operator
+	switch operator {
+	case "dan":
+		operator = "&&"
+	case "atau":
+		operator = "||"
+	case "tidak":
+		operator = "!"
+	}
+
+	return fmt.Sprintf("(%s %s %s)", left, operator, right), nil
 }
 
 func (c *Compiler) compileInterpolatedString(is *parser.InterpolatedString, prefix string, fn *parser.FunctionLiteral) (string, error) {

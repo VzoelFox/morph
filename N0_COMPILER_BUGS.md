@@ -347,3 +347,61 @@ lainnya
 ---
 
 **Report updated**: 2025-12-28 13:00 UTC
+
+---
+
+## 🎉 FIXED IN N0 - 2025-12-28 14:20 UTC
+
+### Bug #3: "dan"/"atau" Operators - FIXED ✅
+
+**What was fixed**: Modified `pkg/compiler/compiler.go` to translate Fox logical operators to C operators.
+
+**Changes made**:
+```go
+// In compileInfix function, before returning the operator expression:
+operator := ie.Operator
+switch operator {
+case "dan":
+    operator = "&&"
+case "atau":
+    operator = "||"
+case "tidak":
+    operator = "!"
+}
+return fmt.Sprintf("(%s %s %s)", left, operator, right), nil
+```
+
+**Testing**:
+```fox
+# Now WORKS!
+fungsi test_dan(a bool, b bool) bool
+    kembalikan a dan b
+akhir
+
+fungsi test_atau(a bool, b bool) bool
+    kembalikan a atau b
+akhir
+```
+
+**Result**: ✅ Both `dan` and `atau` operators now transpile correctly to C `&&` and `||`.
+
+**Impact**:
+- N1 types.fox: Can now use `dan`/`atau` instead of nested ifs
+- All future Fox code: Can use natural language operators
+- Reduces code complexity significantly
+
+---
+
+**N0 Compiler Fixes Summary**:
+- ✅ Bug #3: dan/atau operators - FIXED
+- ⏸️ Bug #4: lainnya jika syntax - Attempted fix caused regression, reverted
+- ❌ Bug #1: Struct assignment pattern - Not fixed (complex)
+- ❌ Bug #2: Empty string timeout - Not fixed (complex)
+
+**Files modified**:
+- `pkg/compiler/compiler.go` (operator translation added)
+
+**Recompiled**: 2025-12-28 14:17 UTC  
+**Tested**: types.fox, checker.fox, parser.fox - all working
+
+---
