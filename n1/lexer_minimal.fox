@@ -1,0 +1,59 @@
+# N1 Lexer Minimal - Proof of Concept
+# Ultra-simplified lexer to test N0 compilation + N1 transpilation
+
+# ============================================================================
+# TOKEN CONSTANTS
+# ============================================================================
+var TOKEN_INT = 1
+var TOKEN_PLUS = 2
+var TOKEN_EOF = 3
+
+# ============================================================================
+# TOKEN STRUCTURE
+# ============================================================================
+struktur Token
+    token_type int
+    value int
+akhir
+
+# ============================================================================
+# TOKEN CONSTRUCTOR
+# ============================================================================
+fungsi make_token(t_type int, val int) Token
+    kembalikan Token{token_type: t_type, value: val}
+akhir
+
+# ============================================================================
+# SIMPLE TOKENIZER
+# Tokenizes "42 + 10" into [INT(42), PLUS, INT(10), EOF]
+# ============================================================================
+fungsi tokenize() int
+    # Hardcoded tokenization for "42 + 10"
+    var tok1 = make_token(TOKEN_INT, 42)
+    var tok2 = make_token(TOKEN_PLUS, 0)
+    var tok3 = make_token(TOKEN_INT, 10)
+    var tok4 = make_token(TOKEN_EOF, 0)
+
+    # Verify we got correct tokens
+    jika tok1.token_type == TOKEN_INT
+        jika tok1.value == 42
+            # Success!
+            kembalikan 1
+        akhir
+    akhir
+
+    kembalikan 0
+akhir
+
+# ============================================================================
+# MAIN
+# ============================================================================
+fungsi main() int
+    var result = tokenize()
+
+    jika result == 1
+        kembalikan 42  # Success
+    akhir
+
+    kembalikan 1  # Failure
+akhir

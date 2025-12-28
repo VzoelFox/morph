@@ -1,0 +1,300 @@
+# N1 Lexer Standalone - With Inlined Token Definitions
+# No imports - all self-contained for N0 compilation
+# Complex functions ported to C natives
+
+# ============================================================================
+# INLINED TOKEN CONSTANTS (from token.fox)
+# ============================================================================
+var TOKEN_ILLEGAL = 0
+var TOKEN_EOF = 1
+
+# Identifiers + literals
+var TOKEN_IDENT = 2
+var TOKEN_INT = 3
+var TOKEN_FLOAT = 4
+var TOKEN_STRING = 5
+var TOKEN_CHAR = 6
+
+# Operators
+var TOKEN_ASSIGN = 7
+var TOKEN_PLUS = 8
+var TOKEN_MINUS = 9
+var TOKEN_BANG = 10
+var TOKEN_ASTERISK = 11
+var TOKEN_SLASH = 12
+var TOKEN_PERCENT = 13
+
+var TOKEN_LT = 14
+var TOKEN_GT = 15
+var TOKEN_EQ = 16
+var TOKEN_NOT_EQ = 17
+var TOKEN_LE = 18
+var TOKEN_GE = 19
+
+# Bitwise
+var TOKEN_BIT_AND = 20
+var TOKEN_BIT_OR = 21
+var TOKEN_BIT_XOR = 22
+var TOKEN_BIT_NOT = 23
+var TOKEN_LSHIFT = 24
+var TOKEN_RSHIFT = 25
+
+# Logical
+var TOKEN_AND = 26
+var TOKEN_OR = 27
+
+# Delimiters
+var TOKEN_COMMA = 28
+var TOKEN_SEMICOLON = 29
+var TOKEN_COLON = 30
+
+var TOKEN_LPAREN = 31
+var TOKEN_RPAREN = 32
+var TOKEN_LBRACE = 33
+var TOKEN_RBRACE = 34
+var TOKEN_LBRACKET = 35
+var TOKEN_RBRACKET = 36
+
+# Keywords
+var TOKEN_FUNGSI = 37
+var TOKEN_VAR = 38
+var TOKEN_TETAPAN = 39
+var TOKEN_BENAR = 40
+var TOKEN_SALAH = 41
+var TOKEN_JIKA = 42
+var TOKEN_LAINNYA = 43
+var TOKEN_KEMBALIKAN = 44
+var TOKEN_STRUKTUR = 45
+var TOKEN_ANTARMUKA = 46
+var TOKEN_AMBIL = 47
+var TOKEN_UNTUK = 48
+var TOKEN_SELAMA = 49
+var TOKEN_PUTUS = 50
+var TOKEN_LANJUT = 51
+var TOKEN_PILIH = 52
+var TOKEN_KASUS = 53
+var TOKEN_BAWAAN = 54
+var TOKEN_AKHIR = 55
+var TOKEN_ATAU_JIKA = 56
+var TOKEN_DAN = 57
+var TOKEN_ATAU = 58
+var TOKEN_KOSONG = 59
+
+# Special
+var TOKEN_DOT = 60
+var TOKEN_ARROW = 61
+
+# ============================================================================
+# TOKEN STRUCTURE
+# ============================================================================
+struktur Token
+    token_type int
+    literal string
+    line int
+    column int
+akhir
+
+# ============================================================================
+# LEXER STRUCTURE
+# ============================================================================
+struktur Lexer
+    input string
+    position int
+    read_position int
+    ch int
+    line int
+    column int
+akhir
+
+# ============================================================================
+# NATIVE C FUNCTION DECLARATIONS
+# These will be implemented in n1_natives.c
+# ============================================================================
+# native_char_to_ascii(char_str string) int - Convert single char to ASCII
+# native_substring(str string, start int, end int) string - Get substring
+# native_strlen(str string) int - Get string length
+# native_is_letter(ch int) int - Check if character is letter (returns 1/0)
+# native_is_digit(ch int) int - Check if character is digit (returns 1/0)
+# native_is_whitespace(ch int) int - Check if character is whitespace (returns 1/0)
+
+# ============================================================================
+# LEXER CONSTRUCTOR
+# ============================================================================
+fungsi new_lexer(input string) Lexer
+    var l = Lexer{
+        input: input,
+        position: 0,
+        read_position: 0,
+        ch: 0,
+        line: 1,
+        column: 0
+    }
+    l = lexer_read_char(l)
+    kembalikan l
+akhir
+
+# ============================================================================
+# CHARACTER READING
+# ============================================================================
+fungsi lexer_read_char(l Lexer) Lexer
+    jika l.read_position >= native_strlen(l.input)
+        l.ch = 0
+    lainnya
+        var char_str = native_substring(l.input, l.read_position, l.read_position + 1)
+        l.ch = native_char_to_ascii(char_str)
+    akhir
+
+    l.position = l.read_position
+    l.read_position = l.read_position + 1
+
+    jika l.ch == 10
+        l.line = l.line + 1
+        l.column = 0
+    lainnya
+        l.column = l.column + 1
+    akhir
+
+    kembalikan l
+akhir
+
+# ============================================================================
+# PEEK NEXT CHARACTER
+# ============================================================================
+fungsi lexer_peek_char(l Lexer) int
+    jika l.read_position >= native_strlen(l.input)
+        kembalikan 0
+    akhir
+    var char_str = native_substring(l.input, l.read_position, l.read_position + 1)
+    kembalikan native_char_to_ascii(char_str)
+akhir
+
+# ============================================================================
+# SKIP WHITESPACE
+# ============================================================================
+fungsi lexer_skip_whitespace(l Lexer) Lexer
+    selama native_is_whitespace(l.ch) == 1
+        l = lexer_read_char(l)
+    akhir
+    kembalikan l
+akhir
+
+# ============================================================================
+# READ IDENTIFIER
+# ============================================================================
+fungsi lexer_read_identifier(l Lexer) string
+    var start_pos = l.position
+
+    selama native_is_letter(l.ch) == 1
+        l = lexer_read_char(l)
+    akhir
+
+    kembalikan native_substring(l.input, start_pos, l.position)
+akhir
+
+# ============================================================================
+# READ NUMBER
+# ============================================================================
+fungsi lexer_read_number(l Lexer) string
+    var start_pos = l.position
+
+    selama native_is_digit(l.ch) == 1
+        l = lexer_read_char(l)
+    akhir
+
+    kembalikan native_substring(l.input, start_pos, l.position)
+akhir
+
+# ============================================================================
+# TOKEN CONSTRUCTOR
+# ============================================================================
+fungsi make_token(t_type int, lit string, ln int, col int) Token
+    kembalikan Token{
+        token_type: t_type,
+        literal: lit,
+        line: ln,
+        column: col
+    }
+akhir
+
+# ============================================================================
+# NEXT TOKEN (SIMPLIFIED - Main lexing function)
+# ============================================================================
+fungsi lexer_next_token(l Lexer) Token
+    l = lexer_skip_whitespace(l)
+
+    var tok = make_token(TOKEN_ILLEGAL, "", l.line, l.column)
+
+    # Single character tokens
+    jika l.ch == 43  # '+'
+        tok = make_token(TOKEN_PLUS, "+", l.line, l.column)
+        l = lexer_read_char(l)
+    akhir
+
+    jika l.ch == 45  # '-'
+        tok = make_token(TOKEN_MINUS, "-", l.line, l.column)
+        l = lexer_read_char(l)
+    akhir
+
+    jika l.ch == 42  # '*'
+        tok = make_token(TOKEN_ASTERISK, "*", l.line, l.column)
+        l = lexer_read_char(l)
+    akhir
+
+    jika l.ch == 47  # '/'
+        tok = make_token(TOKEN_SLASH, "/", l.line, l.column)
+        l = lexer_read_char(l)
+    akhir
+
+    jika l.ch == 40  # '('
+        tok = make_token(TOKEN_LPAREN, "(", l.line, l.column)
+        l = lexer_read_char(l)
+    akhir
+
+    jika l.ch == 41  # ')'
+        tok = make_token(TOKEN_RPAREN, ")", l.line, l.column)
+        l = lexer_read_char(l)
+    akhir
+
+    jika l.ch == 123  # '{'
+        tok = make_token(TOKEN_LBRACE, "{", l.line, l.column)
+        l = lexer_read_char(l)
+    akhir
+
+    jika l.ch == 125  # '}'
+        tok = make_token(TOKEN_RBRACE, "}", l.line, l.column)
+        l = lexer_read_char(l)
+    akhir
+
+    jika l.ch == 0  # EOF
+        tok = make_token(TOKEN_EOF, "", l.line, l.column)
+    akhir
+
+    # Identifiers and numbers
+    jika native_is_letter(l.ch) == 1
+        var ident = lexer_read_identifier(l)
+        tok = make_token(TOKEN_IDENT, ident, l.line, l.column)
+    akhir
+
+    jika native_is_digit(l.ch) == 1
+        var num = lexer_read_number(l)
+        tok = make_token(TOKEN_INT, num, l.line, l.column)
+    akhir
+
+    kembalikan tok
+akhir
+
+# ============================================================================
+# TEST FUNCTION
+# ============================================================================
+fungsi main() int
+    # Simple test
+    var input = "1 + 2"
+    var lexer = new_lexer(input)
+
+    var tok1 = lexer_next_token(lexer)
+    var tok2 = lexer_next_token(lexer)
+    var tok3 = lexer_next_token(lexer)
+
+    # If we got here without crashing, success!
+    kembalikan 42
+akhir

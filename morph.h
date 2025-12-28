@@ -192,6 +192,7 @@ void mph_swap_in(MorphContext* ctx, void* obj); // Ensure object is in RAM
 // Strings
 MorphString* mph_string_new(MorphContext* ctx, const char* literal);
 MorphString* mph_string_concat(MorphContext* ctx, MorphString* a, MorphString* b);
+MorphString* mph_string_substring(MorphContext* ctx, MorphString* s, mph_int start, mph_int end);
 mph_bool mph_string_eq(MorphContext* ctx, MorphString* a, MorphString* b);
 
 // Arrays
