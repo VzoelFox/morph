@@ -25,6 +25,15 @@ var NODE_CALL_EXPRESSION = 17
 var NODE_INDEX_EXPRESSION = 18
 var NODE_MEMBER_EXPRESSION = 19
 var NODE_ASSIGNMENT_EXPRESSION = 20
+var NODE_SWITCH_STATEMENT = 21
+var NODE_CASE_CLAUSE = 22
+var NODE_WHILE_STATEMENT = 23
+var NODE_STRUCT_STATEMENT = 24
+var NODE_STRUCT_LITERAL = 25
+var NODE_IMPORT_STATEMENT = 26
+var NODE_INTERFACE_STATEMENT = 27
+var NODE_BREAK_STATEMENT = 28
+var NODE_CONTINUE_STATEMENT = 29
 
 # ============================================================================
 # Base Node Structure
@@ -146,6 +155,61 @@ struktur MemberExpression
 akhir
 
 # ============================================================================
+# Switch/Case Nodes (pilih/kasus)
+# ============================================================================
+struktur CaseClause
+    base Node
+    values_count int      # Number of values (for multi-case: kasus 1, 2, 3:)
+    v0 int                # First value (simplified - stores int for now)
+    v1 int                # Second value
+    v2 int                # Third value
+    v3 int                # Fourth value
+    has_body bool
+akhir
+
+struktur SwitchStatement
+    base Node
+    cases_count int       # Number of case clauses
+    has_default bool      # Has lainnya block
+akhir
+
+# ============================================================================
+# While Statement
+# ============================================================================
+struktur WhileStatement
+    base Node
+    has_body bool
+akhir
+
+# ============================================================================
+# Struct Statement
+# ============================================================================
+struktur StructStatement
+    base Node
+    name string
+    fields_count int
+akhir
+
+# ============================================================================
+# Import Statement
+# ============================================================================
+struktur ImportStatement
+    base Node
+    path string
+akhir
+
+# ============================================================================
+# Break/Continue Statements
+# ============================================================================
+struktur BreakStatement
+    base Node
+akhir
+
+struktur ContinueStatement
+    base Node
+akhir
+
+# ============================================================================
 # Node Constructors
 # ============================================================================
 fungsi make_node(node_type int, literal string, line int, column int) Node
@@ -190,6 +254,58 @@ akhir
 fungsi make_infix_expression(operator string, line int, column int) InfixExpression
     var base = make_node(NODE_INFIX_EXPRESSION, operator, line, column)
     kembalikan InfixExpression{base: base, operator: operator}
+akhir
+
+fungsi make_case_clause(line int, column int) CaseClause
+    var base = make_node(NODE_CASE_CLAUSE, "kasus", line, column)
+    kembalikan CaseClause{base: base, values_count: 0, v0: 0, v1: 0, v2: 0, v3: 0, has_body: salah}
+akhir
+
+fungsi case_add_value(c CaseClause, val int) CaseClause
+    jika c.values_count == 0
+        c.v0 = val
+    akhir
+    jika c.values_count == 1
+        c.v1 = val
+    akhir
+    jika c.values_count == 2
+        c.v2 = val
+    akhir
+    jika c.values_count == 3
+        c.v3 = val
+    akhir
+    c.values_count = c.values_count + 1
+    kembalikan c
+akhir
+
+fungsi make_switch_statement(line int, column int) SwitchStatement
+    var base = make_node(NODE_SWITCH_STATEMENT, "pilih", line, column)
+    kembalikan SwitchStatement{base: base, cases_count: 0, has_default: salah}
+akhir
+
+fungsi make_while_statement(line int, column int) WhileStatement
+    var base = make_node(NODE_WHILE_STATEMENT, "selama", line, column)
+    kembalikan WhileStatement{base: base, has_body: salah}
+akhir
+
+fungsi make_struct_statement(name string, line int, column int) StructStatement
+    var base = make_node(NODE_STRUCT_STATEMENT, "struktur", line, column)
+    kembalikan StructStatement{base: base, name: name, fields_count: 0}
+akhir
+
+fungsi make_import_statement(path string, line int, column int) ImportStatement
+    var base = make_node(NODE_IMPORT_STATEMENT, "ambil", line, column)
+    kembalikan ImportStatement{base: base, path: path}
+akhir
+
+fungsi make_break_statement(line int, column int) BreakStatement
+    var base = make_node(NODE_BREAK_STATEMENT, "putus", line, column)
+    kembalikan BreakStatement{base: base}
+akhir
+
+fungsi make_continue_statement(line int, column int) ContinueStatement
+    var base = make_node(NODE_CONTINUE_STATEMENT, "lanjut", line, column)
+    kembalikan ContinueStatement{base: base}
 akhir
 
 # ============================================================================

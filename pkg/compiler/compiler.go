@@ -30,6 +30,7 @@ type Compiler struct {
 
 	moduleGlobals  map[*parser.Program]map[string]bool
 	currentGlobals map[string]bool
+	importOrigins  map[string]string // identifier -> module prefix
 	tempIndex      int
 }
 
@@ -49,6 +50,7 @@ func New(c *checker.Checker) *Compiler {
 		freeVarCache:   make(map[*parser.FunctionLiteral][]string),
 		moduleGlobals:  make(map[*parser.Program]map[string]bool),
 		currentGlobals: make(map[string]bool),
+		importOrigins:  make(map[string]string),
 		tempIndex:      0,
 	}
 }
@@ -225,6 +227,12 @@ func (c *Compiler) collectModuleGlobals(prog *parser.Program) {
 			parts := strings.Split(imp.Path, "/")
 			name := parts[len(parts)-1]
 			globals[name] = true
+			// Also add individual imported identifiers (dari...ambil)
+			modulePrefix := mangle(name)
+			for _, ident := range imp.Identifiers {
+				globals[ident] = true
+				c.importOrigins[ident] = modulePrefix
+			}
 		}
 		// Collect top-level functions and vars
 		if s, ok := stmt.(*parser.ExpressionStatement); ok {
@@ -1461,6 +1469,10 @@ func (c *Compiler) compileExpression(expr parser.Expression, prefix string, fn *
 		if c.isLocal(name, fn) {
 			return name, nil
 		}
+		// Imported identifier? Use origin module prefix
+		if importPrefix, ok := c.importOrigins[name]; ok {
+			return importPrefix + name, nil
+		}
 		// Global in THIS module?
 		if c.currentGlobals[name] && !isBuiltin(name) {
 			return prefix + name, nil
@@ -1612,13 +1624,19 @@ func (c *Compiler) compileCall(call *parser.CallExpression, prefix string, fn *p
 			return c.compileBuiltin(call, "mph_string_trim", prefix, fn)
 		case "split":
 			return c.compileBuiltin(call, "mph_string_split", prefix, fn)
+		case "substring":
+			return c.compileBuiltin(call, "mph_string_substring", prefix, fn)
 		}
 
 		funcCode = ident.Value
 		if c.isCaptured(funcCode, fn) {
 			funcCode = fmt.Sprintf("_env->%s", funcCode)
 		} else if !c.isLocal(funcCode, fn) && !isBuiltin(funcCode) {
-			if c.currentGlobals[funcCode] {
+			// Check if imported from another module
+			if importPrefix, ok := c.importOrigins[funcCode]; ok {
+				funcCode = importPrefix + funcCode
+				isDirect = true
+			} else if c.currentGlobals[funcCode] {
 				funcCode = prefix + funcCode
 				isDirect = true
 			}
@@ -1899,7 +1917,7 @@ func (c *Compiler) isLocal(name string, fn *parser.FunctionLiteral) bool {
 }
 
 func isBuiltin(name string) bool {
-	return name == "native_print" || name == "native_print_int" || name == "len" || name == "hapus" || name == "panjang" || name == "error" || name == "native_print_error" || name == "index" || name == "trim" || name == "split"
+	return name == "native_print" || name == "native_print_int" || name == "len" || name == "hapus" || name == "panjang" || name == "error" || name == "native_print_error" || name == "index" || name == "trim" || name == "split" || name == "substring"
 }
 
 func (c *Compiler) compileBuiltin(call *parser.CallExpression, cName string, prefix string, fn *parser.FunctionLiteral) (string, error) {

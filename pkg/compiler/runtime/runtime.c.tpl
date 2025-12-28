@@ -790,12 +790,16 @@ MorphArray* mph_string_split(MorphContext* ctx, MorphString* s, MorphString* sep
 }
 
 MorphString* mph_string_substring(MorphContext* ctx, MorphString* s, mph_int start, mph_int end) {
+    if (!s) {
+        return mph_string_new(ctx, "");
+    }
     int roots = 0;
-    if (s) { mph_gc_push_root(ctx, (void**)&s); roots++; }
-    mph_swap_in(ctx, s); mph_swap_in(ctx, s->data);
+    mph_gc_push_root(ctx, (void**)&s); roots++;
+    mph_swap_in(ctx, s);
+    if (s->data) mph_swap_in(ctx, s->data);
     if (start < 0) start = 0;
     if (end > s->length) end = s->length;
-    if (start >= end) {
+    if (start >= end || !s->data) {
         MorphString* empty = mph_string_new(ctx, "");
         mph_gc_pop_roots(ctx, roots);
         return empty;
