@@ -212,52 +212,52 @@ akhir
 # ============================================================================
 # Node Constructors
 # ============================================================================
-fungsi make_node(node_type int, literal string, line int, column int) Node
+fungsi MakeNode(node_type int, literal string, line int, column int) Node
     kembalikan Node{node_type: node_type, token_literal: literal, line: line, column: column}
 akhir
 
-fungsi make_program() Program
-    var base = make_node(NODE_PROGRAM, "program", 1, 1)
+fungsi MakeProgram() Program
+    var base = MakeNode(NODE_PROGRAM, "program", 1, 1)
     kembalikan Program{base: base, statements_count: 0}
 akhir
 
-fungsi make_identifier(name string, line int, column int) Identifier
-    var base = make_node(NODE_IDENTIFIER, name, line, column)
+fungsi MakeIdentifier(name string, line int, column int) Identifier
+    var base = MakeNode(NODE_IDENTIFIER, name, line, column)
     kembalikan Identifier{base: base, value: name}
 akhir
 
-fungsi make_integer_literal(value int, literal string, line int, column int) IntegerLiteral
-    var base = make_node(NODE_INTEGER_LITERAL, literal, line, column)
+fungsi MakeIntegerLiteral(value int, literal string, line int, column int) IntegerLiteral
+    var base = MakeNode(NODE_INTEGER_LITERAL, literal, line, column)
     kembalikan IntegerLiteral{base: base, value: value}
 akhir
 
-fungsi make_string_literal(value string, line int, column int) StringLiteral
-    var base = make_node(NODE_STRING_LITERAL, value, line, column)
+fungsi MakeStringLiteral(value string, line int, column int) StringLiteral
+    var base = MakeNode(NODE_STRING_LITERAL, value, line, column)
     kembalikan StringLiteral{base: base, value: value}
 akhir
 
-fungsi make_boolean_literal(value bool, literal string, line int, column int) BooleanLiteral
-    var base = make_node(NODE_BOOLEAN_LITERAL, literal, line, column)
+fungsi MakeBooleanLiteral(value bool, literal string, line int, column int) BooleanLiteral
+    var base = MakeNode(NODE_BOOLEAN_LITERAL, literal, line, column)
     kembalikan BooleanLiteral{base: base, value: value}
 akhir
 
-fungsi make_var_statement(name string, type_str string, line int, column int) VarStatement
-    var base = make_node(NODE_VAR_STATEMENT, "var", line, column)
+fungsi MakeVarStatement(name string, type_str string, line int, column int) VarStatement
+    var base = MakeNode(NODE_VAR_STATEMENT, "var", line, column)
     kembalikan VarStatement{base: base, name: name, value_type: type_str, has_value: salah}
 akhir
 
-fungsi make_prefix_expression(operator string, line int, column int) PrefixExpression
-    var base = make_node(NODE_PREFIX_EXPRESSION, operator, line, column)
+fungsi MakePrefixExpression(operator string, line int, column int) PrefixExpression
+    var base = MakeNode(NODE_PREFIX_EXPRESSION, operator, line, column)
     kembalikan PrefixExpression{base: base, operator: operator}
 akhir
 
 fungsi make_infix_expression(operator string, line int, column int) InfixExpression
-    var base = make_node(NODE_INFIX_EXPRESSION, operator, line, column)
+    var base = MakeNode(NODE_INFIX_EXPRESSION, operator, line, column)
     kembalikan InfixExpression{base: base, operator: operator}
 akhir
 
 fungsi make_case_clause(line int, column int) CaseClause
-    var base = make_node(NODE_CASE_CLAUSE, "kasus", line, column)
+    var base = MakeNode(NODE_CASE_CLAUSE, "kasus", line, column)
     kembalikan CaseClause{base: base, values_count: 0, v0: 0, v1: 0, v2: 0, v3: 0, has_body: salah}
 akhir
 
@@ -279,32 +279,32 @@ fungsi case_add_value(c CaseClause, val int) CaseClause
 akhir
 
 fungsi make_switch_statement(line int, column int) SwitchStatement
-    var base = make_node(NODE_SWITCH_STATEMENT, "pilih", line, column)
+    var base = MakeNode(NODE_SWITCH_STATEMENT, "pilih", line, column)
     kembalikan SwitchStatement{base: base, cases_count: 0, has_default: salah}
 akhir
 
 fungsi make_while_statement(line int, column int) WhileStatement
-    var base = make_node(NODE_WHILE_STATEMENT, "selama", line, column)
+    var base = MakeNode(NODE_WHILE_STATEMENT, "selama", line, column)
     kembalikan WhileStatement{base: base, has_body: salah}
 akhir
 
 fungsi make_struct_statement(name string, line int, column int) StructStatement
-    var base = make_node(NODE_STRUCT_STATEMENT, "struktur", line, column)
+    var base = MakeNode(NODE_STRUCT_STATEMENT, "struktur", line, column)
     kembalikan StructStatement{base: base, name: name, fields_count: 0}
 akhir
 
 fungsi make_import_statement(path string, line int, column int) ImportStatement
-    var base = make_node(NODE_IMPORT_STATEMENT, "ambil", line, column)
+    var base = MakeNode(NODE_IMPORT_STATEMENT, "ambil", line, column)
     kembalikan ImportStatement{base: base, path: path}
 akhir
 
 fungsi make_break_statement(line int, column int) BreakStatement
-    var base = make_node(NODE_BREAK_STATEMENT, "putus", line, column)
+    var base = MakeNode(NODE_BREAK_STATEMENT, "putus", line, column)
     kembalikan BreakStatement{base: base}
 akhir
 
 fungsi make_continue_statement(line int, column int) ContinueStatement
-    var base = make_node(NODE_CONTINUE_STATEMENT, "lanjut", line, column)
+    var base = MakeNode(NODE_CONTINUE_STATEMENT, "lanjut", line, column)
     kembalikan ContinueStatement{base: base}
 akhir
 

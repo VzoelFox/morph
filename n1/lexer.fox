@@ -480,7 +480,7 @@ akhir
 # ============================================================================
 # Main Tokenization Function
 # ============================================================================
-fungsi lexer_next_token(l Lexer) token.Token
+fungsi LexerNextToken(l Lexer) token.Token
     lexer_skip_whitespace(l)
     
     var tok = token.MakeToken(token.TOKEN_ILLEGAL, "-", l.line, l.column)
