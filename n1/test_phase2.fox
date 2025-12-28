@@ -1,0 +1,76 @@
+# N1 Type System - Phase 2 Test
+# Testing type operations: assignability, comparability, binary ops
+
+# Import type system
+ambil "types"
+
+fungsi main() void
+    native_print("N1 Type System - Phase 2 Test\n")
+    native_print("==============================\n")
+
+    # Create test types
+    var int_t = int_type()
+    var float_t = float_type()
+    var string_t = string_type()
+    var null_t = null_type()
+
+    # Test assignability
+    native_print("Assignability Tests:\n")
+    
+    var int_to_int = type_assignable_to(int_t, int_t)
+    native_print("int -> int: ")
+    jika int_to_int
+        native_print("PASS\n")
+    lainnya
+        native_print("FAIL\n")
+    akhir
+
+    var int_to_float = type_assignable_to(int_t, float_t)
+    native_print("int -> float: ")
+    jika int_to_float
+        native_print("FAIL (should be false)\n")
+    lainnya
+        native_print("PASS (correctly false)\n")
+    akhir
+
+    # Test comparability
+    native_print("\nComparability Tests:\n")
+    
+    var int_comparable = type_is_comparable(int_t)
+    native_print("int comparable: ")
+    jika int_comparable
+        native_print("PASS\n")
+    lainnya
+        native_print("FAIL\n")
+    akhir
+
+    # Test binary operations
+    native_print("\nBinary Operation Tests:\n")
+    
+    var add_result = type_binary_op(int_t, "+", int_t)
+    native_print("int + int: ")
+    jika add_result.has_error
+        native_print("FAIL (has error)\n")
+    lainnya
+        jika add_result.result_type.kind == KIND_INT
+            native_print("PASS (returns int)\n")
+        lainnya
+            native_print("FAIL (wrong type)\n")
+        akhir
+    akhir
+
+    var eq_result = type_binary_op(int_t, "==", int_t)
+    native_print("int == int: ")
+    jika eq_result.has_error
+        native_print("FAIL (has error)\n")
+    lainnya
+        jika eq_result.result_type.kind == KIND_BOOL
+            native_print("PASS (returns bool)\n")
+        lainnya
+            native_print("FAIL (wrong type)\n")
+        akhir
+    akhir
+
+    native_print("\n==============================\n")
+    native_print("Phase 2 type operations working!\n")
+akhir

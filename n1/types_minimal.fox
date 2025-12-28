@@ -1,0 +1,176 @@
+# N1 Type System - Minimal for Robustness Tests
+# Simplified version without complex constructs
+
+# ============================================================================
+# TypeKind Constants
+# ============================================================================
+var KIND_INT = 0
+var KIND_FLOAT = 1
+var KIND_STRING = 2
+var KIND_BOOL = 3
+var KIND_VOID = 4
+var KIND_FUNCTION = 5
+var KIND_STRUCT = 6
+var KIND_INTERFACE = 7
+var KIND_ARRAY = 8
+var KIND_MAP = 9
+var KIND_POINTER = 10
+var KIND_MULTI = 11
+var KIND_UNKNOWN = 12
+var KIND_ERROR = 13
+var KIND_NULL = 14
+var KIND_USER_ERROR = 15
+var KIND_MODULE = 16
+var KIND_CHANNEL = 17
+
+# ============================================================================
+# Type Structure
+# ============================================================================
+struktur Type
+    kind int
+    name string
+akhir
+
+# ============================================================================
+# Type Constructors
+# ============================================================================
+fungsi make_type(k int, n string) Type
+    kembalikan Type{kind: k, name: n}
+akhir
+
+fungsi int_type() Type
+    kembalikan make_type(KIND_INT, "int")
+akhir
+
+fungsi float_type() Type
+    kembalikan make_type(KIND_FLOAT, "float")
+akhir
+
+fungsi string_type() Type
+    kembalikan make_type(KIND_STRING, "string")
+akhir
+
+fungsi bool_type() Type
+    kembalikan make_type(KIND_BOOL, "bool")
+akhir
+
+fungsi void_type() Type
+    kembalikan make_type(KIND_VOID, "void")
+akhir
+
+fungsi null_type() Type
+    kembalikan make_type(KIND_NULL, "null")
+akhir
+
+fungsi unknown_type() Type
+    kembalikan make_type(KIND_UNKNOWN, "unknown")
+akhir
+
+fungsi error_type() Type
+    kembalikan make_type(KIND_ERROR, "error")
+akhir
+
+fungsi user_error_type() Type
+    kembalikan make_type(KIND_USER_ERROR, "error")
+akhir
+
+fungsi channel_type() Type
+    kembalikan make_type(KIND_CHANNEL, "channel")
+akhir
+
+fungsi array_type() Type
+    kembalikan make_type(KIND_ARRAY, "array")
+akhir
+
+fungsi map_type() Type
+    kembalikan make_type(KIND_MAP, "map")
+akhir
+
+fungsi struct_type(n string) Type
+    kembalikan make_type(KIND_STRUCT, n)
+akhir
+
+fungsi interface_type(n string) Type
+    kembalikan make_type(KIND_INTERFACE, n)
+akhir
+
+fungsi function_type() Type
+    kembalikan make_type(KIND_FUNCTION, "function")
+akhir
+
+fungsi pointer_type() Type
+    kembalikan make_type(KIND_POINTER, "pointer")
+akhir
+
+fungsi multi_type() Type
+    kembalikan make_type(KIND_MULTI, "multi")
+akhir
+
+fungsi module_type() Type
+    kembalikan make_type(KIND_MODULE, "module")
+akhir
+
+# ============================================================================
+# Type Operations
+# ============================================================================
+fungsi type_equals(t1 Type, t2 Type) bool
+    kembalikan t1.kind == t2.kind
+akhir
+
+fungsi kind_to_string(k int) string
+    jika k == KIND_INT
+        kembalikan "int"
+    akhir
+    jika k == KIND_FLOAT
+        kembalikan "float"
+    akhir
+    jika k == KIND_STRING
+        kembalikan "string"
+    akhir
+    jika k == KIND_BOOL
+        kembalikan "bool"
+    akhir
+    jika k == KIND_VOID
+        kembalikan "void"
+    akhir
+    jika k == KIND_FUNCTION
+        kembalikan "function"
+    akhir
+    jika k == KIND_STRUCT
+        kembalikan "struct"
+    akhir
+    jika k == KIND_INTERFACE
+        kembalikan "interface"
+    akhir
+    jika k == KIND_ARRAY
+        kembalikan "array"
+    akhir
+    jika k == KIND_MAP
+        kembalikan "map"
+    akhir
+    jika k == KIND_POINTER
+        kembalikan "pointer"
+    akhir
+    jika k == KIND_MULTI
+        kembalikan "multi"
+    akhir
+    jika k == KIND_UNKNOWN
+        kembalikan "unknown"
+    akhir
+    jika k == KIND_ERROR
+        kembalikan "error"
+    akhir
+    jika k == KIND_NULL
+        kembalikan "null"
+    akhir
+    jika k == KIND_USER_ERROR
+        kembalikan "user_error"
+    akhir
+    jika k == KIND_MODULE
+        kembalikan "module"
+    akhir
+    jika k == KIND_CHANNEL
+        kembalikan "channel"
+    akhir
+    kembalikan "unknown"
+akhir

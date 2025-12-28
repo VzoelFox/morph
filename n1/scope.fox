@@ -1,0 +1,204 @@
+# N1 Scope Management System
+# Port dari N0 pkg/checker/scope.go
+
+# Import dependencies
+ambil "types_minimal"
+
+# ============================================================================
+# Symbol Structure
+# ============================================================================
+struktur Symbol
+    name string
+    symbol_type Type
+    is_const bool
+    line int
+    column int
+    used bool
+akhir
+
+# ============================================================================
+# Scope Structure
+# ============================================================================
+struktur Scope
+    parent_scope_id int  # -1 for global scope
+    symbols_count int
+    level int
+    # Note: In real implementation, would have map of symbols
+akhir
+
+# ============================================================================
+# Scope Manager Structure
+# ============================================================================
+struktur ScopeManager
+    scopes_count int
+    current_scope_id int
+    global_scope_id int
+    max_depth int
+    errors_count int
+akhir
+
+# ============================================================================
+# Scope Manager Constructor
+# ============================================================================
+fungsi new_scope_manager() ScopeManager
+    var sm = ScopeManager{
+        scopes_count: 1,
+        current_scope_id: 0,
+        global_scope_id: 0,
+        max_depth: 100,
+        errors_count: 0
+    }
+    kembalikan sm
+akhir
+
+# ============================================================================
+# Symbol Constructor
+# ============================================================================
+fungsi make_symbol(name string, sym_type Type, is_const bool, line int, col int) Symbol
+    kembalikan Symbol{
+        name: name,
+        symbol_type: sym_type,
+        is_const: is_const,
+        line: line,
+        column: col,
+        used: salah
+    }
+akhir
+
+# ============================================================================
+# Scope Operations
+# ============================================================================
+fungsi scope_enter(sm ScopeManager) bool
+    jika sm.scopes_count >= sm.max_depth
+        sm.errors_count = sm.errors_count + 1
+        native_print("ERROR: Maximum scope depth exceeded\n")
+        kembalikan salah
+    akhir
+    
+    var new_scope_id = sm.scopes_count
+    sm.scopes_count = sm.scopes_count + 1
+    sm.current_scope_id = new_scope_id
+    
+    native_print("Entered scope ")
+    native_print_int(new_scope_id)
+    native_print(" (depth: ")
+    native_print_int(sm.scopes_count - 1)
+    native_print(")\n")
+    
+    kembalikan benar
+akhir
+
+fungsi scope_exit(sm ScopeManager) bool
+    jika sm.current_scope_id == sm.global_scope_id
+        sm.errors_count = sm.errors_count + 1
+        native_print("ERROR: Cannot exit global scope\n")
+        kembalikan salah
+    akhir
+    
+    native_print("Exited scope ")
+    native_print_int(sm.current_scope_id)
+    native_print("\n")
+    
+    # In real implementation, would traverse parent chain
+    sm.current_scope_id = sm.current_scope_id - 1
+    kembalikan benar
+akhir
+
+# ============================================================================
+# Symbol Management
+# ============================================================================
+fungsi scope_define_symbol(sm ScopeManager, sym Symbol) bool
+    # Simplified: just report definition
+    native_print("Defined symbol '")
+    native_print(sym.name)
+    native_print("' : ")
+    native_print(kind_to_string(sym.symbol_type.kind))
+    native_print(" in scope ")
+    native_print_int(sm.current_scope_id)
+    
+    jika sym.is_const
+        native_print(" (const)")
+    akhir
+    native_print("\n")
+    
+    kembalikan benar
+akhir
+
+fungsi scope_lookup_symbol(sm ScopeManager, name string) bool
+    # Simplified: assume found in current scope
+    native_print("Looking up symbol '")
+    native_print(name)
+    native_print("' in scope ")
+    native_print_int(sm.current_scope_id)
+    native_print(" -> FOUND\n")
+    
+    kembalikan benar
+akhir
+
+fungsi scope_mark_used(sm ScopeManager, name string) void
+    native_print("Marked symbol '")
+    native_print(name)
+    native_print("' as used\n")
+akhir
+
+# ============================================================================
+# Shadowing Detection
+# ============================================================================
+fungsi scope_check_shadowing(sm ScopeManager, name string) bool
+    # Simplified: check if name exists in parent scopes
+    jika sm.current_scope_id > sm.global_scope_id
+        native_print("WARNING: Symbol '")
+        native_print(name)
+        native_print("' shadows outer declaration\n")
+        kembalikan benar  # Has shadowing
+    akhir
+    kembalikan salah  # No shadowing
+akhir
+
+# ============================================================================
+# Unused Variable Detection
+# ============================================================================
+fungsi scope_check_unused(sm ScopeManager) int
+    # Simplified: report unused check
+    native_print("Checking for unused variables in scope ")
+    native_print_int(sm.current_scope_id)
+    native_print("\n")
+    
+    # In real implementation, would iterate through symbols
+    var unused_count = 0
+    kembalikan unused_count
+akhir
+
+# ============================================================================
+# Scope Validation
+# ============================================================================
+fungsi scope_validate(sm ScopeManager) bool
+    jika sm.errors_count > 0
+        native_print("Scope validation failed with ")
+        native_print_int(sm.errors_count)
+        native_print(" error(s)\n")
+        kembalikan salah
+    akhir
+    
+    native_print("Scope validation passed\n")
+    kembalikan benar
+akhir
+
+# ============================================================================
+# Scope Statistics
+# ============================================================================
+fungsi scope_print_stats(sm ScopeManager) void
+    native_print("Scope Statistics:\n")
+    native_print("  Total scopes: ")
+    native_print_int(sm.scopes_count)
+    native_print("\n")
+    native_print("  Current scope: ")
+    native_print_int(sm.current_scope_id)
+    native_print("\n")
+    native_print("  Max depth: ")
+    native_print_int(sm.max_depth)
+    native_print("\n")
+    native_print("  Errors: ")
+    native_print_int(sm.errors_count)
+    native_print("\n")
+akhir

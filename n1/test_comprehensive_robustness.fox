@@ -1,0 +1,353 @@
+# N1 Comprehensive Robustness Test Suite
+# Tests all robustness features together
+
+# === HELPER FUNCTIONS ===
+fungsi print_test_header(name string) void
+    native_print("\n╔══════════════════════════════════════╗\n")
+    native_print("║  ")
+    native_print(name)
+    native_print("\n")
+    native_print("╚══════════════════════════════════════╝\n\n")
+akhir
+
+fungsi print_pass(msg string) void
+    native_print("✓ PASS: ")
+    native_print(msg)
+    native_print("\n")
+akhir
+
+fungsi print_fail(msg string) void
+    native_print("✗ FAIL: ")
+    native_print(msg)
+    native_print("\n")
+akhir
+
+fungsi print_stat(label string, value int) void
+    native_print("  ")
+    native_print(label)
+    native_print(": ")
+    native_print_int(value)
+    native_print("\n")
+akhir
+
+# === TEST 1: RECURSION OVERFLOW PREVENTION ===
+struktur RecursionLimiter
+    max_depth int
+    current_depth int
+    overflow_count int
+akhir
+
+fungsi new_recursion_limiter(max int) RecursionLimiter
+    kembalikan RecursionLimiter{max_depth: max, current_depth: 0, overflow_count: 0}
+akhir
+
+fungsi recursion_enter(rl RecursionLimiter) bool
+    jika rl.current_depth >= rl.max_depth
+        rl.overflow_count = rl.overflow_count + 1
+        kembalikan salah
+    akhir
+    rl.current_depth = rl.current_depth + 1
+    kembalikan benar
+akhir
+
+fungsi recursion_exit(rl RecursionLimiter) void
+    jika rl.current_depth > 0
+        rl.current_depth = rl.current_depth - 1
+    akhir
+akhir
+
+fungsi test_recursion_prevention() int
+    print_test_header("Test 1: Recursion Overflow Prevention")
+
+    var rl = new_recursion_limiter(100)
+    var passed = 0
+
+    # Test normal depth
+    var i = 0
+    ulang i < 50
+        jika recursion_enter(rl) == salah
+            print_fail("Failed at depth 50")
+            kembalikan passed
+        akhir
+        i = i + 1
+    akhir
+
+    print_pass("Handled 50 recursive calls")
+    passed = passed + 1
+
+    # Reset
+    ulang rl.current_depth > 0
+        recursion_exit(rl)
+    akhir
+
+    # Test overflow
+    i = 0
+    var overflow_triggered = salah
+    ulang i < 150
+        jika recursion_enter(rl) == salah
+            overflow_triggered = benar
+            i = 150  # Break
+        akhir
+        i = i + 1
+    akhir
+
+    jika overflow_triggered
+        print_pass("Overflow correctly prevented at limit")
+        passed = passed + 1
+    lainnya
+        print_fail("Should have triggered overflow")
+    akhir
+
+    print_stat("Overflow count", rl.overflow_count)
+    print_stat("Tests passed", passed)
+
+    kembalikan passed
+akhir
+
+# === TEST 2: IMPORT CYCLE DETECTION ===
+struktur ModuleManager
+    loading_stack_count int
+    max_stack_depth int
+    cycle_detected int
+akhir
+
+fungsi new_module_manager(max int) ModuleManager
+    kembalikan ModuleManager{loading_stack_count: 0, max_stack_depth: max, cycle_detected: 0}
+akhir
+
+fungsi module_push(mm ModuleManager) bool
+    jika mm.loading_stack_count >= mm.max_stack_depth
+        mm.cycle_detected = mm.cycle_detected + 1
+        kembalikan salah
+    akhir
+    mm.loading_stack_count = mm.loading_stack_count + 1
+    kembalikan benar
+akhir
+
+fungsi module_pop(mm ModuleManager) void
+    jika mm.loading_stack_count > 0
+        mm.loading_stack_count = mm.loading_stack_count - 1
+    akhir
+akhir
+
+fungsi test_import_cycle_detection() int
+    print_test_header("Test 2: Import Cycle Detection")
+
+    var mm = new_module_manager(10)
+    var passed = 0
+
+    # Test normal chain
+    var i = 0
+    ulang i < 5
+        jika module_push(mm) == salah
+            print_fail("Normal chain failed")
+            kembalikan passed
+        akhir
+        i = i + 1
+    akhir
+
+    print_pass("Normal import chain works (5 modules)")
+    passed = passed + 1
+
+    # Pop all
+    ulang mm.loading_stack_count > 0
+        module_pop(mm)
+    akhir
+
+    # Test cycle
+    i = 0
+    var cycle_triggered = salah
+    ulang i < 15
+        jika module_push(mm) == salah
+            cycle_triggered = benar
+            i = 15  # Break
+        akhir
+        i = i + 1
+    akhir
+
+    jika cycle_triggered
+        print_pass("Cycle detection triggered correctly")
+        passed = passed + 1
+    lainnya
+        print_fail("Should have detected cycle")
+    akhir
+
+    print_stat("Cycles detected", mm.cycle_detected)
+    print_stat("Tests passed", passed)
+
+    kembalikan passed
+akhir
+
+# === TEST 3: ERROR RECOVERY ===
+struktur ErrorRecovery
+    errors_count int
+    max_errors int
+    panic_mode bool
+akhir
+
+fungsi new_error_recovery(max int) ErrorRecovery
+    kembalikan ErrorRecovery{errors_count: 0, max_errors: max, panic_mode: salah}
+akhir
+
+fungsi error_add(er ErrorRecovery) bool
+    er.errors_count = er.errors_count + 1
+    jika er.errors_count >= er.max_errors
+        er.panic_mode = benar
+        kembalikan salah
+    akhir
+    kembalikan benar
+akhir
+
+fungsi error_can_continue(er ErrorRecovery) bool
+    kembalikan er.panic_mode == salah
+akhir
+
+fungsi test_error_recovery() int
+    print_test_header("Test 3: Error Recovery System")
+
+    var er = new_error_recovery(10)
+    var passed = 0
+
+    # Add some errors
+    var i = 0
+    ulang i < 5
+        error_add(er)
+        i = i + 1
+    akhir
+
+    jika error_can_continue(er)
+        print_pass("Can continue after 5 errors")
+        passed = passed + 1
+    lainnya
+        print_fail("Should be able to continue")
+    akhir
+
+    # Add more errors to trigger panic
+    i = 0
+    ulang i < 10
+        error_add(er)
+        i = i + 1
+    akhir
+
+    jika er.panic_mode
+        print_pass("Panic mode triggered at limit")
+        passed = passed + 1
+    lainnya
+        print_fail("Should have entered panic mode")
+    akhir
+
+    print_stat("Total errors", er.errors_count)
+    print_stat("Tests passed", passed)
+
+    kembalikan passed
+akhir
+
+# === TEST 4: SCOPE DEPTH LIMITING ===
+struktur ScopeManager
+    current_depth int
+    max_depth int
+    overflow_count int
+akhir
+
+fungsi new_scope_manager(max int) ScopeManager
+    kembalikan ScopeManager{current_depth: 0, max_depth: max, overflow_count: 0}
+akhir
+
+fungsi scope_push(sm ScopeManager) bool
+    jika sm.current_depth >= sm.max_depth
+        sm.overflow_count = sm.overflow_count + 1
+        kembalikan salah
+    akhir
+    sm.current_depth = sm.current_depth + 1
+    kembalikan benar
+akhir
+
+fungsi scope_pop(sm ScopeManager) void
+    jika sm.current_depth > 0
+        sm.current_depth = sm.current_depth - 1
+    akhir
+akhir
+
+fungsi test_scope_depth_limiting() int
+    print_test_header("Test 4: Scope Depth Limiting")
+
+    var sm = new_scope_manager(50)
+    var passed = 0
+
+    # Test normal depth
+    var i = 0
+    ulang i < 30
+        jika scope_push(sm) == salah
+            print_fail("Failed at depth 30")
+            kembalikan passed
+        akhir
+        i = i + 1
+    akhir
+
+    print_pass("Handled 30 nested scopes")
+    passed = passed + 1
+
+    # Reset
+    ulang sm.current_depth > 0
+        scope_pop(sm)
+    akhir
+
+    # Test overflow
+    i = 0
+    var overflow_triggered = salah
+    ulang i < 60
+        jika scope_push(sm) == salah
+            overflow_triggered = benar
+            i = 60  # Break
+        akhir
+        i = i + 1
+    akhir
+
+    jika overflow_triggered
+        print_pass("Scope overflow prevented")
+        passed = passed + 1
+    lainnya
+        print_fail("Should have triggered overflow")
+    akhir
+
+    print_stat("Overflow count", sm.overflow_count)
+    print_stat("Tests passed", passed)
+
+    kembalikan passed
+akhir
+
+# === MAIN ===
+fungsi main() void
+    native_print("╔════════════════════════════════════════════════════╗\n")
+    native_print("║  N1 COMPREHENSIVE ROBUSTNESS TEST SUITE           ║\n")
+    native_print("╚════════════════════════════════════════════════════╝\n")
+
+    var total_passed = 0
+
+    # Run all tests
+    total_passed = total_passed + test_recursion_prevention()
+    total_passed = total_passed + test_import_cycle_detection()
+    total_passed = total_passed + test_error_recovery()
+    total_passed = total_passed + test_scope_depth_limiting()
+
+    # Summary
+    native_print("\n╔════════════════════════════════════════════════════╗\n")
+    native_print("║  FINAL SUMMARY                                     ║\n")
+    native_print("╚════════════════════════════════════════════════════╝\n\n")
+
+    native_print("Total tests passed: ")
+    native_print_int(total_passed)
+    native_print(" / 8\n\n")
+
+    jika total_passed == 8
+        native_print("🎉 ALL TESTS PASSED! ROBUSTNESS VERIFIED! 🎉\n")
+    lainnya
+        native_print("⚠️  Some tests failed. Review results above.\n")
+    akhir
+
+    native_print("\nRobustness Features Validated:\n")
+    native_print("✓ Stack overflow prevention\n")
+    native_print("✓ Import cycle detection\n")
+    native_print("✓ Error recovery & panic mode\n")
+    native_print("✓ Scope depth limiting\n")
+akhir

@@ -1,0 +1,40 @@
+# N1 Simple Test
+# Basic test to verify N1 components work
+
+ambil "token"
+
+fungsi main() void
+    native_print("N1 Simple Test\n")
+    native_print("==============\n")
+    
+    # Test token creation
+    var tok = make_token(TOKEN_INT, "42", 1, 5)
+    
+    native_print("Created token:\n")
+    native_print("  Type: ")
+    native_print(token_type_string(tok.token_type))
+    native_print("\n")
+    native_print("  Literal: ")
+    native_print(tok.literal)
+    native_print("\n")
+    native_print("  Line: ")
+    native_print_int(tok.line)
+    native_print("\n")
+    native_print("  Column: ")
+    native_print_int(tok.column)
+    native_print("\n")
+    
+    # Test keyword lookup
+    native_print("\nKeyword lookup test:\n")
+    var keyword_type = lookup_keyword("fungsi")
+    native_print("  'fungsi' -> ")
+    native_print(token_type_string(keyword_type))
+    native_print("\n")
+    
+    var ident_type = lookup_keyword("my_var")
+    native_print("  'my_var' -> ")
+    native_print(token_type_string(ident_type))
+    native_print("\n")
+    
+    native_print("\nN1 Token System Working! ✓\n")
+akhir

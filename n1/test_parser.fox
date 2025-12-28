@@ -1,0 +1,99 @@
+# N1 Parser Test
+# Testing the parser implementation
+
+# Import dependencies
+ambil "lexer"
+ambil "parser"
+ambil "ast"
+
+fungsi main() void
+    native_print("N1 Parser Test\n")
+    native_print("==============\n")
+
+    # Test 1: Simple variable declaration
+    native_print("Test 1: Variable Declaration\n")
+    var input1 = "var x = 42"
+    var l1 = new_lexer(input1)
+    var p1 = new_parser(l1)
+    
+    native_print("Input: ")
+    native_print(input1)
+    native_print("\n")
+    
+    var program1 = parser_parse_program(p1)
+    parser_print_errors(p1)
+    
+    native_print("Statements parsed: ")
+    native_print_int(program1.statements_count)
+    native_print("\n\n")
+
+    # Test 2: Variable with type annotation
+    native_print("Test 2: Variable with Type\n")
+    var input2 = "var name : string = \"hello\""
+    var l2 = new_lexer(input2)
+    var p2 = new_parser(l2)
+    
+    native_print("Input: ")
+    native_print(input2)
+    native_print("\n")
+    
+    var program2 = parser_parse_program(p2)
+    parser_print_errors(p2)
+    
+    native_print("Statements parsed: ")
+    native_print_int(program2.statements_count)
+    native_print("\n\n")
+
+    # Test 3: Multiple statements
+    native_print("Test 3: Multiple Statements\n")
+    var input3 = "var x = 10; var y = 20; var z = x"
+    var l3 = new_lexer(input3)
+    var p3 = new_parser(l3)
+    
+    native_print("Input: ")
+    native_print(input3)
+    native_print("\n")
+    
+    var program3 = parser_parse_program(p3)
+    parser_print_errors(p3)
+    
+    native_print("Statements parsed: ")
+    native_print_int(program3.statements_count)
+    native_print("\n\n")
+
+    # Test 4: AST Node Creation
+    native_print("Test 4: AST Node Creation\n")
+    
+    var ident = make_identifier("test_var", 1, 5)
+    print_identifier(ident)
+    
+    var int_lit = make_integer_literal(123, "123", 2, 10)
+    print_integer_literal(int_lit)
+    
+    var str_lit = make_string_literal("hello world", 3, 15)
+    print_string_literal(str_lit)
+    
+    var bool_lit = make_boolean_literal(benar, "benar", 4, 20)
+    print_boolean_literal(bool_lit)
+    
+    native_print("\n")
+
+    # Test 5: Expression Parsing (Basic)
+    native_print("Test 5: Expression Parsing\n")
+    var input5 = "var result = !benar"
+    var l5 = new_lexer(input5)
+    var p5 = new_parser(l5)
+    
+    native_print("Input: ")
+    native_print(input5)
+    native_print("\n")
+    
+    var program5 = parser_parse_program(p5)
+    parser_print_errors(p5)
+    
+    native_print("Statements parsed: ")
+    native_print_int(program5.statements_count)
+    native_print("\n\n")
+
+    native_print("=== Parser Test Complete ===\n")
+akhir

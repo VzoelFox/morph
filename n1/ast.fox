@@ -1,0 +1,323 @@
+# N1 AST (Abstract Syntax Tree) Implementation
+# Port dari N0 pkg/parser/ast.go
+
+# ============================================================================
+# Node Type Constants
+# ============================================================================
+var NODE_PROGRAM = 0
+var NODE_VAR_STATEMENT = 1
+var NODE_FUNCTION_STATEMENT = 2
+var NODE_RETURN_STATEMENT = 3
+var NODE_EXPRESSION_STATEMENT = 4
+var NODE_BLOCK_STATEMENT = 5
+var NODE_IF_EXPRESSION = 6
+var NODE_IDENTIFIER = 7
+var NODE_INTEGER_LITERAL = 8
+var NODE_FLOAT_LITERAL = 9
+var NODE_STRING_LITERAL = 10
+var NODE_BOOLEAN_LITERAL = 11
+var NODE_ARRAY_LITERAL = 12
+var NODE_HASH_LITERAL = 13
+var NODE_FUNCTION_LITERAL = 14
+var NODE_PREFIX_EXPRESSION = 15
+var NODE_INFIX_EXPRESSION = 16
+var NODE_CALL_EXPRESSION = 17
+var NODE_INDEX_EXPRESSION = 18
+var NODE_MEMBER_EXPRESSION = 19
+var NODE_ASSIGNMENT_EXPRESSION = 20
+
+# ============================================================================
+# Base Node Structure
+# ============================================================================
+struktur Node
+    node_type int
+    token_literal string
+    line int
+    column int
+akhir
+
+# ============================================================================
+# Program Node (Root)
+# ============================================================================
+struktur Program
+    base Node
+    statements_count int
+    # Note: In a real implementation, we'd have an array of statements
+    # For simplicity, we'll track count and process statements individually
+akhir
+
+# ============================================================================
+# Statement Nodes
+# ============================================================================
+struktur VarStatement
+    base Node
+    name string
+    value_type string  # Optional type annotation
+    has_value bool
+    # Note: value would be an Expression node
+akhir
+
+struktur FunctionStatement
+    base Node
+    name string
+    parameters_count int
+    return_type string
+    # Note: parameters and body would be arrays/nodes
+akhir
+
+struktur ReturnStatement
+    base Node
+    has_value bool
+    # Note: return_value would be an Expression node
+akhir
+
+struktur ExpressionStatement
+    base Node
+    # Note: expression would be an Expression node
+akhir
+
+struktur BlockStatement
+    base Node
+    statements_count int
+    # Note: statements would be an array of Statement nodes
+akhir
+
+# ============================================================================
+# Expression Nodes
+# ============================================================================
+struktur Identifier
+    base Node
+    value string
+akhir
+
+struktur IntegerLiteral
+    base Node
+    value int
+akhir
+
+struktur FloatLiteral
+    base Node
+    value_str string  # Store as string for now
+akhir
+
+struktur StringLiteral
+    base Node
+    value string
+akhir
+
+struktur BooleanLiteral
+    base Node
+    value bool
+akhir
+
+struktur PrefixExpression
+    base Node
+    operator string
+    # Note: right would be an Expression node
+akhir
+
+struktur InfixExpression
+    base Node
+    operator string
+    # Note: left and right would be Expression nodes
+akhir
+
+struktur IfExpression
+    base Node
+    # Note: condition, consequence, alternative would be nodes
+    has_alternative bool
+akhir
+
+struktur CallExpression
+    base Node
+    # Note: function and arguments would be nodes
+    arguments_count int
+akhir
+
+struktur IndexExpression
+    base Node
+    # Note: left and index would be Expression nodes
+akhir
+
+struktur MemberExpression
+    base Node
+    member_name string
+    # Note: object would be an Expression node
+akhir
+
+# ============================================================================
+# Node Constructors
+# ============================================================================
+fungsi make_node(node_type int, literal string, line int, column int) Node
+    kembalikan Node{node_type: node_type, token_literal: literal, line: line, column: column}
+akhir
+
+fungsi make_program() Program
+    var base = make_node(NODE_PROGRAM, "program", 1, 1)
+    kembalikan Program{base: base, statements_count: 0}
+akhir
+
+fungsi make_identifier(name string, line int, column int) Identifier
+    var base = make_node(NODE_IDENTIFIER, name, line, column)
+    kembalikan Identifier{base: base, value: name}
+akhir
+
+fungsi make_integer_literal(value int, literal string, line int, column int) IntegerLiteral
+    var base = make_node(NODE_INTEGER_LITERAL, literal, line, column)
+    kembalikan IntegerLiteral{base: base, value: value}
+akhir
+
+fungsi make_string_literal(value string, line int, column int) StringLiteral
+    var base = make_node(NODE_STRING_LITERAL, value, line, column)
+    kembalikan StringLiteral{base: base, value: value}
+akhir
+
+fungsi make_boolean_literal(value bool, literal string, line int, column int) BooleanLiteral
+    var base = make_node(NODE_BOOLEAN_LITERAL, literal, line, column)
+    kembalikan BooleanLiteral{base: base, value: value}
+akhir
+
+fungsi make_var_statement(name string, type_str string, line int, column int) VarStatement
+    var base = make_node(NODE_VAR_STATEMENT, "var", line, column)
+    kembalikan VarStatement{base: base, name: name, value_type: type_str, has_value: salah}
+akhir
+
+fungsi make_prefix_expression(operator string, line int, column int) PrefixExpression
+    var base = make_node(NODE_PREFIX_EXPRESSION, operator, line, column)
+    kembalikan PrefixExpression{base: base, operator: operator}
+akhir
+
+fungsi make_infix_expression(operator string, line int, column int) InfixExpression
+    var base = make_node(NODE_INFIX_EXPRESSION, operator, line, column)
+    kembalikan InfixExpression{base: base, operator: operator}
+akhir
+
+# ============================================================================
+# Node Type to String
+# ============================================================================
+fungsi node_type_string(node_type int) string
+    jika node_type == NODE_PROGRAM
+        kembalikan "Program"
+    akhir
+    jika node_type == NODE_VAR_STATEMENT
+        kembalikan "VarStatement"
+    akhir
+    jika node_type == NODE_FUNCTION_STATEMENT
+        kembalikan "FunctionStatement"
+    akhir
+    jika node_type == NODE_RETURN_STATEMENT
+        kembalikan "ReturnStatement"
+    akhir
+    jika node_type == NODE_EXPRESSION_STATEMENT
+        kembalikan "ExpressionStatement"
+    akhir
+    jika node_type == NODE_BLOCK_STATEMENT
+        kembalikan "BlockStatement"
+    akhir
+    jika node_type == NODE_IF_EXPRESSION
+        kembalikan "IfExpression"
+    akhir
+    jika node_type == NODE_IDENTIFIER
+        kembalikan "Identifier"
+    akhir
+    jika node_type == NODE_INTEGER_LITERAL
+        kembalikan "IntegerLiteral"
+    akhir
+    jika node_type == NODE_FLOAT_LITERAL
+        kembalikan "FloatLiteral"
+    akhir
+    jika node_type == NODE_STRING_LITERAL
+        kembalikan "StringLiteral"
+    akhir
+    jika node_type == NODE_BOOLEAN_LITERAL
+        kembalikan "BooleanLiteral"
+    akhir
+    jika node_type == NODE_ARRAY_LITERAL
+        kembalikan "ArrayLiteral"
+    akhir
+    jika node_type == NODE_HASH_LITERAL
+        kembalikan "HashLiteral"
+    akhir
+    jika node_type == NODE_FUNCTION_LITERAL
+        kembalikan "FunctionLiteral"
+    akhir
+    jika node_type == NODE_PREFIX_EXPRESSION
+        kembalikan "PrefixExpression"
+    akhir
+    jika node_type == NODE_INFIX_EXPRESSION
+        kembalikan "InfixExpression"
+    akhir
+    jika node_type == NODE_CALL_EXPRESSION
+        kembalikan "CallExpression"
+    akhir
+    jika node_type == NODE_INDEX_EXPRESSION
+        kembalikan "IndexExpression"
+    akhir
+    jika node_type == NODE_MEMBER_EXPRESSION
+        kembalikan "MemberExpression"
+    akhir
+    jika node_type == NODE_ASSIGNMENT_EXPRESSION
+        kembalikan "AssignmentExpression"
+    akhir
+    kembalikan "Unknown"
+akhir
+
+# ============================================================================
+# AST Visitor Pattern (Simplified)
+# ============================================================================
+fungsi visit_node(node Node) void
+    native_print("Visiting ")
+    native_print(node_type_string(node.node_type))
+    native_print(" at line ")
+    native_print_int(node.line)
+    native_print(", column ")
+    native_print_int(node.column)
+    native_print("\n")
+akhir
+
+# ============================================================================
+# AST Utilities
+# ============================================================================
+fungsi print_identifier(ident Identifier) void
+    native_print("Identifier: ")
+    native_print(ident.value)
+    native_print(" (")
+    native_print_int(ident.base.line)
+    native_print(":")
+    native_print_int(ident.base.column)
+    native_print(")\n")
+akhir
+
+fungsi print_integer_literal(lit IntegerLiteral) void
+    native_print("IntegerLiteral: ")
+    native_print_int(lit.value)
+    native_print(" (")
+    native_print_int(lit.base.line)
+    native_print(":")
+    native_print_int(lit.base.column)
+    native_print(")\n")
+akhir
+
+fungsi print_string_literal(lit StringLiteral) void
+    native_print("StringLiteral: \"")
+    native_print(lit.value)
+    native_print("\" (")
+    native_print_int(lit.base.line)
+    native_print(":")
+    native_print_int(lit.base.column)
+    native_print(")\n")
+akhir
+
+fungsi print_boolean_literal(lit BooleanLiteral) void
+    native_print("BooleanLiteral: ")
+    jika lit.value
+        native_print("benar")
+    lainnya
+        native_print("salah")
+    akhir
+    native_print(" (")
+    native_print_int(lit.base.line)
+    native_print(":")
+    native_print_int(lit.base.column)
+    native_print(")\n")
+akhir

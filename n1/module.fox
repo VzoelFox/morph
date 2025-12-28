@@ -1,0 +1,255 @@
+# N1 Module System & Import Cycle Detection
+# Port dari N0 module loading dengan cycle detection
+
+# Import dependencies
+ambil "types_minimal"
+
+# ============================================================================
+# Module Structure
+# ============================================================================
+struktur Module
+    name string
+    path string
+    loaded bool
+    loading bool
+    exports_count int
+    dependencies_count int
+akhir
+
+# ============================================================================
+# Module Manager Structure
+# ============================================================================
+struktur ModuleManager
+    modules_count int
+    loading_stack_count int
+    max_modules int
+    max_stack_depth int
+    errors_count int
+akhir
+
+# ============================================================================
+# Module Manager Constructor
+# ============================================================================
+fungsi new_module_manager() ModuleManager
+    kembalikan ModuleManager{
+        modules_count: 0,
+        loading_stack_count: 0,
+        max_modules: 1000,
+        max_stack_depth: 50,
+        errors_count: 0
+    }
+akhir
+
+# ============================================================================
+# Module Constructor
+# ============================================================================
+fungsi make_module(name string, path string) Module
+    kembalikan Module{
+        name: name,
+        path: path,
+        loaded: salah,
+        loading: salah,
+        exports_count: 0,
+        dependencies_count: 0
+    }
+akhir
+
+# ============================================================================
+# Import Cycle Detection
+# ============================================================================
+fungsi module_start_loading(mm ModuleManager, name string) bool
+    # Check if already in loading stack (cycle detection)
+    jika mm.loading_stack_count >= mm.max_stack_depth
+        mm.errors_count = mm.errors_count + 1
+        native_print("ERROR: Import cycle detected - maximum depth exceeded\n")
+        kembalikan salah
+    akhir
+    
+    # Simplified cycle check - in real implementation would check stack
+    native_print("Starting to load module '")
+    native_print(name)
+    native_print("' (stack depth: ")
+    native_print_int(mm.loading_stack_count)
+    native_print(")\n")
+    
+    mm.loading_stack_count = mm.loading_stack_count + 1
+    kembalikan benar
+akhir
+
+fungsi module_finish_loading(mm ModuleManager, name string) void
+    jika mm.loading_stack_count > 0
+        mm.loading_stack_count = mm.loading_stack_count - 1
+    akhir
+    
+    native_print("Finished loading module '")
+    native_print(name)
+    native_print("' (stack depth: ")
+    native_print_int(mm.loading_stack_count)
+    native_print(")\n")
+akhir
+
+fungsi module_check_cycle(mm ModuleManager, name string) bool
+    # Simplified cycle detection
+    # In real implementation, would check if name is in loading stack
+    jika mm.loading_stack_count > 10  # Arbitrary threshold for demo
+        native_print("WARNING: Potential import cycle involving '")
+        native_print(name)
+        native_print("'\n")
+        kembalikan benar
+    akhir
+    kembalikan salah
+akhir
+
+# ============================================================================
+# Module Loading
+# ============================================================================
+fungsi module_load(mm ModuleManager, mod Module) bool
+    jika mod.loaded
+        native_print("Module '")
+        native_print(mod.name)
+        native_print("' already loaded\n")
+        kembalikan benar
+    akhir
+    
+    jika mod.loading
+        mm.errors_count = mm.errors_count + 1
+        native_print("ERROR: Circular dependency detected for module '")
+        native_print(mod.name)
+        native_print("'\n")
+        kembalikan salah
+    akhir
+    
+    # Start loading
+    var can_load = module_start_loading(mm, mod.name)
+    jika can_load == salah
+        kembalikan salah
+    akhir
+    
+    mod.loading = benar
+    
+    # Simulate loading process
+    native_print("Loading module '")
+    native_print(mod.name)
+    native_print("' from '")
+    native_print(mod.path)
+    native_print("'\n")
+    
+    # Mark as loaded
+    mod.loaded = benar
+    mod.loading = salah
+    mm.modules_count = mm.modules_count + 1
+    
+    module_finish_loading(mm, mod.name)
+    kembalikan benar
+akhir
+
+# ============================================================================
+# Module Resolution
+# ============================================================================
+fungsi module_resolve_path(name string) string
+    # Simplified path resolution
+    jika name == "types"
+        kembalikan "n1/types.fox"
+    akhir
+    jika name == "token"
+        kembalikan "n1/token.fox"
+    akhir
+    jika name == "lexer"
+        kembalikan "n1/lexer.fox"
+    akhir
+    jika name == "parser"
+        kembalikan "n1/parser.fox"
+    akhir
+    jika name == "ast"
+        kembalikan "n1/ast.fox"
+    akhir
+    
+    # Default: assume .fox extension
+    kembalikan name + ".fox"
+akhir
+
+fungsi module_find(mm ModuleManager, name string) bool
+    var path = module_resolve_path(name)
+    
+    native_print("Resolving module '")
+    native_print(name)
+    native_print("' -> '")
+    native_print(path)
+    native_print("'\n")
+    
+    # In real implementation, would check file existence
+    kembalikan benar
+akhir
+
+# ============================================================================
+# Export Management
+# ============================================================================
+fungsi module_add_export(mod Module, name string, export_type Type) void
+    mod.exports_count = mod.exports_count + 1
+    
+    native_print("Module '")
+    native_print(mod.name)
+    native_print("' exports '")
+    native_print(name)
+    native_print("' : ")
+    native_print(kind_to_string(export_type.kind))
+    native_print("\n")
+akhir
+
+fungsi module_get_export(mod Module, name string) Type
+    # Simplified: return int type for demo
+    native_print("Getting export '")
+    native_print(name)
+    native_print("' from module '")
+    native_print(mod.name)
+    native_print("'\n")
+    
+    kembalikan int_type()
+akhir
+
+# ============================================================================
+# Dependency Management
+# ============================================================================
+fungsi module_add_dependency(mod Module, dep_name string) void
+    mod.dependencies_count = mod.dependencies_count + 1
+    
+    native_print("Module '")
+    native_print(mod.name)
+    native_print("' depends on '")
+    native_print(dep_name)
+    native_print("'\n")
+akhir
+
+# ============================================================================
+# Module Validation
+# ============================================================================
+fungsi module_validate(mm ModuleManager) bool
+    jika mm.errors_count > 0
+        native_print("Module validation failed with ")
+        native_print_int(mm.errors_count)
+        native_print(" error(s)\n")
+        kembalikan salah
+    akhir
+    
+    native_print("Module validation passed\n")
+    kembalikan benar
+akhir
+
+# ============================================================================
+# Module Statistics
+# ============================================================================
+fungsi module_print_stats(mm ModuleManager) void
+    native_print("Module Statistics:\n")
+    native_print("  Loaded modules: ")
+    native_print_int(mm.modules_count)
+    native_print("\n")
+    native_print("  Loading stack depth: ")
+    native_print_int(mm.loading_stack_count)
+    native_print("\n")
+    native_print("  Max modules: ")
+    native_print_int(mm.max_modules)
+    native_print("\n")
+    native_print("  Errors: ")
+    native_print_int(mm.errors_count)
+    native_print("\n")
+akhir

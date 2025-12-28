@@ -1,0 +1,98 @@
+# N1 Lexer Test
+# Testing the lexer implementation
+
+# Import lexer and token
+ambil "lexer"
+ambil "token"
+
+fungsi main() void
+    native_print("N1 Lexer Test\n")
+    native_print("=============\n")
+
+    # Test basic tokenization
+    var input = "var x = 42 + 10"
+    var l = new_lexer(input)
+    
+    native_print("Input: ")
+    native_print(input)
+    native_print("\n\nTokens:\n")
+    
+    var token_count = 0
+    selama benar
+        var tok = lexer_next_token(l)
+        
+        native_print("Type: ")
+        native_print(token_type_string(tok.token_type))
+        native_print(", Literal: '")
+        native_print(tok.literal)
+        native_print("', Line: ")
+        native_print_int(tok.line)
+        native_print(", Column: ")
+        native_print_int(tok.column)
+        native_print("\n")
+        
+        token_count = token_count + 1
+        
+        jika tok.token_type == TOKEN_EOF
+            putus
+        akhir
+        
+        # Safety check to prevent infinite loop
+        jika token_count > 20
+            native_print("ERROR: Too many tokens, stopping\n")
+            putus
+        akhir
+    akhir
+    
+    native_print("\nTotal tokens: ")
+    native_print_int(token_count)
+    native_print("\n")
+    
+    # Test keyword recognition
+    native_print("\n=== Keyword Test ===\n")
+    var keyword_input = "fungsi jika lainnya kembalikan"
+    var l2 = new_lexer(keyword_input)
+    
+    native_print("Input: ")
+    native_print(keyword_input)
+    native_print("\n\nKeywords:\n")
+    
+    selama benar
+        var tok2 = lexer_next_token(l2)
+        
+        jika tok2.token_type == TOKEN_EOF
+            putus
+        akhir
+        
+        native_print("'")
+        native_print(tok2.literal)
+        native_print("' -> ")
+        native_print(token_type_string(tok2.token_type))
+        native_print("\n")
+    akhir
+    
+    # Test operators
+    native_print("\n=== Operator Test ===\n")
+    var op_input = "== != <= >= << >> && ||"
+    var l3 = new_lexer(op_input)
+    
+    native_print("Input: ")
+    native_print(op_input)
+    native_print("\n\nOperators:\n")
+    
+    selama benar
+        var tok3 = lexer_next_token(l3)
+        
+        jika tok3.token_type == TOKEN_EOF
+            putus
+        akhir
+        
+        native_print("'")
+        native_print(tok3.literal)
+        native_print("' -> ")
+        native_print(token_type_string(tok3.token_type))
+        native_print("\n")
+    akhir
+    
+    native_print("\n=== Lexer Test Complete ===\n")
+akhir

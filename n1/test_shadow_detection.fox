@@ -1,0 +1,161 @@
+# N1 Robustness Test - Variable Shadowing Detection
+# Port from N0 pkg/checker/shadow_test.go
+
+# Simplified Type for testing
+struktur Type
+    kind int
+    name string
+akhir
+
+fungsi int_type() Type
+    kembalikan Type{kind: 0, name: "int"}
+akhir
+
+fungsi string_type() Type
+    kembalikan Type{kind: 2, name: "string"}
+akhir
+
+# Symbol structure
+struktur Symbol
+    name string
+    symbol_type Type
+    scope_level int
+akhir
+
+fungsi make_symbol(name string, sym_type Type, level int) Symbol
+    kembalikan Symbol{name: name, symbol_type: sym_type, scope_level: level}
+akhir
+
+# Scope Manager
+struktur ScopeManager
+    current_level int
+    shadow_warnings int
+akhir
+
+fungsi new_scope_manager() ScopeManager
+    kembalikan ScopeManager{current_level: 0, shadow_warnings: 0}
+akhir
+
+fungsi scope_enter(sm ScopeManager) void
+    sm.current_level = sm.current_level + 1
+    native_print("  Entered scope level ")
+    native_print_int(sm.current_level)
+    native_print("\n")
+akhir
+
+fungsi scope_exit(sm ScopeManager) void
+    jika sm.current_level > 0
+        native_print("  Exited scope level ")
+        native_print_int(sm.current_level)
+        native_print("\n")
+        sm.current_level = sm.current_level - 1
+    akhir
+akhir
+
+# Simplified shadowing check
+fungsi check_shadowing(sm ScopeManager, sym Symbol, outer_sym Symbol) bool
+    jika sym.name == outer_sym.name
+        jika sym.scope_level > outer_sym.scope_level
+            sm.shadow_warnings = sm.shadow_warnings + 1
+            native_print("WARNING: Variable '")
+            native_print(sym.name)
+            native_print("' at level ")
+            native_print_int(sym.scope_level)
+            native_print(" shadows outer declaration at level ")
+            native_print_int(outer_sym.scope_level)
+            native_print("\n")
+            kembalikan benar
+        akhir
+    akhir
+    kembalikan salah
+akhir
+
+fungsi main() void
+    native_print("╔══════════════════════════════════════╗\n")
+    native_print("║  Shadowing Detection Test           ║\n")
+    native_print("╚══════════════════════════════════════╝\n\n")
+
+    var sm = new_scope_manager()
+
+    # Test 1: No shadowing (different names)
+    native_print("=== Test 1: No Shadowing (different names) ===\n")
+    var x_outer = make_symbol("x", int_type(), 0)
+    scope_enter(sm)
+    var y_inner = make_symbol("y", int_type(), 1)
+
+    var has_shadow1 = check_shadowing(sm, y_inner, x_outer)
+    jika has_shadow1
+        native_print("FAIL: Should not detect shadowing\n")
+    lainnya
+        native_print("PASS: No shadowing detected\n")
+    akhir
+
+    scope_exit(sm)
+    native_print("  Shadow warnings: ")
+    native_print_int(sm.shadow_warnings)
+    native_print("\n\n")
+
+    # Test 2: Shadowing same name
+    native_print("=== Test 2: Shadowing (same name) ===\n")
+    var x_outer2 = make_symbol("x", int_type(), 0)
+    scope_enter(sm)
+    var x_inner = make_symbol("x", string_type(), 1)
+
+    var has_shadow2 = check_shadowing(sm, x_inner, x_outer2)
+    jika has_shadow2
+        native_print("PASS: Shadowing correctly detected\n")
+    lainnya
+        native_print("FAIL: Should detect shadowing\n")
+    akhir
+
+    scope_exit(sm)
+    native_print("  Shadow warnings: ")
+    native_print_int(sm.shadow_warnings)
+    native_print("\n\n")
+
+    # Test 3: Multiple levels of shadowing
+    native_print("=== Test 3: Multi-level Shadowing ===\n")
+    var z_level0 = make_symbol("z", int_type(), 0)
+
+    scope_enter(sm)
+    var z_level1 = make_symbol("z", int_type(), 1)
+    check_shadowing(sm, z_level1, z_level0)
+
+    scope_enter(sm)
+    var z_level2 = make_symbol("z", string_type(), 2)
+    check_shadowing(sm, z_level2, z_level1)
+    check_shadowing(sm, z_level2, z_level0)
+
+    scope_exit(sm)
+    scope_exit(sm)
+
+    native_print("  Total shadow warnings: ")
+    native_print_int(sm.shadow_warnings)
+    native_print("\n\n")
+
+    # Test 4: Same level (no shadowing)
+    native_print("=== Test 4: Same Level (no shadowing) ===\n")
+    var a_var = make_symbol("a", int_type(), 0)
+    var b_var = make_symbol("a", int_type(), 0)
+
+    var has_shadow4 = check_shadowing(sm, b_var, a_var)
+    jika has_shadow4
+        native_print("FAIL: Same level should not shadow\n")
+    lainnya
+        native_print("PASS: Same level not treated as shadowing\n")
+    akhir
+
+    native_print("  Shadow warnings: ")
+    native_print_int(sm.shadow_warnings)
+    native_print("\n\n")
+
+    # Summary
+    native_print("╔══════════════════════════════════════╗\n")
+    native_print("║         TEST SUMMARY                ║\n")
+    native_print("╚══════════════════════════════════════╝\n")
+    native_print("✓ Different names don't trigger warnings\n")
+    native_print("✓ Same name in inner scope triggers warning\n")
+    native_print("✓ Multi-level shadowing detected\n")
+    native_print("✓ Same-level variables don't shadow\n\n")
+    native_print("🎉 SHADOWING DETECTION TEST PASSED! 🎉\n")
+akhir

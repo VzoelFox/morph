@@ -1,0 +1,398 @@
+# N1 Token System
+# Port dari N0 pkg/lexer/token.go
+
+# ============================================================================
+# Token Type Constants
+# ============================================================================
+var TOKEN_ILLEGAL = 0
+var TOKEN_EOF = 1
+
+# Identifiers + literals
+var TOKEN_IDENT = 2      # add, foobar, x, y, ...
+var TOKEN_INT = 3        # 1343456
+var TOKEN_FLOAT = 4      # 13.45
+var TOKEN_STRING = 5     # "foobar"
+var TOKEN_CHAR = 6       # 'a'
+
+# Operators
+var TOKEN_ASSIGN = 7     # =
+var TOKEN_PLUS = 8       # +
+var TOKEN_MINUS = 9      # -
+var TOKEN_BANG = 10      # !
+var TOKEN_ASTERISK = 11  # *
+var TOKEN_SLASH = 12     # /
+var TOKEN_PERCENT = 13   # %
+
+var TOKEN_LT = 14        # <
+var TOKEN_GT = 15        # >
+var TOKEN_EQ = 16        # ==
+var TOKEN_NOT_EQ = 17    # !=
+var TOKEN_LE = 18        # <=
+var TOKEN_GE = 19        # >=
+
+# Bitwise
+var TOKEN_BIT_AND = 20   # &
+var TOKEN_BIT_OR = 21    # |
+var TOKEN_BIT_XOR = 22   # ^
+var TOKEN_BIT_NOT = 23   # ~
+var TOKEN_LSHIFT = 24    # <<
+var TOKEN_RSHIFT = 25    # >>
+
+# Logical
+var TOKEN_AND = 26       # &&
+var TOKEN_OR = 27        # ||
+
+# Delimiters
+var TOKEN_COMMA = 28     # ,
+var TOKEN_SEMICOLON = 29 # ;
+var TOKEN_COLON = 30     # :
+
+var TOKEN_LPAREN = 31    # (
+var TOKEN_RPAREN = 32    # )
+var TOKEN_LBRACE = 33    # {
+var TOKEN_RBRACE = 34    # }
+var TOKEN_LBRACKET = 35  # [
+var TOKEN_RBRACKET = 36  # ]
+
+# Keywords
+var TOKEN_FUNGSI = 37    # fungsi
+var TOKEN_VAR = 38       # var
+var TOKEN_TETAPAN = 39   # tetapan
+var TOKEN_BENAR = 40     # benar
+var TOKEN_SALAH = 41     # salah
+var TOKEN_JIKA = 42      # jika
+var TOKEN_LAINNYA = 43   # lainnya
+var TOKEN_KEMBALIKAN = 44 # kembalikan
+var TOKEN_STRUKTUR = 45  # struktur
+var TOKEN_ANTARMUKA = 46 # antarmuka
+var TOKEN_AMBIL = 47     # ambil
+var TOKEN_UNTUK = 48     # untuk
+var TOKEN_SELAMA = 49    # selama
+var TOKEN_PUTUS = 50     # putus
+var TOKEN_LANJUT = 51    # lanjut
+var TOKEN_PILIH = 52     # pilih
+var TOKEN_KASUS = 53     # kasus
+var TOKEN_BAWAAN = 54    # bawaan
+var TOKEN_AKHIR = 55     # akhir
+var TOKEN_ATAU_JIKA = 56 # atau_jika
+var TOKEN_DAN = 57       # dan
+var TOKEN_ATAU = 58      # atau
+var TOKEN_KOSONG = 59    # kosong
+var TOKEN_LUNCURKAN = 60 # luncurkan
+var TOKEN_SALURAN_BARU = 61 # saluran_baru
+var TOKEN_KIRIM = 62     # kirim
+var TOKEN_TERIMA = 63    # terima
+
+# Special
+var TOKEN_DOT = 64       # .
+var TOKEN_ARROW = 65     # ->
+
+# ============================================================================
+# Token Structure
+# ============================================================================
+struktur Token
+    token_type int
+    literal string
+    line int
+    column int
+akhir
+
+# ============================================================================
+# Token Constructor
+# ============================================================================
+fungsi make_token(t_type int, lit string, ln int, col int) Token
+    kembalikan Token{token_type: t_type, literal: lit, line: ln, column: col}
+akhir
+
+# ============================================================================
+# Token Type to String
+# ============================================================================
+fungsi token_type_string(t_type int) string
+    jika t_type == TOKEN_ILLEGAL
+        kembalikan "ILLEGAL"
+    akhir
+    jika t_type == TOKEN_EOF
+        kembalikan "EOF"
+    akhir
+    jika t_type == TOKEN_IDENT
+        kembalikan "IDENT"
+    akhir
+    jika t_type == TOKEN_INT
+        kembalikan "INT"
+    akhir
+    jika t_type == TOKEN_FLOAT
+        kembalikan "FLOAT"
+    akhir
+    jika t_type == TOKEN_STRING
+        kembalikan "STRING"
+    akhir
+    jika t_type == TOKEN_CHAR
+        kembalikan "CHAR"
+    akhir
+    jika t_type == TOKEN_ASSIGN
+        kembalikan "="
+    akhir
+    jika t_type == TOKEN_PLUS
+        kembalikan "+"
+    akhir
+    jika t_type == TOKEN_MINUS
+        kembalikan "-"
+    akhir
+    jika t_type == TOKEN_BANG
+        kembalikan "!"
+    akhir
+    jika t_type == TOKEN_ASTERISK
+        kembalikan "*"
+    akhir
+    jika t_type == TOKEN_SLASH
+        kembalikan "/"
+    akhir
+    jika t_type == TOKEN_PERCENT
+        kembalikan "%"
+    akhir
+    jika t_type == TOKEN_LT
+        kembalikan "<"
+    akhir
+    jika t_type == TOKEN_GT
+        kembalikan ">"
+    akhir
+    jika t_type == TOKEN_EQ
+        kembalikan "=="
+    akhir
+    jika t_type == TOKEN_NOT_EQ
+        kembalikan "!="
+    akhir
+    jika t_type == TOKEN_LE
+        kembalikan "<="
+    akhir
+    jika t_type == TOKEN_GE
+        kembalikan ">="
+    akhir
+    jika t_type == TOKEN_BIT_AND
+        kembalikan "&"
+    akhir
+    jika t_type == TOKEN_BIT_OR
+        kembalikan "|"
+    akhir
+    jika t_type == TOKEN_BIT_XOR
+        kembalikan "^"
+    akhir
+    jika t_type == TOKEN_BIT_NOT
+        kembalikan "~"
+    akhir
+    jika t_type == TOKEN_LSHIFT
+        kembalikan "<<"
+    akhir
+    jika t_type == TOKEN_RSHIFT
+        kembalikan ">>"
+    akhir
+    jika t_type == TOKEN_AND
+        kembalikan "&&"
+    akhir
+    jika t_type == TOKEN_OR
+        kembalikan "||"
+    akhir
+    jika t_type == TOKEN_COMMA
+        kembalikan ","
+    akhir
+    jika t_type == TOKEN_SEMICOLON
+        kembalikan ";"
+    akhir
+    jika t_type == TOKEN_COLON
+        kembalikan ":"
+    akhir
+    jika t_type == TOKEN_LPAREN
+        kembalikan "("
+    akhir
+    jika t_type == TOKEN_RPAREN
+        kembalikan ")"
+    akhir
+    jika t_type == TOKEN_LBRACE
+        kembalikan "{"
+    akhir
+    jika t_type == TOKEN_RBRACE
+        kembalikan "}"
+    akhir
+    jika t_type == TOKEN_LBRACKET
+        kembalikan "["
+    akhir
+    jika t_type == TOKEN_RBRACKET
+        kembalikan "]"
+    akhir
+    jika t_type == TOKEN_FUNGSI
+        kembalikan "fungsi"
+    akhir
+    jika t_type == TOKEN_VAR
+        kembalikan "var"
+    akhir
+    jika t_type == TOKEN_TETAPAN
+        kembalikan "tetapan"
+    akhir
+    jika t_type == TOKEN_BENAR
+        kembalikan "benar"
+    akhir
+    jika t_type == TOKEN_SALAH
+        kembalikan "salah"
+    akhir
+    jika t_type == TOKEN_JIKA
+        kembalikan "jika"
+    akhir
+    jika t_type == TOKEN_LAINNYA
+        kembalikan "lainnya"
+    akhir
+    jika t_type == TOKEN_KEMBALIKAN
+        kembalikan "kembalikan"
+    akhir
+    jika t_type == TOKEN_STRUKTUR
+        kembalikan "struktur"
+    akhir
+    jika t_type == TOKEN_ANTARMUKA
+        kembalikan "antarmuka"
+    akhir
+    jika t_type == TOKEN_AMBIL
+        kembalikan "ambil"
+    akhir
+    jika t_type == TOKEN_UNTUK
+        kembalikan "untuk"
+    akhir
+    jika t_type == TOKEN_SELAMA
+        kembalikan "selama"
+    akhir
+    jika t_type == TOKEN_PUTUS
+        kembalikan "putus"
+    akhir
+    jika t_type == TOKEN_LANJUT
+        kembalikan "lanjut"
+    akhir
+    jika t_type == TOKEN_PILIH
+        kembalikan "pilih"
+    akhir
+    jika t_type == TOKEN_KASUS
+        kembalikan "kasus"
+    akhir
+    jika t_type == TOKEN_BAWAAN
+        kembalikan "bawaan"
+    akhir
+    jika t_type == TOKEN_AKHIR
+        kembalikan "akhir"
+    akhir
+    jika t_type == TOKEN_ATAU_JIKA
+        kembalikan "atau_jika"
+    akhir
+    jika t_type == TOKEN_DAN
+        kembalikan "dan"
+    akhir
+    jika t_type == TOKEN_ATAU
+        kembalikan "atau"
+    akhir
+    jika t_type == TOKEN_KOSONG
+        kembalikan "kosong"
+    akhir
+    jika t_type == TOKEN_LUNCURKAN
+        kembalikan "luncurkan"
+    akhir
+    jika t_type == TOKEN_SALURAN_BARU
+        kembalikan "saluran_baru"
+    akhir
+    jika t_type == TOKEN_KIRIM
+        kembalikan "kirim"
+    akhir
+    jika t_type == TOKEN_TERIMA
+        kembalikan "terima"
+    akhir
+    jika t_type == TOKEN_DOT
+        kembalikan "."
+    akhir
+    jika t_type == TOKEN_ARROW
+        kembalikan "->"
+    akhir
+    kembalikan "UNKNOWN"
+akhir
+
+# ============================================================================
+# Keyword Lookup
+# ============================================================================
+fungsi lookup_keyword(ident string) int
+    jika ident == "fungsi"
+        kembalikan TOKEN_FUNGSI
+    akhir
+    jika ident == "var"
+        kembalikan TOKEN_VAR
+    akhir
+    jika ident == "tetapan"
+        kembalikan TOKEN_TETAPAN
+    akhir
+    jika ident == "benar"
+        kembalikan TOKEN_BENAR
+    akhir
+    jika ident == "salah"
+        kembalikan TOKEN_SALAH
+    akhir
+    jika ident == "jika"
+        kembalikan TOKEN_JIKA
+    akhir
+    jika ident == "lainnya"
+        kembalikan TOKEN_LAINNYA
+    akhir
+    jika ident == "kembalikan"
+        kembalikan TOKEN_KEMBALIKAN
+    akhir
+    jika ident == "struktur"
+        kembalikan TOKEN_STRUKTUR
+    akhir
+    jika ident == "antarmuka"
+        kembalikan TOKEN_ANTARMUKA
+    akhir
+    jika ident == "ambil"
+        kembalikan TOKEN_AMBIL
+    akhir
+    jika ident == "untuk"
+        kembalikan TOKEN_UNTUK
+    akhir
+    jika ident == "selama"
+        kembalikan TOKEN_SELAMA
+    akhir
+    jika ident == "putus"
+        kembalikan TOKEN_PUTUS
+    akhir
+    jika ident == "lanjut"
+        kembalikan TOKEN_LANJUT
+    akhir
+    jika ident == "pilih"
+        kembalikan TOKEN_PILIH
+    akhir
+    jika ident == "kasus"
+        kembalikan TOKEN_KASUS
+    akhir
+    jika ident == "bawaan"
+        kembalikan TOKEN_BAWAAN
+    akhir
+    jika ident == "akhir"
+        kembalikan TOKEN_AKHIR
+    akhir
+    jika ident == "atau_jika"
+        kembalikan TOKEN_ATAU_JIKA
+    akhir
+    jika ident == "dan"
+        kembalikan TOKEN_DAN
+    akhir
+    jika ident == "atau"
+        kembalikan TOKEN_ATAU
+    akhir
+    jika ident == "kosong"
+        kembalikan TOKEN_KOSONG
+    akhir
+    jika ident == "luncurkan"
+        kembalikan TOKEN_LUNCURKAN
+    akhir
+    jika ident == "saluran_baru"
+        kembalikan TOKEN_SALURAN_BARU
+    akhir
+    jika ident == "kirim"
+        kembalikan TOKEN_KIRIM
+    akhir
+    jika ident == "terima"
+        kembalikan TOKEN_TERIMA
+    akhir
+    kembalikan TOKEN_IDENT
+akhir

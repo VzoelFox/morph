@@ -1,0 +1,250 @@
+# N1 Type Checker Implementation
+# Port dari N0 pkg/checker/checker.go
+
+# Import dependencies
+ambil "types"
+ambil "ast"
+ambil "parser"
+
+# ============================================================================
+# Checker Structure
+# ============================================================================
+struktur Checker
+    errors_count int
+    current_scope_level int
+    # Note: In a real implementation, we'd have symbol tables and type maps
+akhir
+
+# ============================================================================
+# Symbol Structure (Simplified)
+# ============================================================================
+struktur Symbol
+    name string
+    symbol_type Type
+    is_constant bool
+    line int
+    column int
+akhir
+
+# ============================================================================
+# Checker Constructor
+# ============================================================================
+fungsi new_checker() Checker
+    kembalikan Checker{errors_count: 0, current_scope_level: 0}
+akhir
+
+# ============================================================================
+# Error Handling
+# ============================================================================
+fungsi checker_add_error(c Checker, message string) void
+    c.errors_count = c.errors_count + 1
+    native_print("Type Error: ")
+    native_print(message)
+    native_print("\n")
+akhir
+
+fungsi checker_has_errors(c Checker) bool
+    kembalikan c.errors_count > 0
+akhir
+
+# ============================================================================
+# Type Checking for Literals
+# ============================================================================
+fungsi check_integer_literal(c Checker, lit IntegerLiteral) Type
+    kembalikan int_type()
+akhir
+
+fungsi check_string_literal(c Checker, lit StringLiteral) Type
+    kembalikan string_type()
+akhir
+
+fungsi check_boolean_literal(c Checker, lit BooleanLiteral) Type
+    kembalikan bool_type()
+akhir
+
+fungsi check_identifier(c Checker, ident Identifier) Type
+    # Simplified: assume all identifiers are int for now
+    # In a real implementation, we'd look up in symbol table
+    kembalikan int_type()
+akhir
+
+# ============================================================================
+# Type Checking for Expressions
+# ============================================================================
+fungsi check_prefix_expression(c Checker, expr PrefixExpression) Type
+    # For now, assume the right operand is int
+    var right_type = int_type()
+    
+    var result = type_prefix_op(right_type, expr.operator)
+    jika result.has_error
+        checker_add_error(c, result.error_msg)
+        kembalikan error_type()
+    akhir
+    
+    kembalikan result.result
+akhir
+
+fungsi check_infix_expression(c Checker, expr InfixExpression) Type
+    # For now, assume both operands are int
+    var left_type = int_type()
+    var right_type = int_type()
+    
+    var result = type_binary_op(left_type, expr.operator, right_type)
+    jika result.has_error
+        checker_add_error(c, result.error_msg)
+        kembalikan error_type()
+    akhir
+    
+    kembalikan result.result
+akhir
+
+# ============================================================================
+# Type Checking for Statements
+# ============================================================================
+fungsi check_var_statement(c Checker, stmt VarStatement) Type
+    var declared_type = void_type()
+    
+    # Check if type annotation exists
+    jika stmt.value_type != ""
+        jika stmt.value_type == "int"
+            declared_type = int_type()
+        lainnya jika stmt.value_type == "string"
+            declared_type = string_type()
+        lainnya jika stmt.value_type == "bool"
+            declared_type = bool_type()
+        lainnya
+            checker_add_error(c, "Unknown type: " + stmt.value_type)
+            kembalikan error_type()
+        akhir
+    akhir
+    
+    # If there's a value, check type compatibility
+    jika stmt.has_value
+        # For now, assume the value is compatible
+        # In a real implementation, we'd check the expression type
+        native_print("Variable '")
+        native_print(stmt.name)
+        native_print("' declared with type ")
+        native_print(kind_to_string(declared_type.kind))
+        native_print(" and has initial value\n")
+    lainnya
+        native_print("Variable '")
+        native_print(stmt.name)
+        native_print("' declared with type ")
+        native_print(kind_to_string(declared_type.kind))
+        native_print(" (no initial value)\n")
+    akhir
+    
+    kembalikan declared_type
+akhir
+
+# ============================================================================
+# Program Type Checking
+# ============================================================================
+fungsi check_program(c Checker, program Program) void
+    native_print("Type checking program with ")
+    native_print_int(program.statements_count)
+    native_print(" statements\n")
+    
+    # In a real implementation, we'd iterate through all statements
+    # For now, we just report that type checking is happening
+    
+    jika checker_has_errors(c)
+        native_print("Type checking completed with ")
+        native_print_int(c.errors_count)
+        native_print(" error(s)\n")
+    lainnya
+        native_print("Type checking completed successfully\n")
+    akhir
+akhir
+
+# ============================================================================
+# Built-in Function Type Checking
+# ============================================================================
+fungsi check_builtin_function(c Checker, name string, args_count int) Type
+    jika name == "native_print"
+        jika args_count == 1
+            kembalikan void_type()
+        lainnya
+            checker_add_error(c, "native_print expects 1 argument")
+            kembalikan error_type()
+        akhir
+    akhir
+    
+    jika name == "native_print_int"
+        jika args_count == 1
+            kembalikan void_type()
+        lainnya
+            checker_add_error(c, "native_print_int expects 1 argument")
+            kembalikan error_type()
+        akhir
+    akhir
+    
+    jika name == "panjang"
+        jika args_count == 1
+            kembalikan int_type()
+        lainnya
+            checker_add_error(c, "panjang expects 1 argument")
+            kembalikan error_type()
+        akhir
+    akhir
+    
+    jika name == "substring"
+        jika args_count == 3
+            kembalikan string_type()
+        lainnya
+            checker_add_error(c, "substring expects 3 arguments")
+            kembalikan error_type()
+        akhir
+    akhir
+    
+    checker_add_error(c, "Unknown built-in function: " + name)
+    kembalikan error_type()
+akhir
+
+# ============================================================================
+# Type Compatibility Checking
+# ============================================================================
+fungsi check_assignment_compatibility(c Checker, target_type Type, value_type Type) bool
+    jika type_assignable_to(value_type, target_type)
+        kembalikan benar
+    lainnya
+        checker_add_error(c, "Cannot assign " + kind_to_string(value_type.kind) + " to " + kind_to_string(target_type.kind))
+        kembalikan salah
+    akhir
+akhir
+
+# ============================================================================
+# Scope Management (Simplified)
+# ============================================================================
+fungsi checker_enter_scope(c Checker) void
+    c.current_scope_level = c.current_scope_level + 1
+    native_print("Entered scope level ")
+    native_print_int(c.current_scope_level)
+    native_print("\n")
+akhir
+
+fungsi checker_exit_scope(c Checker) void
+    jika c.current_scope_level > 0
+        c.current_scope_level = c.current_scope_level - 1
+        native_print("Exited to scope level ")
+        native_print_int(c.current_scope_level)
+        native_print("\n")
+    akhir
+akhir
+
+# ============================================================================
+# Type Inference
+# ============================================================================
+fungsi infer_type_from_literal(literal string, token_type int) Type
+    jika token_type == TOKEN_INT
+        kembalikan int_type()
+    akhir
+    jika token_type == TOKEN_STRING
+        kembalikan string_type()
+    akhir
+    jika token_type == TOKEN_BENAR atau token_type == TOKEN_SALAH
+        kembalikan bool_type()
+    akhir
+    kembalikan unknown_type()
+akhir

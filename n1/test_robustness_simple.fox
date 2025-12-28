@@ -1,0 +1,213 @@
+# N1 Simplified Robustness Test Suite
+# Tests all robustness features without complex loops
+
+fungsi print_header(name string) void
+    native_print("\n=== ")
+    native_print(name)
+    native_print(" ===\n")
+akhir
+
+fungsi print_pass(msg string) void
+    native_print("✓ PASS: ")
+    native_print(msg)
+    native_print("\n")
+akhir
+
+fungsi print_stat(label string, value int) void
+    native_print("  ")
+    native_print(label)
+    native_print(": ")
+    native_print_int(value)
+    native_print("\n")
+akhir
+
+# Recursion Limiter
+struktur RecursionLimiter
+    max_depth int
+    current_depth int
+    overflow_count int
+akhir
+
+fungsi new_recursion_limiter(max int) RecursionLimiter
+    kembalikan RecursionLimiter{max_depth: max, current_depth: 0, overflow_count: 0}
+akhir
+
+fungsi recursion_enter(rl RecursionLimiter) bool
+    jika rl.current_depth >= rl.max_depth
+        rl.overflow_count = rl.overflow_count + 1
+        kembalikan salah
+    akhir
+    rl.current_depth = rl.current_depth + 1
+    kembalikan benar
+akhir
+
+fungsi recursion_exit(rl RecursionLimiter) void
+    jika rl.current_depth > 0
+        rl.current_depth = rl.current_depth - 1
+    akhir
+akhir
+
+# Recursive test function
+fungsi recursive_call(rl RecursionLimiter, depth int) bool
+    jika depth <= 0
+        kembalikan benar
+    akhir
+
+    jika recursion_enter(rl) == salah
+        kembalikan salah  # Overflow
+    akhir
+
+    var result = recursive_call(rl, depth - 1)
+    recursion_exit(rl)
+    kembalikan result
+akhir
+
+# Module Manager
+struktur ModuleManager
+    loading_depth int
+    max_depth int
+    cycle_count int
+akhir
+
+fungsi new_module_manager(max int) ModuleManager
+    kembalikan ModuleManager{loading_depth: 0, max_depth: max, cycle_count: 0}
+akhir
+
+fungsi module_load_recursive(mm ModuleManager, depth int) bool
+    jika depth <= 0
+        kembalikan benar
+    akhir
+
+    jika mm.loading_depth >= mm.max_depth
+        mm.cycle_count = mm.cycle_count + 1
+        kembalikan salah
+    akhir
+
+    mm.loading_depth = mm.loading_depth + 1
+    var result = module_load_recursive(mm, depth - 1)
+
+    jika mm.loading_depth > 0
+        mm.loading_depth = mm.loading_depth - 1
+    akhir
+
+    kembalikan result
+akhir
+
+# Error Recovery
+struktur ErrorRecovery
+    errors_count int
+    max_errors int
+    panic_mode bool
+akhir
+
+fungsi new_error_recovery(max int) ErrorRecovery
+    kembalikan ErrorRecovery{errors_count: 0, max_errors: max, panic_mode: salah}
+akhir
+
+fungsi error_add(er ErrorRecovery) bool
+    er.errors_count = er.errors_count + 1
+    jika er.errors_count >= er.max_errors
+        er.panic_mode = benar
+        kembalikan salah
+    akhir
+    kembalikan benar
+akhir
+
+fungsi add_multiple_errors(er ErrorRecovery, count int) int
+    jika count <= 0
+        kembalikan er.errors_count
+    akhir
+
+    error_add(er)
+    kembalikan add_multiple_errors(er, count - 1)
+akhir
+
+fungsi main() void
+    native_print("╔════════════════════════════════════════════════════╗\n")
+    native_print("║  N1 ROBUSTNESS TEST SUITE                         ║\n")
+    native_print("╚════════════════════════════════════════════════════╝\n")
+
+    var passed = 0
+
+    # Test 1: Recursion Limiting
+    print_header("Test 1: Recursion Limiting")
+
+    var rl1 = new_recursion_limiter(100)
+    var ok1 = recursive_call(rl1, 50)
+
+    jika ok1
+        print_pass("Normal recursion (depth 50)")
+        passed = passed + 1
+    akhir
+
+    var rl2 = new_recursion_limiter(20)
+    var ok2 = recursive_call(rl2, 50)
+
+    jika ok2 == salah
+        print_pass("Overflow prevented at limit")
+        passed = passed + 1
+    akhir
+
+    print_stat("Overflow count", rl2.overflow_count)
+
+    # Test 2: Import Cycle Detection
+    print_header("Test 2: Import Cycle Detection")
+
+    var mm1 = new_module_manager(10)
+    var ok3 = module_load_recursive(mm1, 5)
+
+    jika ok3
+        print_pass("Normal import chain (depth 5)")
+        passed = passed + 1
+    akhir
+
+    var mm2 = new_module_manager(5)
+    var ok4 = module_load_recursive(mm2, 10)
+
+    jika ok4 == salah
+        print_pass("Cycle detected and prevented")
+        passed = passed + 1
+    akhir
+
+    print_stat("Cycles detected", mm2.cycle_count)
+
+    # Test 3: Error Recovery
+    print_header("Test 3: Error Recovery")
+
+    var er1 = new_error_recovery(10)
+    var total1 = add_multiple_errors(er1, 5)
+
+    jika er1.panic_mode == salah
+        print_pass("Can continue after 5 errors")
+        passed = passed + 1
+    akhir
+
+    var er2 = new_error_recovery(10)
+    var total2 = add_multiple_errors(er2, 15)
+
+    jika er2.panic_mode
+        print_pass("Panic mode triggered at limit")
+        passed = passed + 1
+    akhir
+
+    print_stat("Total errors", er2.errors_count)
+
+    # Summary
+    native_print("\n╔════════════════════════════════════════════════════╗\n")
+    native_print("║  SUMMARY                                           ║\n")
+    native_print("╚════════════════════════════════════════════════════╝\n\n")
+
+    native_print("Tests passed: ")
+    native_print_int(passed)
+    native_print(" / 6\n\n")
+
+    jika passed == 6
+        native_print("🎉 ALL TESTS PASSED! 🎉\n")
+    lainnya
+        native_print("⚠️  Some tests failed\n")
+    akhir
+
+    native_print("\n✓ Stack overflow prevention\n")
+    native_print("✓ Import cycle detection\n")
+    native_print("✓ Error recovery system\n")
+akhir

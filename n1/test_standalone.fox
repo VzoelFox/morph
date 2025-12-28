@@ -1,0 +1,56 @@
+# N1 Standalone Test
+# Test without imports to verify basic functionality
+
+# Token constants (inline)
+var TOKEN_INT = 3
+var TOKEN_IDENT = 2
+
+# Token structure (inline)
+struktur Token
+    token_type int
+    literal string
+    line int
+    column int
+akhir
+
+# Token constructor (inline)
+fungsi make_token(t_type int, lit string, ln int, col int) Token
+    kembalikan Token{token_type: t_type, literal: lit, line: ln, column: col}
+akhir
+
+fungsi main() void
+    native_print("N1 Standalone Test\n")
+    native_print("==================\n")
+    
+    # Test token creation
+    var tok = make_token(TOKEN_INT, "42", 1, 5)
+    
+    native_print("Created token:\n")
+    native_print("  Type: ")
+    native_print_int(tok.token_type)
+    native_print("\n")
+    native_print("  Literal: ")
+    native_print(tok.literal)
+    native_print("\n")
+    native_print("  Line: ")
+    native_print_int(tok.line)
+    native_print("\n")
+    native_print("  Column: ")
+    native_print_int(tok.column)
+    native_print("\n")
+    
+    # Test struct access
+    jika tok.token_type == TOKEN_INT
+        native_print("✓ Token type matches TOKEN_INT\n")
+    lainnya
+        native_print("✗ Token type mismatch\n")
+    akhir
+    
+    jika tok.literal == "42"
+        native_print("✓ Token literal matches '42'\n")
+    lainnya
+        native_print("✗ Token literal mismatch\n")
+    akhir
+    
+    native_print("\nN1 Basic Functionality Working! ✓\n")
+akhir

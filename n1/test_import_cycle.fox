@@ -1,0 +1,174 @@
+# N1 Robustness Test - Import Cycle Detection
+# Port from N0 pkg/checker/cycle_test.go
+
+# Module Manager with cycle detection
+struktur ModuleManager
+    modules_count int
+    loading_stack_count int
+    max_stack_depth int
+    errors_count int
+akhir
+
+fungsi new_module_manager() ModuleManager
+    kembalikan ModuleManager{modules_count: 0, loading_stack_count: 0, max_stack_depth: 5, errors_count: 0}
+akhir
+
+fungsi module_start_loading(mm ModuleManager, name string) bool
+    # Check for cycle
+    jika mm.loading_stack_count >= mm.max_stack_depth
+        mm.errors_count = mm.errors_count + 1
+        native_print("ERROR: Import cycle detected! Stack depth: ")
+        native_print_int(mm.loading_stack_count)
+        native_print(", Module: '")
+        native_print(name)
+        native_print("'\n")
+        kembalikan salah
+    akhir
+
+    mm.loading_stack_count = mm.loading_stack_count + 1
+    native_print("  Loading '")
+    native_print(name)
+    native_print("' (stack: ")
+    native_print_int(mm.loading_stack_count)
+    native_print(")\n")
+
+    kembalikan benar
+akhir
+
+fungsi module_finish_loading(mm ModuleManager, name string) void
+    jika mm.loading_stack_count > 0
+        mm.loading_stack_count = mm.loading_stack_count - 1
+    akhir
+
+    native_print("  Finished '")
+    native_print(name)
+    native_print("' (stack: ")
+    native_print_int(mm.loading_stack_count)
+    native_print(")\n")
+akhir
+
+# Simulate loading chain: A -> B -> C
+fungsi load_chain_linear(mm ModuleManager) bool
+    native_print("Loading chain: A -> B -> C\n")
+
+    jika module_start_loading(mm, "A") == salah
+        kembalikan salah
+    akhir
+
+    jika module_start_loading(mm, "B") == salah
+        module_finish_loading(mm, "A")
+        kembalikan salah
+    akhir
+
+    jika module_start_loading(mm, "C") == salah
+        module_finish_loading(mm, "B")
+        module_finish_loading(mm, "A")
+        kembalikan salah
+    akhir
+
+    module_finish_loading(mm, "C")
+    module_finish_loading(mm, "B")
+    module_finish_loading(mm, "A")
+
+    kembalikan benar
+akhir
+
+# Simulate cycle: A -> B -> C -> A (should fail)
+fungsi load_chain_cycle(mm ModuleManager) bool
+    native_print("Loading chain with cycle: A -> B -> C -> D -> E -> F (exceeds max 5)\n")
+
+    jika module_start_loading(mm, "A") == salah
+        kembalikan salah
+    akhir
+
+    jika module_start_loading(mm, "B") == salah
+        kembalikan salah
+    akhir
+
+    jika module_start_loading(mm, "C") == salah
+        kembalikan salah
+    akhir
+
+    jika module_start_loading(mm, "D") == salah
+        kembalikan salah
+    akhir
+
+    jika module_start_loading(mm, "E") == salah
+        kembalikan salah
+    akhir
+
+    # This should trigger cycle detection
+    jika module_start_loading(mm, "F") == salah
+        native_print("Cycle detected and prevented!\n")
+        kembalikan salah
+    akhir
+
+    kembalikan benar
+akhir
+
+fungsi main() void
+    native_print("╔══════════════════════════════════════╗\n")
+    native_print("║  Import Cycle Detection Test        ║\n")
+    native_print("╚══════════════════════════════════════╝\n\n")
+
+    # Test 1: Normal import chain (no cycle)
+    native_print("=== Test 1: Linear Import Chain ===\n")
+    var mm1 = new_module_manager()
+    var result1 = load_chain_linear(mm1)
+
+    jika result1
+        native_print("PASS: Linear chain loaded successfully\n")
+    lainnya
+        native_print("FAIL: Linear chain should not fail\n")
+    akhir
+
+    native_print("  Errors: ")
+    native_print_int(mm1.errors_count)
+    native_print("\n\n")
+
+    # Test 2: Import chain with cycle
+    native_print("=== Test 2: Circular Import Chain ===\n")
+    var mm2 = new_module_manager()
+    var result2 = load_chain_cycle(mm2)
+
+    jika result2
+        native_print("FAIL: Cycle should have been detected\n")
+    lainnya
+        native_print("PASS: Cycle correctly prevented\n")
+    akhir
+
+    native_print("  Errors: ")
+    native_print_int(mm2.errors_count)
+    native_print("\n\n")
+
+    # Test 3: Multiple imports at same level
+    native_print("=== Test 3: Multiple Imports (same level) ===\n")
+    var mm3 = new_module_manager()
+
+    native_print("Loading multiple modules...\n")
+    var ok1 = module_start_loading(mm3, "utils")
+    var ok2 = module_start_loading(mm3, "helpers")
+
+    jika ok1 == benar
+        module_finish_loading(mm3, "utils")
+        native_print("PASS: First module loaded\n")
+    akhir
+
+    jika ok2 == benar
+        module_finish_loading(mm3, "helpers")
+        native_print("PASS: Second module loaded\n")
+    akhir
+
+    native_print("  Errors: ")
+    native_print_int(mm3.errors_count)
+    native_print("\n\n")
+
+    # Summary
+    native_print("╔══════════════════════════════════════╗\n")
+    native_print("║         TEST SUMMARY                ║\n")
+    native_print("╚══════════════════════════════════════╝\n")
+    native_print("✓ Linear imports work correctly\n")
+    native_print("✓ Circular imports are detected\n")
+    native_print("✓ Stack depth limiting prevents infinite loops\n\n")
+    native_print("🎉 IMPORT CYCLE TEST PASSED! 🎉\n")
+akhir

@@ -1,101 +1,166 @@
-# N1 Type System - Foundation
-# Port dari N0 pkg/types/types.go untuk N1 self-hosted compiler
-# Reference: .vzoel.jules/n0-type-system-analysis.md
+# N1 Type System - Full Implementation
+# Port dari N0 pkg/types/types.go
 
 # ============================================================================
-# TypeKind Constants (14 types)
+# TypeKind Constants (18 types)
 # ============================================================================
-
-konst KIND_INT = 0
-konst KIND_FLOAT = 1
-konst KIND_STRING = 2
-konst KIND_BOOL = 3
-konst KIND_VOID = 4
-konst KIND_FUNCTION = 5
-konst KIND_STRUCT = 6
-konst KIND_INTERFACE = 7
-konst KIND_ARRAY = 8
-konst KIND_MAP = 9
-konst KIND_POINTER = 10
-konst KIND_MULTI = 11      # Multiple return values
-konst KIND_UNKNOWN = 12
-konst KIND_ERROR = 13      # Internal compiler error
-konst KIND_NULL = 14
-konst KIND_USER_ERROR = 15 # User-facing 'error' type
-konst KIND_MODULE = 16     # Module namespace
-konst KIND_CHANNEL = 17    # Channel for concurrency
+var KIND_INT = 0
+var KIND_FLOAT = 1
+var KIND_STRING = 2
+var KIND_BOOL = 3
+var KIND_VOID = 4
+var KIND_FUNCTION = 5
+var KIND_STRUCT = 6
+var KIND_INTERFACE = 7
+var KIND_ARRAY = 8
+var KIND_MAP = 9
+var KIND_POINTER = 10
+var KIND_MULTI = 11
+var KIND_UNKNOWN = 12
+var KIND_ERROR = 13
+var KIND_NULL = 14
+var KIND_USER_ERROR = 15
+var KIND_MODULE = 16
+var KIND_CHANNEL = 17
 
 # ============================================================================
-# Type Structure (Base Type)
+# Type Structure
 # ============================================================================
-
 struktur Type
     kind int
     name string
 akhir
 
 # ============================================================================
-# Type Creation Functions
+# Type Constructors
 # ============================================================================
-
 fungsi make_type(k int, n string) Type
     kembalikan Type{kind: k, name: n}
 akhir
 
-# Predefined types (global singletons)
-var IntType Type
-var FloatType Type
-var StringType Type
-var BoolType Type
-var VoidType Type
-var UnknownType Type
-var ErrorType Type
-var NullType Type
-var UserErrorType Type
-var ChannelType Type
+fungsi int_type() Type
+    kembalikan make_type(KIND_INT, "int")
+akhir
 
-fungsi init_types() void
-    IntType = make_type(KIND_INT, "int")
-    FloatType = make_type(KIND_FLOAT, "float")
-    StringType = make_type(KIND_STRING, "string")
-    BoolType = make_type(KIND_BOOL, "bool")
-    VoidType = make_type(KIND_VOID, "void")
-    UnknownType = make_type(KIND_UNKNOWN, "Unknown")
-    ErrorType = make_type(KIND_ERROR, "Error")
-    NullType = make_type(KIND_NULL, "Null")
-    UserErrorType = make_type(KIND_USER_ERROR, "error")
-    ChannelType = make_type(KIND_CHANNEL, "channel")
+fungsi float_type() Type
+    kembalikan make_type(KIND_FLOAT, "float")
+akhir
+
+fungsi string_type() Type
+    kembalikan make_type(KIND_STRING, "string")
+akhir
+
+fungsi bool_type() Type
+    kembalikan make_type(KIND_BOOL, "bool")
+akhir
+
+fungsi void_type() Type
+    kembalikan make_type(KIND_VOID, "void")
+akhir
+
+fungsi null_type() Type
+    kembalikan make_type(KIND_NULL, "null")
+akhir
+
+fungsi unknown_type() Type
+    kembalikan make_type(KIND_UNKNOWN, "unknown")
+akhir
+
+fungsi error_type() Type
+    kembalikan make_type(KIND_ERROR, "error")
+akhir
+
+fungsi user_error_type() Type
+    kembalikan make_type(KIND_USER_ERROR, "error")
+akhir
+
+fungsi channel_type() Type
+    kembalikan make_type(KIND_CHANNEL, "channel")
+akhir
+
+fungsi array_type() Type
+    kembalikan make_type(KIND_ARRAY, "array")
+akhir
+
+fungsi map_type() Type
+    kembalikan make_type(KIND_MAP, "map")
+akhir
+
+fungsi struct_type(n string) Type
+    kembalikan make_type(KIND_STRUCT, n)
+akhir
+
+fungsi interface_type(n string) Type
+    kembalikan make_type(KIND_INTERFACE, n)
+akhir
+
+fungsi function_type() Type
+    kembalikan make_type(KIND_FUNCTION, "function")
+akhir
+
+fungsi pointer_type() Type
+    kembalikan make_type(KIND_POINTER, "pointer")
+akhir
+
+fungsi multi_type() Type
+    kembalikan make_type(KIND_MULTI, "multi")
+akhir
+
+fungsi module_type(n string) Type
+    kembalikan make_type(KIND_MODULE, n)
 akhir
 
 # ============================================================================
-# Type Operations - Equals
+# Type Equality
 # ============================================================================
-
 fungsi type_equals(t1 Type, t2 Type) bool
-    # Null check
-    jika t1.kind == KIND_UNKNOWN atau t2.kind == KIND_UNKNOWN
-        kembalikan salah
-    akhir
-
     kembalikan t1.kind == t2.kind
 akhir
 
 # ============================================================================
-# Type Operations - AssignableTo
+# Type Result Structure (for error handling)
 # ============================================================================
+struktur TypeResult
+    result_type Type
+    has_error bool
+    error_message string
+akhir
 
+fungsi make_type_result(t Type) TypeResult
+    var result TypeResult
+    result.result_type = t
+    result.has_error = salah
+    result.error_message = ""
+    kembalikan result
+akhir
+
+fungsi make_type_error(msg string) TypeResult
+    var result TypeResult
+    result.result_type = error_type()
+    result.has_error = benar
+    result.error_message = msg
+    kembalikan result
+akhir
+
+# ============================================================================
+# Type Assignability (from N0 AssignableTo)
+# ============================================================================
 fungsi type_assignable_to(source Type, target Type) bool
-    # Unknown types are assignable to anything (error recovery)
-    jika source.kind == KIND_UNKNOWN atau target.kind == KIND_UNKNOWN
+    # Unknown/Error types assignable to anything
+    jika source.kind == KIND_UNKNOWN
+        kembalikan benar
+    akhir
+    jika target.kind == KIND_UNKNOWN
+        kembalikan benar
+    akhir
+    jika source.kind == KIND_ERROR
+        kembalikan benar
+    akhir
+    jika target.kind == KIND_ERROR
         kembalikan benar
     akhir
 
-    # Error types are assignable to anything (compiler errors)
-    jika source.kind == KIND_ERROR atau target.kind == KIND_ERROR
-        kembalikan benar
-    akhir
-
-    # Null assignability rules
+    # Null assignability rules (from N0)
     jika source.kind == KIND_NULL
         jika target.kind == KIND_ARRAY
             kembalikan benar
@@ -109,32 +174,102 @@ fungsi type_assignable_to(source Type, target Type) bool
         jika target.kind == KIND_INTERFACE
             kembalikan benar
         akhir
+        kembalikan salah
+    akhir
+
+    # Same type assignability
+    kembalikan type_equals(source, target)
+akhir
+
+# ============================================================================
+# Type Comparability
+# ============================================================================
+fungsi type_is_comparable(t Type) bool
+    jika t.kind == KIND_INT
+        kembalikan benar
+    akhir
+    jika t.kind == KIND_FLOAT
+        kembalikan benar
+    akhir
+    jika t.kind == KIND_STRING
+        kembalikan benar
+    akhir
+    jika t.kind == KIND_BOOL
+        kembalikan benar
+    akhir
+    jika t.kind == KIND_NULL
+        kembalikan benar
+    akhir
+    kembalikan salah
+akhir
+
+# ============================================================================
+# Binary Operations (from N0 BinaryOp)
+# ============================================================================
+fungsi type_binary_op(left Type, op string, right Type) TypeResult
+    # Arithmetic operations
+    jika op == "+"
+        jika left.kind == KIND_INT
+            jika right.kind == KIND_INT
+                kembalikan make_type_result(int_type())
+            akhir
+            jika right.kind == KIND_FLOAT
+                kembalikan make_type_result(float_type())
+            akhir
+        akhir
+        jika left.kind == KIND_FLOAT
+            jika right.kind == KIND_INT
+                kembalikan make_type_result(float_type())
+            akhir
+            jika right.kind == KIND_FLOAT
+                kembalikan make_type_result(float_type())
+            akhir
+        akhir
+        jika left.kind == KIND_STRING
+            jika right.kind == KIND_STRING
+                kembalikan make_type_result(string_type())
+            akhir
+        akhir
+        kembalikan make_type_error("invalid binary operation")
+    akhir
+
+    # Comparison operations
+    jika op == "=="
+        jika type_is_comparable(left)
+            jika type_is_comparable(right)
+                kembalikan make_type_result(bool_type())
+            akhir
+        akhir
+        kembalikan make_type_error("invalid comparison")
+    akhir
+
+    kembalikan make_type_error("unsupported operator")
+akhir
+        akhir
         jika target.kind == KIND_FUNCTION
             kembalikan benar
         akhir
         jika target.kind == KIND_STRING
             kembalikan benar
         akhir
-        jika target.kind == KIND_STRUCT
+        jika target.kind == KIND_NULL
             kembalikan benar
         akhir
         jika target.kind == KIND_USER_ERROR
             kembalikan benar
         akhir
-        jika target.kind == KIND_NULL
+        jika target.kind == KIND_STRUCT
             kembalikan benar
         akhir
         kembalikan salah
     akhir
 
-    # Same type always assignable
     kembalikan type_equals(source, target)
 akhir
 
 # ============================================================================
-# Type Operations - IsComparable
+# Type Comparability (from N0 IsComparable)
 # ============================================================================
-
 fungsi type_is_comparable(t Type) bool
     jika t.kind == KIND_INT
         kembalikan benar
@@ -154,203 +289,665 @@ fungsi type_is_comparable(t Type) bool
     jika t.kind == KIND_USER_ERROR
         kembalikan benar
     akhir
-
-    # Void, Unknown, Error not comparable
     kembalikan salah
 akhir
 
 # ============================================================================
-# Type Operations - BinaryOp
+# TypeResult for operation results
 # ============================================================================
-
 struktur TypeResult
-    result_type Type
+    result Type
     error_msg string
     has_error bool
 akhir
 
-fungsi make_type_result(t Type) TypeResult
-    kembalikan TypeResult{result_type: t, error_msg: "", has_error: salah}
+fungsi ok_result(t Type) TypeResult
+    kembalikan TypeResult{result: t, error_msg: "", has_error: salah}
 akhir
 
-fungsi make_type_error(msg string) TypeResult
-    kembalikan TypeResult{result_type: ErrorType, error_msg: msg, has_error: benar}
+fungsi err_result(msg string) TypeResult
+    kembalikan TypeResult{result: error_type(), error_msg: msg, has_error: benar}
 akhir
 
+# ============================================================================
+# Binary Operations (from N0 BinaryOp)
+# ============================================================================
 fungsi type_binary_op(left Type, op string, right Type) TypeResult
-    # Unknown type handling (error recovery)
-    jika left.kind == KIND_UNKNOWN atau right.kind == KIND_UNKNOWN
-        kembalikan make_type_result(UnknownType)
+    # Unknown handling
+    jika left.kind == KIND_UNKNOWN
+        kembalikan ok_result(unknown_type())
+    akhir
+    jika right.kind == KIND_UNKNOWN
+        kembalikan ok_result(unknown_type())
     akhir
 
-    # Arithmetic operators: +, -, *, /
+    # Arithmetic: +, -, *, /
     jika op == "+"
-        # Int + Int → Int
         jika left.kind == KIND_INT dan right.kind == KIND_INT
-            kembalikan make_type_result(IntType)
+            kembalikan ok_result(int_type())
         akhir
-
-        # Float + Float → Float
         jika left.kind == KIND_FLOAT dan right.kind == KIND_FLOAT
-            kembalikan make_type_result(FloatType)
+            kembalikan ok_result(float_type())
         akhir
-
-        # String + String → String (concatenation)
         jika left.kind == KIND_STRING dan right.kind == KIND_STRING
-            kembalikan make_type_result(StringType)
+            kembalikan ok_result(string_type())
         akhir
-
-        kembalikan make_type_error("Operator + tidak didukung untuk tipe ini")
+        kembalikan err_result("+ tidak didukung untuk tipe ini")
     akhir
 
-    jika op == "-" atau op == "*" atau op == "/"
-        # Int arithmetic
+    jika op == "-"
         jika left.kind == KIND_INT dan right.kind == KIND_INT
-            kembalikan make_type_result(IntType)
+            kembalikan ok_result(int_type())
         akhir
-
-        # Float arithmetic
         jika left.kind == KIND_FLOAT dan right.kind == KIND_FLOAT
-            kembalikan make_type_result(FloatType)
+            kembalikan ok_result(float_type())
         akhir
-
-        kembalikan make_type_error("Operator aritmatika memerlukan numeric types")
+        kembalikan err_result("- memerlukan numeric")
     akhir
 
-    # Modulo operator: %
+    jika op == "*"
+        jika left.kind == KIND_INT dan right.kind == KIND_INT
+            kembalikan ok_result(int_type())
+        akhir
+        jika left.kind == KIND_FLOAT dan right.kind == KIND_FLOAT
+            kembalikan ok_result(float_type())
+        akhir
+        kembalikan err_result("* memerlukan numeric")
+    akhir
+
+    jika op == "/"
+        jika left.kind == KIND_INT dan right.kind == KIND_INT
+            kembalikan ok_result(int_type())
+        akhir
+        jika left.kind == KIND_FLOAT dan right.kind == KIND_FLOAT
+            kembalikan ok_result(float_type())
+        akhir
+        kembalikan err_result("/ memerlukan numeric")
+    akhir
+
+    # Modulo: %
     jika op == "%"
         jika left.kind == KIND_INT dan right.kind == KIND_INT
-            kembalikan make_type_result(IntType)
+            kembalikan ok_result(int_type())
         akhir
-        kembalikan make_type_error("Operator % memerlukan int operands")
+        kembalikan err_result("% memerlukan int")
     akhir
 
-    # Equality operators: ==, !=
-    jika op == "==" atau op == "!="
+    # Equality: ==, !=
+    jika op == "=="
         jika type_equals(left, right)
-            kembalikan make_type_result(BoolType)
+            kembalikan ok_result(bool_type())
         akhir
-
-        # Allow comparison with Null
         jika left.kind == KIND_NULL
             jika type_assignable_to(left, right)
-                kembalikan make_type_result(BoolType)
+                kembalikan ok_result(bool_type())
             akhir
         akhir
-
         jika right.kind == KIND_NULL
             jika type_assignable_to(right, left)
-                kembalikan make_type_result(BoolType)
+                kembalikan ok_result(bool_type())
             akhir
         akhir
-
-        kembalikan make_type_error("Tidak dapat membandingkan tipe berbeda")
+        kembalikan err_result("tidak dapat membandingkan tipe berbeda")
     akhir
 
-    # Logical operators: &&, ||, dan, atau
-    jika op == "&&" atau op == "||" atau op == "dan" atau op == "atau"
-        jika left.kind == KIND_BOOL dan right.kind == KIND_BOOL
-            kembalikan make_type_result(BoolType)
+    jika op == "!="
+        jika type_equals(left, right)
+            kembalikan ok_result(bool_type())
         akhir
-        kembalikan make_type_error("Operator logika memerlukan Bool operands")
+        jika left.kind == KIND_NULL
+            jika type_assignable_to(left, right)
+                kembalikan ok_result(bool_type())
+            akhir
+        akhir
+        jika right.kind == KIND_NULL
+            jika type_assignable_to(right, left)
+                kembalikan ok_result(bool_type())
+            akhir
+        akhir
+        kembalikan err_result("tidak dapat membandingkan tipe berbeda")
     akhir
 
-    # Comparison operators: <, >, <=, >=
-    jika op == "<" atau op == ">" atau op == "<=" atau op == ">="
+    # Logical: &&, ||, dan, atau
+    jika op == "&&"
+        jika left.kind == KIND_BOOL dan right.kind == KIND_BOOL
+            kembalikan ok_result(bool_type())
+        akhir
+        kembalikan err_result("&& memerlukan bool")
+    akhir
+
+    jika op == "||"
+        jika left.kind == KIND_BOOL dan right.kind == KIND_BOOL
+            kembalikan ok_result(bool_type())
+        akhir
+        kembalikan err_result("|| memerlukan bool")
+    akhir
+
+    jika op == "dan"
+        jika left.kind == KIND_BOOL dan right.kind == KIND_BOOL
+            kembalikan ok_result(bool_type())
+        akhir
+        kembalikan err_result("dan memerlukan bool")
+    akhir
+
+    jika op == "atau"
+        jika left.kind == KIND_BOOL dan right.kind == KIND_BOOL
+            kembalikan ok_result(bool_type())
+        akhir
+        kembalikan err_result("atau memerlukan bool")
+    akhir
+
+    # Comparison: <, >, <=, >=
+    jika op == "<"
         jika left.kind == KIND_INT dan right.kind == KIND_INT
-            kembalikan make_type_result(BoolType)
+            kembalikan ok_result(bool_type())
         akhir
         jika left.kind == KIND_FLOAT dan right.kind == KIND_FLOAT
-            kembalikan make_type_result(BoolType)
+            kembalikan ok_result(bool_type())
         akhir
-        kembalikan make_type_error("Operator perbandingan memerlukan numeric types")
+        kembalikan err_result("< memerlukan numeric")
     akhir
 
-    # Bitwise operators: &, |, ^, <<, >>
-    jika op == "&" atau op == "|" atau op == "^" atau op == "<<" atau op == ">>"
+    jika op == ">"
         jika left.kind == KIND_INT dan right.kind == KIND_INT
-            kembalikan make_type_result(IntType)
+            kembalikan ok_result(bool_type())
         akhir
-        kembalikan make_type_error("Operator bitwise memerlukan int operands")
+        jika left.kind == KIND_FLOAT dan right.kind == KIND_FLOAT
+            kembalikan ok_result(bool_type())
+        akhir
+        kembalikan err_result("> memerlukan numeric")
     akhir
 
-    kembalikan make_type_error("Operator tidak dikenal")
+    jika op == "<="
+        jika left.kind == KIND_INT dan right.kind == KIND_INT
+            kembalikan ok_result(bool_type())
+        akhir
+        jika left.kind == KIND_FLOAT dan right.kind == KIND_FLOAT
+            kembalikan ok_result(bool_type())
+        akhir
+        kembalikan err_result("<= memerlukan numeric")
+    akhir
+
+    jika op == ">="
+        jika left.kind == KIND_INT dan right.kind == KIND_INT
+            kembalikan ok_result(bool_type())
+        akhir
+        jika left.kind == KIND_FLOAT dan right.kind == KIND_FLOAT
+            kembalikan ok_result(bool_type())
+        akhir
+        kembalikan err_result(">= memerlukan numeric")
+    akhir
+
+    # Bitwise: &, |, ^, <<, >>
+    jika op == "&"
+        jika left.kind == KIND_INT dan right.kind == KIND_INT
+            kembalikan ok_result(int_type())
+        akhir
+        kembalikan err_result("& memerlukan int")
+    akhir
+
+    jika op == "|"
+        jika left.kind == KIND_INT dan right.kind == KIND_INT
+            kembalikan ok_result(int_type())
+        akhir
+        kembalikan err_result("| memerlukan int")
+    akhir
+
+    jika op == "^"
+        jika left.kind == KIND_INT dan right.kind == KIND_INT
+            kembalikan ok_result(int_type())
+        akhir
+        kembalikan err_result("^ memerlukan int")
+    akhir
+
+    jika op == "<<"
+        jika left.kind == KIND_INT dan right.kind == KIND_INT
+            kembalikan ok_result(int_type())
+        akhir
+        kembalikan err_result("<< memerlukan int")
+    akhir
+
+    jika op == ">>"
+        jika left.kind == KIND_INT dan right.kind == KIND_INT
+            kembalikan ok_result(int_type())
+        akhir
+        kembalikan err_result(">> memerlukan int")
+    akhir
+
+    kembalikan err_result("operator tidak dikenal")
 akhir
 
 # ============================================================================
-# Type Operations - PrefixOp
+# Prefix Operations (from N0 PrefixOp)
 # ============================================================================
-
 fungsi type_prefix_op(t Type, op string) TypeResult
-    # Unknown type handling
     jika t.kind == KIND_UNKNOWN
-        kembalikan make_type_result(UnknownType)
+        kembalikan ok_result(unknown_type())
     akhir
 
     # Logical NOT: !
     jika op == "!"
         jika t.kind == KIND_BOOL
-            kembalikan make_type_result(BoolType)
+            kembalikan ok_result(bool_type())
         akhir
-        kembalikan make_type_error("Operator ! memerlukan Bool type")
+        kembalikan err_result("! memerlukan bool")
     akhir
 
     # Unary minus: -
     jika op == "-"
         jika t.kind == KIND_INT
-            kembalikan make_type_result(IntType)
+            kembalikan ok_result(int_type())
         akhir
         jika t.kind == KIND_FLOAT
-            kembalikan make_type_result(FloatType)
+            kembalikan ok_result(float_type())
         akhir
-        kembalikan make_type_error("Operator - memerlukan numeric type")
+        kembalikan err_result("- memerlukan numeric")
     akhir
 
     # Bitwise NOT: ~
     jika op == "~"
         jika t.kind == KIND_INT
-            kembalikan make_type_result(IntType)
+            kembalikan ok_result(int_type())
         akhir
-        kembalikan make_type_error("Operator ~ memerlukan int type")
+        kembalikan err_result("~ memerlukan int")
     akhir
 
-    kembalikan make_type_error("Prefix operator tidak dikenal")
+    kembalikan err_result("prefix tidak dikenal")
 akhir
 
 # ============================================================================
-# Helper Functions
+# Type Kind to String
 # ============================================================================
-
-fungsi type_kind_to_string(kind int) string
-    jika kind == KIND_INT
+fungsi kind_to_string(k int) string
+    jika k == KIND_INT
         kembalikan "int"
-    lain jika kind == KIND_FLOAT
-        kembalikan "float"
-    lain jika kind == KIND_STRING
-        kembalikan "string"
-    lain jika kind == KIND_BOOL
-        kembalikan "bool"
-    lain jika kind == KIND_VOID
-        kembalikan "void"
-    lain jika kind == KIND_NULL
-        kembalikan "null"
-    lain jika kind == KIND_UNKNOWN
-        kembalikan "unknown"
-    lain jika kind == KIND_ERROR
-        kembalikan "error"
-    lain
-        kembalikan "unknown_type"
     akhir
+    jika k == KIND_FLOAT
+        kembalikan "float"
+    akhir
+    jika k == KIND_STRING
+        kembalikan "string"
+    akhir
+    jika k == KIND_BOOL
+        kembalikan "bool"
+    akhir
+    jika k == KIND_VOID
+        kembalikan "void"
+    akhir
+    jika k == KIND_FUNCTION
+        kembalikan "function"
+    akhir
+    jika k == KIND_STRUCT
+        kembalikan "struct"
+    akhir
+    jika k == KIND_INTERFACE
+        kembalikan "interface"
+    akhir
+    jika k == KIND_ARRAY
+        kembalikan "array"
+    akhir
+    jika k == KIND_MAP
+        kembalikan "map"
+    akhir
+    jika k == KIND_POINTER
+        kembalikan "pointer"
+    akhir
+    jika k == KIND_MULTI
+        kembalikan "multi"
+    akhir
+    jika k == KIND_UNKNOWN
+        kembalikan "unknown"
+    akhir
+    jika k == KIND_ERROR
+        kembalikan "error"
+    akhir
+    jika k == KIND_NULL
+        kembalikan "null"
+    akhir
+    jika k == KIND_USER_ERROR
+        kembalikan "user_error"
+    akhir
+    jika k == KIND_MODULE
+        kembalikan "module"
+    akhir
+    jika k == KIND_CHANNEL
+        kembalikan "channel"
+    akhir
+    kembalikan "unknown"
 akhir
 
 # ============================================================================
-# Main Entry Point (for testing)
+# Main - Test Suite
 # ============================================================================
-
 fungsi main() void
-    # Initialize predefined types
-    init_types()
+    native_print("╔══════════════════════════════════════╗\n")
+    native_print("║   N1 Type System - Full Test Suite   ║\n")
+    native_print("╚══════════════════════════════════════╝\n\n")
 
-    native_print("N1 Type System - Foundation\n")
-    native_print("Type system initialized successfully\n")
+    var passed = 0
+    var failed = 0
+
+    # Test 1: Type Creation
+    native_print("[Test 1] Type Creation\n")
+    var t_int = int_type()
+    var t_float = float_type()
+    var t_string = string_type()
+    var t_bool = bool_type()
+    jika t_int.kind == KIND_INT
+        native_print("  ✓ int_type().kind == KIND_INT\n")
+        passed = passed + 1
+    lainnya
+        native_print("  ✗ int_type().kind FAILED\n")
+        failed = failed + 1
+    akhir
+
+    # Test 2: Type Equality
+    native_print("\n[Test 2] Type Equality\n")
+    jika type_equals(t_int, t_int)
+        native_print("  ✓ int == int\n")
+        passed = passed + 1
+    lainnya
+        native_print("  ✗ int == int FAILED\n")
+        failed = failed + 1
+    akhir
+
+    jika type_equals(t_int, t_float)
+        native_print("  ✗ int != float FAILED\n")
+        failed = failed + 1
+    lainnya
+        native_print("  ✓ int != float\n")
+        passed = passed + 1
+    akhir
+
+    # Test 3: Null Assignability
+    native_print("\n[Test 3] Null Assignability\n")
+    var t_null = null_type()
+    var t_array = array_type()
+    var t_map = map_type()
+
+    jika type_assignable_to(t_null, t_array)
+        native_print("  ✓ null -> array\n")
+        passed = passed + 1
+    lainnya
+        native_print("  ✗ null -> array FAILED\n")
+        failed = failed + 1
+    akhir
+
+    jika type_assignable_to(t_null, t_map)
+        native_print("  ✓ null -> map\n")
+        passed = passed + 1
+    lainnya
+        native_print("  ✗ null -> map FAILED\n")
+        failed = failed + 1
+    akhir
+
+    jika type_assignable_to(t_null, t_int)
+        native_print("  ✗ null !-> int FAILED\n")
+        failed = failed + 1
+    lainnya
+        native_print("  ✓ null !-> int\n")
+        passed = passed + 1
+    akhir
+
+    # Test 4: Type Comparability
+    native_print("\n[Test 4] Type Comparability\n")
+    jika type_is_comparable(t_int)
+        native_print("  ✓ int is comparable\n")
+        passed = passed + 1
+    lainnya
+        native_print("  ✗ int is comparable FAILED\n")
+        failed = failed + 1
+    akhir
+
+    var t_void = void_type()
+    jika type_is_comparable(t_void)
+        native_print("  ✗ void not comparable FAILED\n")
+        failed = failed + 1
+    lainnya
+        native_print("  ✓ void not comparable\n")
+        passed = passed + 1
+    akhir
+
+    # Test 5: Binary Operations - Arithmetic
+    native_print("\n[Test 5] Binary Ops - Arithmetic\n")
+    var r1 = type_binary_op(t_int, "+", t_int)
+    jika r1.has_error
+        native_print("  ✗ int + int FAILED\n")
+        failed = failed + 1
+    lainnya
+        jika r1.result.kind == KIND_INT
+            native_print("  ✓ int + int = int\n")
+            passed = passed + 1
+        lainnya
+            native_print("  ✗ int + int wrong type\n")
+            failed = failed + 1
+        akhir
+    akhir
+
+    var r2 = type_binary_op(t_string, "+", t_string)
+    jika r2.has_error
+        native_print("  ✗ string + string FAILED\n")
+        failed = failed + 1
+    lainnya
+        jika r2.result.kind == KIND_STRING
+            native_print("  ✓ string + string = string\n")
+            passed = passed + 1
+        lainnya
+            native_print("  ✗ string + string wrong type\n")
+            failed = failed + 1
+        akhir
+    akhir
+
+    var r3 = type_binary_op(t_float, "*", t_float)
+    jika r3.has_error
+        native_print("  ✗ float * float FAILED\n")
+        failed = failed + 1
+    lainnya
+        jika r3.result.kind == KIND_FLOAT
+            native_print("  ✓ float * float = float\n")
+            passed = passed + 1
+        lainnya
+            native_print("  ✗ float * float wrong type\n")
+            failed = failed + 1
+        akhir
+    akhir
+
+    # Test 6: Binary Operations - Comparison
+    native_print("\n[Test 6] Binary Ops - Comparison\n")
+    var r4 = type_binary_op(t_int, "<", t_int)
+    jika r4.has_error
+        native_print("  ✗ int < int FAILED\n")
+        failed = failed + 1
+    lainnya
+        jika r4.result.kind == KIND_BOOL
+            native_print("  ✓ int < int = bool\n")
+            passed = passed + 1
+        lainnya
+            native_print("  ✗ int < int wrong type\n")
+            failed = failed + 1
+        akhir
+    akhir
+
+    var r5 = type_binary_op(t_int, "==", t_int)
+    jika r5.has_error
+        native_print("  ✗ int == int FAILED\n")
+        failed = failed + 1
+    lainnya
+        jika r5.result.kind == KIND_BOOL
+            native_print("  ✓ int == int = bool\n")
+            passed = passed + 1
+        lainnya
+            native_print("  ✗ int == int wrong type\n")
+            failed = failed + 1
+        akhir
+    akhir
+
+    # Test 7: Binary Operations - Logical
+    native_print("\n[Test 7] Binary Ops - Logical\n")
+    var r6 = type_binary_op(t_bool, "dan", t_bool)
+    jika r6.has_error
+        native_print("  ✗ bool dan bool FAILED\n")
+        failed = failed + 1
+    lainnya
+        jika r6.result.kind == KIND_BOOL
+            native_print("  ✓ bool dan bool = bool\n")
+            passed = passed + 1
+        lainnya
+            native_print("  ✗ bool dan bool wrong type\n")
+            failed = failed + 1
+        akhir
+    akhir
+
+    var r7 = type_binary_op(t_bool, "||", t_bool)
+    jika r7.has_error
+        native_print("  ✗ bool || bool FAILED\n")
+        failed = failed + 1
+    lainnya
+        jika r7.result.kind == KIND_BOOL
+            native_print("  ✓ bool || bool = bool\n")
+            passed = passed + 1
+        lainnya
+            native_print("  ✗ bool || bool wrong type\n")
+            failed = failed + 1
+        akhir
+    akhir
+
+    # Test 8: Binary Operations - Bitwise
+    native_print("\n[Test 8] Binary Ops - Bitwise\n")
+    var r8 = type_binary_op(t_int, "&", t_int)
+    jika r8.has_error
+        native_print("  ✗ int & int FAILED\n")
+        failed = failed + 1
+    lainnya
+        jika r8.result.kind == KIND_INT
+            native_print("  ✓ int & int = int\n")
+            passed = passed + 1
+        lainnya
+            native_print("  ✗ int & int wrong type\n")
+            failed = failed + 1
+        akhir
+    akhir
+
+    var r9 = type_binary_op(t_int, "<<", t_int)
+    jika r9.has_error
+        native_print("  ✗ int << int FAILED\n")
+        failed = failed + 1
+    lainnya
+        jika r9.result.kind == KIND_INT
+            native_print("  ✓ int << int = int\n")
+            passed = passed + 1
+        lainnya
+            native_print("  ✗ int << int wrong type\n")
+            failed = failed + 1
+        akhir
+    akhir
+
+    # Test 9: Error Detection
+    native_print("\n[Test 9] Error Detection\n")
+    var r10 = type_binary_op(t_int, "+", t_string)
+    jika r10.has_error
+        native_print("  ✓ int + string = ERROR\n")
+        passed = passed + 1
+    lainnya
+        native_print("  ✗ int + string should error\n")
+        failed = failed + 1
+    akhir
+
+    var r11 = type_binary_op(t_string, "-", t_string)
+    jika r11.has_error
+        native_print("  ✓ string - string = ERROR\n")
+        passed = passed + 1
+    lainnya
+        native_print("  ✗ string - string should error\n")
+        failed = failed + 1
+    akhir
+
+    # Test 10: Prefix Operations
+    native_print("\n[Test 10] Prefix Operations\n")
+    var r12 = type_prefix_op(t_bool, "!")
+    jika r12.has_error
+        native_print("  ✗ !bool FAILED\n")
+        failed = failed + 1
+    lainnya
+        jika r12.result.kind == KIND_BOOL
+            native_print("  ✓ !bool = bool\n")
+            passed = passed + 1
+        lainnya
+            native_print("  ✗ !bool wrong type\n")
+            failed = failed + 1
+        akhir
+    akhir
+
+    var r13 = type_prefix_op(t_int, "-")
+    jika r13.has_error
+        native_print("  ✗ -int FAILED\n")
+        failed = failed + 1
+    lainnya
+        jika r13.result.kind == KIND_INT
+            native_print("  ✓ -int = int\n")
+            passed = passed + 1
+        lainnya
+            native_print("  ✗ -int wrong type\n")
+            failed = failed + 1
+        akhir
+    akhir
+
+    var r14 = type_prefix_op(t_int, "~")
+    jika r14.has_error
+        native_print("  ✗ ~int FAILED\n")
+        failed = failed + 1
+    lainnya
+        jika r14.result.kind == KIND_INT
+            native_print("  ✓ ~int = int\n")
+            passed = passed + 1
+        lainnya
+            native_print("  ✗ ~int wrong type\n")
+            failed = failed + 1
+        akhir
+    akhir
+
+    var r15 = type_prefix_op(t_string, "!")
+    jika r15.has_error
+        native_print("  ✓ !string = ERROR\n")
+        passed = passed + 1
+    lainnya
+        native_print("  ✗ !string should error\n")
+        failed = failed + 1
+    akhir
+
+    # Test 11: Kind to String
+    native_print("\n[Test 11] Kind to String\n")
+    var s1 = kind_to_string(KIND_INT)
+    jika s1 == "int"
+        native_print("  ✓ KIND_INT -> \"int\"\n")
+        passed = passed + 1
+    lainnya
+        native_print("  ✗ KIND_INT -> string FAILED\n")
+        failed = failed + 1
+    akhir
+
+    var s2 = kind_to_string(KIND_CHANNEL)
+    jika s2 == "channel"
+        native_print("  ✓ KIND_CHANNEL -> \"channel\"\n")
+        passed = passed + 1
+    lainnya
+        native_print("  ✗ KIND_CHANNEL -> string FAILED\n")
+        failed = failed + 1
+    akhir
+
+    # Summary
+    native_print("\n╔══════════════════════════════════════╗\n")
+    native_print("║            TEST SUMMARY              ║\n")
+    native_print("╚══════════════════════════════════════╝\n")
+    native_print("  Passed: ")
+    native_print_int(passed)
+    native_print("\n  Failed: ")
+    native_print_int(failed)
+    native_print("\n")
+
+    jika failed == 0
+        native_print("\n  ★ ALL TESTS PASSED! ★\n")
+    lainnya
+        native_print("\n  ✗ SOME TESTS FAILED\n")
+    akhir
 akhir

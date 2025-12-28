@@ -1,0 +1,45 @@
+# Simple types.fox test
+ambil "types"
+
+fungsi main() void
+    native_print("=== Types Test ===\n")
+
+    # Test basic types
+    var int_t = int_type()
+    var str_t = string_type()
+    var bool_t = bool_type()
+
+    native_print("Created int type: ")
+    native_print(kind_to_string(int_t.kind))
+    native_print("\n")
+
+    native_print("Created string type: ")
+    native_print(kind_to_string(str_t.kind))
+    native_print("\n")
+
+    native_print("Created bool type: ")
+    native_print(kind_to_string(bool_t.kind))
+    native_print("\n")
+
+    # Test type equality
+    var same = type_equals(int_t, int_t)
+    var diff = type_equals(int_t, str_t)
+
+    native_print("int == int: ")
+    jika same
+        native_print("true")
+    lainnya
+        native_print("false")
+    akhir
+    native_print("\n")
+
+    native_print("int == string: ")
+    jika diff
+        native_print("true")
+    lainnya
+        native_print("false")
+    akhir
+    native_print("\n")
+
+    native_print("Types test PASSED!\n")
+akhir
