@@ -1,0 +1,81 @@
+# N1 Enhanced Type - Struct with Fields Test
+
+var KIND_INT = 0
+var KIND_STRING = 2
+
+struktur StructField
+    name string
+    type_kind int
+akhir
+
+struktur StructType
+    name string
+    field_count int
+    f0 StructField
+    f1 StructField
+akhir
+
+fungsi make_struct(n string) StructType
+    var empty = StructField{name: "", type_kind: 0}
+    kembalikan StructType{name: n, field_count: 0, f0: empty, f1: empty}
+akhir
+
+fungsi add_field(s StructType, fname string, fkind int) StructType
+    jika s.field_count == 0
+        s.f0 = StructField{name: fname, type_kind: fkind}
+    lainnya
+        s.f1 = StructField{name: fname, type_kind: fkind}
+    akhir
+    s.field_count = s.field_count + 1
+    kembalikan s
+akhir
+
+fungsi get_field_kind(s StructType, fname string) int
+    jika s.f0.name == fname
+        kembalikan s.f0.type_kind
+    akhir
+    jika s.f1.name == fname
+        kembalikan s.f1.type_kind
+    akhir
+    kembalikan -1
+akhir
+
+fungsi main() void
+    native_print("StructType Test\n")
+    native_print("===============\n")
+    
+    var person = make_struct("Person")
+    person = add_field(person, "name", KIND_STRING)
+    person = add_field(person, "age", KIND_INT)
+    
+    native_print("Person struct created\n")
+    native_print("field_count: ")
+    jika person.field_count == 2
+        native_print("2 OK\n")
+    lainnya
+        native_print("FAIL\n")
+    akhir
+    
+    var name_kind = get_field_kind(person, "name")
+    jika name_kind == KIND_STRING
+        native_print("✓ name field is string\n")
+    lainnya
+        native_print("✗ name field wrong\n")
+    akhir
+    
+    var age_kind = get_field_kind(person, "age")
+    jika age_kind == KIND_INT
+        native_print("✓ age field is int\n")
+    lainnya
+        native_print("✗ age field wrong\n")
+    akhir
+    
+    var unknown = get_field_kind(person, "unknown")
+    jika unknown == -1
+        native_print("✓ unknown field returns -1\n")
+    lainnya
+        native_print("✗ should return -1\n")
+    akhir
+    
+    native_print("StructType OK!\n")
+akhir

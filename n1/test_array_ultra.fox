@@ -1,0 +1,22 @@
+# N1 Enhanced Type - Ultra Minimal Test
+
+var KIND_INT = 0
+var KIND_STRING = 2
+
+struktur ArrayType
+    element_kind int
+akhir
+
+fungsi make_array(k int) ArrayType
+    kembalikan ArrayType{element_kind: k}
+akhir
+
+fungsi main() void
+    var arr = make_array(KIND_INT)
+    native_print("ArrayType element_kind: ")
+    jika arr.element_kind == KIND_INT
+        native_print("INT - OK\n")
+    lainnya
+        native_print("FAIL\n")
+    akhir
+akhir

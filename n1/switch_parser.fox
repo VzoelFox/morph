@@ -1,0 +1,142 @@
+# N1 Switch Parser - pilih/kasus support
+# Port dari N0 pkg/parser/parser.go parseSwitchStatement
+
+# Token constants (from token.fox)
+var TOKEN_PILIH = 52
+var TOKEN_KASUS = 53
+var TOKEN_LAINNYA = 50
+var TOKEN_AKHIR = 49
+var TOKEN_COLON = 30
+var TOKEN_COMMA = 28
+var TOKEN_EOF = 1
+var TOKEN_INT = 3
+
+# Node type constants
+var NODE_SWITCH = 21
+var NODE_CASE = 22
+
+# ============================================================================
+# CaseClause - supports multi-value (kasus 1, 2, 3:)
+# ============================================================================
+struktur CaseClause
+    node_type int
+    line int
+    values_count int
+    v0 int
+    v1 int
+    v2 int
+    v3 int
+akhir
+
+fungsi make_case_clause(line int) CaseClause
+    kembalikan CaseClause{node_type: NODE_CASE, line: line, values_count: 0, v0: 0, v1: 0, v2: 0, v3: 0}
+akhir
+
+fungsi case_add_value(c CaseClause, val int) CaseClause
+    jika c.values_count == 0
+        c.v0 = val
+    akhir
+    jika c.values_count == 1
+        c.v1 = val
+    akhir
+    jika c.values_count == 2
+        c.v2 = val
+    akhir
+    jika c.values_count == 3
+        c.v3 = val
+    akhir
+    c.values_count = c.values_count + 1
+    kembalikan c
+akhir
+
+fungsi case_has_value(c CaseClause, val int) bool
+    jika c.values_count >= 1
+        jika c.v0 == val
+            kembalikan benar
+        akhir
+    akhir
+    jika c.values_count >= 2
+        jika c.v1 == val
+            kembalikan benar
+        akhir
+    akhir
+    jika c.values_count >= 3
+        jika c.v2 == val
+            kembalikan benar
+        akhir
+    akhir
+    jika c.values_count >= 4
+        jika c.v3 == val
+            kembalikan benar
+        akhir
+    akhir
+    kembalikan salah
+akhir
+
+# ============================================================================
+# SwitchStatement
+# ============================================================================
+struktur SwitchStatement
+    node_type int
+    line int
+    condition_value int   # Simplified: store condition as int
+    cases_count int
+    c0 CaseClause
+    c1 CaseClause
+    c2 CaseClause
+    c3 CaseClause
+    has_default bool
+akhir
+
+fungsi make_switch_statement(line int) SwitchStatement
+    var empty_case = make_case_clause(0)
+    kembalikan SwitchStatement{node_type: NODE_SWITCH, line: line, condition_value: 0, cases_count: 0, c0: empty_case, c1: empty_case, c2: empty_case, c3: empty_case, has_default: salah}
+akhir
+
+fungsi switch_add_case(sw SwitchStatement, c CaseClause) SwitchStatement
+    jika sw.cases_count == 0
+        sw.c0 = c
+    akhir
+    jika sw.cases_count == 1
+        sw.c1 = c
+    akhir
+    jika sw.cases_count == 2
+        sw.c2 = c
+    akhir
+    jika sw.cases_count == 3
+        sw.c3 = c
+    akhir
+    sw.cases_count = sw.cases_count + 1
+    kembalikan sw
+akhir
+
+# ============================================================================
+# Switch Evaluation (flattening to if-else)
+# ============================================================================
+fungsi switch_find_case(sw SwitchStatement, val int) int
+    # Returns case index (0-3) or -1 for default, -2 for not found
+    jika sw.cases_count >= 1
+        jika case_has_value(sw.c0, val)
+            kembalikan 0
+        akhir
+    akhir
+    jika sw.cases_count >= 2
+        jika case_has_value(sw.c1, val)
+            kembalikan 1
+        akhir
+    akhir
+    jika sw.cases_count >= 3
+        jika case_has_value(sw.c2, val)
+            kembalikan 2
+        akhir
+    akhir
+    jika sw.cases_count >= 4
+        jika case_has_value(sw.c3, val)
+            kembalikan 3
+        akhir
+    akhir
+    jika sw.has_default
+        kembalikan -1
+    akhir
+    kembalikan -2
+akhir

@@ -1,0 +1,55 @@
+# Test Enhanced Type System - Minimal
+ambil "types"
+ambil "types_enhanced"
+
+# Test ArrayType
+var arr_int = make_array_type(KIND_INT, "int")
+cetak("ArrayType element_kind: " + int_to_string(arr_int.element_kind))
+
+var idx_result = array_index(arr_int, KIND_INT)
+jika idx_result.has_error == salah
+    cetak("✓ ArrayType index OK")
+lainnya
+    cetak("✗ ArrayType index FAIL")
+akhir
+
+# Test MapType
+var map_si = make_map_type(KIND_STRING, "string", KIND_INT, "int")
+cetak("MapType key_kind: " + int_to_string(map_si.key_kind))
+
+var map_idx = map_index(map_si, KIND_STRING)
+jika map_idx.has_error == salah
+    cetak("✓ MapType index OK")
+lainnya
+    cetak("✗ MapType index FAIL")
+akhir
+
+# Test StructType
+var person = make_struct_type("Person", "main")
+person = struct_add_field(person, "name", KIND_STRING, "string")
+cetak("StructType field_count: " + int_to_string(person.field_count))
+
+var name_field = struct_get_field(person, "name")
+jika name_field.has_error == salah
+    cetak("✓ StructType get field OK")
+lainnya
+    cetak("✗ StructType get field FAIL")
+akhir
+
+# Test FunctionType
+var add_func = make_function_type("add", KIND_INT, "int")
+add_func = func_add_param(add_func, "a", KIND_INT, "int")
+cetak("FunctionType param_count: " + int_to_string(add_func.param_count))
+
+# Test PointerType
+var ptr_int = make_pointer_type(KIND_INT, "int")
+var deref = pointer_deref(ptr_int)
+cetak("PointerType deref kind: " + int_to_string(deref.kind))
+
+# Test MultiType
+var multi = make_multi_type()
+multi = multi_add_type(multi, KIND_INT, "int")
+cetak("MultiType count: " + int_to_string(multi.type_count))
+
+cetak("")
+cetak("Enhanced Type System Test Complete!")

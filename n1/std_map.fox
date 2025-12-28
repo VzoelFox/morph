@@ -1,0 +1,95 @@
+# N1 Stdlib - Map (4 entries, int keys)
+
+struktur IntMap
+    k0 int
+    v0 int
+    k1 int
+    v1 int
+    k2 int
+    v2 int
+    k3 int
+    v3 int
+    len int
+akhir
+
+fungsi imap_new() IntMap
+    kembalikan IntMap{k0: -1, v0: 0, k1: -1, v1: 0, k2: -1, v2: 0, k3: -1, v3: 0, len: 0}
+akhir
+
+fungsi imap_set(m IntMap, k int, v int) IntMap
+    # Check existing
+    jika m.k0 == k
+        m.v0 = v
+        kembalikan m
+    akhir
+    jika m.k1 == k
+        m.v1 = v
+        kembalikan m
+    akhir
+    jika m.k2 == k
+        m.v2 = v
+        kembalikan m
+    akhir
+    jika m.k3 == k
+        m.v3 = v
+        kembalikan m
+    akhir
+    # Add new
+    jika m.len == 0
+        m.k0 = k
+        m.v0 = v
+        m.len = 1
+        kembalikan m
+    akhir
+    jika m.len == 1
+        m.k1 = k
+        m.v1 = v
+        m.len = 2
+        kembalikan m
+    akhir
+    jika m.len == 2
+        m.k2 = k
+        m.v2 = v
+        m.len = 3
+        kembalikan m
+    akhir
+    jika m.len == 3
+        m.k3 = k
+        m.v3 = v
+        m.len = 4
+    akhir
+    kembalikan m
+akhir
+
+fungsi imap_get(m IntMap, k int) int
+    jika m.k0 == k
+        kembalikan m.v0
+    akhir
+    jika m.k1 == k
+        kembalikan m.v1
+    akhir
+    jika m.k2 == k
+        kembalikan m.v2
+    akhir
+    jika m.k3 == k
+        kembalikan m.v3
+    akhir
+    kembalikan -1
+akhir
+
+fungsi main() void
+    native_print("Map\n")
+    var m = imap_new()
+    m = imap_set(m, 1, 100)
+    m = imap_set(m, 2, 200)
+    
+    native_print_int(imap_get(m, 1))
+    native_print("\n")
+    native_print_int(imap_get(m, 2))
+    native_print("\n")
+    
+    # Update
+    m = imap_set(m, 1, 111)
+    native_print_int(imap_get(m, 1))
+    native_print("\nOK\n")
+akhir

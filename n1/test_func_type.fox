@@ -1,0 +1,71 @@
+# N1 FunctionType Test
+
+var KIND_INT = 0
+var KIND_BOOL = 3
+
+struktur FunctionType
+    name string
+    param_count int
+    p0_kind int
+    p1_kind int
+    return_kind int
+akhir
+
+fungsi make_func(n string, ret int) FunctionType
+    kembalikan FunctionType{name: n, param_count: 0, p0_kind: 0, p1_kind: 0, return_kind: ret}
+akhir
+
+fungsi add_param(f FunctionType, pkind int) FunctionType
+    jika f.param_count == 0
+        f.p0_kind = pkind
+    lainnya
+        f.p1_kind = pkind
+    akhir
+    f.param_count = f.param_count + 1
+    kembalikan f
+akhir
+
+fungsi check_call(f FunctionType, a0 int, a1 int) bool
+    jika f.param_count == 2
+        jika f.p0_kind == a0
+            jika f.p1_kind == a1
+                kembalikan benar
+            akhir
+        akhir
+    akhir
+    kembalikan salah
+akhir
+
+fungsi main() void
+    native_print("FunctionType Test\n")
+    
+    var add = make_func("add", KIND_INT)
+    add = add_param(add, KIND_INT)
+    add = add_param(add, KIND_INT)
+    
+    jika add.param_count == 2
+        native_print("✓ param_count OK\n")
+    lainnya
+        native_print("✗ param_count FAIL\n")
+    akhir
+    
+    jika add.return_kind == KIND_INT
+        native_print("✓ return_kind OK\n")
+    lainnya
+        native_print("✗ return_kind FAIL\n")
+    akhir
+    
+    jika check_call(add, KIND_INT, KIND_INT)
+        native_print("✓ call check OK\n")
+    lainnya
+        native_print("✗ call check FAIL\n")
+    akhir
+    
+    jika check_call(add, KIND_BOOL, KIND_INT) == salah
+        native_print("✓ wrong type rejected\n")
+    lainnya
+        native_print("✗ should reject\n")
+    akhir
+    
+    native_print("FunctionType OK!\n")
+akhir

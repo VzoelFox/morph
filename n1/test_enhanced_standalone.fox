@@ -1,0 +1,172 @@
+# N1 Enhanced Type System - Standalone Test
+# Semua definisi dalam satu file untuk menghindari import overhead
+
+# ============================================================================
+# TypeKind Constants
+# ============================================================================
+var KIND_INT = 0
+var KIND_FLOAT = 1
+var KIND_STRING = 2
+var KIND_BOOL = 3
+var KIND_VOID = 4
+var KIND_FUNCTION = 5
+var KIND_STRUCT = 6
+var KIND_INTERFACE = 7
+var KIND_ARRAY = 8
+var KIND_MAP = 9
+var KIND_POINTER = 10
+var KIND_UNKNOWN = 12
+var KIND_ERROR = 13
+var KIND_USER_ERROR = 15
+
+# ============================================================================
+# Basic Type
+# ============================================================================
+struktur Type
+    kind int
+    name string
+akhir
+
+fungsi make_type(k int, n string) Type
+    kembalikan Type{kind: k, name: n}
+akhir
+
+# ============================================================================
+# TypeResult
+# ============================================================================
+struktur TypeResult
+    result Type
+    error_msg string
+    has_error bool
+akhir
+
+fungsi ok_result(t Type) TypeResult
+    kembalikan TypeResult{result: t, error_msg: "", has_error: salah}
+akhir
+
+fungsi err_result(msg string) TypeResult
+    var err_type = make_type(KIND_ERROR, "error")
+    kembalikan TypeResult{result: err_type, error_msg: msg, has_error: benar}
+akhir
+
+# ============================================================================
+# ArrayType
+# ============================================================================
+struktur ArrayType
+    element_kind int
+    element_name string
+akhir
+
+fungsi make_array_type(elem_kind int, elem_name string) ArrayType
+    kembalikan ArrayType{element_kind: elem_kind, element_name: elem_name}
+akhir
+
+fungsi array_index(arr ArrayType, key_kind int) TypeResult
+    jika key_kind != KIND_INT
+        kembalikan err_result("array index harus int")
+    akhir
+    kembalikan ok_result(make_type(arr.element_kind, arr.element_name))
+akhir
+
+# ============================================================================
+# MapType
+# ============================================================================
+struktur MapType
+    key_kind int
+    value_kind int
+akhir
+
+fungsi make_map_type(k_kind int, v_kind int) MapType
+    kembalikan MapType{key_kind: k_kind, value_kind: v_kind}
+akhir
+
+fungsi map_index(m MapType, key_kind int) TypeResult
+    jika key_kind != m.key_kind
+        kembalikan err_result("map key mismatch")
+    akhir
+    kembalikan ok_result(make_type(m.value_kind, "value"))
+akhir
+
+# ============================================================================
+# StructField
+# ============================================================================
+struktur StructField
+    name string
+    type_kind int
+akhir
+
+# ============================================================================
+# PointerType
+# ============================================================================
+struktur PointerType
+    base_kind int
+akhir
+
+fungsi make_pointer_type(base_kind int) PointerType
+    kembalikan PointerType{base_kind: base_kind}
+akhir
+
+fungsi pointer_deref(p PointerType) Type
+    kembalikan make_type(p.base_kind, "deref")
+akhir
+
+# ============================================================================
+# Main Test
+# ============================================================================
+fungsi main() void
+    native_print("N1 Enhanced Type System Test\n")
+    native_print("============================\n\n")
+    
+    # Test ArrayType
+    native_print("1. ArrayType Test:\n")
+    var arr_int = make_array_type(KIND_INT, "int")
+    native_print("   Created []int array\n")
+    
+    var idx_ok = array_index(arr_int, KIND_INT)
+    jika idx_ok.has_error == salah
+        native_print("   ✓ array[int] returns element type\n")
+    lainnya
+        native_print("   ✗ array[int] failed\n")
+    akhir
+    
+    var idx_bad = array_index(arr_int, KIND_STRING)
+    jika idx_bad.has_error
+        native_print("   ✓ array[string] correctly rejected\n")
+    lainnya
+        native_print("   ✗ array[string] should fail\n")
+    akhir
+    
+    # Test MapType
+    native_print("\n2. MapType Test:\n")
+    var map_si = make_map_type(KIND_STRING, KIND_INT)
+    native_print("   Created map[string]int\n")
+    
+    var map_ok = map_index(map_si, KIND_STRING)
+    jika map_ok.has_error == salah
+        native_print("   ✓ map[string] returns value type\n")
+    lainnya
+        native_print("   ✗ map[string] failed\n")
+    akhir
+    
+    var map_bad = map_index(map_si, KIND_INT)
+    jika map_bad.has_error
+        native_print("   ✓ map[int] correctly rejected\n")
+    lainnya
+        native_print("   ✗ map[int] should fail\n")
+    akhir
+    
+    # Test PointerType
+    native_print("\n3. PointerType Test:\n")
+    var ptr_int = make_pointer_type(KIND_INT)
+    native_print("   Created *int pointer\n")
+    
+    var deref = pointer_deref(ptr_int)
+    jika deref.kind == KIND_INT
+        native_print("   ✓ *int deref returns int\n")
+    lainnya
+        native_print("   ✗ deref failed\n")
+    akhir
+    
+    native_print("\n============================\n")
+    native_print("Enhanced Type System OK!\n")
+akhir

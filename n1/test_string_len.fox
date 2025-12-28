@@ -1,0 +1,18 @@
+# N1 String Length Test
+
+fungsi main() void
+    native_print("String Test\n")
+    
+    var s = "hello"
+    var len = panjang(s)
+    
+    native_print("length: ")
+    native_print_int(len)
+    native_print("\n")
+    
+    jika len == 5
+        native_print("✓ OK\n")
+    lainnya
+        native_print("✗ FAIL\n")
+    akhir
+akhir

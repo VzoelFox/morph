@@ -1,0 +1,40 @@
+# N1 Enhanced Type - Map Test
+
+var KIND_INT = 0
+var KIND_STRING = 2
+
+struktur MapType
+    key_kind int
+    value_kind int
+akhir
+
+fungsi make_map(k int, v int) MapType
+    kembalikan MapType{key_kind: k, value_kind: v}
+akhir
+
+fungsi map_check_key(m MapType, k int) bool
+    kembalikan m.key_kind == k
+akhir
+
+fungsi main() void
+    native_print("MapType Test\n")
+    native_print("============\n")
+    
+    var m = make_map(KIND_STRING, KIND_INT)
+    
+    native_print("map[string]int created\n")
+    
+    jika map_check_key(m, KIND_STRING)
+        native_print("✓ key check string OK\n")
+    lainnya
+        native_print("✗ key check FAIL\n")
+    akhir
+    
+    jika map_check_key(m, KIND_INT) == salah
+        native_print("✓ key check int rejected OK\n")
+    lainnya
+        native_print("✗ should reject int key\n")
+    akhir
+    
+    native_print("MapType OK!\n")
+akhir

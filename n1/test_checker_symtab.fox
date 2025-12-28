@@ -1,0 +1,231 @@
+# N1 Type Checker with Symbol Table
+# Pakai linked-list style untuk symbol table
+
+# Type Kinds
+var KIND_INT = 0
+var KIND_FLOAT = 1
+var KIND_STRING = 2
+var KIND_BOOL = 3
+var KIND_VOID = 4
+var KIND_UNKNOWN = -1
+var KIND_ERROR = -2
+
+# ============================================================================
+# Symbol (linked list node)
+# ============================================================================
+struktur Symbol
+    name string
+    kind int
+    scope_level int
+    next_id int  # -1 = no next
+akhir
+
+# ============================================================================
+# Type Checker
+# ============================================================================
+struktur TypeChecker
+    scope_level int
+    error_count int
+    # Symbol storage (max 32 symbols)
+    sym0_name string
+    sym0_kind int
+    sym0_level int
+    sym1_name string
+    sym1_kind int
+    sym1_level int
+    sym2_name string
+    sym2_kind int
+    sym2_level int
+    sym3_name string
+    sym3_kind int
+    sym3_level int
+    sym_count int
+akhir
+
+fungsi tc_new() TypeChecker
+    kembalikan TypeChecker{
+        scope_level: 0,
+        error_count: 0,
+        sym0_name: "",
+        sym0_kind: KIND_UNKNOWN,
+        sym0_level: 0,
+        sym1_name: "",
+        sym1_kind: KIND_UNKNOWN,
+        sym1_level: 0,
+        sym2_name: "",
+        sym2_kind: KIND_UNKNOWN,
+        sym2_level: 0,
+        sym3_name: "",
+        sym3_kind: KIND_UNKNOWN,
+        sym3_level: 0,
+        sym_count: 0
+    }
+akhir
+
+# ============================================================================
+# Scope Management
+# ============================================================================
+fungsi tc_enter_scope(tc TypeChecker) TypeChecker
+    tc.scope_level = tc.scope_level + 1
+    kembalikan tc
+akhir
+
+fungsi tc_exit_scope(tc TypeChecker) TypeChecker
+    tc.scope_level = tc.scope_level - 1
+    kembalikan tc
+akhir
+
+# ============================================================================
+# Symbol Table (hardcoded 4 slots)
+# ============================================================================
+fungsi tc_define(tc TypeChecker, name string, kind int) TypeChecker
+    jika tc.sym_count == 0
+        tc.sym0_name = name
+        tc.sym0_kind = kind
+        tc.sym0_level = tc.scope_level
+        tc.sym_count = 1
+        kembalikan tc
+    akhir
+    jika tc.sym_count == 1
+        tc.sym1_name = name
+        tc.sym1_kind = kind
+        tc.sym1_level = tc.scope_level
+        tc.sym_count = 2
+        kembalikan tc
+    akhir
+    jika tc.sym_count == 2
+        tc.sym2_name = name
+        tc.sym2_kind = kind
+        tc.sym2_level = tc.scope_level
+        tc.sym_count = 3
+        kembalikan tc
+    akhir
+    jika tc.sym_count == 3
+        tc.sym3_name = name
+        tc.sym3_kind = kind
+        tc.sym3_level = tc.scope_level
+        tc.sym_count = 4
+        kembalikan tc
+    akhir
+    # Table full
+    tc.error_count = tc.error_count + 1
+    kembalikan tc
+akhir
+
+fungsi tc_lookup(tc TypeChecker, name string) int
+    jika tc.sym0_name == name
+        kembalikan tc.sym0_kind
+    akhir
+    jika tc.sym1_name == name
+        kembalikan tc.sym1_kind
+    akhir
+    jika tc.sym2_name == name
+        kembalikan tc.sym2_kind
+    akhir
+    jika tc.sym3_name == name
+        kembalikan tc.sym3_kind
+    akhir
+    kembalikan KIND_UNKNOWN
+akhir
+
+# ============================================================================
+# Binary Type Check
+# ============================================================================
+fungsi tc_check_binary(left int, op string, right int) int
+    jika op == "+"
+        jika left == KIND_INT
+            jika right == KIND_INT
+                kembalikan KIND_INT
+            akhir
+        akhir
+        jika left == KIND_STRING
+            jika right == KIND_STRING
+                kembalikan KIND_STRING
+            akhir
+        akhir
+        kembalikan KIND_ERROR
+    akhir
+    
+    jika op == "-"
+        jika left == KIND_INT
+            jika right == KIND_INT
+                kembalikan KIND_INT
+            akhir
+        akhir
+        kembalikan KIND_ERROR
+    akhir
+    
+    jika op == "=="
+        jika left == right
+            kembalikan KIND_BOOL
+        akhir
+        kembalikan KIND_ERROR
+    akhir
+    
+    jika op == "<"
+        jika left == KIND_INT
+            jika right == KIND_INT
+                kembalikan KIND_BOOL
+            akhir
+        akhir
+        kembalikan KIND_ERROR
+    akhir
+    
+    kembalikan KIND_ERROR
+akhir
+
+# ============================================================================
+# Test
+# ============================================================================
+fungsi main() void
+    native_print("=== N1 Type Checker + Symbol Table ===\n\n")
+    
+    var tc = tc_new()
+    
+    # Define some variables
+    tc = tc_define(tc, "x", KIND_INT)
+    tc = tc_define(tc, "name", KIND_STRING)
+    tc = tc_define(tc, "flag", KIND_BOOL)
+    
+    native_print("Defined: x:int, name:string, flag:bool\n\n")
+    
+    # Lookup tests
+    var x_kind = tc_lookup(tc, "x")
+    jika x_kind == KIND_INT
+        native_print("✓ lookup(x) = int\n")
+    lainnya
+        native_print("✗ lookup(x) failed\n")
+    akhir
+    
+    var name_kind = tc_lookup(tc, "name")
+    jika name_kind == KIND_STRING
+        native_print("✓ lookup(name) = string\n")
+    lainnya
+        native_print("✗ lookup(name) failed\n")
+    akhir
+    
+    var unknown = tc_lookup(tc, "y")
+    jika unknown == KIND_UNKNOWN
+        native_print("✓ lookup(y) = unknown\n")
+    lainnya
+        native_print("✗ lookup(y) should be unknown\n")
+    akhir
+    
+    # Type check: x + 5 (int + int)
+    var r1 = tc_check_binary(x_kind, "+", KIND_INT)
+    jika r1 == KIND_INT
+        native_print("✓ x + 5 : int\n")
+    lainnya
+        native_print("✗ x + 5 failed\n")
+    akhir
+    
+    # Type check: x + name (int + string = error)
+    var r2 = tc_check_binary(x_kind, "+", name_kind)
+    jika r2 == KIND_ERROR
+        native_print("✓ x + name : error\n")
+    lainnya
+        native_print("✗ x + name should error\n")
+    akhir
+    
+    native_print("\n=== Done ===\n")
+akhir

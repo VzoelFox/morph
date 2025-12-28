@@ -1,0 +1,187 @@
+# Test Enhanced Type System
+ambil "types"
+ambil "types_enhanced"
+
+var passed = 0
+var failed = 0
+
+fungsi test(name string, result bool) void
+    jika result
+        cetak("✓ " + name)
+        passed = passed + 1
+    lainnya
+        cetak("✗ " + name)
+        failed = failed + 1
+    akhir
+akhir
+
+# ============================================================================
+# Test ArrayType
+# ============================================================================
+cetak("=== ArrayType Tests ===")
+
+var arr_int = make_array_type(KIND_INT, "int")
+test("ArrayType creation", arr_int.element_kind == KIND_INT)
+
+var arr_int2 = make_array_type(KIND_INT, "int")
+test("ArrayType equals same", array_type_equals(arr_int, arr_int2))
+
+var arr_str = make_array_type(KIND_STRING, "string")
+test("ArrayType not equals different", array_type_equals(arr_int, arr_str) == salah)
+
+var arr_unknown = make_array_type(KIND_UNKNOWN, "unknown")
+test("ArrayType equals unknown", array_type_equals(arr_int, arr_unknown))
+
+var idx_result = array_index(arr_int, KIND_INT)
+test("ArrayType index int ok", idx_result.has_error == salah)
+test("ArrayType index returns element", idx_result.result.kind == KIND_INT)
+
+var idx_bad = array_index(arr_int, KIND_STRING)
+test("ArrayType index string error", idx_bad.has_error)
+
+# ============================================================================
+# Test MapType
+# ============================================================================
+cetak("")
+cetak("=== MapType Tests ===")
+
+var map_si = make_map_type(KIND_STRING, "string", KIND_INT, "int")
+test("MapType creation", map_si.key_kind == KIND_STRING)
+test("MapType value kind", map_si.value_kind == KIND_INT)
+
+var map_si2 = make_map_type(KIND_STRING, "string", KIND_INT, "int")
+test("MapType equals same", map_type_equals(map_si, map_si2))
+
+var map_ii = make_map_type(KIND_INT, "int", KIND_INT, "int")
+test("MapType not equals different key", map_type_equals(map_si, map_ii) == salah)
+
+var map_idx = map_index(map_si, KIND_STRING)
+test("MapType index correct key", map_idx.has_error == salah)
+test("MapType index returns value", map_idx.result.kind == KIND_INT)
+
+var map_idx_bad = map_index(map_si, KIND_INT)
+test("MapType index wrong key error", map_idx_bad.has_error)
+
+# ============================================================================
+# Test StructType
+# ============================================================================
+cetak("")
+cetak("=== StructType Tests ===")
+
+var person = make_struct_type("Person", "main")
+person = struct_add_field(person, "name", KIND_STRING, "string")
+person = struct_add_field(person, "age", KIND_INT, "int")
+
+test("StructType creation", person.name == "Person")
+test("StructType field count", person.field_count == 2)
+
+var name_field = struct_get_field(person, "name")
+test("StructType get field ok", name_field.has_error == salah)
+test("StructType field type", name_field.result.kind == KIND_STRING)
+
+var bad_field = struct_get_field(person, "unknown")
+test("StructType get unknown field error", bad_field.has_error)
+
+var person2 = make_struct_type("Person", "main")
+test("StructType equals same", struct_type_equals(person, person2))
+
+var animal = make_struct_type("Animal", "main")
+test("StructType not equals different", struct_type_equals(person, animal) == salah)
+
+# ============================================================================
+# Test FunctionType
+# ============================================================================
+cetak("")
+cetak("=== FunctionType Tests ===")
+
+var add_func = make_function_type("add", KIND_INT, "int")
+add_func = func_add_param(add_func, "a", KIND_INT, "int")
+add_func = func_add_param(add_func, "b", KIND_INT, "int")
+
+test("FunctionType creation", add_func.name == "add")
+test("FunctionType param count", add_func.param_count == 2)
+test("FunctionType return kind", add_func.return_kind == KIND_INT)
+
+var args = [KIND_INT, KIND_INT]
+var call_result = func_check_call(add_func, args)
+test("FunctionType call ok", call_result.has_error == salah)
+test("FunctionType call returns", call_result.result.kind == KIND_INT)
+
+var bad_args = [KIND_STRING, KIND_INT]
+var call_bad = func_check_call(add_func, bad_args)
+test("FunctionType call wrong type error", call_bad.has_error)
+
+var few_args = [KIND_INT]
+var call_few = func_check_call(add_func, few_args)
+test("FunctionType call wrong count error", call_few.has_error)
+
+# ============================================================================
+# Test PointerType
+# ============================================================================
+cetak("")
+cetak("=== PointerType Tests ===")
+
+var ptr_int = make_pointer_type(KIND_INT, "int")
+test("PointerType creation", ptr_int.base_kind == KIND_INT)
+
+var deref = pointer_deref(ptr_int)
+test("PointerType deref", deref.kind == KIND_INT)
+
+# ============================================================================
+# Test MultiType
+# ============================================================================
+cetak("")
+cetak("=== MultiType Tests ===")
+
+var multi = make_multi_type()
+multi = multi_add_type(multi, KIND_INT, "int")
+multi = multi_add_type(multi, KIND_USER_ERROR, "error")
+
+test("MultiType creation", multi.type_count == 2)
+test("MultiType first", multi.type_kinds[0] == KIND_INT)
+test("MultiType second", multi.type_kinds[1] == KIND_USER_ERROR)
+
+# ============================================================================
+# Test Type Casting
+# ============================================================================
+cetak("")
+cetak("=== Type Casting Tests ===")
+
+var cast_fi = type_cast(KIND_INT, KIND_FLOAT)
+test("Cast float to int", cast_fi.has_error == salah)
+
+var cast_if = type_cast(KIND_FLOAT, KIND_INT)
+test("Cast int to float", cast_if.has_error == salah)
+
+var cast_se = type_cast(KIND_USER_ERROR, KIND_STRING)
+test("Cast string to error", cast_se.has_error == salah)
+
+var cast_bad = type_cast(KIND_INT, KIND_STRING)
+test("Cast string to int error", cast_bad.has_error)
+
+# ============================================================================
+# Test String Index
+# ============================================================================
+cetak("")
+cetak("=== String Index Tests ===")
+
+var str_idx = string_index(KIND_INT)
+test("String index int ok", str_idx.has_error == salah)
+test("String index returns int", str_idx.result.kind == KIND_INT)
+
+var str_idx_bad = string_index(KIND_STRING)
+test("String index string error", str_idx_bad.has_error)
+
+# ============================================================================
+# Summary
+# ============================================================================
+cetak("")
+cetak("=== Summary ===")
+cetak("Passed: " + int_to_string(passed))
+cetak("Failed: " + int_to_string(failed))
+
+jika failed == 0
+    cetak("ALL TESTS PASSED!")
+lainnya
+    cetak("SOME TESTS FAILED")
+akhir

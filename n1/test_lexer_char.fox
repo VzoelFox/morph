@@ -1,0 +1,23 @@
+# N1 Lexer Char Test
+
+fungsi main() void
+    native_print("Lexer Char Test\n")
+    
+    var s = "var"
+    var c = substring(s, 0, 1)
+    
+    jika c == "v"
+        native_print("✓ first char = v\n")
+    lainnya
+        native_print("✗ first char\n")
+    akhir
+    
+    var len = panjang(s)
+    jika len == 3
+        native_print("✓ length = 3\n")
+    lainnya
+        native_print("✗ length\n")
+    akhir
+    
+    native_print("OK!\n")
+akhir

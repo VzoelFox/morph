@@ -1,0 +1,67 @@
+# N1 Enhanced Type - Simple Struct Test
+
+var KIND_INT = 0
+var KIND_STRING = 2
+
+struktur StructType
+    name string
+    field_count int
+    f0_name string
+    f0_kind int
+    f1_name string
+    f1_kind int
+akhir
+
+fungsi make_struct(n string) StructType
+    kembalikan StructType{name: n, field_count: 0, f0_name: "", f0_kind: 0, f1_name: "", f1_kind: 0}
+akhir
+
+fungsi add_field(s StructType, fname string, fkind int) StructType
+    jika s.field_count == 0
+        s.f0_name = fname
+        s.f0_kind = fkind
+    lainnya
+        s.f1_name = fname
+        s.f1_kind = fkind
+    akhir
+    s.field_count = s.field_count + 1
+    kembalikan s
+akhir
+
+fungsi get_field_kind(s StructType, fname string) int
+    jika s.f0_name == fname
+        kembalikan s.f0_kind
+    akhir
+    jika s.f1_name == fname
+        kembalikan s.f1_kind
+    akhir
+    kembalikan -1
+akhir
+
+fungsi main() void
+    native_print("StructType Test\n")
+    
+    var person = make_struct("Person")
+    person = add_field(person, "name", KIND_STRING)
+    person = add_field(person, "age", KIND_INT)
+    
+    jika person.field_count == 2
+        native_print("✓ field_count OK\n")
+    lainnya
+        native_print("✗ field_count FAIL\n")
+    akhir
+    
+    jika get_field_kind(person, "name") == KIND_STRING
+        native_print("✓ name is string\n")
+    lainnya
+        native_print("✗ name FAIL\n")
+    akhir
+    
+    jika get_field_kind(person, "age") == KIND_INT
+        native_print("✓ age is int\n")
+    lainnya
+        native_print("✗ age FAIL\n")
+    akhir
+    
+    native_print("StructType OK!\n")
+akhir

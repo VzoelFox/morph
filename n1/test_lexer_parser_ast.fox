@@ -1,0 +1,430 @@
+# N1 Lexer/Parser/AST Comprehensive Test
+
+# ============================================================================
+# Token Constants (inline untuk avoid import overhead)
+# ============================================================================
+var TOKEN_EOF = 1
+var TOKEN_IDENT = 2
+var TOKEN_INT = 3
+var TOKEN_STRING = 5
+var TOKEN_ASSIGN = 7
+var TOKEN_PLUS = 8
+var TOKEN_MINUS = 9
+var TOKEN_ASTERISK = 11
+var TOKEN_SLASH = 12
+var TOKEN_LT = 14
+var TOKEN_GT = 15
+var TOKEN_EQ = 16
+var TOKEN_LPAREN = 31
+var TOKEN_RPAREN = 32
+var TOKEN_LBRACE = 33
+var TOKEN_RBRACE = 34
+var TOKEN_FUNGSI = 37
+var TOKEN_VAR = 38
+var TOKEN_JIKA = 42
+var TOKEN_SELAMA = 49
+var TOKEN_AKHIR = 55
+
+# ============================================================================
+# Node Constants
+# ============================================================================
+var NODE_PROGRAM = 0
+var NODE_VAR_STATEMENT = 1
+var NODE_IDENTIFIER = 7
+var NODE_INTEGER_LITERAL = 8
+var NODE_INFIX_EXPRESSION = 16
+
+# ============================================================================
+# Token Structure
+# ============================================================================
+struktur Token
+    token_type int
+    literal string
+    line int
+akhir
+
+fungsi make_token(t int, lit string, ln int) Token
+    kembalikan Token{token_type: t, literal: lit, line: ln}
+akhir
+
+# ============================================================================
+# Lexer Structure
+# ============================================================================
+struktur Lexer
+    input string
+    pos int
+    ch int
+    line int
+akhir
+
+fungsi new_lexer(input string) Lexer
+    var l = Lexer{input: input, pos: 0, ch: 0, line: 1}
+    lexer_read(l)
+    kembalikan l
+akhir
+
+fungsi lexer_read(l Lexer) void
+    jika l.pos >= panjang(l.input)
+        l.ch = 0
+    lainnya
+        var c = substring(l.input, l.pos, l.pos + 1)
+        l.ch = char_code(c)
+    akhir
+    l.pos = l.pos + 1
+akhir
+
+fungsi char_code(c string) int
+    jika c == " "
+        kembalikan 32
+    akhir
+    jika c == "\n"
+        kembalikan 10
+    akhir
+    jika c == "="
+        kembalikan 61
+    akhir
+    jika c == "+"
+        kembalikan 43
+    akhir
+    jika c == "-"
+        kembalikan 45
+    akhir
+    jika c == "*"
+        kembalikan 42
+    akhir
+    jika c == "/"
+        kembalikan 47
+    akhir
+    jika c == "<"
+        kembalikan 60
+    akhir
+    jika c == ">"
+        kembalikan 62
+    akhir
+    jika c == "("
+        kembalikan 40
+    akhir
+    jika c == ")"
+        kembalikan 41
+    akhir
+    jika c == "{"
+        kembalikan 123
+    akhir
+    jika c == "}"
+        kembalikan 125
+    akhir
+    # digits 0-9
+    jika c == "0"
+        kembalikan 48
+    akhir
+    jika c == "1"
+        kembalikan 49
+    akhir
+    jika c == "2"
+        kembalikan 50
+    akhir
+    jika c == "3"
+        kembalikan 51
+    akhir
+    jika c == "4"
+        kembalikan 52
+    akhir
+    jika c == "5"
+        kembalikan 53
+    akhir
+    # letters
+    jika c == "a"
+        kembalikan 97
+    akhir
+    jika c == "b"
+        kembalikan 98
+    akhir
+    jika c == "c"
+        kembalikan 99
+    akhir
+    jika c == "d"
+        kembalikan 100
+    akhir
+    jika c == "e"
+        kembalikan 101
+    akhir
+    jika c == "f"
+        kembalikan 102
+    akhir
+    jika c == "g"
+        kembalikan 103
+    akhir
+    jika c == "i"
+        kembalikan 105
+    akhir
+    jika c == "j"
+        kembalikan 106
+    akhir
+    jika c == "k"
+        kembalikan 107
+    akhir
+    jika c == "l"
+        kembalikan 108
+    akhir
+    jika c == "m"
+        kembalikan 109
+    akhir
+    jika c == "n"
+        kembalikan 110
+    akhir
+    jika c == "o"
+        kembalikan 111
+    akhir
+    jika c == "r"
+        kembalikan 114
+    akhir
+    jika c == "s"
+        kembalikan 115
+    akhir
+    jika c == "t"
+        kembalikan 116
+    akhir
+    jika c == "u"
+        kembalikan 117
+    akhir
+    jika c == "v"
+        kembalikan 118
+    akhir
+    jika c == "x"
+        kembalikan 120
+    akhir
+    kembalikan 0
+akhir
+
+fungsi is_letter(ch int) bool
+    kembalikan ch >= 97
+akhir
+
+fungsi is_digit(ch int) bool
+    kembalikan ch >= 48
+akhir
+
+fungsi is_space(ch int) bool
+    kembalikan ch == 32
+akhir
+
+fungsi lexer_peek(l Lexer) int
+    jika l.pos >= panjang(l.input)
+        kembalikan 0
+    akhir
+    var c = substring(l.input, l.pos, l.pos + 1)
+    kembalikan char_code(c)
+akhir
+
+fungsi lexer_skip_ws(l Lexer) void
+    selama l.ch == 32
+        lexer_read(l)
+    akhir
+    selama l.ch == 10
+        l.line = l.line + 1
+        lexer_read(l)
+    akhir
+akhir
+
+fungsi lexer_read_ident(l Lexer) string
+    var start = l.pos - 1
+    selama is_letter(l.ch)
+        lexer_read(l)
+    akhir
+    kembalikan substring(l.input, start, l.pos - 1)
+akhir
+
+fungsi lexer_read_num(l Lexer) string
+    var start = l.pos - 1
+    selama is_digit(l.ch)
+        lexer_read(l)
+    akhir
+    kembalikan substring(l.input, start, l.pos - 1)
+akhir
+
+fungsi lookup_kw(ident string) int
+    jika ident == "var"
+        kembalikan TOKEN_VAR
+    akhir
+    jika ident == "fungsi"
+        kembalikan TOKEN_FUNGSI
+    akhir
+    jika ident == "jika"
+        kembalikan TOKEN_JIKA
+    akhir
+    jika ident == "selama"
+        kembalikan TOKEN_SELAMA
+    akhir
+    jika ident == "akhir"
+        kembalikan TOKEN_AKHIR
+    akhir
+    kembalikan TOKEN_IDENT
+akhir
+
+fungsi next_token(l Lexer) Token
+    lexer_skip_ws(l)
+    
+    jika l.ch == 0
+        kembalikan make_token(TOKEN_EOF, "", l.line)
+    akhir
+    
+    jika l.ch == 61
+        jika lexer_peek(l) == 61
+            lexer_read(l)
+            lexer_read(l)
+            kembalikan make_token(TOKEN_EQ, "==", l.line)
+        akhir
+        lexer_read(l)
+        kembalikan make_token(TOKEN_ASSIGN, "=", l.line)
+    akhir
+    
+    jika l.ch == 43
+        lexer_read(l)
+        kembalikan make_token(TOKEN_PLUS, "+", l.line)
+    akhir
+    
+    jika l.ch == 45
+        lexer_read(l)
+        kembalikan make_token(TOKEN_MINUS, "-", l.line)
+    akhir
+    
+    jika l.ch == 42
+        lexer_read(l)
+        kembalikan make_token(TOKEN_ASTERISK, "*", l.line)
+    akhir
+    
+    jika l.ch == 47
+        lexer_read(l)
+        kembalikan make_token(TOKEN_SLASH, "/", l.line)
+    akhir
+    
+    jika l.ch == 60
+        lexer_read(l)
+        kembalikan make_token(TOKEN_LT, "<", l.line)
+    akhir
+    
+    jika l.ch == 62
+        lexer_read(l)
+        kembalikan make_token(TOKEN_GT, ">", l.line)
+    akhir
+    
+    jika l.ch == 40
+        lexer_read(l)
+        kembalikan make_token(TOKEN_LPAREN, "(", l.line)
+    akhir
+    
+    jika l.ch == 41
+        lexer_read(l)
+        kembalikan make_token(TOKEN_RPAREN, ")", l.line)
+    akhir
+    
+    jika is_letter(l.ch)
+        var ident = lexer_read_ident(l)
+        var tt = lookup_kw(ident)
+        kembalikan make_token(tt, ident, l.line)
+    akhir
+    
+    jika is_digit(l.ch)
+        var num = lexer_read_num(l)
+        kembalikan make_token(TOKEN_INT, num, l.line)
+    akhir
+    
+    lexer_read(l)
+    kembalikan make_token(0, "", l.line)
+akhir
+
+# ============================================================================
+# Test Runner
+# ============================================================================
+var passed = 0
+var failed = 0
+
+fungsi test(name string, result bool) void
+    jika result
+        native_print("✓ ")
+        passed = passed + 1
+    lainnya
+        native_print("✗ ")
+        failed = failed + 1
+    akhir
+    native_print(name)
+    native_print("\n")
+akhir
+
+# ============================================================================
+# Main Test
+# ============================================================================
+fungsi main() void
+    native_print("N1 Lexer/Parser/AST Test\n")
+    native_print("========================\n\n")
+    
+    # Test 1: Basic tokens
+    native_print("Lexer Tests:\n")
+    var l1 = new_lexer("var x = 5")
+    var t1 = next_token(l1)
+    test("var keyword", t1.token_type == TOKEN_VAR)
+    
+    var t2 = next_token(l1)
+    test("identifier x", t2.token_type == TOKEN_IDENT)
+    test("identifier value", t2.literal == "x")
+    
+    var t3 = next_token(l1)
+    test("assign =", t3.token_type == TOKEN_ASSIGN)
+    
+    var t4 = next_token(l1)
+    test("integer 5", t4.token_type == TOKEN_INT)
+    test("integer value", t4.literal == "5")
+    
+    # Test 2: Operators
+    native_print("\nOperator Tests:\n")
+    var l2 = new_lexer("1 + 2 * 3")
+    next_token(l2)  # 1
+    var op1 = next_token(l2)
+    test("plus +", op1.token_type == TOKEN_PLUS)
+    
+    next_token(l2)  # 2
+    var op2 = next_token(l2)
+    test("asterisk *", op2.token_type == TOKEN_ASTERISK)
+    
+    # Test 3: Comparison
+    native_print("\nComparison Tests:\n")
+    var l3 = new_lexer("a == b")
+    next_token(l3)  # a
+    var eq = next_token(l3)
+    test("equals ==", eq.token_type == TOKEN_EQ)
+    
+    # Test 4: Keywords
+    native_print("\nKeyword Tests:\n")
+    var l4 = new_lexer("fungsi jika selama akhir")
+    var kw1 = next_token(l4)
+    test("fungsi keyword", kw1.token_type == TOKEN_FUNGSI)
+    
+    var kw2 = next_token(l4)
+    test("jika keyword", kw2.token_type == TOKEN_JIKA)
+    
+    var kw3 = next_token(l4)
+    test("selama keyword", kw3.token_type == TOKEN_SELAMA)
+    
+    var kw4 = next_token(l4)
+    test("akhir keyword", kw4.token_type == TOKEN_AKHIR)
+    
+    # Test 5: EOF
+    native_print("\nEOF Test:\n")
+    var l5 = new_lexer("")
+    var eof = next_token(l5)
+    test("empty input EOF", eof.token_type == TOKEN_EOF)
+    
+    # Summary
+    native_print("\n========================\n")
+    native_print("Passed: ")
+    native_print_int(passed)
+    native_print("\nFailed: ")
+    native_print_int(failed)
+    native_print("\n")
+    
+    jika failed == 0
+        native_print("ALL TESTS PASSED!\n")
+    lainnya
+        native_print("SOME TESTS FAILED\n")
+    akhir
+akhir

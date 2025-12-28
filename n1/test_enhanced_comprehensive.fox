@@ -1,0 +1,206 @@
+# N1 Enhanced Type System - Comprehensive Test
+
+var KIND_INT = 0
+var KIND_FLOAT = 1
+var KIND_STRING = 2
+var KIND_BOOL = 3
+var KIND_UNKNOWN = 12
+var KIND_USER_ERROR = 15
+
+var passed = 0
+var failed = 0
+
+# ============================================================================
+# ArrayType
+# ============================================================================
+struktur ArrayType
+    element_kind int
+akhir
+
+fungsi make_array(k int) ArrayType
+    kembalikan ArrayType{element_kind: k}
+akhir
+
+fungsi array_index_ok(arr ArrayType, key_kind int) bool
+    kembalikan key_kind == KIND_INT
+akhir
+
+# ============================================================================
+# MapType
+# ============================================================================
+struktur MapType
+    key_kind int
+    value_kind int
+akhir
+
+fungsi make_map(k int, v int) MapType
+    kembalikan MapType{key_kind: k, value_kind: v}
+akhir
+
+fungsi map_key_ok(m MapType, k int) bool
+    kembalikan m.key_kind == k
+akhir
+
+# ============================================================================
+# FunctionType
+# ============================================================================
+struktur FunctionType
+    param_count int
+    p0_kind int
+    p1_kind int
+    return_kind int
+akhir
+
+fungsi make_func(ret int) FunctionType
+    kembalikan FunctionType{param_count: 0, p0_kind: 0, p1_kind: 0, return_kind: ret}
+akhir
+
+fungsi func_add_p(f FunctionType, k int) FunctionType
+    jika f.param_count == 0
+        f.p0_kind = k
+    lainnya
+        f.p1_kind = k
+    akhir
+    f.param_count = f.param_count + 1
+    kembalikan f
+akhir
+
+# ============================================================================
+# PointerType
+# ============================================================================
+struktur PointerType
+    base_kind int
+akhir
+
+fungsi make_ptr(k int) PointerType
+    kembalikan PointerType{base_kind: k}
+akhir
+
+# ============================================================================
+# MultiType
+# ============================================================================
+struktur MultiType
+    count int
+    t0 int
+    t1 int
+akhir
+
+fungsi make_multi() MultiType
+    kembalikan MultiType{count: 0, t0: 0, t1: 0}
+akhir
+
+fungsi multi_add(m MultiType, k int) MultiType
+    jika m.count == 0
+        m.t0 = k
+    lainnya
+        m.t1 = k
+    akhir
+    m.count = m.count + 1
+    kembalikan m
+akhir
+
+# ============================================================================
+# Type Casting
+# ============================================================================
+fungsi can_cast(target int, source int) bool
+    jika source == KIND_UNKNOWN
+        kembalikan benar
+    akhir
+    jika target == KIND_INT
+        jika source == KIND_FLOAT
+            kembalikan benar
+        akhir
+    akhir
+    jika target == KIND_FLOAT
+        jika source == KIND_INT
+            kembalikan benar
+        akhir
+    akhir
+    jika target == KIND_USER_ERROR
+        jika source == KIND_STRING
+            kembalikan benar
+        akhir
+    akhir
+    kembalikan target == source
+akhir
+
+# ============================================================================
+# Test Runner
+# ============================================================================
+fungsi test(name string, result bool) void
+    jika result
+        native_print("✓ ")
+        native_print(name)
+        native_print("\n")
+        passed = passed + 1
+    lainnya
+        native_print("✗ ")
+        native_print(name)
+        native_print("\n")
+        failed = failed + 1
+    akhir
+akhir
+
+fungsi main() void
+    native_print("N1 Enhanced Type System Test\n")
+    native_print("============================\n\n")
+    
+    # ArrayType tests
+    native_print("ArrayType:\n")
+    var arr = make_array(KIND_INT)
+    test("create []int", arr.element_kind == KIND_INT)
+    test("index with int OK", array_index_ok(arr, KIND_INT))
+    test("index with string FAIL", array_index_ok(arr, KIND_STRING) == salah)
+    
+    # MapType tests
+    native_print("\nMapType:\n")
+    var m = make_map(KIND_STRING, KIND_INT)
+    test("create map[string]int", m.key_kind == KIND_STRING)
+    test("key check string OK", map_key_ok(m, KIND_STRING))
+    test("key check int FAIL", map_key_ok(m, KIND_INT) == salah)
+    
+    # FunctionType tests
+    native_print("\nFunctionType:\n")
+    var f = make_func(KIND_INT)
+    f = func_add_p(f, KIND_INT)
+    f = func_add_p(f, KIND_INT)
+    test("param_count = 2", f.param_count == 2)
+    test("return_kind = int", f.return_kind == KIND_INT)
+    test("p0 = int", f.p0_kind == KIND_INT)
+    
+    # PointerType tests
+    native_print("\nPointerType:\n")
+    var ptr = make_ptr(KIND_INT)
+    test("*int base = int", ptr.base_kind == KIND_INT)
+    
+    # MultiType tests
+    native_print("\nMultiType:\n")
+    var mt = make_multi()
+    mt = multi_add(mt, KIND_INT)
+    mt = multi_add(mt, KIND_USER_ERROR)
+    test("count = 2", mt.count == 2)
+    test("t0 = int", mt.t0 == KIND_INT)
+    test("t1 = error", mt.t1 == KIND_USER_ERROR)
+    
+    # Type Casting tests
+    native_print("\nType Casting:\n")
+    test("float->int OK", can_cast(KIND_INT, KIND_FLOAT))
+    test("int->float OK", can_cast(KIND_FLOAT, KIND_INT))
+    test("string->error OK", can_cast(KIND_USER_ERROR, KIND_STRING))
+    test("string->int FAIL", can_cast(KIND_INT, KIND_STRING) == salah)
+    test("unknown->any OK", can_cast(KIND_INT, KIND_UNKNOWN))
+    
+    # Summary
+    native_print("\n============================\n")
+    native_print("Passed: ")
+    native_print_int(passed)
+    native_print("\nFailed: ")
+    native_print_int(failed)
+    native_print("\n")
+    
+    jika failed == 0
+        native_print("ALL TESTS PASSED!\n")
+    lainnya
+        native_print("SOME TESTS FAILED\n")
+    akhir
+akhir

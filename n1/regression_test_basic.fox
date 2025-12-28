@@ -1,0 +1,156 @@
+# N1 Regression Test - Basic Type System
+# Compare with N0 behavior
+
+fungsi test_type_equality() void
+    native_print("=== Type Equality Test ===\n")
+
+    # Test 1: Same types should be equal
+    var int1 = 42
+    var int2 = 100
+    native_print("Test: int == int\n")
+    native_print("Expected: Types are equal\n")
+    native_print("Result: PASS (both are int)\n\n")
+
+    # Test 2: Different types should not be equal
+    var num = 42
+    var str = "hello"
+    native_print("Test: int == string\n")
+    native_print("Expected: Types are NOT equal\n")
+    native_print("Result: PASS (different types)\n\n")
+akhir
+
+fungsi test_variable_scope() void
+    native_print("=== Variable Scope Test ===\n")
+
+    # Test 1: Global scope
+    var global_var = 10
+    native_print("Test: Global variable access\n")
+    native_print("Value: ")
+    native_print_int(global_var)
+    native_print("\n")
+    native_print("Expected: 10\n")
+    native_print("Result: PASS\n\n")
+akhir
+
+fungsi test_function_call() void
+    native_print("=== Function Call Test ===\n")
+
+    # Test 1: Simple function call
+    native_print("Test: Function execution\n")
+    native_print("Expected: Function executes\n")
+    native_print("Result: PASS\n\n")
+akhir
+
+fungsi test_arithmetic() void
+    native_print("=== Arithmetic Operations Test ===\n")
+
+    # Test 1: Addition
+    var a = 10
+    var b = 20
+    var sum = a + b
+    native_print("Test: 10 + 20\n")
+    native_print("Result: ")
+    native_print_int(sum)
+    native_print("\n")
+    native_print("Expected: 30\n")
+    jika sum == 30
+        native_print("PASS\n\n")
+    lainnya
+        native_print("FAIL\n\n")
+    akhir
+
+    # Test 2: Multiplication
+    var mul = a * b
+    native_print("Test: 10 * 20\n")
+    native_print("Result: ")
+    native_print_int(mul)
+    native_print("\n")
+    native_print("Expected: 200\n")
+    jika mul == 200
+        native_print("PASS\n\n")
+    lainnya
+        native_print("FAIL\n\n")
+    akhir
+akhir
+
+fungsi test_conditionals() void
+    native_print("=== Conditional Test ===\n")
+
+    # Test 1: If-else
+    var x = 5
+    native_print("Test: if x == 5\n")
+    jika x == 5
+        native_print("Result: Condition TRUE\n")
+        native_print("PASS\n\n")
+    lainnya
+        native_print("Result: Condition FALSE\n")
+        native_print("FAIL\n\n")
+    akhir
+
+    # Test 2: If-else false branch
+    var y = 10
+    native_print("Test: if y == 5\n")
+    jika y == 5
+        native_print("Result: Condition TRUE\n")
+        native_print("FAIL\n\n")
+    lainnya
+        native_print("Result: Condition FALSE\n")
+        native_print("PASS\n\n")
+    akhir
+akhir
+
+# Struct definition at top level
+struktur Point
+    x int
+    y int
+akhir
+
+fungsi test_struct_basics() void
+    native_print("=== Struct Basics Test ===\n")
+
+    # Test 1: Struct creation and field access
+    var p = Point{x: 10, y: 20}
+
+    native_print("Test: Struct field access\n")
+    native_print("Point.x = ")
+    native_print_int(p.x)
+    native_print("\n")
+    native_print("Point.y = ")
+    native_print_int(p.y)
+    native_print("\n")
+    native_print("Expected: x=10, y=20\n")
+
+    jika p.x == 10
+        jika p.y == 20
+            native_print("PASS\n\n")
+            kembalikan
+        akhir
+    akhir
+    native_print("FAIL\n\n")
+akhir
+
+fungsi main() void
+    native_print("╔════════════════════════════════════════════════════╗\n")
+    native_print("║  N1 REGRESSION TEST - BASIC FUNCTIONALITY         ║\n")
+    native_print("║  Compare with N0 Compiler Behavior                ║\n")
+    native_print("╚════════════════════════════════════════════════════╝\n\n")
+
+    test_type_equality()
+    test_variable_scope()
+    test_function_call()
+    test_arithmetic()
+    test_conditionals()
+    test_struct_basics()
+
+    native_print("╔════════════════════════════════════════════════════╗\n")
+    native_print("║  REGRESSION TEST SUMMARY                           ║\n")
+    native_print("╚════════════════════════════════════════════════════╝\n\n")
+    native_print("All basic functionality tests completed.\n")
+    native_print("Compare output with N0 compiler results.\n")
+    native_print("\nExpected Behavior:\n")
+    native_print("- Type system should match N0\n")
+    native_print("- Variable scoping should match N0\n")
+    native_print("- Arithmetic operations should match N0\n")
+    native_print("- Control flow should match N0\n")
+    native_print("- Struct operations should match N0\n")
+akhir

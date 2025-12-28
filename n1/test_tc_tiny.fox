@@ -1,0 +1,21 @@
+# N1 TC Test
+
+var KIND_INT = 0
+var KIND_STR = 2
+
+fungsi check_add(l int, r int) int
+    jika l == KIND_INT
+        jika r == KIND_INT
+            kembalikan KIND_INT
+        akhir
+    akhir
+    kembalikan -1
+akhir
+
+fungsi main() void
+    native_print("TC Test\n")
+    var r = check_add(KIND_INT, KIND_INT)
+    jika r == KIND_INT
+        native_print("OK\n")
+    akhir
+akhir

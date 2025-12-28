@@ -1,0 +1,177 @@
+# N1 Type Checker - Minimal Working Version
+# Symbol table pakai array (linear search)
+
+# ============================================================================
+# Symbol Entry
+# ============================================================================
+struktur SymbolEntry
+    name string
+    type_kind int
+    is_const bool
+    scope_level int
+akhir
+
+# ============================================================================
+# Type Checker State
+# ============================================================================
+struktur TypeChecker
+    symbols_count int
+    scope_level int
+    error_count int
+akhir
+
+# Max 64 symbols (memory constraint)
+var MAX_SYMBOLS = 64
+var symbol_names [64]string
+var symbol_kinds [64]int
+var symbol_levels [64]int
+
+# ============================================================================
+# Constructor
+# ============================================================================
+fungsi tc_new() TypeChecker
+    kembalikan TypeChecker{symbols_count: 0, scope_level: 0, error_count: 0}
+akhir
+
+# ============================================================================
+# Scope Management
+# ============================================================================
+fungsi tc_enter_scope(tc TypeChecker) TypeChecker
+    tc.scope_level = tc.scope_level + 1
+    kembalikan tc
+akhir
+
+fungsi tc_exit_scope(tc TypeChecker) TypeChecker
+    # Remove symbols at current level
+    var i = tc.symbols_count - 1
+    selama i >= 0
+        jika symbol_levels[i] == tc.scope_level
+            tc.symbols_count = tc.symbols_count - 1
+        akhir
+        i = i - 1
+    akhir
+    tc.scope_level = tc.scope_level - 1
+    kembalikan tc
+akhir
+
+# ============================================================================
+# Symbol Table Operations
+# ============================================================================
+fungsi tc_define(tc TypeChecker, name string, kind int) TypeChecker
+    jika tc.symbols_count >= MAX_SYMBOLS
+        native_print("Error: symbol table full\n")
+        tc.error_count = tc.error_count + 1
+        kembalikan tc
+    akhir
+    
+    # Check redefinition in same scope
+    var i = 0
+    selama i < tc.symbols_count
+        jika symbol_names[i] == name
+            jika symbol_levels[i] == tc.scope_level
+                native_print("Error: redefinition of ")
+                native_print(name)
+                native_print("\n")
+                tc.error_count = tc.error_count + 1
+                kembalikan tc
+            akhir
+        akhir
+        i = i + 1
+    akhir
+    
+    symbol_names[tc.symbols_count] = name
+    symbol_kinds[tc.symbols_count] = kind
+    symbol_levels[tc.symbols_count] = tc.scope_level
+    tc.symbols_count = tc.symbols_count + 1
+    kembalikan tc
+akhir
+
+fungsi tc_lookup(tc TypeChecker, name string) int
+    # Search from end (inner scope first)
+    var i = tc.symbols_count - 1
+    selama i >= 0
+        jika symbol_names[i] == name
+            kembalikan symbol_kinds[i]
+        akhir
+        i = i - 1
+    akhir
+    kembalikan -1  # Not found
+akhir
+
+# ============================================================================
+# Type Kinds (match types.fox)
+# ============================================================================
+var KIND_INT = 0
+var KIND_FLOAT = 1
+var KIND_STRING = 2
+var KIND_BOOL = 3
+var KIND_VOID = 4
+var KIND_ERROR = -1
+
+# ============================================================================
+# Type Checking Expressions
+# ============================================================================
+fungsi tc_check_binary(tc TypeChecker, left_kind int, op string, right_kind int) int
+    # Arithmetic: int op int -> int
+    jika op == "+" atau op == "-" atau op == "*" atau op == "/"
+        jika left_kind == KIND_INT dan right_kind == KIND_INT
+            kembalikan KIND_INT
+        akhir
+        jika left_kind == KIND_FLOAT atau right_kind == KIND_FLOAT
+            kembalikan KIND_FLOAT
+        akhir
+        # String concat
+        jika op == "+" dan left_kind == KIND_STRING dan right_kind == KIND_STRING
+            kembalikan KIND_STRING
+        akhir
+        kembalikan KIND_ERROR
+    akhir
+    
+    # Comparison: any op any -> bool
+    jika op == "==" atau op == "!=" atau op == "<" atau op == ">" atau op == "<=" atau op == ">="
+        jika left_kind == right_kind
+            kembalikan KIND_BOOL
+        akhir
+        kembalikan KIND_ERROR
+    akhir
+    
+    # Logical: bool op bool -> bool
+    jika op == "dan" atau op == "atau"
+        jika left_kind == KIND_BOOL dan right_kind == KIND_BOOL
+            kembalikan KIND_BOOL
+        akhir
+        kembalikan KIND_ERROR
+    akhir
+    
+    kembalikan KIND_ERROR
+akhir
+
+fungsi tc_check_unary(tc TypeChecker, op string, operand_kind int) int
+    jika op == "-"
+        jika operand_kind == KIND_INT atau operand_kind == KIND_FLOAT
+            kembalikan operand_kind
+        akhir
+    akhir
+    jika op == "!"
+        jika operand_kind == KIND_BOOL
+            kembalikan KIND_BOOL
+        akhir
+    akhir
+    kembalikan KIND_ERROR
+akhir
+
+# ============================================================================
+# Error Reporting
+# ============================================================================
+fungsi tc_error(tc TypeChecker, msg string) TypeChecker
+    native_print("TypeError: ")
+    native_print(msg)
+    native_print("\n")
+    tc.error_count = tc.error_count + 1
+    kembalikan tc
+akhir
+
+fungsi tc_has_errors(tc TypeChecker) bool
+    kembalikan tc.error_count > 0
+akhir
+akhir

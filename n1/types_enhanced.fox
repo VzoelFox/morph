@@ -1,0 +1,284 @@
+# N1 Enhanced Type System
+# Port dari N0 pkg/types/types.go - Complex Types
+
+# ============================================================================
+# ArrayType - Array dengan element type tracking
+# ============================================================================
+struktur ArrayType
+    element_kind int
+    element_name string
+akhir
+
+fungsi make_array_type(elem_kind int, elem_name string) ArrayType
+    kembalikan ArrayType{element_kind: elem_kind, element_name: elem_name}
+akhir
+
+fungsi array_type_equals(a1 ArrayType, a2 ArrayType) bool
+    jika a1.element_kind == KIND_UNKNOWN
+        kembalikan benar
+    akhir
+    jika a2.element_kind == KIND_UNKNOWN
+        kembalikan benar
+    akhir
+    kembalikan a1.element_kind == a2.element_kind
+akhir
+
+fungsi array_index(arr ArrayType, key_kind int) TypeResult
+    jika key_kind != KIND_INT
+        kembalikan err_result("array index harus int")
+    akhir
+    kembalikan ok_result(make_type(arr.element_kind, arr.element_name))
+akhir
+
+# ============================================================================
+# MapType - Map dengan key/value type tracking
+# ============================================================================
+struktur MapType
+    key_kind int
+    key_name string
+    value_kind int
+    value_name string
+akhir
+
+fungsi make_map_type(k_kind int, k_name string, v_kind int, v_name string) MapType
+    kembalikan MapType{key_kind: k_kind, key_name: k_name, value_kind: v_kind, value_name: v_name}
+akhir
+
+fungsi map_type_equals(m1 MapType, m2 MapType) bool
+    var key_match = m1.key_kind == m2.key_kind
+    var val_match = m1.value_kind == m2.value_kind
+    jika m1.key_kind == KIND_UNKNOWN atau m2.key_kind == KIND_UNKNOWN
+        key_match = benar
+    akhir
+    jika m1.value_kind == KIND_UNKNOWN atau m2.value_kind == KIND_UNKNOWN
+        val_match = benar
+    akhir
+    kembalikan key_match dan val_match
+akhir
+
+fungsi map_index(m MapType, key_kind int) TypeResult
+    jika key_kind != m.key_kind
+        kembalikan err_result("map key type mismatch")
+    akhir
+    kembalikan ok_result(make_type(m.value_kind, m.value_name))
+akhir
+
+# ============================================================================
+# StructField - Field dalam struct
+# ============================================================================
+struktur StructField
+    name string
+    type_kind int
+    type_name string
+akhir
+
+# ============================================================================
+# StructType - Struct dengan fields
+# ============================================================================
+struktur StructType
+    name string
+    module_name string
+    field_count int
+    fields []StructField
+akhir
+
+fungsi make_struct_type(name string, mod string) StructType
+    var fields []StructField
+    kembalikan StructType{name: name, module_name: mod, field_count: 0, fields: fields}
+akhir
+
+fungsi struct_add_field(s StructType, fname string, fkind int, ftname string) StructType
+    var field = StructField{name: fname, type_kind: fkind, type_name: ftname}
+    s.fields = s.fields + [field]
+    s.field_count = s.field_count + 1
+    kembalikan s
+akhir
+
+fungsi struct_get_field(s StructType, fname string) TypeResult
+    var i = 0
+    selama i < s.field_count
+        jika s.fields[i].name == fname
+            kembalikan ok_result(make_type(s.fields[i].type_kind, s.fields[i].type_name))
+        akhir
+        i = i + 1
+    akhir
+    kembalikan err_result("field tidak ditemukan: " + fname)
+akhir
+
+fungsi struct_type_equals(s1 StructType, s2 StructType) bool
+    kembalikan s1.name == s2.name dan s1.module_name == s2.module_name
+akhir
+
+# ============================================================================
+# FunctionParam - Parameter fungsi
+# ============================================================================
+struktur FunctionParam
+    name string
+    type_kind int
+    type_name string
+akhir
+
+# ============================================================================
+# FunctionType - Function dengan params dan return
+# ============================================================================
+struktur FunctionType
+    name string
+    param_count int
+    params []FunctionParam
+    return_kind int
+    return_name string
+    is_variadic bool
+akhir
+
+fungsi make_function_type(name string, ret_kind int, ret_name string) FunctionType
+    var params []FunctionParam
+    kembalikan FunctionType{name: name, param_count: 0, params: params, return_kind: ret_kind, return_name: ret_name, is_variadic: salah}
+akhir
+
+fungsi func_add_param(f FunctionType, pname string, pkind int, ptname string) FunctionType
+    var param = FunctionParam{name: pname, type_kind: pkind, type_name: ptname}
+    f.params = f.params + [param]
+    f.param_count = f.param_count + 1
+    kembalikan f
+akhir
+
+fungsi func_type_equals(f1 FunctionType, f2 FunctionType) bool
+    jika f1.param_count != f2.param_count
+        kembalikan salah
+    akhir
+    jika f1.return_kind != f2.return_kind
+        kembalikan salah
+    akhir
+    var i = 0
+    selama i < f1.param_count
+        jika f1.params[i].type_kind != f2.params[i].type_kind
+            kembalikan salah
+        akhir
+        i = i + 1
+    akhir
+    kembalikan benar
+akhir
+
+fungsi func_check_call(f FunctionType, arg_kinds []int) TypeResult
+    jika panjang(arg_kinds) != f.param_count
+        kembalikan err_result("jumlah argumen tidak cocok")
+    akhir
+    var i = 0
+    selama i < f.param_count
+        jika arg_kinds[i] != f.params[i].type_kind
+            jika arg_kinds[i] != KIND_UNKNOWN dan f.params[i].type_kind != KIND_UNKNOWN
+                kembalikan err_result("tipe argumen tidak cocok")
+            akhir
+        akhir
+        i = i + 1
+    akhir
+    kembalikan ok_result(make_type(f.return_kind, f.return_name))
+akhir
+
+# ============================================================================
+# InterfaceMethod - Method dalam interface
+# ============================================================================
+struktur InterfaceMethod
+    name string
+    func_type FunctionType
+akhir
+
+# ============================================================================
+# InterfaceType - Interface dengan duck typing
+# ============================================================================
+struktur InterfaceType
+    name string
+    method_count int
+    methods []InterfaceMethod
+akhir
+
+fungsi make_interface_type(name string) InterfaceType
+    var methods []InterfaceMethod
+    kembalikan InterfaceType{name: name, method_count: 0, methods: methods}
+akhir
+
+fungsi interface_add_method(iface InterfaceType, mname string, mfunc FunctionType) InterfaceType
+    var method = InterfaceMethod{name: mname, func_type: mfunc}
+    iface.methods = iface.methods + [method]
+    iface.method_count = iface.method_count + 1
+    kembalikan iface
+akhir
+
+# ============================================================================
+# PointerType - Pointer dengan base type
+# ============================================================================
+struktur PointerType
+    base_kind int
+    base_name string
+akhir
+
+fungsi make_pointer_type(base_kind int, base_name string) PointerType
+    kembalikan PointerType{base_kind: base_kind, base_name: base_name}
+akhir
+
+fungsi pointer_deref(p PointerType) Type
+    kembalikan make_type(p.base_kind, p.base_name)
+akhir
+
+# ============================================================================
+# MultiType - Multiple return values (tuple)
+# ============================================================================
+struktur MultiType
+    type_count int
+    type_kinds []int
+    type_names []string
+akhir
+
+fungsi make_multi_type() MultiType
+    var kinds []int
+    var names []string
+    kembalikan MultiType{type_count: 0, type_kinds: kinds, type_names: names}
+akhir
+
+fungsi multi_add_type(m MultiType, kind int, name string) MultiType
+    m.type_kinds = m.type_kinds + [kind]
+    m.type_names = m.type_names + [name]
+    m.type_count = m.type_count + 1
+    kembalikan m
+akhir
+
+# ============================================================================
+# Type Casting (from N0 Call)
+# ============================================================================
+fungsi type_cast(target_kind int, source_kind int) TypeResult
+    jika source_kind == KIND_UNKNOWN
+        kembalikan ok_result(make_type(target_kind, kind_to_string(target_kind)))
+    akhir
+    
+    # Float to Int (lossy)
+    jika target_kind == KIND_INT dan source_kind == KIND_FLOAT
+        kembalikan ok_result(int_type())
+    akhir
+    
+    # Int to Float
+    jika target_kind == KIND_FLOAT dan source_kind == KIND_INT
+        kembalikan ok_result(float_type())
+    akhir
+    
+    # String to Error
+    jika target_kind == KIND_USER_ERROR dan source_kind == KIND_STRING
+        kembalikan ok_result(user_error_type())
+    akhir
+    
+    # Same type
+    jika target_kind == source_kind
+        kembalikan ok_result(make_type(target_kind, kind_to_string(target_kind)))
+    akhir
+    
+    kembalikan err_result("tidak dapat cast tipe")
+akhir
+
+# ============================================================================
+# String Index Operation
+# ============================================================================
+fungsi string_index(key_kind int) TypeResult
+    jika key_kind == KIND_INT
+        kembalikan ok_result(int_type())
+    akhir
+    kembalikan err_result("string index harus int")
+akhir

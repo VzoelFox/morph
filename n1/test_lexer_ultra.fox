@@ -1,0 +1,52 @@
+# N1 Lexer Ultra Mini Test
+
+struktur Lexer
+    input string
+    pos int
+akhir
+
+fungsi new_lex(s string) Lexer
+    kembalikan Lexer{input: s, pos: 0}
+akhir
+
+fungsi get_char(l Lexer) string
+    jika l.pos >= panjang(l.input)
+        kembalikan ""
+    akhir
+    kembalikan substring(l.input, l.pos, l.pos + 1)
+akhir
+
+fungsi advance(l Lexer) void
+    l.pos = l.pos + 1
+akhir
+
+fungsi main() void
+    native_print("Lexer Ultra Mini\n")
+    
+    var l = new_lex("var x")
+    
+    var c1 = get_char(l)
+    jika c1 == "v"
+        native_print("✓ char 1 = v\n")
+    lainnya
+        native_print("✗ char 1\n")
+    akhir
+    
+    advance(l)
+    var c2 = get_char(l)
+    jika c2 == "a"
+        native_print("✓ char 2 = a\n")
+    lainnya
+        native_print("✗ char 2\n")
+    akhir
+    
+    advance(l)
+    var c3 = get_char(l)
+    jika c3 == "r"
+        native_print("✓ char 3 = r\n")
+    lainnya
+        native_print("✗ char 3\n")
+    akhir
+    
+    native_print("OK!\n")
+akhir

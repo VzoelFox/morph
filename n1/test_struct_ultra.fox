@@ -1,0 +1,18 @@
+# N1 Struct Field Test - Ultra Minimal
+
+struktur StructType
+    name string
+    f0_name string
+    f0_kind int
+akhir
+
+fungsi main() void
+    var s = StructType{name: "Person", f0_name: "age", f0_kind: 0}
+    native_print("Struct name: ")
+    native_print(s.name)
+    native_print("\n")
+    native_print("Field name: ")
+    native_print(s.f0_name)
+    native_print("\n")
+    native_print("OK!\n")
+akhir

@@ -1,0 +1,67 @@
+# N1 Stdlib - Array (4 elements max)
+
+struktur IntArr
+    v0 int
+    v1 int
+    v2 int
+    v3 int
+    len int
+akhir
+
+fungsi arr_new() IntArr
+    kembalikan IntArr{v0: 0, v1: 0, v2: 0, v3: 0, len: 0}
+akhir
+
+fungsi arr_push(a IntArr, v int) IntArr
+    jika a.len == 0
+        a.v0 = v
+        a.len = 1
+        kembalikan a
+    akhir
+    jika a.len == 1
+        a.v1 = v
+        a.len = 2
+        kembalikan a
+    akhir
+    jika a.len == 2
+        a.v2 = v
+        a.len = 3
+        kembalikan a
+    akhir
+    jika a.len == 3
+        a.v3 = v
+        a.len = 4
+    akhir
+    kembalikan a
+akhir
+
+fungsi arr_get(a IntArr, i int) int
+    jika i == 0
+        kembalikan a.v0
+    akhir
+    jika i == 1
+        kembalikan a.v1
+    akhir
+    jika i == 2
+        kembalikan a.v2
+    akhir
+    jika i == 3
+        kembalikan a.v3
+    akhir
+    kembalikan -1
+akhir
+
+fungsi main() void
+    native_print("Arr\n")
+    var a = arr_new()
+    a = arr_push(a, 10)
+    a = arr_push(a, 20)
+    a = arr_push(a, 30)
+    
+    native_print_int(arr_get(a, 0))
+    native_print("\n")
+    native_print_int(arr_get(a, 1))
+    native_print("\n")
+    native_print_int(a.len)
+    native_print("\nOK\n")
+akhir

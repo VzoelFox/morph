@@ -1,0 +1,175 @@
+# N1 Type Checker v2
+# Extended ops + unary
+
+var K_INT = 0
+var K_STR = 2
+var K_BOOL = 3
+var K_ERR = -1
+
+# Binary type check
+fungsi tc_bin(l int, op string, r int) int
+    # Arithmetic: +
+    jika op == "+"
+        jika l == K_INT
+            jika r == K_INT
+                kembalikan K_INT
+            akhir
+        akhir
+        jika l == K_STR
+            jika r == K_STR
+                kembalikan K_STR
+            akhir
+        akhir
+        kembalikan K_ERR
+    akhir
+    # Arithmetic: -
+    jika op == "-"
+        jika l == K_INT
+            jika r == K_INT
+                kembalikan K_INT
+            akhir
+        akhir
+        kembalikan K_ERR
+    akhir
+    # Arithmetic: *
+    jika op == "*"
+        jika l == K_INT
+            jika r == K_INT
+                kembalikan K_INT
+            akhir
+        akhir
+        kembalikan K_ERR
+    akhir
+    # Arithmetic: /
+    jika op == "/"
+        jika l == K_INT
+            jika r == K_INT
+                kembalikan K_INT
+            akhir
+        akhir
+        kembalikan K_ERR
+    akhir
+    # Comparison: ==
+    jika op == "=="
+        jika l == r
+            kembalikan K_BOOL
+        akhir
+        kembalikan K_ERR
+    akhir
+    # Comparison: !=
+    jika op == "!="
+        jika l == r
+            kembalikan K_BOOL
+        akhir
+        kembalikan K_ERR
+    akhir
+    # Comparison: <
+    jika op == "<"
+        jika l == K_INT
+            jika r == K_INT
+                kembalikan K_BOOL
+            akhir
+        akhir
+        kembalikan K_ERR
+    akhir
+    # Comparison: >
+    jika op == ">"
+        jika l == K_INT
+            jika r == K_INT
+                kembalikan K_BOOL
+            akhir
+        akhir
+        kembalikan K_ERR
+    akhir
+    # Comparison: <=
+    jika op == "<="
+        jika l == K_INT
+            jika r == K_INT
+                kembalikan K_BOOL
+            akhir
+        akhir
+        kembalikan K_ERR
+    akhir
+    # Comparison: >=
+    jika op == ">="
+        jika l == K_INT
+            jika r == K_INT
+                kembalikan K_BOOL
+            akhir
+        akhir
+        kembalikan K_ERR
+    akhir
+    kembalikan K_ERR
+akhir
+
+# Unary type check
+fungsi tc_un(op string, t int) int
+    # Negation: -
+    jika op == "-"
+        jika t == K_INT
+            kembalikan K_INT
+        akhir
+        kembalikan K_ERR
+    akhir
+    # Logical not: !
+    jika op == "!"
+        jika t == K_BOOL
+            kembalikan K_BOOL
+        akhir
+        kembalikan K_ERR
+    akhir
+    kembalikan K_ERR
+akhir
+
+fungsi main() void
+    native_print("TC v2\n")
+    
+    # Binary tests
+    var t1 = tc_bin(K_INT, "-", K_INT)
+    jika t1 == K_INT
+        native_print("1.OK -\n")
+    akhir
+    
+    var t2 = tc_bin(K_INT, "*", K_INT)
+    jika t2 == K_INT
+        native_print("2.OK *\n")
+    akhir
+    
+    var t3 = tc_bin(K_INT, "/", K_INT)
+    jika t3 == K_INT
+        native_print("3.OK /\n")
+    akhir
+    
+    var t4 = tc_bin(K_INT, "!=", K_INT)
+    jika t4 == K_BOOL
+        native_print("4.OK !=\n")
+    akhir
+    
+    var t5 = tc_bin(K_INT, "<=", K_INT)
+    jika t5 == K_BOOL
+        native_print("5.OK <=\n")
+    akhir
+    
+    var t6 = tc_bin(K_INT, ">=", K_INT)
+    jika t6 == K_BOOL
+        native_print("6.OK >=\n")
+    akhir
+    
+    # Unary tests
+    var u1 = tc_un("-", K_INT)
+    jika u1 == K_INT
+        native_print("7.OK -int\n")
+    akhir
+    
+    var u2 = tc_un("!", K_BOOL)
+    jika u2 == K_BOOL
+        native_print("8.OK !bool\n")
+    akhir
+    
+    var u3 = tc_un("-", K_STR)
+    jika u3 == K_ERR
+        native_print("9.OK -str=err\n")
+    akhir
+    
+    native_print("Done\n")
+akhir

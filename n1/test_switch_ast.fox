@@ -1,0 +1,106 @@
+# N1 Switch/Case AST Test
+
+# Node type constants
+var NODE_SWITCH_STATEMENT = 21
+var NODE_CASE_CLAUSE = 22
+
+# CaseClause structure
+struktur CaseClause
+    node_type int
+    values_count int
+    v0 int
+    v1 int
+    v2 int
+akhir
+
+fungsi make_case() CaseClause
+    kembalikan CaseClause{node_type: NODE_CASE_CLAUSE, values_count: 0, v0: 0, v1: 0, v2: 0}
+akhir
+
+fungsi case_add(c CaseClause, val int) CaseClause
+    jika c.values_count == 0
+        c.v0 = val
+    akhir
+    jika c.values_count == 1
+        c.v1 = val
+    akhir
+    jika c.values_count == 2
+        c.v2 = val
+    akhir
+    c.values_count = c.values_count + 1
+    kembalikan c
+akhir
+
+# SwitchStatement structure
+struktur SwitchStatement
+    node_type int
+    cases_count int
+    has_default bool
+akhir
+
+fungsi make_switch() SwitchStatement
+    kembalikan SwitchStatement{node_type: NODE_SWITCH_STATEMENT, cases_count: 0, has_default: salah}
+akhir
+
+# Test
+fungsi main() void
+    native_print("N1 Switch/Case AST Test\n")
+    native_print("=======================\n\n")
+    
+    # Test CaseClause with multi-value (kasus 1, 2, 3:)
+    native_print("CaseClause Test:\n")
+    var c = make_case()
+    c = case_add(c, 1)
+    c = case_add(c, 2)
+    c = case_add(c, 3)
+    
+    jika c.values_count == 3
+        native_print("✓ multi-case values_count = 3\n")
+    lainnya
+        native_print("✗ values_count wrong\n")
+    akhir
+    
+    jika c.v0 == 1
+        native_print("✓ v0 = 1\n")
+    lainnya
+        native_print("✗ v0 wrong\n")
+    akhir
+    
+    jika c.v1 == 2
+        native_print("✓ v1 = 2\n")
+    lainnya
+        native_print("✗ v1 wrong\n")
+    akhir
+    
+    jika c.v2 == 3
+        native_print("✓ v2 = 3\n")
+    lainnya
+        native_print("✗ v2 wrong\n")
+    akhir
+    
+    # Test SwitchStatement
+    native_print("\nSwitchStatement Test:\n")
+    var sw = make_switch()
+    sw.cases_count = 3
+    sw.has_default = benar
+    
+    jika sw.node_type == NODE_SWITCH_STATEMENT
+        native_print("✓ node_type = SWITCH\n")
+    lainnya
+        native_print("✗ node_type wrong\n")
+    akhir
+    
+    jika sw.cases_count == 3
+        native_print("✓ cases_count = 3\n")
+    lainnya
+        native_print("✗ cases_count wrong\n")
+    akhir
+    
+    jika sw.has_default
+        native_print("✓ has_default = true\n")
+    lainnya
+        native_print("✗ has_default wrong\n")
+    akhir
+    
+    native_print("\nSwitch/Case AST OK!\n")
+akhir

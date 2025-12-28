@@ -1,0 +1,135 @@
+# N1 Symbol Table
+# 8 slots using globals
+
+var K_INT = 0
+var K_STR = 2
+var K_BOOL = 3
+var K_UNK = -1
+
+# Symbol slots
+var s0n = ""
+var s0k = -1
+var s1n = ""
+var s1k = -1
+var s2n = ""
+var s2k = -1
+var s3n = ""
+var s3k = -1
+var s4n = ""
+var s4k = -1
+var s5n = ""
+var s5k = -1
+var s6n = ""
+var s6k = -1
+var s7n = ""
+var s7k = -1
+var scount = 0
+
+fungsi sym_def(n string, k int) void
+    jika scount == 0
+        s0n = n
+        s0k = k
+        scount = 1
+        kembalikan
+    akhir
+    jika scount == 1
+        s1n = n
+        s1k = k
+        scount = 2
+        kembalikan
+    akhir
+    jika scount == 2
+        s2n = n
+        s2k = k
+        scount = 3
+        kembalikan
+    akhir
+    jika scount == 3
+        s3n = n
+        s3k = k
+        scount = 4
+        kembalikan
+    akhir
+    jika scount == 4
+        s4n = n
+        s4k = k
+        scount = 5
+        kembalikan
+    akhir
+    jika scount == 5
+        s5n = n
+        s5k = k
+        scount = 6
+        kembalikan
+    akhir
+    jika scount == 6
+        s6n = n
+        s6k = k
+        scount = 7
+        kembalikan
+    akhir
+    jika scount == 7
+        s7n = n
+        s7k = k
+        scount = 8
+    akhir
+akhir
+
+fungsi sym_get(n string) int
+    jika s0n == n
+        kembalikan s0k
+    akhir
+    jika s1n == n
+        kembalikan s1k
+    akhir
+    jika s2n == n
+        kembalikan s2k
+    akhir
+    jika s3n == n
+        kembalikan s3k
+    akhir
+    jika s4n == n
+        kembalikan s4k
+    akhir
+    jika s5n == n
+        kembalikan s5k
+    akhir
+    jika s6n == n
+        kembalikan s6k
+    akhir
+    jika s7n == n
+        kembalikan s7k
+    akhir
+    kembalikan K_UNK
+akhir
+
+fungsi main() void
+    native_print("SymTab\n")
+    
+    sym_def("x", K_INT)
+    sym_def("y", K_INT)
+    sym_def("msg", K_STR)
+    sym_def("ok", K_BOOL)
+    
+    var r1 = sym_get("x")
+    jika r1 == K_INT
+        native_print("1.OK x\n")
+    akhir
+    
+    var r2 = sym_get("msg")
+    jika r2 == K_STR
+        native_print("2.OK msg\n")
+    akhir
+    
+    var r3 = sym_get("ok")
+    jika r3 == K_BOOL
+        native_print("3.OK ok\n")
+    akhir
+    
+    var r4 = sym_get("z")
+    jika r4 == K_UNK
+        native_print("4.OK z=unk\n")
+    akhir
+    
+    native_print("Done\n")
+akhir

@@ -1,0 +1,150 @@
+# N1 Lexer Mini Test
+
+var TOKEN_EOF = 1
+var TOKEN_IDENT = 2
+var TOKEN_INT = 3
+var TOKEN_ASSIGN = 7
+var TOKEN_PLUS = 8
+var TOKEN_VAR = 38
+
+struktur Token
+    tt int
+    lit string
+akhir
+
+struktur Lexer
+    input string
+    pos int
+    ch int
+akhir
+
+fungsi new_lex(s string) Lexer
+    var l = Lexer{input: s, pos: 0, ch: 0}
+    lex_read(l)
+    kembalikan l
+akhir
+
+fungsi lex_read(l Lexer) void
+    jika l.pos >= panjang(l.input)
+        l.ch = 0
+    lainnya
+        var c = substring(l.input, l.pos, l.pos + 1)
+        jika c == " "
+            l.ch = 32
+        lainnya jika c == "="
+            l.ch = 61
+        lainnya jika c == "+"
+            l.ch = 43
+        lainnya jika c == "0"
+            l.ch = 48
+        lainnya jika c == "5"
+            l.ch = 53
+        lainnya jika c == "v"
+            l.ch = 118
+        lainnya jika c == "a"
+            l.ch = 97
+        lainnya jika c == "r"
+            l.ch = 114
+        lainnya jika c == "x"
+            l.ch = 120
+        lainnya
+            l.ch = 1
+        akhir
+    akhir
+    l.pos = l.pos + 1
+akhir
+
+fungsi lex_skip(l Lexer) void
+    selama l.ch == 32
+        lex_read(l)
+    akhir
+akhir
+
+fungsi next_tok(l Lexer) Token
+    lex_skip(l)
+    
+    jika l.ch == 0
+        kembalikan Token{tt: TOKEN_EOF, lit: ""}
+    akhir
+    
+    jika l.ch == 61
+        lex_read(l)
+        kembalikan Token{tt: TOKEN_ASSIGN, lit: "="}
+    akhir
+    
+    jika l.ch == 43
+        lex_read(l)
+        kembalikan Token{tt: TOKEN_PLUS, lit: "+"}
+    akhir
+    
+    # var keyword
+    jika l.ch == 118
+        lex_read(l)
+        jika l.ch == 97
+            lex_read(l)
+            jika l.ch == 114
+                lex_read(l)
+                kembalikan Token{tt: TOKEN_VAR, lit: "var"}
+            akhir
+        akhir
+    akhir
+    
+    # identifier x
+    jika l.ch == 120
+        lex_read(l)
+        kembalikan Token{tt: TOKEN_IDENT, lit: "x"}
+    akhir
+    
+    # number 5
+    jika l.ch == 53
+        lex_read(l)
+        kembalikan Token{tt: TOKEN_INT, lit: "5"}
+    akhir
+    
+    lex_read(l)
+    kembalikan Token{tt: 0, lit: ""}
+akhir
+
+fungsi main() void
+    native_print("N1 Lexer Mini Test\n")
+    native_print("==================\n")
+    
+    var l = new_lex("var x = 5")
+    
+    var t1 = next_tok(l)
+    jika t1.tt == TOKEN_VAR
+        native_print("✓ var keyword\n")
+    lainnya
+        native_print("✗ var keyword\n")
+    akhir
+    
+    var t2 = next_tok(l)
+    jika t2.tt == TOKEN_IDENT
+        native_print("✓ identifier\n")
+    lainnya
+        native_print("✗ identifier\n")
+    akhir
+    
+    var t3 = next_tok(l)
+    jika t3.tt == TOKEN_ASSIGN
+        native_print("✓ assign\n")
+    lainnya
+        native_print("✗ assign\n")
+    akhir
+    
+    var t4 = next_tok(l)
+    jika t4.tt == TOKEN_INT
+        native_print("✓ integer\n")
+    lainnya
+        native_print("✗ integer\n")
+    akhir
+    
+    var t5 = next_tok(l)
+    jika t5.tt == TOKEN_EOF
+        native_print("✓ EOF\n")
+    lainnya
+        native_print("✗ EOF\n")
+    akhir
+    
+    native_print("Lexer OK!\n")
+akhir

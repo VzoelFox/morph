@@ -1,0 +1,21 @@
+# N1 Stdlib - String Utils
+
+fungsi str_len(s string) int
+    kembalikan panjang(s)
+akhir
+
+fungsi str_eq(a string, b string) bool
+    kembalikan a == b
+akhir
+
+fungsi main() void
+    native_print("Str\n")
+    var s = "hello"
+    var l = str_len(s)
+    native_print_int(l)
+    native_print("\n")
+    
+    jika str_eq("a", "a")
+        native_print("OK\n")
+    akhir
+akhir

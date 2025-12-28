@@ -1,0 +1,61 @@
+# N1 Type Checker Core
+
+var K_INT = 0
+var K_STR = 2
+var K_BOOL = 3
+var K_ERR = -1
+
+# Check binary ops
+fungsi tc_bin(l int, op string, r int) int
+    jika op == "+"
+        jika l == K_INT
+            jika r == K_INT
+                kembalikan K_INT
+            akhir
+        akhir
+        jika l == K_STR
+            jika r == K_STR
+                kembalikan K_STR
+            akhir
+        akhir
+    akhir
+    jika op == "=="
+        jika l == r
+            kembalikan K_BOOL
+        akhir
+    akhir
+    jika op == "<"
+        jika l == K_INT
+            jika r == K_INT
+                kembalikan K_BOOL
+            akhir
+        akhir
+    akhir
+    kembalikan K_ERR
+akhir
+
+fungsi main() void
+    native_print("N1 TC\n")
+    
+    var t1 = tc_bin(K_INT, "+", K_INT)
+    jika t1 == K_INT
+        native_print("1.OK\n")
+    akhir
+    
+    var t2 = tc_bin(K_STR, "+", K_STR)
+    jika t2 == K_STR
+        native_print("2.OK\n")
+    akhir
+    
+    var t3 = tc_bin(K_INT, "+", K_STR)
+    jika t3 == K_ERR
+        native_print("3.OK\n")
+    akhir
+    
+    var t4 = tc_bin(K_INT, "==", K_INT)
+    jika t4 == K_BOOL
+        native_print("4.OK\n")
+    akhir
+    
+    native_print("Done\n")
+akhir

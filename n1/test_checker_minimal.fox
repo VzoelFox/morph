@@ -1,0 +1,155 @@
+# N1 Type Checker - Minimal Test
+# Tanpa array, pakai struct sederhana
+
+# Type Kinds
+var KIND_INT = 0
+var KIND_FLOAT = 1
+var KIND_STRING = 2
+var KIND_BOOL = 3
+var KIND_VOID = 4
+var KIND_ERROR = -1
+
+# ============================================================================
+# Type Checker State
+# ============================================================================
+struktur TypeChecker
+    scope_level int
+    error_count int
+akhir
+
+fungsi tc_new() TypeChecker
+    kembalikan TypeChecker{scope_level: 0, error_count: 0}
+akhir
+
+# ============================================================================
+# Binary Type Check
+# ============================================================================
+fungsi tc_check_binary(left int, op string, right int) int
+    # Arithmetic
+    jika op == "+"
+        jika left == KIND_INT
+            jika right == KIND_INT
+                kembalikan KIND_INT
+            akhir
+        akhir
+        jika left == KIND_STRING
+            jika right == KIND_STRING
+                kembalikan KIND_STRING
+            akhir
+        akhir
+        kembalikan KIND_ERROR
+    akhir
+    
+    jika op == "-"
+        jika left == KIND_INT
+            jika right == KIND_INT
+                kembalikan KIND_INT
+            akhir
+        akhir
+        kembalikan KIND_ERROR
+    akhir
+    
+    jika op == "*"
+        jika left == KIND_INT
+            jika right == KIND_INT
+                kembalikan KIND_INT
+            akhir
+        akhir
+        kembalikan KIND_ERROR
+    akhir
+    
+    jika op == "/"
+        jika left == KIND_INT
+            jika right == KIND_INT
+                kembalikan KIND_INT
+            akhir
+        akhir
+        kembalikan KIND_ERROR
+    akhir
+    
+    # Comparison
+    jika op == "=="
+        jika left == right
+            kembalikan KIND_BOOL
+        akhir
+        kembalikan KIND_ERROR
+    akhir
+    
+    jika op == "!="
+        jika left == right
+            kembalikan KIND_BOOL
+        akhir
+        kembalikan KIND_ERROR
+    akhir
+    
+    jika op == "<"
+        jika left == KIND_INT
+            jika right == KIND_INT
+                kembalikan KIND_BOOL
+            akhir
+        akhir
+        kembalikan KIND_ERROR
+    akhir
+    
+    jika op == ">"
+        jika left == KIND_INT
+            jika right == KIND_INT
+                kembalikan KIND_BOOL
+            akhir
+        akhir
+        kembalikan KIND_ERROR
+    akhir
+    
+    kembalikan KIND_ERROR
+akhir
+
+# ============================================================================
+# Test
+# ============================================================================
+fungsi main() void
+    var tc = tc_new()
+    
+    native_print("=== N1 Type Checker Test ===\n")
+    
+    # Test int + int = int
+    var r1 = tc_check_binary(KIND_INT, "+", KIND_INT)
+    jika r1 == KIND_INT
+        native_print("✓ int + int = int\n")
+    lainnya
+        native_print("✗ int + int failed\n")
+    akhir
+    
+    # Test string + string = string
+    var r2 = tc_check_binary(KIND_STRING, "+", KIND_STRING)
+    jika r2 == KIND_STRING
+        native_print("✓ string + string = string\n")
+    lainnya
+        native_print("✗ string + string failed\n")
+    akhir
+    
+    # Test int + string = error
+    var r3 = tc_check_binary(KIND_INT, "+", KIND_STRING)
+    jika r3 == KIND_ERROR
+        native_print("✓ int + string = error\n")
+    lainnya
+        native_print("✗ int + string should error\n")
+    akhir
+    
+    # Test int == int = bool
+    var r4 = tc_check_binary(KIND_INT, "==", KIND_INT)
+    jika r4 == KIND_BOOL
+        native_print("✓ int == int = bool\n")
+    lainnya
+        native_print("✗ int == int failed\n")
+    akhir
+    
+    # Test int < int = bool
+    var r5 = tc_check_binary(KIND_INT, "<", KIND_INT)
+    jika r5 == KIND_BOOL
+        native_print("✓ int < int = bool\n")
+    lainnya
+        native_print("✗ int < int failed\n")
+    akhir
+    
+    native_print("=== Done ===\n")
+akhir

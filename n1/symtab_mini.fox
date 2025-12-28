@@ -1,0 +1,69 @@
+# N1 Symbol Table Mini
+# 4 slots
+
+var K_INT = 0
+var K_STR = 2
+var K_UNK = -1
+
+var s0n = ""
+var s0k = -1
+var s1n = ""
+var s1k = -1
+var s2n = ""
+var s2k = -1
+var s3n = ""
+var s3k = -1
+var sc = 0
+
+fungsi def(n string, k int) void
+    jika sc == 0
+        s0n = n
+        s0k = k
+        sc = 1
+        kembalikan
+    akhir
+    jika sc == 1
+        s1n = n
+        s1k = k
+        sc = 2
+        kembalikan
+    akhir
+    jika sc == 2
+        s2n = n
+        s2k = k
+        sc = 3
+        kembalikan
+    akhir
+    jika sc == 3
+        s3n = n
+        s3k = k
+        sc = 4
+    akhir
+akhir
+
+fungsi get(n string) int
+    jika s0n == n
+        kembalikan s0k
+    akhir
+    jika s1n == n
+        kembalikan s1k
+    akhir
+    jika s2n == n
+        kembalikan s2k
+    akhir
+    jika s3n == n
+        kembalikan s3k
+    akhir
+    kembalikan K_UNK
+akhir
+
+fungsi main() void
+    native_print("Sym\n")
+    def("x", K_INT)
+    def("s", K_STR)
+    
+    var r = get("x")
+    jika r == K_INT
+        native_print("OK\n")
+    akhir
+akhir

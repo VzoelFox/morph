@@ -1,0 +1,11 @@
+# Test import vars
+
+dari "std_types" ambil KIND_INT, KIND_STR
+
+fungsi main() void
+    native_print("Import Vars Test\n")
+    native_print_int(KIND_INT)
+    native_print("\n")
+    native_print_int(KIND_STR)
+    native_print("\nOK\n")
+akhir

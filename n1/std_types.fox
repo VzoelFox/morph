@@ -1,0 +1,18 @@
+# N1 Stdlib - Types (shared constants)
+# Uppercase = exported
+
+var KIND_INT = 0
+var KIND_FLOAT = 1
+var KIND_STR = 2
+var KIND_BOOL = 3
+var KIND_VOID = 4
+var KIND_ERR = -1
+var KIND_UNK = -2
+
+fungsi GetKindInt() int
+    kembalikan 0
+akhir
+
+fungsi GetKindStr() int
+    kembalikan 2
+akhir

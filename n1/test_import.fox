@@ -1,0 +1,11 @@
+# Test import
+
+dari "std_types" ambil GetKindInt, GetKindStr
+
+fungsi main() void
+    native_print("Import Test\n")
+    native_print_int(GetKindInt())
+    native_print("\n")
+    native_print_int(GetKindStr())
+    native_print("\nOK\n")
+akhir

@@ -11,6 +11,7 @@
 !morphsh/**
 !pkg/**
 !stdlib/**
+!n1/**
 !.morph.vz/checksums/**
 !.vzoel.jules/**
 
@@ -21,6 +22,7 @@
 !ROADMAP.md
 !MEMORY_*.md
 !N0_*.md
+!N1_*.md
 !checksum_gen.go
 !go.mod
 !go.sum
@@ -45,3 +47,17 @@ examples/*.c
 examples/*.h
 examples/function_type_test
 examples/stress_test
+
+# Ignore compiled binaries in n1/ but keep source files (.fox, .c)
+n1/checker_core
+n1/checker_v2
+n1/checker_integrated
+n1/regression_simple
+n1/std_array
+n1/std_map
+n1/std_string
+n1/symtab_id
+n1/test_*
+n1/transpiler_asm_simple
+!n1/*.fox
+!n1/*.c

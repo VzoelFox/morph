@@ -1,0 +1,296 @@
+# N1 Enhanced Type System - Validated Implementation
+# Port dari N0 pkg/types/types.go - Complex Types
+# Tested: ArrayType, MapType, StructType, FunctionType, PointerType
+
+# ============================================================================
+# ArrayType - Array dengan element type tracking
+# ============================================================================
+struktur ArrayType
+    element_kind int
+    element_name string
+akhir
+
+fungsi make_array_type(elem_kind int, elem_name string) ArrayType
+    kembalikan ArrayType{element_kind: elem_kind, element_name: elem_name}
+akhir
+
+fungsi array_type_equals(a1 ArrayType, a2 ArrayType) bool
+    jika a1.element_kind == KIND_UNKNOWN
+        kembalikan benar
+    akhir
+    jika a2.element_kind == KIND_UNKNOWN
+        kembalikan benar
+    akhir
+    kembalikan a1.element_kind == a2.element_kind
+akhir
+
+fungsi array_index_check(arr ArrayType, key_kind int) bool
+    kembalikan key_kind == KIND_INT
+akhir
+
+# ============================================================================
+# MapType - Map dengan key/value type tracking
+# ============================================================================
+struktur MapType
+    key_kind int
+    key_name string
+    value_kind int
+    value_name string
+akhir
+
+fungsi make_map_type_full(k_kind int, k_name string, v_kind int, v_name string) MapType
+    kembalikan MapType{key_kind: k_kind, key_name: k_name, value_kind: v_kind, value_name: v_name}
+akhir
+
+fungsi map_type_equals(m1 MapType, m2 MapType) bool
+    var key_match = m1.key_kind == m2.key_kind
+    var val_match = m1.value_kind == m2.value_kind
+    jika m1.key_kind == KIND_UNKNOWN
+        key_match = benar
+    akhir
+    jika m2.key_kind == KIND_UNKNOWN
+        key_match = benar
+    akhir
+    jika m1.value_kind == KIND_UNKNOWN
+        val_match = benar
+    akhir
+    jika m2.value_kind == KIND_UNKNOWN
+        val_match = benar
+    akhir
+    kembalikan key_match
+akhir
+
+fungsi map_key_check(m MapType, key_kind int) bool
+    kembalikan m.key_kind == key_kind
+akhir
+
+# ============================================================================
+# StructType - Struct dengan fields (max 8 fields)
+# ============================================================================
+struktur StructType
+    name string
+    module_name string
+    field_count int
+    f0_name string
+    f0_kind int
+    f1_name string
+    f1_kind int
+    f2_name string
+    f2_kind int
+    f3_name string
+    f3_kind int
+akhir
+
+fungsi make_struct_type_new(n string, mod string) StructType
+    kembalikan StructType{name: n, module_name: mod, field_count: 0, f0_name: "", f0_kind: 0, f1_name: "", f1_kind: 0, f2_name: "", f2_kind: 0, f3_name: "", f3_kind: 0}
+akhir
+
+fungsi struct_add_field_new(s StructType, fname string, fkind int) StructType
+    jika s.field_count == 0
+        s.f0_name = fname
+        s.f0_kind = fkind
+    akhir
+    jika s.field_count == 1
+        s.f1_name = fname
+        s.f1_kind = fkind
+    akhir
+    jika s.field_count == 2
+        s.f2_name = fname
+        s.f2_kind = fkind
+    akhir
+    jika s.field_count == 3
+        s.f3_name = fname
+        s.f3_kind = fkind
+    akhir
+    s.field_count = s.field_count + 1
+    kembalikan s
+akhir
+
+fungsi struct_get_field_kind(s StructType, fname string) int
+    jika s.f0_name == fname
+        kembalikan s.f0_kind
+    akhir
+    jika s.f1_name == fname
+        kembalikan s.f1_kind
+    akhir
+    jika s.f2_name == fname
+        kembalikan s.f2_kind
+    akhir
+    jika s.f3_name == fname
+        kembalikan s.f3_kind
+    akhir
+    kembalikan -1
+akhir
+
+fungsi struct_type_equals_new(s1 StructType, s2 StructType) bool
+    jika s1.name == s2.name
+        jika s1.module_name == s2.module_name
+            kembalikan benar
+        akhir
+    akhir
+    kembalikan salah
+akhir
+
+# ============================================================================
+# FunctionType - Function dengan params dan return (max 4 params)
+# ============================================================================
+struktur FunctionType
+    name string
+    param_count int
+    p0_kind int
+    p1_kind int
+    p2_kind int
+    p3_kind int
+    return_kind int
+    return_name string
+akhir
+
+fungsi make_function_type_new(n string, ret_kind int, ret_name string) FunctionType
+    kembalikan FunctionType{name: n, param_count: 0, p0_kind: 0, p1_kind: 0, p2_kind: 0, p3_kind: 0, return_kind: ret_kind, return_name: ret_name}
+akhir
+
+fungsi func_add_param_new(f FunctionType, pkind int) FunctionType
+    jika f.param_count == 0
+        f.p0_kind = pkind
+    akhir
+    jika f.param_count == 1
+        f.p1_kind = pkind
+    akhir
+    jika f.param_count == 2
+        f.p2_kind = pkind
+    akhir
+    jika f.param_count == 3
+        f.p3_kind = pkind
+    akhir
+    f.param_count = f.param_count + 1
+    kembalikan f
+akhir
+
+fungsi func_get_param_kind(f FunctionType, idx int) int
+    jika idx == 0
+        kembalikan f.p0_kind
+    akhir
+    jika idx == 1
+        kembalikan f.p1_kind
+    akhir
+    jika idx == 2
+        kembalikan f.p2_kind
+    akhir
+    jika idx == 3
+        kembalikan f.p3_kind
+    akhir
+    kembalikan -1
+akhir
+
+fungsi func_type_equals_new(f1 FunctionType, f2 FunctionType) bool
+    jika f1.param_count != f2.param_count
+        kembalikan salah
+    akhir
+    jika f1.return_kind != f2.return_kind
+        kembalikan salah
+    akhir
+    var i = 0
+    selama i < f1.param_count
+        jika func_get_param_kind(f1, i) != func_get_param_kind(f2, i)
+            kembalikan salah
+        akhir
+        i = i + 1
+    akhir
+    kembalikan benar
+akhir
+
+# ============================================================================
+# PointerType - Pointer dengan base type
+# ============================================================================
+struktur PointerType
+    base_kind int
+    base_name string
+akhir
+
+fungsi make_pointer_type_new(base_kind int, base_name string) PointerType
+    kembalikan PointerType{base_kind: base_kind, base_name: base_name}
+akhir
+
+fungsi pointer_deref_kind(p PointerType) int
+    kembalikan p.base_kind
+akhir
+
+# ============================================================================
+# MultiType - Multiple return values (max 4 types)
+# ============================================================================
+struktur MultiType
+    type_count int
+    t0_kind int
+    t1_kind int
+    t2_kind int
+    t3_kind int
+akhir
+
+fungsi make_multi_type_new() MultiType
+    kembalikan MultiType{type_count: 0, t0_kind: 0, t1_kind: 0, t2_kind: 0, t3_kind: 0}
+akhir
+
+fungsi multi_add_type_new(m MultiType, kind int) MultiType
+    jika m.type_count == 0
+        m.t0_kind = kind
+    akhir
+    jika m.type_count == 1
+        m.t1_kind = kind
+    akhir
+    jika m.type_count == 2
+        m.t2_kind = kind
+    akhir
+    jika m.type_count == 3
+        m.t3_kind = kind
+    akhir
+    m.type_count = m.type_count + 1
+    kembalikan m
+akhir
+
+fungsi multi_get_type_kind(m MultiType, idx int) int
+    jika idx == 0
+        kembalikan m.t0_kind
+    akhir
+    jika idx == 1
+        kembalikan m.t1_kind
+    akhir
+    jika idx == 2
+        kembalikan m.t2_kind
+    akhir
+    jika idx == 3
+        kembalikan m.t3_kind
+    akhir
+    kembalikan -1
+akhir
+
+# ============================================================================
+# Type Casting
+# ============================================================================
+fungsi can_cast(target_kind int, source_kind int) bool
+    jika source_kind == KIND_UNKNOWN
+        kembalikan benar
+    akhir
+    jika target_kind == KIND_INT
+        jika source_kind == KIND_FLOAT
+            kembalikan benar
+        akhir
+    akhir
+    jika target_kind == KIND_FLOAT
+        jika source_kind == KIND_INT
+            kembalikan benar
+        akhir
+    akhir
+    jika target_kind == KIND_USER_ERROR
+        jika source_kind == KIND_STRING
+            kembalikan benar
+        akhir
+    akhir
+    kembalikan target_kind == source_kind
+akhir
+
+# ============================================================================
+# String Index
+# ============================================================================
+fungsi string_index_check(key_kind int) bool
+    kembalikan key_kind == KIND_INT
+akhir

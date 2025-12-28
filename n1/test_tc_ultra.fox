@@ -1,0 +1,81 @@
+# N1 Type Checker - Ultra Minimal
+# Global symbol table (2 slots only)
+
+var KIND_INT = 0
+var KIND_STRING = 2
+var KIND_BOOL = 3
+var KIND_UNKNOWN = -1
+
+# Global symbol table
+var sym0_name = ""
+var sym0_kind = -1
+var sym1_name = ""
+var sym1_kind = -1
+var sym_count = 0
+
+fungsi define(name string, kind int) void
+    jika sym_count == 0
+        sym0_name = name
+        sym0_kind = kind
+        sym_count = 1
+        kembalikan
+    akhir
+    jika sym_count == 1
+        sym1_name = name
+        sym1_kind = kind
+        sym_count = 2
+    akhir
+akhir
+
+fungsi lookup(name string) int
+    jika sym0_name == name
+        kembalikan sym0_kind
+    akhir
+    jika sym1_name == name
+        kembalikan sym1_kind
+    akhir
+    kembalikan KIND_UNKNOWN
+akhir
+
+fungsi check_add(left int, right int) int
+    jika left == KIND_INT
+        jika right == KIND_INT
+            kembalikan KIND_INT
+        akhir
+    akhir
+    jika left == KIND_STRING
+        jika right == KIND_STRING
+            kembalikan KIND_STRING
+        akhir
+    akhir
+    kembalikan KIND_UNKNOWN
+akhir
+
+fungsi main() void
+    native_print("=== N1 TypeChecker ===\n")
+    
+    define("x", KIND_INT)
+    define("s", KIND_STRING)
+    
+    var xk = lookup("x")
+    jika xk == KIND_INT
+        native_print("✓ x:int\n")
+    akhir
+    
+    var sk = lookup("s")
+    jika sk == KIND_STRING
+        native_print("✓ s:string\n")
+    akhir
+    
+    var r = check_add(xk, KIND_INT)
+    jika r == KIND_INT
+        native_print("✓ x+1:int\n")
+    akhir
+    
+    var r2 = check_add(xk, sk)
+    jika r2 == KIND_UNKNOWN
+        native_print("✓ x+s:error\n")
+    akhir
+    
+    native_print("=== OK ===\n")
+akhir
