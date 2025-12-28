@@ -164,13 +164,13 @@ fungsi parser_parse_var_statement(p Parser) VarStatement
     
     jika tidak parser_expect_peek(p, TOKEN_IDENT)
         # Error: expected identifier
-        kembalikan make_var_statement("-", "-", line, column)
+        kembalikan make_var_statement("", "", line, column)
     akhir
     
     var name = p.current_token.literal
-
+    
     # Check for optional type annotation
-    var type_str = "-"
+    var type_str = ""
     jika parser_peek_token_is(p, TOKEN_COLON)
         parser_next_token(p)  # consume ':'
         jika parser_expect_peek(p, TOKEN_IDENT)
@@ -190,17 +190,8 @@ fungsi parser_parse_var_statement(p Parser) VarStatement
     akhir
     
     # Skip to semicolon or end of statement
-    var should_continue = benar
-    selama should_continue
-        jika parser_current_token_is(p, TOKEN_SEMICOLON)
-            should_continue = salah
-        lainnya
-            jika parser_current_token_is(p, TOKEN_EOF)
-                should_continue = salah
-            lainnya
-                parser_next_token(p)
-            akhir
-        akhir
+    selama tidak parser_current_token_is(p, TOKEN_SEMICOLON) dan tidak parser_current_token_is(p, TOKEN_EOF)
+        parser_next_token(p)
     akhir
     
     kembalikan stmt
@@ -220,7 +211,7 @@ fungsi parser_parse_program(p Parser) Program
             # Print parsed statement for debugging
             native_print("Parsed VarStatement: ")
             native_print(stmt.name)
-            jika stmt.value_type != "-"
+            jika stmt.value_type != ""
                 native_print(" : ")
                 native_print(stmt.value_type)
             akhir

@@ -1,0 +1,605 @@
+# N1 Lexer Implementation
+# Port dari N0 pkg/lexer/lexer.go
+
+# Import token definitions
+ambil "n1/token"
+
+# ============================================================================
+# Lexer Structure
+# ============================================================================
+struktur Lexer
+    input string
+    position int      # current position in input (points to current char)
+    read_position int # current reading position in input (after current char)
+    ch int           # current char under examination (as ASCII code)
+    line int         # current line number
+    column int       # current column number
+akhir
+
+# ============================================================================
+# Lexer Constructor
+# ============================================================================
+fungsi new_lexer(input string) Lexer
+    var l = Lexer{input: input, position: 0, read_position: 0, ch: 0, line: 1, column: 0}
+    lexer_read_char(l)
+    kembalikan l
+akhir
+
+# ============================================================================
+# Character Reading
+# ============================================================================
+fungsi lexer_read_char(l Lexer) void
+    jika l.read_position >= panjang(l.input)
+        l.ch = 0  # ASCII NUL character represents "EOF"
+    lainnya
+        # Get character at read_position (simplified - assumes ASCII)
+        var char_str = substring(l.input, l.read_position, l.read_position + 1)
+        l.ch = char_to_ascii(char_str)
+    akhir
+    l.position = l.read_position
+    l.read_position = l.read_position + 1
+    
+    jika l.ch == 10  # '\n'
+        l.line = l.line + 1
+        l.column = 0
+    lainnya
+        l.column = l.column + 1
+    akhir
+akhir
+
+# ============================================================================
+# Character Utilities
+# ============================================================================
+fungsi char_to_ascii(char_str string) int
+    # Simplified ASCII conversion for common characters
+    jika char_str == " "
+        kembalikan 32
+    akhir
+    jika char_str == "!"
+        kembalikan 33
+    akhir
+    jika char_str == "\""
+        kembalikan 34
+    akhir
+    jika char_str == "#"
+        kembalikan 35
+    akhir
+    jika char_str == "$"
+        kembalikan 36
+    akhir
+    jika char_str == "%"
+        kembalikan 37
+    akhir
+    jika char_str == "&"
+        kembalikan 38
+    akhir
+    jika char_str == "'"
+        kembalikan 39
+    akhir
+    jika char_str == "("
+        kembalikan 40
+    akhir
+    jika char_str == ")"
+        kembalikan 41
+    akhir
+    jika char_str == "*"
+        kembalikan 42
+    akhir
+    jika char_str == "+"
+        kembalikan 43
+    akhir
+    jika char_str == ","
+        kembalikan 44
+    akhir
+    jika char_str == "-"
+        kembalikan 45
+    akhir
+    jika char_str == "."
+        kembalikan 46
+    akhir
+    jika char_str == "/"
+        kembalikan 47
+    akhir
+    # Numbers 0-9
+    jika char_str == "0"
+        kembalikan 48
+    akhir
+    jika char_str == "1"
+        kembalikan 49
+    akhir
+    jika char_str == "2"
+        kembalikan 50
+    akhir
+    jika char_str == "3"
+        kembalikan 51
+    akhir
+    jika char_str == "4"
+        kembalikan 52
+    akhir
+    jika char_str == "5"
+        kembalikan 53
+    akhir
+    jika char_str == "6"
+        kembalikan 54
+    akhir
+    jika char_str == "7"
+        kembalikan 55
+    akhir
+    jika char_str == "8"
+        kembalikan 56
+    akhir
+    jika char_str == "9"
+        kembalikan 57
+    akhir
+    jika char_str == ":"
+        kembalikan 58
+    akhir
+    jika char_str == ";"
+        kembalikan 59
+    akhir
+    jika char_str == "<"
+        kembalikan 60
+    akhir
+    jika char_str == "="
+        kembalikan 61
+    akhir
+    jika char_str == ">"
+        kembalikan 62
+    akhir
+    jika char_str == "?"
+        kembalikan 63
+    akhir
+    jika char_str == "@"
+        kembalikan 64
+    akhir
+    # Uppercase A-Z
+    jika char_str == "A"
+        kembalikan 65
+    akhir
+    jika char_str == "B"
+        kembalikan 66
+    akhir
+    jika char_str == "C"
+        kembalikan 67
+    akhir
+    jika char_str == "D"
+        kembalikan 68
+    akhir
+    jika char_str == "E"
+        kembalikan 69
+    akhir
+    jika char_str == "F"
+        kembalikan 70
+    akhir
+    jika char_str == "G"
+        kembalikan 71
+    akhir
+    jika char_str == "H"
+        kembalikan 72
+    akhir
+    jika char_str == "I"
+        kembalikan 73
+    akhir
+    jika char_str == "J"
+        kembalikan 74
+    akhir
+    jika char_str == "K"
+        kembalikan 75
+    akhir
+    jika char_str == "L"
+        kembalikan 76
+    akhir
+    jika char_str == "M"
+        kembalikan 77
+    akhir
+    jika char_str == "N"
+        kembalikan 78
+    akhir
+    jika char_str == "O"
+        kembalikan 79
+    akhir
+    jika char_str == "P"
+        kembalikan 80
+    akhir
+    jika char_str == "Q"
+        kembalikan 81
+    akhir
+    jika char_str == "R"
+        kembalikan 82
+    akhir
+    jika char_str == "S"
+        kembalikan 83
+    akhir
+    jika char_str == "T"
+        kembalikan 84
+    akhir
+    jika char_str == "U"
+        kembalikan 85
+    akhir
+    jika char_str == "V"
+        kembalikan 86
+    akhir
+    jika char_str == "W"
+        kembalikan 87
+    akhir
+    jika char_str == "X"
+        kembalikan 88
+    akhir
+    jika char_str == "Y"
+        kembalikan 89
+    akhir
+    jika char_str == "Z"
+        kembalikan 90
+    akhir
+    jika char_str == "["
+        kembalikan 91
+    akhir
+    jika char_str == "\\"
+        kembalikan 92
+    akhir
+    jika char_str == "]"
+        kembalikan 93
+    akhir
+    jika char_str == "^"
+        kembalikan 94
+    akhir
+    jika char_str == "_"
+        kembalikan 95
+    akhir
+    jika char_str == "`"
+        kembalikan 96
+    akhir
+    # Lowercase a-z
+    jika char_str == "a"
+        kembalikan 97
+    akhir
+    jika char_str == "b"
+        kembalikan 98
+    akhir
+    jika char_str == "c"
+        kembalikan 99
+    akhir
+    jika char_str == "d"
+        kembalikan 100
+    akhir
+    jika char_str == "e"
+        kembalikan 101
+    akhir
+    jika char_str == "f"
+        kembalikan 102
+    akhir
+    jika char_str == "g"
+        kembalikan 103
+    akhir
+    jika char_str == "h"
+        kembalikan 104
+    akhir
+    jika char_str == "i"
+        kembalikan 105
+    akhir
+    jika char_str == "j"
+        kembalikan 106
+    akhir
+    jika char_str == "k"
+        kembalikan 107
+    akhir
+    jika char_str == "l"
+        kembalikan 108
+    akhir
+    jika char_str == "m"
+        kembalikan 109
+    akhir
+    jika char_str == "n"
+        kembalikan 110
+    akhir
+    jika char_str == "o"
+        kembalikan 111
+    akhir
+    jika char_str == "p"
+        kembalikan 112
+    akhir
+    jika char_str == "q"
+        kembalikan 113
+    akhir
+    jika char_str == "r"
+        kembalikan 114
+    akhir
+    jika char_str == "s"
+        kembalikan 115
+    akhir
+    jika char_str == "t"
+        kembalikan 116
+    akhir
+    jika char_str == "u"
+        kembalikan 117
+    akhir
+    jika char_str == "v"
+        kembalikan 118
+    akhir
+    jika char_str == "w"
+        kembalikan 119
+    akhir
+    jika char_str == "x"
+        kembalikan 120
+    akhir
+    jika char_str == "y"
+        kembalikan 121
+    akhir
+    jika char_str == "z"
+        kembalikan 122
+    akhir
+    jika char_str == "{"
+        kembalikan 123
+    akhir
+    jika char_str == "|"
+        kembalikan 124
+    akhir
+    jika char_str == "}"
+        kembalikan 125
+    akhir
+    jika char_str == "~"
+        kembalikan 126
+    akhir
+    jika char_str == "\n"
+        kembalikan 10
+    akhir
+    jika char_str == "\t"
+        kembalikan 9
+    akhir
+    jika char_str == "\r"
+        kembalikan 13
+    akhir
+    kembalikan 0  # Unknown character
+akhir
+
+fungsi is_letter(ch int) bool
+    # a-z
+    jika ch >= 97
+        jika ch <= 122
+            kembalikan benar
+        akhir
+    akhir
+    # A-Z
+    jika ch >= 65
+        jika ch <= 90
+            kembalikan benar
+        akhir
+    akhir
+    # _
+    jika ch == 95
+        kembalikan benar
+    akhir
+    kembalikan salah
+akhir
+
+fungsi is_digit(ch int) bool
+    # 0-9
+    jika ch >= 48
+        jika ch <= 57
+            kembalikan benar
+        akhir
+    akhir
+    kembalikan salah
+akhir
+
+fungsi is_whitespace(ch int) bool
+    # space
+    jika ch == 32
+        kembalikan benar
+    akhir
+    # tab
+    jika ch == 9
+        kembalikan benar
+    akhir
+    # newline
+    jika ch == 10
+        kembalikan benar
+    akhir
+    # carriage return
+    jika ch == 13
+        kembalikan benar
+    akhir
+    kembalikan salah
+akhir
+
+# ============================================================================
+# Peek Character
+# ============================================================================
+fungsi lexer_peek_char(l Lexer) int
+    jika l.read_position >= panjang(l.input)
+        kembalikan 0
+    lainnya
+        var char_str = substring(l.input, l.read_position, l.read_position + 1)
+        kembalikan char_to_ascii(char_str)
+    akhir
+akhir
+
+# ============================================================================
+# Skip Whitespace
+# ============================================================================
+fungsi lexer_skip_whitespace(l Lexer) void
+    selama is_whitespace(l.ch)
+        lexer_read_char(l)
+    akhir
+akhir
+
+# ============================================================================
+# Read Identifier
+# ============================================================================
+fungsi lexer_read_identifier(l Lexer) string
+    var position = l.position
+    var done = salah
+    selama tidak done
+        jika is_letter(l.ch)
+            lexer_read_char(l)
+        lainnya
+            jika is_digit(l.ch)
+                lexer_read_char(l)
+            lainnya
+                done = benar
+            akhir
+        akhir
+    akhir
+    kembalikan substring(l.input, position, l.position)
+akhir
+
+# ============================================================================
+# Read Number
+# ============================================================================
+fungsi lexer_read_number(l Lexer) string
+    var position = l.position
+    selama is_digit(l.ch)
+        lexer_read_char(l)
+    akhir
+    kembalikan substring(l.input, position, l.position)
+akhir
+
+# ============================================================================
+# Read String
+# ============================================================================
+fungsi lexer_read_string(l Lexer) string
+    var position = l.position + 1  # Skip opening quote
+    lexer_read_char(l)  # Move past opening quote
+
+    var should_continue = benar
+    selama should_continue
+        jika l.ch == 34  # Closing quote
+            should_continue = salah
+        lainnya
+            jika l.ch == 0  # EOF
+                should_continue = salah
+            lainnya
+                lexer_read_char(l)
+            akhir
+        akhir
+    akhir
+    
+    kembalikan substring(l.input, position, l.position)
+akhir
+
+# ============================================================================
+# Main Tokenization Function
+# ============================================================================
+fungsi lexer_next_token(l Lexer) Token
+    lexer_skip_whitespace(l)
+    
+    var tok = make_token(TOKEN_ILLEGAL, "-", l.line, l.column)
+    
+    # Single character tokens
+    jika l.ch == 61  # =
+        jika lexer_peek_char(l) == 61  # ==
+            var ch = l.ch
+            lexer_read_char(l)
+            tok = make_token(TOKEN_EQ, "==", l.line, l.column)
+        lainnya
+            tok = make_token(TOKEN_ASSIGN, "=", l.line, l.column)
+        akhir
+    lainnya jika l.ch == 43  # +
+        tok = make_token(TOKEN_PLUS, "+", l.line, l.column)
+    lainnya jika l.ch == 45  # -
+        jika lexer_peek_char(l) == 62  # ->
+            lexer_read_char(l)
+            tok = make_token(TOKEN_ARROW, "->", l.line, l.column)
+        lainnya
+            tok = make_token(TOKEN_MINUS, "-", l.line, l.column)
+        akhir
+    lainnya jika l.ch == 33  # !
+        jika lexer_peek_char(l) == 61  # !=
+            lexer_read_char(l)
+            tok = make_token(TOKEN_NOT_EQ, "!=", l.line, l.column)
+        lainnya
+            tok = make_token(TOKEN_BANG, "!", l.line, l.column)
+        akhir
+    lainnya jika l.ch == 42  # *
+        tok = make_token(TOKEN_ASTERISK, "*", l.line, l.column)
+    lainnya jika l.ch == 47  # /
+        tok = make_token(TOKEN_SLASH, "/", l.line, l.column)
+    lainnya jika l.ch == 37  # %
+        tok = make_token(TOKEN_PERCENT, "%", l.line, l.column)
+    lainnya jika l.ch == 60  # <
+        jika lexer_peek_char(l) == 61  # <=
+            lexer_read_char(l)
+            tok = make_token(TOKEN_LE, "<=", l.line, l.column)
+        lainnya
+            jika lexer_peek_char(l) == 60  # <<
+                lexer_read_char(l)
+                tok = make_token(TOKEN_LSHIFT, "<<", l.line, l.column)
+            lainnya
+                tok = make_token(TOKEN_LT, "<", l.line, l.column)
+            akhir
+        akhir
+    lainnya jika l.ch == 62  # >
+        jika lexer_peek_char(l) == 61  # >=
+            lexer_read_char(l)
+            tok = make_token(TOKEN_GE, ">=", l.line, l.column)
+        lainnya
+            jika lexer_peek_char(l) == 62  # >>
+                lexer_read_char(l)
+                tok = make_token(TOKEN_RSHIFT, ">>", l.line, l.column)
+            lainnya
+                tok = make_token(TOKEN_GT, ">", l.line, l.column)
+            akhir
+        akhir
+    lainnya jika l.ch == 38  # &
+        jika lexer_peek_char(l) == 38  # &&
+            lexer_read_char(l)
+            tok = make_token(TOKEN_AND, "&&", l.line, l.column)
+        lainnya
+            tok = make_token(TOKEN_BIT_AND, "&", l.line, l.column)
+        akhir
+    lainnya jika l.ch == 124  # |
+        jika lexer_peek_char(l) == 124  # ||
+            lexer_read_char(l)
+            tok = make_token(TOKEN_OR, "||", l.line, l.column)
+        lainnya
+            tok = make_token(TOKEN_BIT_OR, "|", l.line, l.column)
+        akhir
+    lainnya jika l.ch == 94  # ^
+        tok = make_token(TOKEN_BIT_XOR, "^", l.line, l.column)
+    lainnya jika l.ch == 126  # ~
+        tok = make_token(TOKEN_BIT_NOT, "~", l.line, l.column)
+    lainnya jika l.ch == 44  # ,
+        tok = make_token(TOKEN_COMMA, ",", l.line, l.column)
+    lainnya jika l.ch == 59  # ;
+        tok = make_token(TOKEN_SEMICOLON, ";", l.line, l.column)
+    lainnya jika l.ch == 58  # :
+        tok = make_token(TOKEN_COLON, ":", l.line, l.column)
+    lainnya jika l.ch == 40  # (
+        tok = make_token(TOKEN_LPAREN, "(", l.line, l.column)
+    lainnya jika l.ch == 41  # )
+        tok = make_token(TOKEN_RPAREN, ")", l.line, l.column)
+    lainnya jika l.ch == 123  # {
+        tok = make_token(TOKEN_LBRACE, "{", l.line, l.column)
+    lainnya jika l.ch == 125  # }
+        tok = make_token(TOKEN_RBRACE, "}", l.line, l.column)
+    lainnya jika l.ch == 91  # [
+        tok = make_token(TOKEN_LBRACKET, "[", l.line, l.column)
+    lainnya jika l.ch == 93  # ]
+        tok = make_token(TOKEN_RBRACKET, "]", l.line, l.column)
+    lainnya jika l.ch == 46  # .
+        tok = make_token(TOKEN_DOT, ".", l.line, l.column)
+    lainnya jika l.ch == 34  # "
+        var str_literal = lexer_read_string(l)
+        tok = make_token(TOKEN_STRING, str_literal, l.line, l.column)
+    lainnya jika l.ch == 0  # EOF
+        tok = make_token(TOKEN_EOF, "-", l.line, l.column)
+    lainnya
+        jika is_letter(l.ch)
+            var literal = lexer_read_identifier(l)
+            var token_type = lookup_keyword(literal)
+            tok = make_token(token_type, literal, l.line, l.column)
+            kembalikan tok  # Don't advance character, already done in read_identifier
+        lainnya
+            jika is_digit(l.ch)
+                var literal = lexer_read_number(l)
+                tok = make_token(TOKEN_INT, literal, l.line, l.column)
+                kembalikan tok  # Don't advance character, already done in read_number
+            lainnya
+                tok = make_token(TOKEN_ILLEGAL, "-", l.line, l.column)
+            akhir
+        akhir
+    akhir
+
+    lexer_read_char(l)
+    kembalikan tok
+akhir

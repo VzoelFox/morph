@@ -8,6 +8,67 @@
 
 ## Critical Bugs Discovered
 
+### 4. "lainnya jika" Syntax Not Supported
+
+**Severity**: 🔴 BLOCKER
+**Impact**: Cannot use else-if chains; must use fully nested if-else blocks
+
+#### Bug Description:
+N0 parser does NOT recognize `lainnya jika` (else if) syntax at all. Only fully nested `lainnya { jika { } }` structure is supported.
+
+#### Failing Code:
+```fox
+fungsi test(ch int) int
+    jika ch == 61
+        kembalikan 1
+    lainnya jika ch == 43
+        kembalikan 2
+    lainnya jika ch == 45
+        kembalikan 3
+    lainnya
+        kembalikan 99
+    akhir
+akhir
+```
+
+**Error**: `expected token to be AKHIR, got EOF`
+
+#### Working Workaround:
+Use fully nested if-else structure:
+```fox
+fungsi test(ch int) int
+    jika ch == 61
+        kembalikan 1
+    lainnya
+        jika ch == 43
+            kembalikan 2
+        lainnya
+            jika ch == 45
+                kembalikan 3
+            lainnya
+                kembalikan 99
+            akhir
+        akhir
+    akhir
+akhir
+```
+
+#### Root Cause:
+N0 parser expects each `lainnya jika` to be treated as separate `lainnya` + `jika` blocks with proper nesting and closing `akhir` statements.
+
+#### Impact on N1 Development:
+- **lexer.fox**: Has 25+ `lainnya jika` statements (605 lines)
+  - **Status**: ⏸️ BLOCKED - too complex to manually convert
+  - **Solution needed**: Either auto-convert or simplify lexer structure
+  
+- **checker.fox**: Had 2 `lainnya jika` statements (250 lines)
+  - **Status**: ✅ FIXED - manually converted to nested structure
+  
+- **parser.fox**: Had 1 `lainnya jika` in loop condition (293 lines)
+  - **Status**: ✅ FIXED - converted to nested ifs
+
+---
+
 ### 1. Struct Return with Assignment Pattern - "multi-var not supported"
 
 **Severity**: ⚠️ CRITICAL
@@ -246,3 +307,43 @@ TEST SUMMARY: 25 Passed, 0 Failed
 **Report generated**: 2025-12-28 12:52 UTC
 **Compiler tested**: morph (N0) rebuilt from source
 **Test platform**: Linux 5.15.0-164-generic
+
+---
+
+## Update 2025-12-28 13:00 UTC - Critical Discovery
+
+### NEW BUG FOUND: "lainnya jika" Not Supported (Bug #4)
+
+During systematic bug fixing, discovered N0 parser **completely rejects** `lainnya jika` syntax.
+
+**Testing Results**:
+```bash
+# ❌ FAILS
+lainnya jika condition
+    
+# ✅ WORKS  
+lainnya
+    jika condition
+```
+
+**Files Fixed**:
+1. ✅ **checker.fox** - 2 instances converted to nested structure
+2. ✅ **parser.fox** - 1 instance converted
+3. ⏸️ **lexer.fox** - 25+ instances - BLOCKED (too complex for manual conversion)
+
+**Impact on Progress**:
+- **types.fox**: ✅ 100% WORKING (25/25 tests)
+- **checker.fox**: ✅ Syntax fixed (import errors expected)  
+- **parser.fox**: ✅ Syntax fixed (import errors expected)
+- **lexer.fox**: 🔴 BLOCKED - needs automated conversion or restructuring
+- **ast.fox**: ✅ No bugs found
+- **token.fox**: ✅ No bugs found
+
+**Current Progress**: ~45% (up from 40%)
+- Core type system fully functional
+- 3/6 compiler modules syntax-clean
+- Main blocker: lexer.fox complexity
+
+---
+
+**Report updated**: 2025-12-28 13:00 UTC

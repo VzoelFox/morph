@@ -105,20 +105,16 @@ fungsi check_var_statement(c Checker, stmt VarStatement) Type
     var declared_type = void_type()
     
     # Check if type annotation exists
-    jika stmt.value_type != "-"
+    jika stmt.value_type != ""
         jika stmt.value_type == "int"
             declared_type = int_type()
+        lainnya jika stmt.value_type == "string"
+            declared_type = string_type()
+        lainnya jika stmt.value_type == "bool"
+            declared_type = bool_type()
         lainnya
-            jika stmt.value_type == "string"
-                declared_type = string_type()
-            lainnya
-                jika stmt.value_type == "bool"
-                    declared_type = bool_type()
-                lainnya
-                    checker_add_error(c, "Unknown type: " + stmt.value_type)
-                    kembalikan error_type()
-                akhir
-            akhir
+            checker_add_error(c, "Unknown type: " + stmt.value_type)
+            kembalikan error_type()
         akhir
     akhir
     
@@ -247,10 +243,7 @@ fungsi infer_type_from_literal(literal string, token_type int) Type
     jika token_type == TOKEN_STRING
         kembalikan string_type()
     akhir
-    jika token_type == TOKEN_BENAR
-        kembalikan bool_type()
-    akhir
-    jika token_type == TOKEN_SALAH
+    jika token_type == TOKEN_BENAR atau token_type == TOKEN_SALAH
         kembalikan bool_type()
     akhir
     kembalikan unknown_type()
