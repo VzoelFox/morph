@@ -1,9 +1,9 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.69.4
+- **Versi**: 1.70.0
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
-- **Terakhir Diupdate**: 2025-12-28 04:20 WIB
+- **Terakhir Diupdate**: 2025-12-28 12:52 UTC
 - **Status**: Active
 
 ---
@@ -4052,5 +4052,103 @@ e4aecded4e23813e7e23ac24e81bfa5e601f6126635832c02a90b6988be6c3b2  n1/lexer.fox (
 - `test_token_import_v2.fox` - Successful import test
 - `N1_AMBIL_HONEST_ANALYSIS.md` - Complete honest analysis
 - `N1_IMPORT_EXPORT_VERIFICATION.md` - Verification report
+
+---
+
+---
+
+## 🔧 N0 COMPILER BUGS DISCOVERED & FIXED (2025-12-28)
+
+**Context**: Deep investigation during N1 types.fox debugging session
+**Action**: Recompiled N0 from source to verify bugs are in original compiler
+
+### ✅ CRITICAL BUGS FOUND:
+
+1. **"multi-var not supported" Error** - MISLEADING
+   - **Bug**: Struct return with assignment pattern triggers error
+   - **Cause**: Compiler incorrectly parses struct field assignments as multi-var
+   - **Fix**: Use struct literal syntax instead
+   ```fox
+   # ❌ FAILS:
+   fungsi make_type(k int, n string) Type
+       var t Type
+       t.kind = k
+       kembalikan t
+   akhir
+   
+   # ✅ WORKS:
+   fungsi make_type(k int, n string) Type
+       kembalikan Type{kind: k, name: n}
+   akhir
+   ```
+
+2. **Empty String Timeout** - COMPILATION HANG
+   - **Bug**: `""` in struct literals causes infinite loop
+   - **Fix**: Use sentinel values ("ok", "-", etc.)
+   ```fox
+   # ❌ TIMEOUT:
+   kembalikan TypeResult{error_msg: "", has_error: salah}
+   
+   # ✅ WORKS:
+   kembalikan TypeResult{error_msg: "ok", has_error: salah}
+   ```
+
+3. **"dan" Operator Not Transpiled** - C COMPILATION ERROR
+   - **Bug**: Fox keyword `dan` output as-is to C (not translated to `&&`)
+   - **Fix**: Use nested if statements
+   ```fox
+   # ❌ FAILS (C error: "before 'dan'"):
+   jika a == 1 dan b == 2
+   
+   # ✅ WORKS:
+   jika a == 1
+       jika b == 2
+   ```
+
+### ✅ N1 types.fox - FULLY WORKING!
+
+**Status**: ✅ Compiled successfully, all tests passing
+**Lines**: 896 (grew from 841 due to nested if conversion)
+**Test Results**: 25/25 PASSED
+
+```
+✅ Test 1: Type Creation
+✅ Test 2: Type Equality
+✅ Test 3: Null Assignability
+✅ Test 4: Type Comparability
+✅ Test 5: Binary Ops - Arithmetic
+✅ Test 6: Binary Ops - Comparison
+✅ Test 7: Binary Ops - Logical
+✅ Test 8: Binary Ops - Bitwise
+✅ Test 9: Error Detection
+✅ Test 10: Prefix Operations
+✅ Test 11: Kind to String
+
+TEST SUMMARY: 25 Passed, 0 Failed
+```
+
+**Applied Fixes**:
+1. Converted assignment pattern → struct literals (27 instances)
+2. Replaced empty strings → sentinel values ("ok")
+3. Converted `dan` operators → nested ifs (27 instances via Python script)
+
+**Checksums**:
+```
+fa69dc64d1233e6750891ac1e308ddd7519a3adb5448121b265edd680d60734f  n1/types.fox (896 lines, working)
+0d5bf62e8f9f47b895a047dea81a46035d16d38586c78e3b20c3dffcc8547cd4  n1/types.fox.backup (original)
+f52efd9a45eef732b3298ceb2386c96f6fcc78731f3e3df1fcab42a352784f89  n1/types.fox.pre_dan_fix
+b47b53a8da0a30a19893d39294d2fad30f7f7e32a065f14116884be01a75267a  N0_COMPILER_BUGS.md
+```
+
+### ⏸️ Parser/Lexer Status:
+
+- **parser.fox**: Timeout (empty string issue in `make_var_statement("")`)
+- **lexer.fox**: Timeout (543 lines, complexity + empty strings)
+- **checker.fox**: Not yet tested (depends on types.fox)
+
+**Progress**:
+- Before: ~20-25% (import paths fixed)
+- After types.fox: ~40% (core type system working)
+- Full self-hosting: Realistic with systematic workaround application
 
 ---

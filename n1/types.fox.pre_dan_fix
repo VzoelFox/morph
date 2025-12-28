@@ -211,72 +211,52 @@ fungsi type_binary_op(left Type, op string, right Type) TypeResult
 
     # Arithmetic: +, -, *, /
     jika op == "+"
-        jika left.kind == KIND_INT
-            jika right.kind == KIND_INT
+        jika left.kind == KIND_INT dan right.kind == KIND_INT
             kembalikan make_type_result(int_type())
-            akhir
         akhir
-        jika left.kind == KIND_FLOAT
-            jika right.kind == KIND_FLOAT
+        jika left.kind == KIND_FLOAT dan right.kind == KIND_FLOAT
             kembalikan make_type_result(float_type())
-            akhir
         akhir
-        jika left.kind == KIND_STRING
-            jika right.kind == KIND_STRING
+        jika left.kind == KIND_STRING dan right.kind == KIND_STRING
             kembalikan make_type_result(string_type())
-            akhir
         akhir
         kembalikan make_type_error("+ tidak didukung untuk tipe ini")
     akhir
 
     jika op == "-"
-        jika left.kind == KIND_INT
-            jika right.kind == KIND_INT
+        jika left.kind == KIND_INT dan right.kind == KIND_INT
             kembalikan make_type_result(int_type())
-            akhir
         akhir
-        jika left.kind == KIND_FLOAT
-            jika right.kind == KIND_FLOAT
+        jika left.kind == KIND_FLOAT dan right.kind == KIND_FLOAT
             kembalikan make_type_result(float_type())
-            akhir
         akhir
         kembalikan make_type_error("- memerlukan numeric")
     akhir
 
     jika op == "*"
-        jika left.kind == KIND_INT
-            jika right.kind == KIND_INT
+        jika left.kind == KIND_INT dan right.kind == KIND_INT
             kembalikan make_type_result(int_type())
-            akhir
         akhir
-        jika left.kind == KIND_FLOAT
-            jika right.kind == KIND_FLOAT
+        jika left.kind == KIND_FLOAT dan right.kind == KIND_FLOAT
             kembalikan make_type_result(float_type())
-            akhir
         akhir
         kembalikan make_type_error("* memerlukan numeric")
     akhir
 
     jika op == "/"
-        jika left.kind == KIND_INT
-            jika right.kind == KIND_INT
+        jika left.kind == KIND_INT dan right.kind == KIND_INT
             kembalikan make_type_result(int_type())
-            akhir
         akhir
-        jika left.kind == KIND_FLOAT
-            jika right.kind == KIND_FLOAT
+        jika left.kind == KIND_FLOAT dan right.kind == KIND_FLOAT
             kembalikan make_type_result(float_type())
-            akhir
         akhir
         kembalikan make_type_error("/ memerlukan numeric")
     akhir
 
     # Modulo: %
     jika op == "%"
-        jika left.kind == KIND_INT
-            jika right.kind == KIND_INT
+        jika left.kind == KIND_INT dan right.kind == KIND_INT
             kembalikan make_type_result(int_type())
-            akhir
         akhir
         kembalikan make_type_error("% memerlukan int")
     akhir
@@ -318,140 +298,106 @@ fungsi type_binary_op(left Type, op string, right Type) TypeResult
 
     # Logical: &&, ||, dan, atau
     jika op == "&&"
-        jika left.kind == KIND_BOOL
-            jika right.kind == KIND_BOOL
+        jika left.kind == KIND_BOOL dan right.kind == KIND_BOOL
             kembalikan make_type_result(bool_type())
-            akhir
         akhir
         kembalikan make_type_error("&& memerlukan bool")
     akhir
 
     jika op == "||"
-        jika left.kind == KIND_BOOL
-            jika right.kind == KIND_BOOL
+        jika left.kind == KIND_BOOL dan right.kind == KIND_BOOL
             kembalikan make_type_result(bool_type())
-            akhir
         akhir
         kembalikan make_type_error("|| memerlukan bool")
     akhir
 
     jika op == "dan"
-        jika left.kind == KIND_BOOL
-            jika right.kind == KIND_BOOL
+        jika left.kind == KIND_BOOL dan right.kind == KIND_BOOL
             kembalikan make_type_result(bool_type())
-            akhir
         akhir
         kembalikan make_type_error("dan memerlukan bool")
     akhir
 
     jika op == "atau"
-        jika left.kind == KIND_BOOL
-            jika right.kind == KIND_BOOL
+        jika left.kind == KIND_BOOL dan right.kind == KIND_BOOL
             kembalikan make_type_result(bool_type())
-            akhir
         akhir
         kembalikan make_type_error("atau memerlukan bool")
     akhir
 
     # Comparison: <, >, <=, >=
     jika op == "<"
-        jika left.kind == KIND_INT
-            jika right.kind == KIND_INT
+        jika left.kind == KIND_INT dan right.kind == KIND_INT
             kembalikan make_type_result(bool_type())
-            akhir
         akhir
-        jika left.kind == KIND_FLOAT
-            jika right.kind == KIND_FLOAT
+        jika left.kind == KIND_FLOAT dan right.kind == KIND_FLOAT
             kembalikan make_type_result(bool_type())
-            akhir
         akhir
         kembalikan make_type_error("< memerlukan numeric")
     akhir
 
     jika op == ">"
-        jika left.kind == KIND_INT
-            jika right.kind == KIND_INT
+        jika left.kind == KIND_INT dan right.kind == KIND_INT
             kembalikan make_type_result(bool_type())
-            akhir
         akhir
-        jika left.kind == KIND_FLOAT
-            jika right.kind == KIND_FLOAT
+        jika left.kind == KIND_FLOAT dan right.kind == KIND_FLOAT
             kembalikan make_type_result(bool_type())
-            akhir
         akhir
         kembalikan make_type_error("> memerlukan numeric")
     akhir
 
     jika op == "<="
-        jika left.kind == KIND_INT
-            jika right.kind == KIND_INT
+        jika left.kind == KIND_INT dan right.kind == KIND_INT
             kembalikan make_type_result(bool_type())
-            akhir
         akhir
-        jika left.kind == KIND_FLOAT
-            jika right.kind == KIND_FLOAT
+        jika left.kind == KIND_FLOAT dan right.kind == KIND_FLOAT
             kembalikan make_type_result(bool_type())
-            akhir
         akhir
         kembalikan make_type_error("<= memerlukan numeric")
     akhir
 
     jika op == ">="
-        jika left.kind == KIND_INT
-            jika right.kind == KIND_INT
+        jika left.kind == KIND_INT dan right.kind == KIND_INT
             kembalikan make_type_result(bool_type())
-            akhir
         akhir
-        jika left.kind == KIND_FLOAT
-            jika right.kind == KIND_FLOAT
+        jika left.kind == KIND_FLOAT dan right.kind == KIND_FLOAT
             kembalikan make_type_result(bool_type())
-            akhir
         akhir
         kembalikan make_type_error(">= memerlukan numeric")
     akhir
 
     # Bitwise: &, |, ^, <<, >>
     jika op == "&"
-        jika left.kind == KIND_INT
-            jika right.kind == KIND_INT
+        jika left.kind == KIND_INT dan right.kind == KIND_INT
             kembalikan make_type_result(int_type())
-            akhir
         akhir
         kembalikan make_type_error("& memerlukan int")
     akhir
 
     jika op == "|"
-        jika left.kind == KIND_INT
-            jika right.kind == KIND_INT
+        jika left.kind == KIND_INT dan right.kind == KIND_INT
             kembalikan make_type_result(int_type())
-            akhir
         akhir
         kembalikan make_type_error("| memerlukan int")
     akhir
 
     jika op == "^"
-        jika left.kind == KIND_INT
-            jika right.kind == KIND_INT
+        jika left.kind == KIND_INT dan right.kind == KIND_INT
             kembalikan make_type_result(int_type())
-            akhir
         akhir
         kembalikan make_type_error("^ memerlukan int")
     akhir
 
     jika op == "<<"
-        jika left.kind == KIND_INT
-            jika right.kind == KIND_INT
+        jika left.kind == KIND_INT dan right.kind == KIND_INT
             kembalikan make_type_result(int_type())
-            akhir
         akhir
         kembalikan make_type_error("<< memerlukan int")
     akhir
 
     jika op == ">>"
-        jika left.kind == KIND_INT
-            jika right.kind == KIND_INT
+        jika left.kind == KIND_INT dan right.kind == KIND_INT
             kembalikan make_type_result(int_type())
-            akhir
         akhir
         kembalikan make_type_error(">> memerlukan int")
     akhir
@@ -893,4 +839,3 @@ fungsi main() void
         native_print("\n  ✗ SOME TESTS FAILED\n")
     akhir
 akhir
-
