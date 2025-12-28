@@ -208,37 +208,15 @@ func (l *Lexer) readCodeToken() Token {
 		tok = Token{Type: COMMENT, Literal: l.readComment(), Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
 		return tok
 	case '"':
-		// Optimization for empty string
-		if l.peekChar() == '"' {
+		l.readChar() // consume opening "
+		// Check for empty string
+		if l.ch == '"' {
 			tok = Token{Type: STRING, Literal: "", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
-			l.readChar() // consume opening "
-			// consume closing " happens at end of function if logic flowed there, but here we return early?
-			// Wait, previous logic was: l.readChar(); return ...
-			// But readStringToken expects to read content.
-			// Let's keep logic simple: push state, delegate to readStringToken.
-			// Optimizations might be tricky with HasLeadingSpace.
-			// Let's remove optimization for clarity/safety or fix it.
-			// If empty string: ""
-			l.readChar() // eat opening "
-			// check closing
-			if l.ch == '"' {
-				tok = Token{Type: STRING, Literal: "", Line: tokLine, Column: tokCol, HasLeadingSpace: hasLeadingSpace}
-				l.readChar() // eat closing "
-				return tok
-			}
-			// Not empty immediately (or logic above was just optimization).
-			// Let's stick to standard path.
-			// Rewind? No.
-			// Just use readStringToken logic.
-			l.pushState(STATE_STRING)
-			// l.readChar() was done (consumed opening ").
-			// But readStringToken expects to start reading content.
-			return l.readStringToken(hasLeadingSpace)
-		} else {
-			l.pushState(STATE_STRING)
-			l.readChar() // consume opening "
-			return l.readStringToken(hasLeadingSpace)
+			l.readChar() // consume closing "
+			return tok
 		}
+		l.pushState(STATE_STRING)
+		return l.readStringToken(hasLeadingSpace)
 	case '\'':
 		tok = l.readCharToken(hasLeadingSpace)
 	case 0:
