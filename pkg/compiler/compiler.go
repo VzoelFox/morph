@@ -32,6 +32,8 @@ type Compiler struct {
 	currentGlobals map[string]bool
 	importOrigins  map[string]string // identifier -> module prefix
 	tempIndex      int
+
+	recursionDepth int // Track recursion depth to prevent stack overflow
 }
 
 type rootTemp struct {
@@ -1460,6 +1462,13 @@ func (c *Compiler) compileWhile(we *parser.WhileExpression, buf *strings.Builder
 }
 
 func (c *Compiler) compileExpression(expr parser.Expression, prefix string, fn *parser.FunctionLiteral) (string, error) {
+	// Guard against stack overflow from deeply nested expressions
+	c.recursionDepth++
+	if c.recursionDepth > 1000 {
+		return "", fmt.Errorf("compilation recursion limit exceeded (max 1000 levels)")
+	}
+	defer func() { c.recursionDepth-- }()
+
 	switch e := expr.(type) {
 	case *parser.Identifier:
 		name := e.Value
@@ -1486,8 +1495,13 @@ func (c *Compiler) compileExpression(expr parser.Expression, prefix string, fn *
 		}
 		return c.compileCall(e, prefix, fn)
 	case *parser.StringLiteral:
-		escaped := strings.ReplaceAll(e.Value, "\n", "\\n")
+		// Escape special characters for C string literals
+		// IMPORTANT: Backslash must be escaped first!
+		escaped := strings.ReplaceAll(e.Value, "\\", "\\\\")
 		escaped = strings.ReplaceAll(escaped, "\"", "\\\"")
+		escaped = strings.ReplaceAll(escaped, "\n", "\\n")
+		escaped = strings.ReplaceAll(escaped, "\r", "\\r")
+		escaped = strings.ReplaceAll(escaped, "\t", "\\t")
 		return fmt.Sprintf("mph_string_new(ctx, \"%s\")", escaped), nil
 	case *parser.IntegerLiteral:
 		return fmt.Sprintf("%d", e.Value), nil

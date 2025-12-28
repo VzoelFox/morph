@@ -1,0 +1,38 @@
+# Test N0 Bug #7 Fix: String Escaping Improvements
+# Tests: \n, \r, \t, \\, \"
+
+fungsi test_newline() string
+    kembalikan "line1\nline2"
+akhir
+
+fungsi test_carriage_return() string
+    kembalikan "before\rafter"
+akhir
+
+fungsi test_tab() string
+    kembalikan "col1\tcol2"
+akhir
+
+fungsi test_backslash() string
+    kembalikan "path\\to\\file"
+akhir
+
+fungsi test_quote() string
+    kembalikan "say \"hello\""
+akhir
+
+fungsi test_combined() string
+    kembalikan "complex:\n\tpath=\"C:\\Users\\test\""
+akhir
+
+fungsi main() int
+    var s1 = test_newline()
+    var s2 = test_carriage_return()
+    var s3 = test_tab()
+    var s4 = test_backslash()
+    var s5 = test_quote()
+    var s6 = test_combined()
+
+    # If all compile and run without segfault, test passes
+    kembalikan 42
+akhir

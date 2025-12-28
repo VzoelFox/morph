@@ -1,0 +1,90 @@
+# N0 Regression Test Suite - All Fixed Bugs
+# Tests Bug #2 (empty string), Bug #3 (dan/atau), Bug #4 (atau_jika)
+
+struktur Message
+    text string
+    code int
+akhir
+
+# Test Bug #2: Empty string in struct literals
+fungsi test_empty_string() int
+    var msg = Message{text: "", code: 1}
+    jika msg.code == 1
+        kembalikan 1  # Pass
+    akhir
+    kembalikan 0  # Fail
+akhir
+
+# Test Bug #3: dan/atau operators
+fungsi test_dan_operator(a bool, b bool) bool
+    kembalikan a dan b
+akhir
+
+fungsi test_atau_operator(a bool, b bool) bool
+    kembalikan a atau b
+akhir
+
+fungsi test_logical_ops() int
+    # Test dan
+    jika test_dan_operator(benar, benar)
+        jika test_dan_operator(benar, salah)
+            kembalikan 0  # Fail - should be false
+        akhir
+    lainnya
+        kembalikan 0  # Fail - should be true
+    akhir
+
+    # Test atau
+    jika test_atau_operator(salah, benar)
+        jika test_atau_operator(salah, salah)
+            kembalikan 0  # Fail - should be false
+        akhir
+    lainnya
+        kembalikan 0  # Fail - should be true
+    akhir
+
+    kembalikan 1  # Pass
+akhir
+
+# Test Bug #4: atau_jika syntax
+fungsi test_atau_jika(x int) int
+    jika x == 1
+        kembalikan 10
+    atau_jika x == 2
+        kembalikan 20
+    atau_jika x == 3
+        kembalikan 30
+    lainnya
+        kembalikan 99
+    akhir
+akhir
+
+fungsi test_else_if() int
+    jika test_atau_jika(1) == 10
+        jika test_atau_jika(2) == 20
+            jika test_atau_jika(3) == 30
+                jika test_atau_jika(99) == 99
+                    kembalikan 1  # Pass
+                akhir
+            akhir
+        akhir
+    akhir
+    kembalikan 0  # Fail
+akhir
+
+fungsi main() int
+    var r1 = test_empty_string()
+    var r2 = test_logical_ops()
+    var r3 = test_else_if()
+
+    # All tests must pass (return 1)
+    jika r1 == 1
+        jika r2 == 1
+            jika r3 == 1
+                kembalikan 42  # All tests PASSED!
+            akhir
+        akhir
+    akhir
+
+    kembalikan 0  # Some test failed
+akhir

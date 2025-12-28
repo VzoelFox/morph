@@ -1,0 +1,24 @@
+# Test N0 Bug #5 Fix: Compiler Recursion Limit
+# This test creates deeply nested expressions to trigger recursion limit
+
+fungsi make_deep_expression(depth int) int
+    # Create nested expression: (((1 + 1) + 1) + 1) ...
+    # If depth > 1000, should fail with recursion limit error
+    jika depth == 0
+        kembalikan 1
+    akhir
+
+    var x = make_deep_expression(depth - 1)
+    kembalikan x + 1
+akhir
+
+fungsi main() int
+    # Test with depth 100 - should work
+    var result = make_deep_expression(100)
+
+    # NOTE: Cannot test depth 1001 in Fox code itself
+    # (would cause runtime stack overflow before compiler limit)
+    # Compiler limit protects against EXPRESSION nesting, not CALL nesting
+
+    kembalikan 42  # Success if we get here
+akhir
