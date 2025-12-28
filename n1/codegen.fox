@@ -1,0 +1,336 @@
+# N1 Codegen - AST → C Transpiler
+# Port dari N0 pkg/compiler/compiler.go
+# Self-hosting codegen untuk Morph language
+
+# Import dependencies
+ambil "ast"
+ambil "types"
+ambil "checker"
+
+# ============================================================================
+# Codegen Structure (N0 Compiler equivalent)
+# ============================================================================
+# N0 has 6 string builders for multi-pass compilation:
+# 1. typeDefs   - struct type definitions
+# 2. globalsDef - global variable declarations
+# 3. prototypes - function prototypes
+# 4. funcDefs   - function implementations
+# 5. entryBody  - main entry point body
+# 6. output     - final assembled output
+
+struktur Codegen
+    # Output buffers (Fox doesn't have StringBuilder, use string concatenation)
+    output string
+    type_defs string
+    global_defs string
+    prototypes string
+    func_defs string
+    entry_body string
+
+    # State tracking
+    temp_index int
+    has_main bool
+    indent_level int
+
+    # Module tracking
+    current_prefix string
+
+    # TODO: Need symbol table integration when checker is mature
+    # checker checker.Checker
+akhir
+
+# ============================================================================
+# Codegen Constructor
+# ============================================================================
+fungsi new_codegen() Codegen
+    kembalikan Codegen{
+        output: "",
+        type_defs: "",
+        global_defs: "",
+        prototypes: "",
+        func_defs: "",
+        entry_body: "",
+        temp_index: 0,
+        has_main: salah,
+        indent_level: 0,
+        current_prefix: "mph_"
+    }
+akhir
+
+# ============================================================================
+# Multi-Pass Compilation (N0 Architecture)
+# ============================================================================
+# N0 Compile() flow:
+# Pass 1: collectAllGlobals(node)
+# Pass 2: analyzeAllCaptures(node)
+# Pass 3: compileStructTypes(node)
+# Pass 4: compileStructRTTI(node)
+# Pass 5: compileModule(prog, prefix) for each module + main
+# Pass 6: Assemble output: headers → types → globals → protos → funcs → entry
+
+fungsi codegen_compile(cg Codegen, prog ast.Program) string
+    # Reset state
+    cg.output = ""
+    cg.type_defs = ""
+    cg.global_defs = ""
+    cg.prototypes = ""
+    cg.func_defs = ""
+    cg.entry_body = ""
+    cg.temp_index = 0
+    cg.has_main = salah
+
+    # Generate C header includes
+    cg.output = cg.output + "#include \"morph.h\"\n\n"
+
+    # Native function declarations
+    cg.output = cg.output + "// Native bindings\n"
+    cg.output = cg.output + "void mph_native_print(MorphContext* ctx, MorphString* s);\n"
+    cg.output = cg.output + "void mph_native_print_int(MorphContext* ctx, mph_int n);\n\n"
+
+    # TODO: Multi-pass compilation
+    # Pass 1: Collect globals (scan all var statements at top level)
+    # Pass 2: Analyze captures (for closures - Fox N1 might not support yet)
+    # Pass 3: Compile struct types (generate C struct definitions)
+    # Pass 4: Generate RTTI (runtime type info for structs)
+
+    # Pass 5: Compile main program
+    codegen_compile_program(cg, prog, "mph_")
+
+    # Pass 6: Assemble final output
+    cg.output = cg.output + "// Type Definitions\n"
+    cg.output = cg.output + cg.type_defs
+    cg.output = cg.output + "\n"
+
+    cg.output = cg.output + "// Global Variables\n"
+    cg.output = cg.output + cg.global_defs
+    cg.output = cg.output + "\n"
+
+    cg.output = cg.output + "// Function Prototypes\n"
+    cg.output = cg.output + cg.prototypes
+    cg.output = cg.output + "\n"
+
+    cg.output = cg.output + "// Function Definitions\n"
+    cg.output = cg.output + cg.func_defs
+    cg.output = cg.output + "\n"
+
+    cg.output = cg.output + "// Entry Point\n"
+    cg.output = cg.output + "void morph_entry_point(MorphContext* ctx) {\n"
+    cg.output = cg.output + cg.entry_body
+
+    jika cg.has_main
+        cg.output = cg.output + "\tmph_main(ctx, NULL);\n"
+    akhir
+
+    cg.output = cg.output + "}\n"
+
+    kembalikan cg.output
+akhir
+
+# ============================================================================
+# Program Compilation (Module-level)
+# ============================================================================
+fungsi codegen_compile_program(cg Codegen, prog ast.Program, prefix string) void
+    cg.current_prefix = prefix
+
+    # Iterate through all statements in the program
+    var i = 0
+    selama i < prog.statements_count
+        # TODO: Get statement from program.statements[i]
+        # For now, we're designing the architecture
+        # Actual implementation needs array access support
+
+        # Switch on statement type:
+        # - VarStatement → compile global variable
+        # - FunctionLiteral → compile function definition
+        # - StructStatement → compile struct type
+        # - ExpressionStatement → add to entry_body
+
+        i = i + 1
+    akhir
+akhir
+
+# ============================================================================
+# Statement Compilation (TODO - Needs Specific Types)
+# ============================================================================
+# N0 compileStatement() switch:
+# - VarStatement → compileVar()
+# - ReturnStatement → compileReturn()
+# - AssignmentStatement → compileAssignment()
+# - BlockStatement → compileBlock()
+# - ExpressionStatement → compileExpression()
+# - SwitchStatement → compileSwitchStatement()
+#
+# Note: Fox doesn't have interfaces, so we can't use generic Statement type
+# Will implement specific functions for each statement type when needed
+
+# ============================================================================
+# Expression Compilation (TODO - Needs Specific Types)
+# ============================================================================
+# N0 compileExpression() switch (20+ expression types):
+# - Identifier → handle local/global/imported
+# - IntegerLiteral → "42"
+# - StringLiteral → "mph_string_new(ctx, \"hello\")"
+# - BooleanLiteral → "1" or "0"
+# - CallExpression → compileCall()
+# - InfixExpression → compileInfix()
+# - PrefixExpression → "(operator expr)"
+# - MemberExpression → "obj->member"
+# - etc.
+#
+# Note: Will implement specific functions for IntegerLiteral, StringLiteral, etc.
+# when AST structures are fully integrated with codegen
+
+# ============================================================================
+# Type Mapping: Fox Type → C Type
+# ============================================================================
+# N0 mapCheckerTypeToC():
+# - int → mph_int
+# - float → mph_float
+# - string → MorphString*
+# - bool → mph_int
+# - void → void
+# - struct → struct <StructName>*
+# - array → MorphArray*
+# - map → MorphHash*
+
+fungsi codegen_map_type_to_c(t types.Type) string
+    jika t.kind == types.KIND_INT
+        kembalikan "mph_int"
+    akhir
+
+    jika t.kind == types.KIND_FLOAT
+        kembalikan "mph_float"
+    akhir
+
+    jika t.kind == types.KIND_STRING
+        kembalikan "MorphString*"
+    akhir
+
+    jika t.kind == types.KIND_BOOL
+        kembalikan "mph_int"
+    akhir
+
+    jika t.kind == types.KIND_VOID
+        kembalikan "void"
+    akhir
+
+    # TODO: Handle complex types (struct, array, map, function)
+    kembalikan "void*" # Fallback
+akhir
+
+# ============================================================================
+# Helper: Generate Temporary Variable
+# ============================================================================
+# N0 nextTemp(): generates unique temp names like _tmp_1, _tmp_2, etc.
+fungsi codegen_next_temp(cg Codegen, prefix string) string
+    cg.temp_index = cg.temp_index + 1
+    # TODO: Need int_to_string conversion
+    # For now, return placeholder
+    kembalikan "_tmp_1"
+akhir
+
+# ============================================================================
+# Helper: String Concatenation
+# ============================================================================
+# Fox string concatenation helper (since we're accumulating C code)
+fungsi codegen_append(buf string, text string) string
+    kembalikan buf + text
+akhir
+
+fungsi codegen_append_line(buf string, text string) string
+    kembalikan buf + text + "\n"
+akhir
+
+fungsi codegen_append_indent(buf string, text string, level int) string
+    var indent = ""
+    var i = 0
+    selama i < level
+        indent = indent + "\t"
+        i = i + 1
+    akhir
+    kembalikan buf + indent + text + "\n"
+akhir
+
+# ============================================================================
+# Uppercase Export Wrappers (for module imports)
+# ============================================================================
+fungsi NewCodegen() Codegen
+    kembalikan new_codegen()
+akhir
+
+fungsi CodegenCompile(cg Codegen, prog ast.Program) string
+    kembalikan codegen_compile(cg, prog)
+akhir
+
+fungsi CodegenMapTypeToC(t types.Type) string
+    kembalikan codegen_map_type_to_c(t)
+akhir
+
+# ============================================================================
+# DESIGN NOTES
+# ============================================================================
+# This is a skeletal architecture based on N0's proven design.
+#
+# IMPLEMENTATION PHASES:
+#
+# Phase 1: Basic Expressions (CURRENT)
+#   - Integer literals
+#   - String literals
+#   - Boolean literals
+#   - Simple identifiers
+#   - Binary operations (+, -, *, /)
+#   TARGET: Compile "var x = 1 + 2"
+#
+# Phase 2: Statements
+#   - Variable declarations
+#   - Assignments
+#   - Expression statements
+#   - Return statements
+#   TARGET: Compile simple functions
+#
+# Phase 3: Control Flow
+#   - If/else expressions
+#   - While loops
+#   - Switch statements
+#   TARGET: Compile control structures
+#
+# Phase 4: Functions
+#   - Function declarations
+#   - Function calls
+#   - Parameter passing
+#   TARGET: Compile multi-function programs
+#
+# Phase 5: Structs & Types
+#   - Struct definitions
+#   - Struct constructors
+#   - Member access
+#   TARGET: Compile type-safe programs
+#
+# Phase 6: Modules
+#   - Module imports
+#   - Name mangling
+#   - Cross-module calls
+#   TARGET: Self-hosting (N1 compiles N1)
+#
+# CRITICAL DEPENDENCIES:
+# 1. String utilities (int_to_string, string_escape, string_concat)
+# 2. AST array access (prog.statements[i])
+# 3. Type inference/checking integration
+# 4. Module system (ambil/import resolution)
+#
+# BOOTSTRAP STRATEGY:
+# - N0 compiles codegen.fox → codegen.c
+# - Link codegen.c with N1 modules (token, lexer, parser, checker)
+# - Test: N1 compile simple.fox → simple.c
+# - Validate: gcc simple.c → ./simple works
+# - Iterate: Add more expression/statement types
+# - Goal: N1 self-compile (N1 compiles codegen.fox)
+#
+# OUTPUT IDENTITY VERIFICATION:
+# When self-hosting is achieved:
+#   N0_output = N0 compile N1 → n1_by_n0.c
+#   N1_output = N1 compile N1 → n1_by_n1.c
+#   VERIFY: diff n1_by_n0.c n1_by_n1.c == 0 (bitwise identical)
+#
+# This verifies true self-hosting per user's definition.
+# ============================================================================

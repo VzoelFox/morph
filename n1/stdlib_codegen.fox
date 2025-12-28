@@ -1,0 +1,314 @@
+# N1 Standard Library - Codegen Utilities
+# Helper functions untuk code generation
+
+# ============================================================================
+# Integer to String Conversion
+# ============================================================================
+# Manual implementation karena Fox N1 belum punya built-in
+
+fungsi int_to_string(n int) string
+    # Handle zero case
+    jika n == 0
+        kembalikan "0"
+    akhir
+
+    # Handle negative numbers
+    var is_negative = salah
+    var num = n
+    jika n < 0
+        is_negative = benar
+        num = 0 - n  # Make positive
+    akhir
+
+    # Build digits in reverse
+    var result = ""
+    selama num > 0
+        var digit = num - ((num / 10) * 10)  # num % 10
+        num = num / 10
+
+        # Convert digit to character
+        jika digit == 0
+            result = "0" + result
+        akhir
+        jika digit == 1
+            result = "1" + result
+        akhir
+        jika digit == 2
+            result = "2" + result
+        akhir
+        jika digit == 3
+            result = "3" + result
+        akhir
+        jika digit == 4
+            result = "4" + result
+        akhir
+        jika digit == 5
+            result = "5" + result
+        akhir
+        jika digit == 6
+            result = "6" + result
+        akhir
+        jika digit == 7
+            result = "7" + result
+        akhir
+        jika digit == 8
+            result = "8" + result
+        akhir
+        jika digit == 9
+            result = "9" + result
+        akhir
+    akhir
+
+    # Add negative sign if needed
+    jika is_negative
+        result = "-" + result
+    akhir
+
+    kembalikan result
+akhir
+
+# ============================================================================
+# String Escaping for C
+# ============================================================================
+# Escape special characters for C string literals
+# N0 handles: \, ", \n, \r, \t
+
+fungsi char_at(s string, index int) string
+    kembalikan substring(s, index, index + 1)
+akhir
+
+fungsi string_escape(s string) string
+    var result = ""
+    var i = 0
+    var len = panjang(s)
+
+    selama i < len
+        var ch = char_at(s, i)
+
+        # Escape backslash (MUST be first!)
+        jika ch == "\\"
+            result = result + "\\\\"
+        lainnya
+            # Escape double quote
+            jika ch == "\""
+                result = result + "\\\""
+            lainnya
+                # Escape newline
+                jika ch == "\n"
+                    result = result + "\\n"
+                lainnya
+                    # Escape carriage return
+                    jika ch == "\r"
+                        result = result + "\\r"
+                    lainnya
+                        # Escape tab
+                        jika ch == "\t"
+                            result = result + "\\t"
+                        lainnya
+                            # Regular character - keep as is
+                            result = result + ch
+                        akhir
+                    akhir
+                akhir
+            akhir
+        akhir
+
+        i = i + 1
+    akhir
+
+    kembalikan result
+akhir
+
+# ============================================================================
+# C Identifier Validation
+# ============================================================================
+# Check if string is valid C identifier (for name mangling)
+
+fungsi is_alpha(ch string) bool
+    # Check if character is a-z or A-Z
+    # Simplified: just check common cases
+    kembalikan ch == "a" atau ch == "b" atau ch == "c" atau ch == "d" atau
+           ch == "e" atau ch == "f" atau ch == "g" atau ch == "h" atau
+           ch == "i" atau ch == "j" atau ch == "k" atau ch == "l" atau
+           ch == "m" atau ch == "n" atau ch == "o" atau ch == "p" atau
+           ch == "q" atau ch == "r" atau ch == "s" atau ch == "t" atau
+           ch == "u" atau ch == "v" atau ch == "w" atau ch == "x" atau
+           ch == "y" atau ch == "z" atau
+           ch == "A" atau ch == "B" atau ch == "C" atau ch == "D" atau
+           ch == "E" atau ch == "F" atau ch == "G" atau ch == "H" atau
+           ch == "I" atau ch == "J" atau ch == "K" atau ch == "L" atau
+           ch == "M" atau ch == "N" atau ch == "O" atau ch == "P" atau
+           ch == "Q" atau ch == "R" atau ch == "S" atau ch == "T" atau
+           ch == "U" atau ch == "V" atau ch == "W" atau ch == "X" atau
+           ch == "Y" atau ch == "Z"
+akhir
+
+fungsi is_digit(ch string) bool
+    kembalikan ch == "0" atau ch == "1" atau ch == "2" atau ch == "3" atau
+           ch == "4" atau ch == "5" atau ch == "6" atau ch == "7" atau
+           ch == "8" atau ch == "9"
+akhir
+
+fungsi is_valid_c_ident(name string) bool
+    var len = panjang(name)
+    jika len == 0
+        kembalikan salah
+    akhir
+
+    # First character must be letter or underscore
+    var first = char_at(name, 0)
+    jika first != "_" dan !is_alpha(first)
+        kembalikan salah
+    akhir
+
+    # Rest can be letter, digit, or underscore
+    var i = 1
+    selama i < len
+        var ch = char_at(name, i)
+        jika ch != "_" dan !is_alpha(ch) dan !is_digit(ch)
+            kembalikan salah
+        akhir
+        i = i + 1
+    akhir
+
+    kembalikan benar
+akhir
+
+# ============================================================================
+# Module Prefix Generation (Name Mangling)
+# ============================================================================
+# Convert module path to C-safe prefix
+# Example: "std/string" → "mph_std_string_"
+
+fungsi module_to_prefix(path string) string
+    var result = "mph_"
+    var i = 0
+    var len = panjang(path)
+
+    selama i < len
+        var ch = char_at(path, i)
+
+        # Convert / to _
+        jika ch == "/"
+            result = result + "_"
+        lainnya
+            # Keep alphanumeric and underscore
+            jika is_alpha(ch) atau is_digit(ch) atau ch == "_"
+                result = result + ch
+            lainnya
+                # Replace invalid chars with _
+                result = result + "_"
+            akhir
+        akhir
+
+        i = i + 1
+    akhir
+
+    # Add trailing underscore
+    result = result + "_"
+    kembalikan result
+akhir
+
+# ============================================================================
+# Uppercase Export Wrappers
+# ============================================================================
+
+fungsi IntToString(n int) string
+    kembalikan int_to_string(n)
+akhir
+
+fungsi StringEscape(s string) string
+    kembalikan string_escape(s)
+akhir
+
+fungsi IsValidCIdent(name string) bool
+    kembalikan is_valid_c_ident(name)
+akhir
+
+fungsi ModuleToPrefix(path string) string
+    kembalikan module_to_prefix(path)
+akhir
+
+# ============================================================================
+# Main (Test Suite)
+# ============================================================================
+
+fungsi main() void
+    native_print("╔══════════════════════════════════════╗\n")
+    native_print("║  Stdlib Codegen Utilities Test      ║\n")
+    native_print("╚══════════════════════════════════════╝\n\n")
+
+    # Test 1: int_to_string
+    native_print("[Test 1] int_to_string()\n")
+    var s1 = int_to_string(0)
+    native_print("  0 → \"")
+    native_print(s1)
+    native_print("\"\n")
+
+    var s2 = int_to_string(42)
+    native_print("  42 → \"")
+    native_print(s2)
+    native_print("\"\n")
+
+    var s3 = int_to_string(-123)
+    native_print("  -123 → \"")
+    native_print(s3)
+    native_print("\"\n")
+
+    var s4 = int_to_string(9876)
+    native_print("  9876 → \"")
+    native_print(s4)
+    native_print("\"\n\n")
+
+    # Test 2: string_escape
+    native_print("[Test 2] string_escape()\n")
+    var e1 = string_escape("hello")
+    native_print("  \"hello\" → \"")
+    native_print(e1)
+    native_print("\"\n")
+
+    var e2 = string_escape("hello\nworld")
+    native_print("  \"hello\\nworld\" → \"")
+    native_print(e2)
+    native_print("\"\n")
+
+    # Test 3: module_to_prefix
+    native_print("\n[Test 3] module_to_prefix()\n")
+    var p1 = module_to_prefix("token")
+    native_print("  \"token\" → \"")
+    native_print(p1)
+    native_print("\"\n")
+
+    var p2 = module_to_prefix("std/string")
+    native_print("  \"std/string\" → \"")
+    native_print(p2)
+    native_print("\"\n")
+
+    # Test 4: is_valid_c_ident
+    native_print("\n[Test 4] is_valid_c_ident()\n")
+    var v1 = is_valid_c_ident("foo")
+    native_print("  \"foo\" → ")
+    jika v1
+        native_print("valid\n")
+    lainnya
+        native_print("invalid\n")
+    akhir
+
+    var v2 = is_valid_c_ident("_bar123")
+    native_print("  \"_bar123\" → ")
+    jika v2
+        native_print("valid\n")
+    lainnya
+        native_print("invalid\n")
+    akhir
+
+    var v3 = is_valid_c_ident("123bad")
+    native_print("  \"123bad\" → ")
+    jika v3
+        native_print("valid\n")
+    lainnya
+        native_print("invalid\n")
+    akhir
+
+    native_print("\n✅ All utility functions tested\n")
+akhir

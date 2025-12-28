@@ -1,0 +1,25 @@
+# N1 Codegen - Minimal Test
+# Testing basic struct and function compilation
+
+struktur Codegen
+    output string
+    temp_index int
+akhir
+
+fungsi new_codegen() Codegen
+    kembalikan Codegen{output: "", temp_index: 0}
+akhir
+
+fungsi test_void_with_while() void
+    var i = 0
+    selama i < 5
+        i = i + 1
+    akhir
+akhir
+
+fungsi main() void
+    native_print("Codegen minimal test\n")
+    test_void_with_while()
+    var cg = new_codegen()
+    native_print("OK\n")
+akhir
