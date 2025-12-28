@@ -1,9 +1,9 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.73.0
+- **Versi**: 1.74.0
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
-- **Terakhir Diupdate**: 2025-12-28 16:15 UTC
+- **Terakhir Diupdate**: 2025-12-28 17:00 UTC
 - **Status**: Active
 
 ---
@@ -13,13 +13,31 @@ Dokumen ini adalah **single source of truth** untuk AI Agent dalam pengembangan 
 
 ---
 
-## 🔒 N0 COMPILER IS FROZEN! (2025-12-28 16:15 UTC)
+## 🔒 N0 COMPILER IS FROZEN! (2025-12-28 17:00 UTC)
 
 **CRITICAL NOTICE FOR ALL AI AGENTS:**
 
 ### ❄️ N0 v1.0.0 - PRODUCTION BASELINE (DO NOT MODIFY)
 
 **N0 compiler is now FROZEN** as the stable bootstrap compiler for N1 development.
+
+### 📋 IMPORT/EXPORT SYSTEM VERIFIED (2025-12-28 16:45 UTC)
+
+**User Concern**: "AI sebelumnya merombak import/export dan _env"
+**Investigation Result**: ✅ **TIDAK ADA PEROMBAKAN**
+
+**Fakta Lengkap**:
+- ✅ Import system **SUDAH ADA** sejak awal N0 (not added by AI)
+- ✅ Hanya **2 baris** berubah: tambah `"n1"` ke SearchPaths (beneficial)
+- ✅ `_env` adalah **closure feature**, bukan import system (unchanged)
+- ✅ Export automatic via **uppercase naming** (seperti Go)
+- ✅ Cycle detection + module caching **already built-in**
+- ❌ **NO** keyword `load` (uses `ambil` for import)
+- ❌ **NO** environment variable modifications
+
+**Complete Analysis**: See `N0_IMPORT_EXPORT_ANALYSIS.md` (13 sections, comprehensive)
+
+**Conclusion**: User concern ❌ TIDAK TERBUKTI. N0 import system stable dan complete.
 
 ### 🚫 DO NOT MODIFY N0 FILES:
 - ❌ `pkg/lexer/lexer.go`
