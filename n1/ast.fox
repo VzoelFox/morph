@@ -48,16 +48,6 @@ struktur Node
 akhir
 
 # ============================================================================
-# Program Node (Root)
-# ============================================================================
-struktur Program
-    base Node
-    statements_count int
-    # Note: In a real implementation, we'd have an array of statements
-    # For simplicity, we'll track count and process statements individually
-akhir
-
-# ============================================================================
 # Statement Nodes
 # ============================================================================
 struktur VarStatement
@@ -65,6 +55,8 @@ struktur VarStatement
     name string
     value_type string  # Optional type annotation
     has_value bool
+    value_literal string
+    value_token_type int
     # Note: value would be an Expression node
 akhir
 
@@ -91,6 +83,19 @@ struktur BlockStatement
     base Node
     statements_count int
     # Note: statements would be an array of Statement nodes
+akhir
+
+# ============================================================================
+# Program Node (Root)
+# ============================================================================
+struktur Program
+    base Node
+    statements_count int
+    var_statements_count int
+    var_statement VarStatement
+    has_var_statement bool
+    # Note: In a real implementation, we'd have an array of statements
+    # For simplicity, we'll track count and process statements individually
 akhir
 
 # ============================================================================
@@ -229,7 +234,14 @@ akhir
 
 fungsi MakeProgram() Program
     var base = MakeNode(NODE_PROGRAM, "program", 1, 1)
-    kembalikan Program{base: base, statements_count: 0}
+    var stmt = MakeVarStatement("-", "-", 1, 1)
+    kembalikan Program{
+        base: base,
+        statements_count: 0,
+        var_statements_count: 0,
+        var_statement: stmt,
+        has_var_statement: salah
+    }
 akhir
 
 fungsi MakeIdentifier(name string, line int, column int) Identifier
@@ -269,7 +281,7 @@ akhir
 
 fungsi MakeVarStatement(name string, type_str string, line int, column int) VarStatement
     var base = MakeNode(NODE_VAR_STATEMENT, "var", line, column)
-    kembalikan VarStatement{base: base, name: name, value_type: type_str, has_value: salah}
+    kembalikan VarStatement{base: base, name: name, value_type: type_str, has_value: salah, value_literal: "-", value_token_type: 0}
 akhir
 
 fungsi MakePrefixExpression(operator string, line int, column int) PrefixExpression

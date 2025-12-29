@@ -185,6 +185,8 @@ fungsi ParserParseVarStatement(p Parser) ast.VarStatement
         ParserNextToken(p)  # consume '='
         ParserNextToken(p)  # move to value
         stmt.has_value = benar
+        stmt.value_literal = p.current_token.literal
+        stmt.value_token_type = p.current_token.token_type
 
         # Note: In a real implementation, we'd parse the expression here
     akhir
@@ -216,6 +218,9 @@ fungsi ParserParseProgram(p Parser) ast.Program
         jika ParserCurrentTokenIs(p, token.TOKEN_VAR) == benar
             var stmt = ParserParseVarStatement(p)
             program.statements_count = program.statements_count + 1
+            program.var_statements_count = program.var_statements_count + 1
+            program.var_statement = stmt
+            program.has_var_statement = benar
 
             # Print parsed statement for debugging
             native_print("Parsed VarStatement: ")
