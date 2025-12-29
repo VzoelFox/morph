@@ -1,9 +1,9 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.88.1
+- **Versi**: 1.88.2
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
-- **Terakhir Diupdate**: 2025-12-29 12:23 UTC
+- **Terakhir Diupdate**: 2025-12-29 12:29 UTC
 - **Status**: Active
 
 ## 🎯 PRINSIP UTAMA: TELITI, HATI-HATI, JUJUR
@@ -312,7 +312,7 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
 
 #### Files Modified/Created:
 
-**n1/codegen.fox** (588 lines, checksum: `65097213a075eb6b0f9bf4f752c0b0c451d58dc4f8f98c070394d36ce0ce76c4`)
+**n1/codegen.fox** (594 lines, checksum: `d0a96fa6c9876252756250c8fa45bfaad32350757a945ac3a1b16b9f20d9de55`)
 - **Changes Made** (TELITI):
   1. ✅ Added `ambil "stdlib_codegen"` import for helper functions
   2. ✅ Implemented `codegen_compile_integer_literal()` - port dari N0 line 1506-1507
@@ -332,8 +332,9 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
   16. ✅ Added export wrappers: CompileExpressionStatement, CompileReturnStatement, CompilePrefix
   17. ✅ Added `codegen_resolve_builtin_name()` mapping for native_print, native_print_error, native_print_int, error, index, trim, split, substring
   18. ✅ Added `codegen_compile_builtin_call()` helper + export wrappers: ResolveBuiltinName, CompileBuiltinCall
-- **Lines Added**: +65 lines (from 523 → 588)
-- **Functional Logic**: +22 lines of working code (builtin mapping + helper)
+  19. ✅ Added C header prototypes for builtin helpers (native_print_error, string helpers, error_new)
+- **Lines Added**: +6 lines (from 588 → 594)
+- **Functional Logic**: +0 lines (header declarations only)
 - **Status**: ✅ Compiles successfully, all exports working
 
 **n1/test_codegen_literals.fox** (254 lines, checksum: `3edd5a9b7440c37f68cd9b8923b4f02cef580c9d3dd8402d5bbd8fcf6677fbd5`)
