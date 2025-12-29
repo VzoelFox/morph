@@ -263,6 +263,13 @@ fungsi codegen_compile_integer_literal(lit ast.IntegerLiteral) string
     kembalikan stdlib_codegen.IntToString(lit.value)
 akhir
 
+# FloatLiteral → C code
+# N0: case *parser.FloatLiteral: return e.Value, nil
+fungsi codegen_compile_float_literal(lit ast.FloatLiteral) string
+    # Float literal stored as string to preserve formatting
+    kembalikan lit.value_str
+akhir
+
 # StringLiteral → C code
 # N0: case *parser.StringLiteral:
 #       escaped := strings.ReplaceAll(e.Value, "\\", "\\\\")
@@ -386,6 +393,10 @@ akhir
 # Phase 1: Literal compilation exports
 fungsi CompileIntegerLiteral(lit ast.IntegerLiteral) string
     kembalikan codegen_compile_integer_literal(lit)
+akhir
+
+fungsi CompileFloatLiteral(lit ast.FloatLiteral) string
+    kembalikan codegen_compile_float_literal(lit)
 akhir
 
 fungsi CompileStringLiteral(lit ast.StringLiteral) string
