@@ -5,7 +5,8 @@
 # Import dependencies
 ambil "ast"
 ambil "token"
-# ambil "types"      # TODO: Re-enable when implementing type mapping
+# Type mapping uses N1 type system
+ambil "types"
 # ambil "checker"    # TODO: Re-enable when implementing type checking
 ambil "stdlib_codegen"
 
@@ -233,31 +234,84 @@ akhir
 # - array → MorphArray*
 # - map → MorphHash*
 
-# TODO: Re-enable when types module is integrated
-# fungsi codegen_map_type_to_c(t types.Type) string
-#     jika t.kind == types.KIND_INT
-#         kembalikan "mph_int"
-#     akhir
-#
-#     jika t.kind == types.KIND_FLOAT
-#         kembalikan "mph_float"
-#     akhir
-#
-#     jika t.kind == types.KIND_STRING
-#         kembalikan "MorphString*"
-#     akhir
-#
-#     jika t.kind == types.KIND_BOOL
-#         kembalikan "mph_int"
-#     akhir
-#
-#     jika t.kind == types.KIND_VOID
-#         kembalikan "void"
-#     akhir
-#
-#     # TODO: Handle complex types (struct, array, map, function)
-#     kembalikan "void*" # Fallback
-# akhir
+fungsi codegen_map_type_to_c(t types.Type) string
+    jika t.kind == types.KIND_INT
+        kembalikan "mph_int"
+    akhir
+
+    jika t.kind == types.KIND_FLOAT
+        kembalikan "mph_float"
+    akhir
+
+    jika t.kind == types.KIND_STRING
+        kembalikan "MorphString*"
+    akhir
+
+    jika t.kind == types.KIND_BOOL
+        kembalikan "mph_bool"
+    akhir
+
+    jika t.kind == types.KIND_VOID
+        kembalikan "void"
+    akhir
+
+    jika t.kind == types.KIND_FUNCTION
+        kembalikan "MorphClosure*"
+    akhir
+
+    jika t.kind == types.KIND_STRUCT
+        jika t.name != ""
+            kembalikan "mph_" + t.name + "*"
+        akhir
+        kembalikan "void*"
+    akhir
+
+    jika t.kind == types.KIND_INTERFACE
+        kembalikan "MorphInterface"
+    akhir
+
+    jika t.kind == types.KIND_ARRAY
+        kembalikan "MorphArray*"
+    akhir
+
+    jika t.kind == types.KIND_MAP
+        kembalikan "MorphMap*"
+    akhir
+
+    jika t.kind == types.KIND_POINTER
+        kembalikan "void*"
+    akhir
+
+    jika t.kind == types.KIND_MULTI
+        kembalikan "void*"
+    akhir
+
+    jika t.kind == types.KIND_ERROR
+        kembalikan "MorphError*"
+    akhir
+
+    jika t.kind == types.KIND_USER_ERROR
+        kembalikan "MorphError*"
+    akhir
+
+    jika t.kind == types.KIND_NULL
+        kembalikan "void*"
+    akhir
+
+    jika t.kind == types.KIND_UNKNOWN
+        kembalikan "void*"
+    akhir
+
+    jika t.kind == types.KIND_CHANNEL
+        kembalikan "MorphChannel*"
+    akhir
+
+    jika t.kind == types.KIND_MODULE
+        kembalikan "void*"
+    akhir
+
+    kembalikan "void*"
+akhir
 
 # ============================================================================
 # Helper: Generate Temporary Variable
@@ -592,10 +646,9 @@ fungsi CodegenCompile(cg Codegen, prog ast.Program) string
     kembalikan codegen_compile(cg, prog)
 akhir
 
-# TODO: Re-enable when types module is integrated
-# fungsi CodegenMapTypeToC(t types.Type) string
-#     kembalikan codegen_map_type_to_c(t)
-# akhir
+fungsi CodegenMapTypeToC(t types.Type) string
+    kembalikan codegen_map_type_to_c(t)
+akhir
 
 # Phase 1: Literal compilation exports
 fungsi CompileIntegerLiteral(lit ast.IntegerLiteral) string
