@@ -357,6 +357,63 @@ fungsi codegen_compile_prefix(operator string, right_code string) string
 akhir
 
 # ============================================================================
+# Builtin Call Compilation (Phase 2 - Simplified)
+# ============================================================================
+
+# Map builtin function name to C runtime symbol (subset of N0 builtins)
+fungsi codegen_resolve_builtin_name(name string) string
+    jika name == "native_print"
+        kembalikan "mph_native_print"
+    akhir
+
+    jika name == "native_print_error"
+        kembalikan "mph_native_print_error"
+    akhir
+
+    jika name == "native_print_int"
+        kembalikan "mph_native_print_int"
+    akhir
+
+    jika name == "error"
+        kembalikan "mph_error_new"
+    akhir
+
+    jika name == "index"
+        kembalikan "mph_string_index"
+    akhir
+
+    jika name == "trim"
+        kembalikan "mph_string_trim"
+    akhir
+
+    jika name == "split"
+        kembalikan "mph_string_split"
+    akhir
+
+    jika name == "substring"
+        kembalikan "mph_string_substring"
+    akhir
+
+    kembalikan ""
+akhir
+
+# Builtin Call → C code
+# N0: compileBuiltin(call, cName) prepends ctx to args.
+# N1 Simplified: pass pre-joined args code string.
+fungsi codegen_compile_builtin_call(name string, args_code string) string
+    var c_name = codegen_resolve_builtin_name(name)
+    jika c_name == ""
+        kembalikan ""
+    akhir
+
+    jika args_code == ""
+        kembalikan c_name + "(ctx)"
+    akhir
+
+    kembalikan c_name + "(ctx, " + args_code + ")"
+akhir
+
+# ============================================================================
 # Statement Compilation (Phase 2 - Simplified)
 # ============================================================================
 
@@ -439,6 +496,14 @@ akhir
 
 fungsi CompilePrefix(operator string, right_code string) string
     kembalikan codegen_compile_prefix(operator, right_code)
+akhir
+
+fungsi ResolveBuiltinName(name string) string
+    kembalikan codegen_resolve_builtin_name(name)
+akhir
+
+fungsi CompileBuiltinCall(name string, args_code string) string
+    kembalikan codegen_compile_builtin_call(name, args_code)
 akhir
 
 fungsi CompileVarStatement(name string, value_code string) string
