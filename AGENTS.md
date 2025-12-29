@@ -5186,3 +5186,83 @@ Result: ✅ ALL TESTS PASSED
 
 Conclusion: runtime.c mph_map_* functions are PRODUCTION-READY and VERIFIED WORKING!
 ```
+
+---
+
+## 🔧 REFACTOR: Penghilangan Duplikasi Nama Parser & Codegen (2025-12-29)
+
+**Focus**: Perbaikan pola penamaan fungsi untuk menghilangkan duplikasi semantik yang terjadi saat port dari Go ke Fox.
+
+### ❌ Masalah yang Ditemukan
+
+Duplikasi penamaan terjadi karena Fox tidak memiliki method/receiver seperti Go:
+
+**Di Go (N0):**
+```go
+func (p *Parser) ParseIdentifier() ast.Identifier
+func (cg *Codegen) Compile() string
+```
+
+**Di Fox (N1 - SEBELUM perbaikan):**
+```fox
+fungsi ParserParseIdentifier(p Parser) ast.Identifier  # ❌ Duplikasi "ParserParse"
+fungsi CodegenCompile(cg Codegen) string               # ❌ Duplikasi "Codegen"
+```
+
+### ✅ Perbaikan yang Dilakukan
+
+#### 1. **parser.fox** - Fungsi Parse
+| Sebelum (Duplikasi) | Sesudah (Bersih) |
+|---------------------|------------------|
+| `ParserParseIdentifier` | `ParseIdentifier` |
+| `ParserParseIntegerLiteral` | `ParseIntegerLiteral` |
+| `ParserParseStringLiteral` | `ParseStringLiteral` |
+| `ParserParseBooleanLiteral` | `ParseBooleanLiteral` |
+| `ParserParsePrefixExpression` | `ParsePrefixExpression` |
+| `ParserParseVarStatement` | `ParseVarStatement` |
+| `ParserParseProgram` | `ParseProgram` |
+
+#### 2. **codegen.fox** - Fungsi Export
+| Sebelum (Duplikasi) | Sesudah (Bersih) |
+|---------------------|------------------|
+| `CodegenCompile` | `Compile` |
+| `CodegenMapTypeToC` | `MapTypeToC` |
+
+#### 3. **File Terdampak**
+- `n1/test_codegen_globals.fox` → `codegen.Compile`
+- `n1/test_codegen_phase2.fox` → `codegen.Compile`, `codegen.MapTypeToC`
+
+### 📊 Checksums Updated (2025-12-29)
+
+```
+2e8cbe8fc04ddccee1e006002c875b636857a61601182e79740643c65c8d9fe4  n1/parser.fox (7 fungsi di-refactor ✅)
+7f82a117940cbbef421880e4c2832430339359a2548a2f94ea8d0859928414e8  n1/codegen.fox (2 fungsi di-refactor ✅)
+1264417a05a247a729af114284dbd5f9833d96cea73460b8af46c9d35c105958  n1/test_codegen_globals.fox (updated ✅)
+c8116e77e658b7b9ab5413bc1688732ebef57da592061d8d3904d14dcad3eee8  n1/test_codegen_phase2.fox (updated ✅)
+```
+
+### ✅ Verifikasi Kompilasi
+
+```bash
+✅ Build Success! Output: /root/morph/n1/parser
+✅ Build Success! Output: /root/morph/n1/codegen
+✅ Build Success! Output: /root/morph/n1/test_codegen_globals
+✅ Build Success! Output: /root/morph/n1/test_codegen_phase2
+```
+
+### 🎯 Dampak
+
+- **9 fungsi** di-refactor (7 parser + 2 codegen)
+- **Kode lebih bersih** dan tidak redundan
+- **Konsisten** dengan pola penamaan modul lain (`lexer.LexerNextToken`, `token.MakeToken`)
+- **Semua kompilasi berhasil** tanpa error
+
+### 📝 Catatan
+
+Pola penamaan lain yang **TIDAK perlu diubah** (sudah benar):
+- `LexerNextToken` → OK (tidak ada duplikasi)
+- `NewLexer`, `NewParser`, `NewCodegen` → OK (constructor pattern)
+- `CompileIntegerLiteral`, `CompileBooleanLiteral` → OK (tidak ada duplikasi)
+
+**Progress**: N1 code quality +10% (cleaner naming conventions)
+

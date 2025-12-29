@@ -122,42 +122,42 @@ akhir
 # ============================================================================
 # Expression Parsing
 # ============================================================================
-fungsi ParserParseIdentifier(p Parser) ast.Identifier
+fungsi ParseIdentifier(p Parser) ast.Identifier
     kembalikan ast.MakeIdentifier(p.current_token.literal, p.current_token.line, p.current_token.column)
 akhir
 
-fungsi ParserParseIntegerLiteral(p Parser) ast.IntegerLiteral
+fungsi ParseIntegerLiteral(p Parser) ast.IntegerLiteral
     # Simplified integer parsing - convert string to int
     var value = StringToInt(p.current_token.literal)
     kembalikan ast.MakeIntegerLiteral(value, p.current_token.literal, p.current_token.line, p.current_token.column)
 akhir
 
-fungsi ParserParseStringLiteral(p Parser) ast.StringLiteral
+fungsi ParseStringLiteral(p Parser) ast.StringLiteral
     kembalikan ast.MakeStringLiteral(p.current_token.literal, p.current_token.line, p.current_token.column)
 akhir
 
-fungsi ParserParseBooleanLiteral(p Parser) ast.BooleanLiteral
+fungsi ParseBooleanLiteral(p Parser) ast.BooleanLiteral
     var value = ParserCurrentTokenIs(p, token.TOKEN_BENAR)
     kembalikan ast.MakeBooleanLiteral(value, p.current_token.literal, p.current_token.line, p.current_token.column)
 akhir
 
-fungsi ParserParseFloatLiteral(p Parser) ast.FloatLiteral
+fungsi ParseFloatLiteral(p Parser) ast.FloatLiteral
     kembalikan ast.MakeFloatLiteral(p.current_token.literal, p.current_token.line, p.current_token.column)
 akhir
 
-fungsi ParserParseCharLiteral(p Parser) ast.CharLiteral
+fungsi ParseCharLiteral(p Parser) ast.CharLiteral
     var value = lexer.CharToAscii(p.current_token.literal)
     kembalikan ast.MakeCharLiteral(value, p.current_token.literal, p.current_token.line, p.current_token.column)
 akhir
 
-fungsi ParserParseNullLiteral(p Parser) ast.NullLiteral
+fungsi ParseNullLiteral(p Parser) ast.NullLiteral
     kembalikan ast.MakeNullLiteral(p.current_token.line, p.current_token.column)
 akhir
 
 # ============================================================================
 # Simplified Expression Parsing
 # ============================================================================
-fungsi ParserParsePrefixExpression(p Parser) ast.PrefixExpression
+fungsi ParsePrefixExpression(p Parser) ast.PrefixExpression
     var expr = ast.MakePrefixExpression(p.current_token.literal, p.current_token.line, p.current_token.column)
 
     ParserNextToken(p)
@@ -171,7 +171,7 @@ akhir
 # ============================================================================
 # Statement Parsing
 # ============================================================================
-fungsi ParserParseVarStatement(p Parser) ast.VarStatement
+fungsi ParseVarStatement(p Parser) ast.VarStatement
     var line = p.current_token.line
     var column = p.current_token.column
 
@@ -224,12 +224,12 @@ akhir
 # ============================================================================
 # Program Parsing
 # ============================================================================
-fungsi ParserParseProgram(p Parser) ast.Program
+fungsi ParseProgram(p Parser) ast.Program
     var program = ast.MakeProgram()
 
     selama ParserCurrentTokenIs(p, token.TOKEN_EOF) == salah
         jika ParserCurrentTokenIs(p, token.TOKEN_VAR) == benar
-            var stmt = ParserParseVarStatement(p)
+            var stmt = ParseVarStatement(p)
             program.statements_count = program.statements_count + 1
             program.var_statements_count = program.var_statements_count + 1
             program.var_statement = stmt

@@ -655,11 +655,11 @@ fungsi NewCodegen() Codegen
     kembalikan new_codegen()
 akhir
 
-fungsi CodegenCompile(cg Codegen, prog ast.Program) string
+fungsi Compile(cg Codegen, prog ast.Program) string
     kembalikan codegen_compile(cg, prog)
 akhir
 
-fungsi CodegenMapTypeToC(t types.Type) string
+fungsi MapTypeToC(t types.Type) string
     kembalikan codegen_map_type_to_c(t)
 akhir
 

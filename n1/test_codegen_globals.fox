@@ -20,7 +20,7 @@ fungsi test_global_bool_var() void
     program.has_var_statement = benar
 
     var cg = codegen.NewCodegen()
-    var output = codegen.CodegenCompile(cg, program)
+    var output = codegen.Compile(cg, program)
 
     native_print("  Output:\n")
     native_print(output)

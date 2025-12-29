@@ -199,11 +199,11 @@ fungsi test_type_mapping() void
     var struct_type = types.StructType("User")
     var channel_type = types.ChannelType()
 
-    var int_code = codegen.CodegenMapTypeToC(int_type)
-    var string_code = codegen.CodegenMapTypeToC(string_type)
-    var bool_code = codegen.CodegenMapTypeToC(bool_type)
-    var struct_code = codegen.CodegenMapTypeToC(struct_type)
-    var channel_code = codegen.CodegenMapTypeToC(channel_type)
+    var int_code = codegen.MapTypeToC(int_type)
+    var string_code = codegen.MapTypeToC(string_type)
+    var bool_code = codegen.MapTypeToC(bool_type)
+    var struct_code = codegen.MapTypeToC(struct_type)
+    var channel_code = codegen.MapTypeToC(channel_type)
 
     native_print("  int → \"")
     native_print(int_code)
@@ -237,7 +237,7 @@ akhir
 # Test 9: Multi-Pass Compilation Log
 # ============================================================================
 # Expected behavior:
-#   CodegenCompile emits pass log comments in order:
+#   Compile emits pass log comments in order:
 #     // pass1_collect_globals
 #     // pass2_analyze_captures
 #     // pass3_compile_struct_types
@@ -249,7 +249,7 @@ fungsi test_multipass_log() void
 
     var prog = ast.MakeProgram()
     var cg = codegen.NewCodegen()
-    var output = codegen.CodegenCompile(cg, prog)
+    var output = codegen.Compile(cg, prog)
     native_print(output)
 
     native_print("  ✅ Multi-pass log test printed\n\n")
