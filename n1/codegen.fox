@@ -270,6 +270,13 @@ fungsi codegen_compile_float_literal(lit ast.FloatLiteral) string
     kembalikan lit.value_str
 akhir
 
+# CharLiteral → C code
+# N0: case *parser.CharLiteral: return fmt.Sprintf("%d", e.Value), nil
+fungsi codegen_compile_char_literal(lit ast.CharLiteral) string
+    # Char literal represented as integer ASCII code
+    kembalikan stdlib_codegen.IntToString(lit.value)
+akhir
+
 # StringLiteral → C code
 # N0: case *parser.StringLiteral:
 #       escaped := strings.ReplaceAll(e.Value, "\\", "\\\\")
@@ -294,6 +301,12 @@ fungsi codegen_compile_boolean_literal(lit ast.BooleanLiteral) string
         kembalikan "1"
     akhir
     kembalikan "0"
+akhir
+
+# NullLiteral → C code
+# N0: case *parser.NullLiteral: return "NULL", nil
+fungsi codegen_compile_null_literal(lit ast.NullLiteral) string
+    kembalikan "NULL"
 akhir
 
 # ============================================================================
@@ -399,12 +412,20 @@ fungsi CompileFloatLiteral(lit ast.FloatLiteral) string
     kembalikan codegen_compile_float_literal(lit)
 akhir
 
+fungsi CompileCharLiteral(lit ast.CharLiteral) string
+    kembalikan codegen_compile_char_literal(lit)
+akhir
+
 fungsi CompileStringLiteral(lit ast.StringLiteral) string
     kembalikan codegen_compile_string_literal(lit)
 akhir
 
 fungsi CompileBooleanLiteral(lit ast.BooleanLiteral) string
     kembalikan codegen_compile_boolean_literal(lit)
+akhir
+
+fungsi CompileNullLiteral(lit ast.NullLiteral) string
+    kembalikan codegen_compile_null_literal(lit)
 akhir
 
 # Phase 2: Expression & statement compilation exports

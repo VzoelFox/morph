@@ -1,5 +1,6 @@
 # N1 Codegen - Literal Compilation Tests
-# Test cases untuk Phase 1: IntegerLiteral, FloatLiteral, StringLiteral, BooleanLiteral
+# Test cases untuk Phase 1: IntegerLiteral, FloatLiteral, CharLiteral, NullLiteral,
+# StringLiteral, BooleanLiteral
 
 ambil "ast"
 ambil "codegen"
@@ -97,7 +98,58 @@ fungsi test_float_literal() void
 akhir
 
 # ============================================================================
-# Test 3: String Literal Compilation
+# Test 3: Char Literal Compilation
+# ============================================================================
+# Expected behavior (from N0 compiler.go line 1510-1511):
+#   CharLiteral → ASCII integer string
+#
+# Examples:
+#   'A' → "65"
+#   '0' → "48"
+
+fungsi test_char_literal() void
+    native_print("[Test 3] Char Literal Compilation\n")
+
+    # Test case 3.1: Capital letter
+    var lit1 = ast.MakeCharLiteral(65, "A", 1, 1)
+    var result1 = codegen.CompileCharLiteral(lit1)
+    native_print("  'A' → \"")
+    native_print(result1)
+    native_print("\"\n")
+    # EXPECTED: "65"
+
+    # Test case 3.2: Digit character
+    var lit2 = ast.MakeCharLiteral(48, "0", 1, 1)
+    var result2 = codegen.CompileCharLiteral(lit2)
+    native_print("  '0' → \"")
+    native_print(result2)
+    native_print("\"\n")
+    # EXPECTED: "48"
+
+    native_print("  ✅ Char literal tests passed\n\n")
+akhir
+
+# ============================================================================
+# Test 4: Null Literal Compilation
+# ============================================================================
+# Expected behavior (from N0 compiler.go line 1516-1517):
+#   null → "NULL"
+
+fungsi test_null_literal() void
+    native_print("[Test 4] Null Literal Compilation\n")
+
+    var lit = ast.MakeNullLiteral(1, 1)
+    var result = codegen.CompileNullLiteral(lit)
+    native_print("  null → \"")
+    native_print(result)
+    native_print("\"\n")
+    # EXPECTED: "NULL"
+
+    native_print("  ✅ Null literal tests passed\n\n")
+akhir
+
+# ============================================================================
+# Test 5: String Literal Compilation
 # ============================================================================
 # Expected behavior (from N0 compiler.go line 1497-1505):
 #   StringLiteral → mph_string_new(ctx, "escaped_value")
@@ -110,7 +162,7 @@ akhir
 #   "say \"hi\"" → "mph_string_new(ctx, \"say \\\"hi\\\"\")"
 
 fungsi test_string_literal() void
-    native_print("[Test 3] String Literal Compilation\n")
+    native_print("[Test 5] String Literal Compilation\n")
 
     # Test case 2.1: Simple string
     var lit1 = ast.MakeStringLiteral("hello", 1, 1)
@@ -148,7 +200,7 @@ fungsi test_string_literal() void
 akhir
 
 # ============================================================================
-# Test 4: Boolean Literal Compilation
+# Test 6: Boolean Literal Compilation
 # ============================================================================
 # Expected behavior (from N0 compiler.go line 1512-1516):
 #   BooleanLiteral(true) → "1"
@@ -159,7 +211,7 @@ akhir
 #   salah → "0"
 
 fungsi test_boolean_literal() void
-    native_print("[Test 4] Boolean Literal Compilation\n")
+    native_print("[Test 6] Boolean Literal Compilation\n")
 
     # Test case 3.1: True value
     var lit_true = ast.MakeBooleanLiteral(benar, "benar", 1, 1)
@@ -191,6 +243,8 @@ fungsi main() void
 
     test_integer_literal()
     test_float_literal()
+    test_char_literal()
+    test_null_literal()
     test_string_literal()
     test_boolean_literal()
 
