@@ -1,9 +1,9 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.88.4
+- **Versi**: 1.88.5
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
-- **Terakhir Diupdate**: 2025-12-29 13:30 UTC
+- **Terakhir Diupdate**: 2025-12-29 13:18 UTC
 - **Status**: Active
 
 ## 🎯 PRINSIP UTAMA: TELITI, HATI-HATI, JUJUR
@@ -316,7 +316,7 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
 
 #### Files Modified/Created:
 
-**n1/codegen.fox** (709 lines, checksum: `c2f9d24e3dfa5ba61cb83daf60ef2f46fe5a8437ffa3ef7287e4776d663035bf`)
+**n1/codegen.fox** (725 lines, checksum: `064f2db76ed7abc239fbae7c874e7dc79e2ff7a2fc706c52df47ec8dd7296eab`)
 - **Changes Made** (TELITI):
   1. ✅ Added `ambil "stdlib_codegen"` import for helper functions
   2. ✅ Implemented `codegen_compile_integer_literal()` - port dari N0 line 1506-1507
@@ -341,8 +341,10 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
   21. ✅ Emitted pass log section in generated C output for verification
   22. ✅ Added token-aware global var compilation (typed defaults + literal mapping)
   23. ✅ Wired `Program.var_statement` into pass1 globals collection
-- **Lines Added**: +73 lines (from 636 → 709)
-- **Functional Logic**: +73 lines (var statement storage + typed globals)
+  24. ✅ Split global var declaration vs initialization and emit init in entry_body
+  25. ✅ Added var statement helpers for type/value extraction from AST
+- **Lines Added**: +89 lines (from 636 → 725)
+- **Functional Logic**: +89 lines (var statement storage + typed globals + entry init)
 - **Status**: ✅ Compiles successfully, all exports working
 
 **n1/test_codegen_literals.fox** (254 lines, checksum: `3edd5a9b7440c37f68cd9b8923b4f02cef580c9d3dd8402d5bbd8fcf6677fbd5`)

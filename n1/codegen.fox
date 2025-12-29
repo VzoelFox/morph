@@ -154,7 +154,8 @@ akhir
 fungsi codegen_pass_collect_globals(cg Codegen, prog ast.Program) void
     codegen_record_pass(cg, "pass1_collect_globals")
     jika prog.has_var_statement
-        cg.global_defs = cg.global_defs + codegen_compile_var_statement_from_stmt(prog.var_statement)
+        cg.global_defs = cg.global_defs + codegen_compile_global_var_declaration(prog.var_statement)
+        cg.entry_body = cg.entry_body + codegen_compile_global_var_initialization(prog.var_statement)
     akhir
 akhir
 
@@ -520,21 +521,36 @@ fungsi codegen_compile_var_statement_typed(name string, value_code string, c_typ
     kembalikan "\t" + c_type + " " + name + " = " + value_code + ";\n"
 akhir
 
-fungsi codegen_compile_var_statement_from_stmt(stmt ast.VarStatement) string
-    var c_type = codegen_var_type_from_annotation(stmt.value_type)
-    var value_code = ""
-
-    jika stmt.has_value
-        jika stmt.value_type != "-"
-            c_type = codegen_var_type_from_annotation(stmt.value_type)
-        lainnya
-            c_type = codegen_var_type_from_token(stmt.value_token_type)
-        akhir
-        value_code = codegen_value_code_from_token(stmt.value_token_type, stmt.value_literal)
-    lainnya
-        value_code = codegen_default_value_for_annotation(stmt.value_type)
+fungsi codegen_var_type_from_statement(stmt ast.VarStatement) string
+    jika stmt.value_type != "-"
+        kembalikan codegen_var_type_from_annotation(stmt.value_type)
     akhir
+    jika stmt.has_value
+        kembalikan codegen_var_type_from_token(stmt.value_token_type)
+    akhir
+    kembalikan codegen_var_type_from_annotation(stmt.value_type)
+akhir
 
+fungsi codegen_var_value_code_from_statement(stmt ast.VarStatement) string
+    jika stmt.has_value
+        kembalikan codegen_value_code_from_token(stmt.value_token_type, stmt.value_literal)
+    akhir
+    kembalikan codegen_default_value_for_annotation(stmt.value_type)
+akhir
+
+fungsi codegen_compile_global_var_declaration(stmt ast.VarStatement) string
+    var c_type = codegen_var_type_from_statement(stmt)
+    kembalikan c_type + " " + stmt.name + ";\n"
+akhir
+
+fungsi codegen_compile_global_var_initialization(stmt ast.VarStatement) string
+    var value_code = codegen_var_value_code_from_statement(stmt)
+    kembalikan "\t" + stmt.name + " = " + value_code + ";\n"
+akhir
+
+fungsi codegen_compile_var_statement_from_stmt(stmt ast.VarStatement) string
+    var c_type = codegen_var_type_from_statement(stmt)
+    var value_code = codegen_var_value_code_from_statement(stmt)
     kembalikan codegen_compile_var_statement_typed(stmt.name, value_code, c_type)
 akhir
 
