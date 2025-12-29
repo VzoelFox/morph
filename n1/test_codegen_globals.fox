@@ -1,0 +1,40 @@
+# N1 Codegen - Global Var Tests
+# Verify global var declaration + initialization for annotated bool
+
+ambil "ast"
+ambil "codegen"
+ambil "token"
+
+fungsi test_global_bool_var() void
+    native_print("[Test] Global Bool Var Compilation\n")
+
+    var program = ast.MakeProgram()
+    var stmt = ast.MakeVarStatement("flag", "bool", 1, 1)
+    stmt.has_value = benar
+    stmt.value_literal = "benar"
+    stmt.value_token_type = token.TOKEN_BENAR
+
+    program.statements_count = 1
+    program.var_statements_count = 1
+    program.var_statement = stmt
+    program.has_var_statement = benar
+
+    var cg = codegen.NewCodegen()
+    var output = codegen.CodegenCompile(cg, program)
+
+    native_print("  Output:\n")
+    native_print(output)
+    native_print("\n")
+
+    # EXPECTED (excerpt):
+    # mph_bool flag;\n
+    # EXPECTED (excerpt):
+    # \tflag = 1;\n
+
+    native_print("  ✅ Global bool var test completed\n\n")
+akhir
+
+fungsi main() int
+    test_global_bool_var()
+    kembalikan 0
+akhir

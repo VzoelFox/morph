@@ -1,9 +1,9 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.88.6
+- **Versi**: 1.88.7
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
-- **Terakhir Diupdate**: 2025-12-29 13:26 UTC
+- **Terakhir Diupdate**: 2025-12-29 13:52 UTC
 - **Status**: Active
 
 ## 🎯 PRINSIP UTAMA: TELITI, HATI-HATI, JUJUR
@@ -316,7 +316,7 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
 
 #### Files Modified/Created:
 
-**n1/codegen.fox** (778 lines, checksum: `9ba37f71939bacf4564ad9c8933f7f95e4313cc0ed2ad15a655c280c80e680bf`)
+**n1/codegen.fox** (787 lines, checksum: `5fbf635b084f33ce8ceb5f3f6657238b042a108830cda0a811781bc6898eac17`)
 - **Changes Made** (TELITI):
   1. ✅ Added `ambil "stdlib_codegen"` import for helper functions
   2. ✅ Implemented `codegen_compile_integer_literal()` - port dari N0 line 1506-1507
@@ -343,8 +343,10 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
   23. ✅ Wired `Program.var_statement` into pass1 globals collection
   24. ✅ Split global var declaration vs initialization and emit init in entry_body
   25. ✅ Added var statement helpers for type/value extraction from AST
-- **Lines Added**: +53 lines (from 725 → 778)
-- **Functional Logic**: +53 lines (type mapping + export wrapper)
+  26. ✅ Updated bool var type mapping to use `mph_bool` for annotations and literal tokens
+  27. ✅ Added explicit int/float literal handling in token-based var initialization
+- **Lines Added**: +62 lines (from 725 → 787)
+- **Functional Logic**: +62 lines (type mapping + export wrapper + literal mapping tweaks)
 - **Status**: ✅ Compiles successfully, all exports working
 
 **n1/test_codegen_literals.fox** (254 lines, checksum: `3edd5a9b7440c37f68cd9b8923b4f02cef580c9d3dd8402d5bbd8fcf6677fbd5`)
@@ -358,7 +360,7 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
   - Test 5: StringLiteral (4 cases) - hello, newline, empty, quotes ✅
   - Test 6: BooleanLiteral (2 cases) - benar→"1", salah→"0" ✅
 
-**n1/test_codegen_phase2.fox** (272 lines, checksum: `cf995853ecea0a02cfbf4b4492afd7d864ef3e5a9f87b53e54ca00f424f80907`)
+**n1/test_codegen_phase2.fox** (280 lines, checksum: `e2e2e67e567ad4ae8fca6f643e4f39d6a34b37f2fb5a08892993cc94bf4fe216`)
 - **UPDATED** - TDD test suite for Phase 2 helpers
 - **Test Coverage**: 9 test suites, 19 test cases total
 - **Test Results**: ✅ **19/19 TESTS PASSING** (100%)
@@ -369,8 +371,13 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
   - Test 5: ReturnStatement → "\\treturn;\\n", "\\treturn 42;\\n" ✅
   - Test 6: PrefixExpression → "(!x)", "(-5)" ✅
   - Test 7: Builtin calls → "mph_native_print(ctx, ...)", "mph_native_print_int(ctx, 42)", "mph_error_new(ctx, ...)", "mph_string_index(ctx, a, b)" ✅
-  - Test 8: Type mapping → int/string/struct/channel ✅
+  - Test 8: Type mapping → int/string/bool/struct/channel ✅
   - Test 9: Multi-pass log output → pass1..pass5 order ✅
+
+**n1/test_codegen_globals.fox** (40 lines, checksum: `b9b9db25473425e3dc135187fea95d02ef4db4730504f36060cbbb2114a7fd7e`)
+- **NEW FILE** - TDD test for global var bool declaration + initialization
+- **Test Coverage**: 1 test (global bool var)
+- **Test Results**: ✅ **1/1 TESTS PASSING** (100%)
 
 #### Implementation Details (Port dari N0):
 
@@ -455,9 +462,9 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
 
 **Key Metrics**:
 - N0 compiler.go: 2,809 lines, 60 functions
-- N1 codegen.fox: 523 lines, 31 functions (helpers + exports; compile_program still TODO)
+- N1 codegen.fox: 787 lines, 55 functions (helpers + exports; compile_program still TODO)
 - Executable logic: ~104 lines (3.7% of N0, was 1.8%)
-- Test coverage: 27/27 tests passing (100%)
+- Test coverage: 37/37 tests passing (100%)
 
 #### What Can N1 Compile Now? (HONEST):
 

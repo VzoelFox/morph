@@ -186,6 +186,7 @@ akhir
 # Expected behavior (simplified Phase 2):
 #   IntType → "mph_int"
 #   StringType → "MorphString*"
+#   BoolType → "mph_bool"
 #   StructType("User") → "mph_User*"
 #   ChannelType → "MorphChannel*"
 
@@ -194,11 +195,13 @@ fungsi test_type_mapping() void
 
     var int_type = types.IntType()
     var string_type = types.StringType()
+    var bool_type = types.BoolType()
     var struct_type = types.StructType("User")
     var channel_type = types.ChannelType()
 
     var int_code = codegen.CodegenMapTypeToC(int_type)
     var string_code = codegen.CodegenMapTypeToC(string_type)
+    var bool_code = codegen.CodegenMapTypeToC(bool_type)
     var struct_code = codegen.CodegenMapTypeToC(struct_type)
     var channel_code = codegen.CodegenMapTypeToC(channel_type)
 
@@ -211,6 +214,11 @@ fungsi test_type_mapping() void
     native_print(string_code)
     native_print("\"\n")
     # EXPECTED: "MorphString*"
+
+    native_print("  bool → \"")
+    native_print(bool_code)
+    native_print("\"\n")
+    # EXPECTED: "mph_bool"
 
     native_print("  struct User → \"")
     native_print(struct_code)
