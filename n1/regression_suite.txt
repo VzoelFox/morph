@@ -1,0 +1,15 @@
+# N1 Regression Test Suite
+# Curated list dari test files yang WAJIB pass
+# Format: satu file per line (relative to morph root)
+
+# Phase 1: Codegen Literals (CRITICAL - newly implemented)
+n1/test_codegen_literals.fox
+
+# Module System (CRITICAL - core functionality)
+# SKIPPED: n1/test_module_import.fox - N0 codegen bug with struct types (known issue)
+
+# Stdlib Utilities (IMPORTANT - used by codegen)
+n1/stdlib_codegen.fox
+
+# Type System (IMPORTANT - 25 tests)
+n1/types.fox

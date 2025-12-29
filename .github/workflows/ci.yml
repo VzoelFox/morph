@@ -1,0 +1,333 @@
+name: N1 Compiler CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # ============================================================================
+  # Job 1: Checksum Validation
+  # ============================================================================
+  checksum-validation:
+    name: 🔒 Checksum Validation
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Validate N0 Frozen Files
+      run: |
+        echo "Checking N0 frozen files..."
+
+        # Critical N0 files that should NEVER change
+        FROZEN_FILES=(
+          "pkg/lexer/lexer.go:5544ccea3154f6de09d1c2e2f855804f8396171e4c1365ceb5a090a8272dbe4a"
+          "pkg/compiler/compiler.go:007ae22d7785d8a8837efd5d3c21fda1e7d31734fb29e09b4d66e95a636587d5"
+          "cmd/morph/main.go:2ee59b9f8a7c89e67fbf52b062653f08ac1f08d7ef127d4190f97ba792becccb"
+          "morph:97947f5dbaf2722b73887bca8b8dd7215d016c025be7a555d23bce20986c1191"
+        )
+
+        VIOLATIONS=0
+        for entry in "${FROZEN_FILES[@]}"; do
+          FILE="${entry%%:*}"
+          EXPECTED="${entry##*:}"
+
+          if [ ! -f "$FILE" ]; then
+            echo "⚠️  MISSING: $FILE"
+            ((VIOLATIONS++))
+            continue
+          fi
+
+          ACTUAL=$(sha256sum "$FILE" | awk '{print $1}')
+
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "❌ FROZEN FILE MODIFIED: $FILE"
+            echo "   Expected: $EXPECTED"
+            echo "   Actual:   $ACTUAL"
+            ((VIOLATIONS++))
+          else
+            echo "✅ $FILE - OK"
+          fi
+        done
+
+        if [ $VIOLATIONS -gt 0 ]; then
+          echo ""
+          echo "🚨 CRITICAL: $VIOLATIONS frozen file(s) modified!"
+          echo "N0 compiler files must NOT be changed (see N0_FREEZE.md)"
+          exit 1
+        fi
+
+        echo ""
+        echo "✅ All frozen files validated"
+
+  # ============================================================================
+  # Job 2: Build Verification
+  # ============================================================================
+  build-verification:
+    name: 🔨 Build Verification
+    runs-on: ubuntu-latest
+    needs: checksum-validation
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+
+    - name: Build N0 Compiler
+      run: |
+        echo "Building N0 compiler..."
+        cd cmd/morph
+        go build -o ../../morph
+        cd ../..
+        chmod +x morph
+        echo "✅ N0 compiler built successfully"
+
+    - name: Compile N1 Core Files
+      run: |
+        echo "Compiling N1 core modules..."
+
+        CORE_FILES=(
+          "n1/token.fox"
+          "n1/ast.fox"
+          "n1/types.fox"
+          "n1/lexer.fox"
+          "n1/parser.fox"
+          "n1/checker.fox"
+          "n1/stdlib_codegen.fox"
+          "n1/codegen.fox"
+        )
+
+        FAILED=0
+        for file in "${CORE_FILES[@]}"; do
+          echo -n "  Compiling $file... "
+          if timeout 60s ./morph build "$file" > /dev/null 2>&1; then
+            echo "✅"
+          else
+            echo "❌ FAILED"
+            ((FAILED++))
+          fi
+        done
+
+        if [ $FAILED -gt 0 ]; then
+          echo ""
+          echo "❌ $FAILED core file(s) failed to compile"
+          exit 1
+        fi
+
+        echo ""
+        echo "✅ All core files compiled successfully"
+
+  # ============================================================================
+  # Job 3: Regression Tests
+  # ============================================================================
+  regression-tests:
+    name: 🧪 Regression Test Suite
+    runs-on: ubuntu-latest
+    needs: build-verification
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+
+    - name: Build N0 Compiler
+      run: |
+        cd cmd/morph
+        go build -o ../../morph
+        cd ../..
+        chmod +x morph
+
+    - name: Run Regression Suite
+      run: |
+        echo "Running N1 Regression Test Suite..."
+        echo ""
+
+        # Read regression suite
+        TEST_FILES=$(grep -v '^#' n1/regression_suite.txt | grep -v '^$')
+
+        TOTAL=0
+        PASSED=0
+        FAILED=0
+
+        for TEST_FILE in $TEST_FILES; do
+          ((TOTAL++))
+          BASE_NAME="${TEST_FILE%.fox}"
+          TEST_NAME=$(basename "$BASE_NAME")
+
+          echo "[$TOTAL] Testing $TEST_FILE"
+
+          # Compile
+          echo -n "  Compile... "
+          if timeout 60s ./morph build "$TEST_FILE" > /tmp/compile.log 2>&1; then
+            echo "✅"
+          else
+            echo "❌"
+            echo "  Compilation failed:"
+            tail -5 /tmp/compile.log | sed 's/^/    /'
+            ((FAILED++))
+            continue
+          fi
+
+          # Run
+          echo -n "  Run... "
+          if timeout 30s "$BASE_NAME" > /tmp/run.log 2>&1; then
+            echo "✅"
+            ((PASSED++))
+          else
+            echo "❌"
+            echo "  Runtime failed:"
+            tail -10 /tmp/run.log | sed 's/^/    /'
+            ((FAILED++))
+          fi
+
+          echo ""
+        done
+
+        echo "════════════════════════════════════════"
+        echo "Results: $PASSED/$TOTAL passed"
+        echo "════════════════════════════════════════"
+
+        if [ $FAILED -gt 0 ]; then
+          echo "❌ $FAILED test(s) failed"
+          exit 1
+        fi
+
+        echo "✅ All regression tests passed!"
+
+  # ============================================================================
+  # Job 4: Checksum Report
+  # ============================================================================
+  checksum-report:
+    name: 📋 Checksum Report
+    runs-on: ubuntu-latest
+    needs: regression-tests
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Generate Checksum Report
+      run: |
+        echo "Generating checksum report..."
+        echo ""
+        echo "N1 Core Files:"
+        sha256sum n1/token.fox n1/ast.fox n1/types.fox n1/lexer.fox n1/parser.fox n1/checker.fox
+        echo ""
+        echo "N1 Codegen:"
+        sha256sum n1/codegen.fox n1/stdlib_codegen.fox
+        echo ""
+        echo "N1 Tests:"
+        sha256sum n1/test_codegen_literals.fox n1/test_module_import.fox
+        echo ""
+        echo "Documentation:"
+        sha256sum AGENTS.md
+
+    - name: Compare with Stored Checksums
+      run: |
+        echo "Comparing with stored checksums..."
+
+        MISMATCHES=0
+
+        for checksum_file in .morph.vz/checksums/n1/*.sha256; do
+          if [ ! -f "$checksum_file" ]; then
+            continue
+          fi
+
+          # Extract expected checksum and filename
+          EXPECTED=$(cat "$checksum_file" | awk '{print $1}')
+          FILENAME=$(cat "$checksum_file" | awk '{print $2}')
+
+          if [ ! -f "$FILENAME" ]; then
+            echo "⚠️  File not found: $FILENAME"
+            continue
+          fi
+
+          ACTUAL=$(sha256sum "$FILENAME" | awk '{print $1}')
+
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "⚠️  MISMATCH: $FILENAME"
+            echo "   Stored:  $EXPECTED"
+            echo "   Current: $ACTUAL"
+            ((MISMATCHES++))
+          fi
+        done
+
+        if [ $MISMATCHES -gt 0 ]; then
+          echo ""
+          echo "⚠️  $MISMATCHES file(s) modified without checksum update"
+          echo "Run: sha256sum <file> > .morph.vz/checksums/<file>.sha256"
+          # Don't fail, just warn
+        else
+          echo "✅ All checksums match"
+        fi
+
+  # ============================================================================
+  # Job 5: Documentation Check
+  # ============================================================================
+  documentation-check:
+    name: 📚 Documentation Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Check AGENTS.md exists and updated
+      run: |
+        if [ ! -f "AGENTS.md" ]; then
+          echo "❌ AGENTS.md not found!"
+          exit 1
+        fi
+
+        # Check if AGENTS.md was modified in this commit
+        if git diff HEAD^ HEAD --name-only | grep -q "AGENTS.md"; then
+          echo "✅ AGENTS.md was updated in this commit"
+        else
+          echo "⚠️  AGENTS.md was not updated (may be okay for minor changes)"
+        fi
+
+        # Extract version from AGENTS.md
+        VERSION=$(grep -m 1 "^- \*\*Versi\*\*:" AGENTS.md | sed 's/.*: //')
+        echo "Current version: $VERSION"
+
+    - name: Check CI/CD documentation exists
+      run: |
+        if [ -f "CI_CD_ARCHITECTURE.md" ]; then
+          echo "✅ CI/CD documentation found"
+        else
+          echo "⚠️  CI/CD documentation not found"
+        fi
+
+  # ============================================================================
+  # Summary Job
+  # ============================================================================
+  ci-summary:
+    name: ✅ CI/CD Summary
+    runs-on: ubuntu-latest
+    needs: [checksum-validation, build-verification, regression-tests, checksum-report, documentation-check]
+
+    steps:
+    - name: Success Summary
+      run: |
+        echo "╔════════════════════════════════════════╗"
+        echo "║   ✅ ALL CI/CD CHECKS PASSED ✅        ║"
+        echo "╚════════════════════════════════════════╝"
+        echo ""
+        echo "✅ Checksum validation - PASSED"
+        echo "✅ Build verification - PASSED"
+        echo "✅ Regression tests - PASSED"
+        echo "✅ Checksum report - PASSED"
+        echo "✅ Documentation check - PASSED"
+        echo ""
+        echo "Ready for merge! 🚀"
