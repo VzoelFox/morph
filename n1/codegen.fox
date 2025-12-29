@@ -27,6 +27,7 @@ struktur Codegen
     prototypes string
     func_defs string
     entry_body string
+    pass_log string
 
     # State tracking
     temp_index int
@@ -51,6 +52,7 @@ fungsi new_codegen() Codegen
         prototypes: "",
         func_defs: "",
         entry_body: "",
+        pass_log: "",
         temp_index: 0,
         has_main: salah,
         indent_level: 0,
@@ -77,6 +79,7 @@ fungsi codegen_compile(cg Codegen, prog ast.Program) string
     cg.prototypes = ""
     cg.func_defs = ""
     cg.entry_body = ""
+    cg.pass_log = ""
     cg.temp_index = 0
     cg.has_main = salah
 
@@ -94,14 +97,21 @@ fungsi codegen_compile(cg Codegen, prog ast.Program) string
     cg.output = cg.output + "MorphString* mph_string_substring(MorphContext* ctx, MorphString* s, mph_int start, mph_int end);\n"
     cg.output = cg.output + "MorphError* mph_error_new(MorphContext* ctx, MorphString* msg);\n\n"
 
-    # TODO: Multi-pass compilation
+    # Multi-pass compilation
     # Pass 1: Collect globals (scan all var statements at top level)
     # Pass 2: Analyze captures (for closures - Fox N1 might not support yet)
     # Pass 3: Compile struct types (generate C struct definitions)
     # Pass 4: Generate RTTI (runtime type info for structs)
-
     # Pass 5: Compile main program
-    codegen_compile_program(cg, prog, "mph_")
+    codegen_pass_collect_globals(cg, prog)
+    codegen_pass_analyze_captures(cg, prog)
+    codegen_pass_compile_struct_types(cg, prog)
+    codegen_pass_compile_struct_rtti(cg, prog)
+    codegen_pass_compile_module(cg, prog, "mph_")
+
+    cg.output = cg.output + "// Pass Log\n"
+    cg.output = cg.output + cg.pass_log
+    cg.output = cg.output + "\n"
 
     # Pass 6: Assemble final output
     cg.output = cg.output + "// Type Definitions\n"
@@ -131,6 +141,38 @@ fungsi codegen_compile(cg Codegen, prog ast.Program) string
     cg.output = cg.output + "}\n"
 
     kembalikan cg.output
+akhir
+
+# ============================================================================
+# Multi-Pass Helpers
+# ============================================================================
+fungsi codegen_record_pass(cg Codegen, name string) void
+    cg.pass_log = cg.pass_log + "// " + name + "\n"
+akhir
+
+fungsi codegen_pass_collect_globals(cg Codegen, prog ast.Program) void
+    codegen_record_pass(cg, "pass1_collect_globals")
+    # TODO: Scan program statements for global var declarations
+akhir
+
+fungsi codegen_pass_analyze_captures(cg Codegen, prog ast.Program) void
+    codegen_record_pass(cg, "pass2_analyze_captures")
+    # TODO: Analyze closures for captured variables
+akhir
+
+fungsi codegen_pass_compile_struct_types(cg Codegen, prog ast.Program) void
+    codegen_record_pass(cg, "pass3_compile_struct_types")
+    # TODO: Generate struct type definitions
+akhir
+
+fungsi codegen_pass_compile_struct_rtti(cg Codegen, prog ast.Program) void
+    codegen_record_pass(cg, "pass4_compile_struct_rtti")
+    # TODO: Emit runtime type info for structs
+akhir
+
+fungsi codegen_pass_compile_module(cg Codegen, prog ast.Program, prefix string) void
+    codegen_record_pass(cg, "pass5_compile_module")
+    codegen_compile_program(cg, prog, prefix)
 akhir
 
 # ============================================================================
