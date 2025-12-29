@@ -9,116 +9,77 @@ on:
 
 jobs:
   build-and-test:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, morph-vps]
 
     steps:
-    - name: Setup SSH
-      env:
-        SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_KEY }}
-        SSH_HOST: ${{ secrets.VPS_HOST }}
-        SSH_USER: ${{ secrets.VPS_USER }}
-      run: |
-        mkdir -p ~/.ssh
-        echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
-        chmod 600 ~/.ssh/id_ed25519
-        ssh-keyscan -H $SSH_HOST >> ~/.ssh/known_hosts
-
-    - name: Pull Latest Code on VPS
-      env:
-        SSH_HOST: ${{ secrets.VPS_HOST }}
-        SSH_USER: ${{ secrets.VPS_USER }}
-      run: |
-        ssh -i ~/.ssh/id_ed25519 $SSH_USER@$SSH_HOST << 'EOF'
-          cd /root/morph
-          git fetch origin
-          git reset --hard origin/main
-          git clean -fd
-          echo "✅ Code updated to latest commit"
-        EOF
+    - name: Checkout Code
+      uses: actions/checkout@v4
+      with:
+        clean: true
 
     - name: Build Morph Compiler
-      env:
-        SSH_HOST: ${{ secrets.VPS_HOST }}
-        SSH_USER: ${{ secrets.VPS_USER }}
       run: |
-        ssh -i ~/.ssh/id_ed25519 $SSH_USER@$SSH_HOST << 'EOF'
-          cd /root/morph
+        cd ${{ github.workspace }}
 
-          # Build morph menggunakan Go
-          if [ -f "/tmp/go/bin/go" ]; then
-            echo "Building morph with Go..."
-            CGO_ENABLED=0 /tmp/go/bin/go build -o morph
+        echo "Building morph with Go..."
+        CGO_ENABLED=0 /tmp/go/bin/go build -o morph
 
-            if [ -f "./morph" ]; then
-              echo "✅ Morph compiler built successfully"
-              ./morph --version || echo "Version: morph compiler"
-            else
-              echo "❌ Build failed: morph binary not found"
-              exit 1
-            fi
-          else
-            echo "❌ Go compiler not found at /tmp/go/bin/go"
-            exit 1
-          fi
-        EOF
+        if [ -f "./morph" ]; then
+          echo "✅ Morph compiler built successfully"
+          ./morph --version || echo "Version: morph compiler"
+          ls -lh morph
+        else
+          echo "❌ Build failed: morph binary not found"
+          exit 1
+        fi
 
     - name: Run Basic Tests
-      env:
-        SSH_HOST: ${{ secrets.VPS_HOST }}
-        SSH_USER: ${{ secrets.VPS_USER }}
       run: |
-        ssh -i ~/.ssh/id_ed25519 $SSH_USER@$SSH_HOST << 'EOF'
-          cd /root/morph
+        cd ${{ github.workspace }}
 
-          echo "Running basic tests..."
+        echo "Running basic tests..."
 
-          # Test 1: Compile a simple fox file
-          if [ -f "n1/types.fox" ]; then
-            echo "Test: Compiling n1/types.fox"
-            timeout 30s ./morph build n1/types.fox || echo "⚠️  types.fox compilation timeout/failed"
-          fi
+        # Test 1: Compile a simple fox file
+        if [ -f "n1/types.fox" ]; then
+          echo "Test: Compiling n1/types.fox"
+          timeout 30s ./morph build n1/types.fox || echo "⚠️  types.fox compilation timeout/failed"
+        fi
 
-          # Test 2: Check generated C files
+        # Test 2: Check generated C files
+        echo ""
+        echo "Checking generated C files:"
+        ls -lh *.c 2>/dev/null | head -5 || echo "No C files generated yet"
+
+        # Test 3: Run compiled tests if available
+        if [ -f "n1/types" ]; then
           echo ""
-          echo "Checking generated C files:"
-          ls -lh *.c 2>/dev/null | head -5 || echo "No C files generated yet"
+          echo "Test: Running n1/types"
+          timeout 10s ./n1/types || echo "⚠️  n1/types execution failed"
+        fi
 
-          # Test 3: Run compiled tests if available
-          if [ -f "n1/types" ]; then
-            echo ""
-            echo "Test: Running n1/types"
-            timeout 10s ./n1/types || echo "⚠️  n1/types execution failed"
-          fi
-
-          echo ""
-          echo "✅ Basic tests completed"
-        EOF
+        echo ""
+        echo "✅ Basic tests completed"
 
     - name: Cleanup Build Artifacts
       if: always()
-      env:
-        SSH_HOST: ${{ secrets.VPS_HOST }}
-        SSH_USER: ${{ secrets.VPS_USER }}
       run: |
-        ssh -i ~/.ssh/id_ed25519 $SSH_USER@$SSH_HOST << 'EOF'
-          cd /root/morph
+        cd ${{ github.workspace }}
 
-          echo "Cleaning up build artifacts..."
+        echo "Cleaning up build artifacts..."
 
-          # Remove generated C files
-          rm -f *.c 2>/dev/null || true
+        # Remove generated C files
+        rm -f *.c 2>/dev/null || true
 
-          # Remove compiled binaries (keep morph compiler)
-          find n1/ -type f -executable -delete 2>/dev/null || true
+        # Remove compiled binaries (keep morph compiler)
+        find n1/ -type f -executable -delete 2>/dev/null || true
 
-          # Keep only source files
-          git clean -fdX
+        # Keep only source files
+        git clean -fdX
 
-          echo "✅ Cleanup completed"
-          echo ""
-          echo "Remaining files in /root/morph:"
-          ls -lh | head -10
-        EOF
+        echo "✅ Cleanup completed"
+        echo ""
+        echo "Remaining files:"
+        ls -lh | head -10
 
     - name: Report Results
       if: always()
@@ -126,8 +87,9 @@ jobs:
         echo "================================================"
         echo "Build and Test Summary"
         echo "================================================"
-        echo "Repository: VzoelFox/morph"
-        echo "Branch: main"
-        echo "VPS: Vultr (144.202.18.239)"
+        echo "Repository: ${{ github.repository }}"
+        echo "Branch: ${{ github.ref_name }}"
+        echo "Commit: ${{ github.sha }}"
+        echo "Runner: vultr-vps-morph (self-hosted)"
         echo "Status: Check steps above for detailed results"
         echo "================================================"
