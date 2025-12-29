@@ -1,9 +1,9 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.81.0
+- **Versi**: 1.82.0
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
-- **Terakhir Diupdate**: 2025-12-29 04:00 UTC
+- **Terakhir Diupdate**: 2025-12-29 04:26 UTC
 - **Status**: Active
 
 ## 🎯 PRINSIP UTAMA: TELITI, HATI-HATI, JUJUR
@@ -115,7 +115,7 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
 
 #### 4. n1/lexer.fox - ✅ VERIFIED WORKING (UPDATED!)
 ```
-4957c109a73aae1baf3b4d347f53a66f9d569d768023c623d82c01a783439839  n1/lexer.fox
+555cde5f467f6e137a86237c455ee4b57aeef58b789ad6421122f1dfb1cc71d7  n1/lexer.fox
 ```
 - **Lines**: 605
 - **Status**: ✅ Compiles successfully (UPDATED 2025-12-28 20:30 UTC)
@@ -164,7 +164,7 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
 
 #### 6. n1/checker.fox - ✅ VERIFIED WORKING (FIXED!)
 ```
-f008861bbc4845e0fa29f3a550a40c1235635d9e092688bb4da278292715a527  n1/checker.fox
+82eb55fd8a843955045effb32666461c2545c97c51ffc701fd1431c9fd059298  n1/checker.fox
 ```
 - **Lines**: 257
 - **Status**: ✅ Compiles successfully (FIXED 2025-12-28 22:00 UTC)
@@ -212,6 +212,49 @@ f008861bbc4845e0fa29f3a550a40c1235635d9e092688bb4da278292715a527  n1/checker.fox
 - **Export System**: FULLY WORKING - all module dependencies resolved
 - **Module Compatibility**: All files use consistent export/import pattern
 - **Robustness**: Strong foundation, coordinated fixes successful
+
+---
+
+## 🚀 CI/CD INFRASTRUCTURE (2025-12-29 04:26 UTC)
+
+### GitHub Actions Self-Hosted Runner on VPS
+
+**Setup**: Self-hosted runner installed di Vultr VPS (32GB RAM)
+**Status**: ✅ ACTIVE & VERIFIED WORKING
+**Purpose**: Bypass GitHub billing issue, build & test di environment real
+
+#### Workflow File: `.github/workflows/morph-build-test.yml`
+```
+139276cd531b9cfa0bccc4715b1fb01938a00b57c6c12a8e1f09d7b99d5f92b9  .github/workflows/morph-build-test.yml
+```
+- **Lines**: 95
+- **Status**: ✅ Active and working
+- **Runner**: Self-hosted on vultr-vps-morph (144.202.18.239)
+- **Triggers**: Push to main, PR to main, manual dispatch
+- **Build Time**: ~9 seconds (last verified: 04:25:32-04:25:41 UTC)
+- **Features**:
+  - Auto checkout code
+  - Build morph compiler dengan Go (CGO_ENABLED=0)
+  - Run basic tests (compile n1/types.fox)
+  - Auto cleanup artifacts (.c files, binaries)
+  - Real environment testing (32GB RAM, no "killed" errors)
+
+**Benefits**:
+- ✅ **Free**: Bypass GitHub Actions billing
+- ✅ **Real RAM**: 32GB VPS, tidak ada OOM kills
+- ✅ **Fast**: Direct build di VPS (9 detik)
+- ✅ **Portable**: Develop dari perangkat manapun, build di VPS
+- ✅ **Auto cleanup**: Artifacts removed setelah test
+
+**Verification**:
+- Last successful build: commit 92e37e3 (2025-12-29 04:25:41 UTC)
+- Binary output: morph (3.5M) - built successfully
+- Test results: All basic tests passing
+
+**Access**:
+- GitHub Actions: https://github.com/VzoelFox/morph/actions
+- Runner service: `/opt/actions-runner/` on VPS
+- Working directory: `/opt/actions-runner/_work/morph/morph/`
 
 ---
 
