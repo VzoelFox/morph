@@ -22,7 +22,7 @@ jobs:
         cd ${{ github.workspace }}
 
         echo "Building morph with Go..."
-        CGO_ENABLED=0 /tmp/go/bin/go build -o morph
+        CGO_ENABLED=0 /tmp/go/bin/go build -o morph ./cmd/morph
 
         if [ -f "./morph" ]; then
           echo "✅ Morph compiler built successfully"
