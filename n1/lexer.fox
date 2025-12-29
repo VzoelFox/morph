@@ -352,6 +352,11 @@ fungsi char_to_ascii(char_str string) int
     kembalikan 0  # Unknown character
 akhir
 
+# Exported helper for other modules
+fungsi CharToAscii(char_str string) int
+    kembalikan char_to_ascii(char_str)
+akhir
+
 fungsi is_letter(ch int) bool
     # a-z
     jika ch >= 97
@@ -446,21 +451,35 @@ akhir
 # ============================================================================
 # Read Number
 # ============================================================================
-fungsi lexer_read_number(l Lexer) string
+fungsi lexer_read_number_token(l Lexer, line int, column int) token.Token
     var position = l.position
+    var token_type = token.TOKEN_INT
+
     selama is_digit(l.ch)
         lexer_read_char(l)
     akhir
-    kembalikan substring(l.input, position, l.position)
+
+    jika l.ch == 46  # '.'
+        jika is_digit(lexer_peek_char(l))
+            token_type = token.TOKEN_FLOAT
+            lexer_read_char(l)  # consume '.'
+            selama is_digit(l.ch)
+                lexer_read_char(l)
+            akhir
+        akhir
+    akhir
+
+    var literal = substring(l.input, position, l.position)
+    kembalikan token.MakeToken(token_type, literal, line, column)
 akhir
 
 # ============================================================================
 # Read String
 # ============================================================================
 fungsi lexer_read_string(l Lexer) string
-    var position = l.position + 1  # Skip opening quote
     lexer_read_char(l)  # Move past opening quote
 
+    var output = ""
     var should_continue = benar
     selama should_continue
         jika l.ch == 34  # Closing quote
@@ -469,12 +488,79 @@ fungsi lexer_read_string(l Lexer) string
             jika l.ch == 0  # EOF
                 should_continue = salah
             lainnya
+                jika l.ch == 92  # '\\'
+                    lexer_read_char(l)
+                    jika l.ch == 110  # 'n'
+                        output = output + "\n"
+                    lainnya
+                        jika l.ch == 116  # 't'
+                            output = output + "\t"
+                        lainnya
+                            jika l.ch == 114  # 'r'
+                                output = output + "\r"
+                            lainnya
+                                jika l.ch == 34  # '"'
+                                    output = output + "\""
+                                lainnya
+                                    jika l.ch == 92  # '\\'
+                                        output = output + "\\"
+                                    lainnya
+                                        output = output + substring(l.input, l.position, l.position + 1)
+                                    akhir
+                                akhir
+                            akhir
+                        akhir
+                    akhir
+                lainnya
+                    output = output + substring(l.input, l.position, l.position + 1)
+                akhir
                 lexer_read_char(l)
             akhir
         akhir
     akhir
-    
-    kembalikan substring(l.input, position, l.position)
+
+    kembalikan output
+akhir
+
+fungsi lexer_read_char_token(l Lexer, line int, column int) token.Token
+    lexer_read_char(l)  # Consume opening '
+
+    var literal = ""
+    jika l.ch == 92  # '\\'
+        lexer_read_char(l)
+        jika l.ch == 110  # 'n'
+            literal = "\n"
+        lainnya
+            jika l.ch == 116  # 't'
+                literal = "\t"
+            lainnya
+                jika l.ch == 114  # 'r'
+                    literal = "\r"
+                lainnya
+                    jika l.ch == 39  # '\''
+                        literal = "'"
+                    lainnya
+                        jika l.ch == 92  # '\\'
+                            literal = "\\"
+                        lainnya
+                            literal = substring(l.input, l.position, l.position + 1)
+                        akhir
+                    akhir
+                akhir
+            akhir
+        akhir
+    lainnya
+        literal = substring(l.input, l.position, l.position + 1)
+    akhir
+
+    lexer_read_char(l)  # Consume char
+
+    jika l.ch != 39  # Closing '\''
+        kembalikan token.MakeToken(token.TOKEN_ILLEGAL, "Unterminated char literal", line, column)
+    akhir
+
+    lexer_read_char(l)  # Consume closing '\''
+    kembalikan token.MakeToken(token.TOKEN_CHAR, literal, line, column)
 akhir
 
 # ============================================================================
@@ -588,6 +674,9 @@ fungsi LexerNextToken(l Lexer) token.Token
     atau_jika l.ch == 34  # "
         var str_literal = lexer_read_string(l)
         tok = token.MakeToken(token.TOKEN_STRING, str_literal, l.line, l.column)
+    atau_jika l.ch == 39  # '
+        tok = lexer_read_char_token(l, l.line, l.column)
+        kembalikan tok
     atau_jika l.ch == 0  # EOF
         tok = token.MakeToken(token.TOKEN_EOF, "-", l.line, l.column)
     lainnya
@@ -598,8 +687,7 @@ fungsi LexerNextToken(l Lexer) token.Token
             kembalikan tok  # Don't advance character, already done in read_identifier
         lainnya
             jika is_digit(l.ch)
-                var literal = lexer_read_number(l)
-                tok = token.MakeToken(token.TOKEN_INT, literal, l.line, l.column)
+                tok = lexer_read_number_token(l, l.line, l.column)
                 kembalikan tok  # Don't advance character, already done in read_number
             lainnya
                 tok = token.MakeToken(token.TOKEN_ILLEGAL, "-", l.line, l.column)
