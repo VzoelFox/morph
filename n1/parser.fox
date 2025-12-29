@@ -141,6 +141,19 @@ fungsi ParserParseBooleanLiteral(p Parser) ast.BooleanLiteral
     kembalikan ast.MakeBooleanLiteral(value, p.current_token.literal, p.current_token.line, p.current_token.column)
 akhir
 
+fungsi ParserParseFloatLiteral(p Parser) ast.FloatLiteral
+    kembalikan ast.MakeFloatLiteral(p.current_token.literal, p.current_token.line, p.current_token.column)
+akhir
+
+fungsi ParserParseCharLiteral(p Parser) ast.CharLiteral
+    var value = lexer.CharToAscii(p.current_token.literal)
+    kembalikan ast.MakeCharLiteral(value, p.current_token.literal, p.current_token.line, p.current_token.column)
+akhir
+
+fungsi ParserParseNullLiteral(p Parser) ast.NullLiteral
+    kembalikan ast.MakeNullLiteral(p.current_token.line, p.current_token.column)
+akhir
+
 # ============================================================================
 # Simplified Expression Parsing
 # ============================================================================
@@ -245,48 +258,48 @@ akhir
 # Utility Functions
 # ============================================================================
 fungsi StringToInt(s string) int
-    # Simplified string to int conversion
-    # This is a basic implementation for common cases
-    jika s == "0"
+    var length = panjang(s)
+    jika length == 0
         kembalikan 0
     akhir
-    jika s == "1"
-        kembalikan 1
+
+    var i = 0
+    var sign = 1
+    jika substring(s, 0, 1) == "-"
+        sign = -1
+        i = 1
     akhir
-    jika s == "2"
-        kembalikan 2
+
+    var result = 0
+    selama i < length
+        var ch = substring(s, i, i + 1)
+        jika ch == "0"
+            result = result * 10 + 0
+        atau_jika ch == "1"
+            result = result * 10 + 1
+        atau_jika ch == "2"
+            result = result * 10 + 2
+        atau_jika ch == "3"
+            result = result * 10 + 3
+        atau_jika ch == "4"
+            result = result * 10 + 4
+        atau_jika ch == "5"
+            result = result * 10 + 5
+        atau_jika ch == "6"
+            result = result * 10 + 6
+        atau_jika ch == "7"
+            result = result * 10 + 7
+        atau_jika ch == "8"
+            result = result * 10 + 8
+        atau_jika ch == "9"
+            result = result * 10 + 9
+        lainnya
+            kembalikan 0
+        akhir
+        i = i + 1
     akhir
-    jika s == "3"
-        kembalikan 3
-    akhir
-    jika s == "4"
-        kembalikan 4
-    akhir
-    jika s == "5"
-        kembalikan 5
-    akhir
-    jika s == "6"
-        kembalikan 6
-    akhir
-    jika s == "7"
-        kembalikan 7
-    akhir
-    jika s == "8"
-        kembalikan 8
-    akhir
-    jika s == "9"
-        kembalikan 9
-    akhir
-    jika s == "10"
-        kembalikan 10
-    akhir
-    jika s == "42"
-        kembalikan 42
-    akhir
-    jika s == "100"
-        kembalikan 100
-    akhir
-    kembalikan 0  # Default for unknown numbers
+
+    kembalikan result * sign
 akhir
 
 # ============================================================================
