@@ -1,9 +1,9 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.83.0
+- **Versi**: 1.84.0
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
-- **Terakhir Diupdate**: 2025-12-29 04:40 UTC
+- **Terakhir Diupdate**: 2025-12-29 06:30 UTC
 - **Status**: Active
 
 ## 🎯 PRINSIP UTAMA: TELITI, HATI-HATI, JUJUR
@@ -310,7 +310,7 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
 
 #### Files Modified/Created:
 
-**n1/codegen.fox** (449 lines, checksum: `61ebd22771a60a849aac7847632c47ff1aa589c775b43a70d60b5fecc7f06802`)
+**n1/codegen.fox** (474 lines, checksum: `e28dbe9b8725cbad1aaa4f6793d351828bdd1b6e3c92d38e81db78f394bc87b9`)
 - **Changes Made** (TELITI):
   1. ✅ Added `ambil "stdlib_codegen"` import for helper functions
   2. ✅ Implemented `codegen_compile_integer_literal()` - port dari N0 line 1506-1507
@@ -321,7 +321,10 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
   7. ✅ Fixed `codegen_next_temp()` to generate unique temp names via `stdlib_codegen.IntToString`
   8. ⚠️ Temporarily commented out `types` and `checker` imports (will re-enable in Phase 2+)
   9. ⚠️ Temporarily commented out `codegen_map_type_to_c()` (needs types module)
-- **Lines Added**: +59 lines (from 390 → 449)
+  10. ✅ Added simplified `codegen_compile_expression_statement()` helper
+  11. ✅ Added simplified `codegen_compile_return_statement()` helper
+  12. ✅ Added export wrappers: CompileExpressionStatement, CompileReturnStatement
+- **Lines Added**: +84 lines (from 390 → 474)
 - **Functional Logic**: +43 lines of working code (literals + basic helpers)
 - **Status**: ✅ Compiles successfully, all exports working
 
@@ -333,13 +336,15 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
   - Test 2: StringLiteral (4 cases) - hello, newline, empty, quotes ✅
   - Test 3: BooleanLiteral (2 cases) - benar→"1", salah→"0" ✅
 
-**n1/test_codegen_phase2.fox** (92 lines, checksum: `a854e482bd2003234820f9f7e1f07f4dc0ee667d3c853d60533319d4eb6d2c00`)
+**n1/test_codegen_phase2.fox** (137 lines, checksum: `dbc26158b9819d622a53ab5f36bb562fdb3fa1969ea807c00c21ba44bb19c9a2`)
 - **NEW FILE** - TDD test suite for Phase 2 helpers
-- **Test Coverage**: 3 test suites, 5 test cases total
-- **Test Results**: ✅ **5/5 TESTS PASSING** (100%)
+- **Test Coverage**: 5 test suites, 9 test cases total
+- **Test Results**: ✅ **9/9 TESTS PASSING** (100%)
   - Test 1: Identifier → "x" ✅
   - Test 2: Infix arithmetic/logical → "(1 + 2)", "(a && b)", "(a || b)" ✅
   - Test 3: VarStatement → "\\tmph_int x = 42;\\n" ✅
+  - Test 4: ExpressionStatement → "\\tnative_print(\\\"ok\\\");\\n" ✅
+  - Test 5: ReturnStatement → "\\treturn;\\n", "\\treturn 42;\\n" ✅
 
 #### Implementation Details (Port dari N0):
 
@@ -402,7 +407,7 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
 
 **Key Metrics**:
 - N0 compiler.go: 2,809 lines, 60 functions
-- N1 codegen.fox: 449 lines, 17 functions (6 fully working, 11 TODO)
+- N1 codegen.fox: 474 lines, 25 functions (helpers + exports; compile_program still TODO)
 - Executable logic: ~95 lines (3.3% of N0, was 1.8%)
 - Test coverage: 14/14 tests passing (100%)
 
