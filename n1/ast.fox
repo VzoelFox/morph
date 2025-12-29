@@ -34,6 +34,8 @@ var NODE_IMPORT_STATEMENT = 26
 var NODE_INTERFACE_STATEMENT = 27
 var NODE_BREAK_STATEMENT = 28
 var NODE_CONTINUE_STATEMENT = 29
+var NODE_CHAR_LITERAL = 30
+var NODE_NULL_LITERAL = 31
 
 # ============================================================================
 # Base Node Structure
@@ -117,6 +119,15 @@ akhir
 struktur BooleanLiteral
     base Node
     value bool
+akhir
+
+struktur CharLiteral
+    base Node
+    value int
+akhir
+
+struktur NullLiteral
+    base Node
 akhir
 
 struktur PrefixExpression
@@ -231,6 +242,11 @@ fungsi MakeIntegerLiteral(value int, literal string, line int, column int) Integ
     kembalikan IntegerLiteral{base: base, value: value}
 akhir
 
+fungsi MakeFloatLiteral(value_str string, line int, column int) FloatLiteral
+    var base = MakeNode(NODE_FLOAT_LITERAL, value_str, line, column)
+    kembalikan FloatLiteral{base: base, value_str: value_str}
+akhir
+
 fungsi MakeStringLiteral(value string, line int, column int) StringLiteral
     var base = MakeNode(NODE_STRING_LITERAL, value, line, column)
     kembalikan StringLiteral{base: base, value: value}
@@ -239,6 +255,16 @@ akhir
 fungsi MakeBooleanLiteral(value bool, literal string, line int, column int) BooleanLiteral
     var base = MakeNode(NODE_BOOLEAN_LITERAL, literal, line, column)
     kembalikan BooleanLiteral{base: base, value: value}
+akhir
+
+fungsi MakeCharLiteral(value int, literal string, line int, column int) CharLiteral
+    var base = MakeNode(NODE_CHAR_LITERAL, literal, line, column)
+    kembalikan CharLiteral{base: base, value: value}
+akhir
+
+fungsi MakeNullLiteral(line int, column int) NullLiteral
+    var base = MakeNode(NODE_NULL_LITERAL, "null", line, column)
+    kembalikan NullLiteral{base: base}
 akhir
 
 fungsi MakeVarStatement(name string, type_str string, line int, column int) VarStatement
@@ -347,6 +373,12 @@ fungsi node_type_string(node_type int) string
     akhir
     jika node_type == NODE_BOOLEAN_LITERAL
         kembalikan "BooleanLiteral"
+    akhir
+    jika node_type == NODE_CHAR_LITERAL
+        kembalikan "CharLiteral"
+    akhir
+    jika node_type == NODE_NULL_LITERAL
+        kembalikan "NullLiteral"
     akhir
     jika node_type == NODE_ARRAY_LITERAL
         kembalikan "ArrayLiteral"

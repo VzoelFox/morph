@@ -1,9 +1,9 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.85.0
+- **Versi**: 1.88.0
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
-- **Terakhir Diupdate**: 2025-12-29 07:10 UTC
+- **Terakhir Diupdate**: 2025-12-29 12:13 UTC
 - **Status**: Active
 
 ## 🎯 PRINSIP UTAMA: TELITI, HATI-HATI, JUJUR
@@ -74,14 +74,16 @@ c09917c8361974968ad2c0db21b8cd7052d58d44b1e929b96dca4269644c5e7e  n1/token.fox
 
 #### 2. n1/ast.fox - ✅ VERIFIED WORKING (UPDATED!)
 ```
-18de1aae83d9f540e5dd35134bbc32ff5b1f0bec1d0a33da851bf4a5aa71b197  n1/ast.fox
+3652489695d7456279e801e9fa9ee394497f85bac977f59cc14ba3148d4733f0  n1/ast.fox
 ```
-- **Lines**: 439
-- **Status**: ✅ Compiles successfully (UPDATED 2025-12-28 20:30 UTC)
+- **Lines**: 471
+- **Status**: ✅ Compiles successfully (UPDATED 2025-12-29 12:13 UTC)
 - **Exports**: AST node structures (29 types), Make* constructors (exported), visitor pattern
 - **Changes Made** (TELITI):
   - All `fungsi make_*` → `fungsi Make*` for export
   - All internal calls `make_node` → `MakeNode`
+  - Added `MakeFloatLiteral()` constructor for float literal codegen tests
+  - Added `MakeCharLiteral()` and `MakeNullLiteral()` constructors for codegen literals
   - **REASON**: Fox exports require Uppercase first letter
 - **Testing**: Build success, used by parser.fox successfully
 - **Note**: Export consistency critical untuk module system
@@ -310,32 +312,38 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
 
 #### Files Modified/Created:
 
-**n1/codegen.fox** (491 lines, checksum: `629cc3934e607c314d4a48a65f0670ccb79b5268ab6574ca5763d9bca1299e48`)
+**n1/codegen.fox** (523 lines, checksum: `e826db62d3085bce6abf65544c3983b222df27d136affcfd3b0c7b007f155aa3`)
 - **Changes Made** (TELITI):
   1. ✅ Added `ambil "stdlib_codegen"` import for helper functions
   2. ✅ Implemented `codegen_compile_integer_literal()` - port dari N0 line 1506-1507
-  3. ✅ Implemented `codegen_compile_string_literal()` - port dari N0 line 1497-1505
-  4. ✅ Implemented `codegen_compile_boolean_literal()` - port dari N0 line 1512-1516
-  5. ✅ Added 3 Uppercase export wrappers: CompileIntegerLiteral, CompileStringLiteral, CompileBooleanLiteral
-  6. ✅ Implemented `codegen_compile_identifier()`, `codegen_compile_infix()`, `codegen_compile_var_statement()` helpers
-  7. ✅ Fixed `codegen_next_temp()` to generate unique temp names via `stdlib_codegen.IntToString`
-  8. ⚠️ Temporarily commented out `types` and `checker` imports (will re-enable in Phase 2+)
-  9. ⚠️ Temporarily commented out `codegen_map_type_to_c()` (needs types module)
-  10. ✅ Added simplified `codegen_compile_expression_statement()` helper
-  11. ✅ Added simplified `codegen_compile_return_statement()` helper
-  12. ✅ Added simplified `codegen_compile_prefix()` helper
-  13. ✅ Added export wrappers: CompileExpressionStatement, CompileReturnStatement, CompilePrefix
-- **Lines Added**: +101 lines (from 390 → 491)
-- **Functional Logic**: +43 lines of working code (literals + basic helpers)
+  3. ✅ Implemented `codegen_compile_float_literal()` - port dari N0 line 1509-1510
+  4. ✅ Implemented `codegen_compile_char_literal()` - port dari N0 line 1510-1511
+  5. ✅ Implemented `codegen_compile_string_literal()` - port dari N0 line 1497-1505
+  6. ✅ Implemented `codegen_compile_boolean_literal()` - port dari N0 line 1512-1516
+  7. ✅ Implemented `codegen_compile_null_literal()` - port dari N0 line 1516-1517
+  8. ✅ Added 6 Uppercase export wrappers: CompileIntegerLiteral, CompileFloatLiteral, CompileCharLiteral, CompileStringLiteral, CompileBooleanLiteral, CompileNullLiteral
+  9. ✅ Implemented `codegen_compile_identifier()`, `codegen_compile_infix()`, `codegen_compile_var_statement()` helpers
+  10. ✅ Fixed `codegen_next_temp()` to generate unique temp names via `stdlib_codegen.IntToString`
+  11. ⚠️ Temporarily commented out `types` and `checker` imports (will re-enable in Phase 2+)
+  12. ⚠️ Temporarily commented out `codegen_map_type_to_c()` (needs types module)
+  13. ✅ Added simplified `codegen_compile_expression_statement()` helper
+  14. ✅ Added simplified `codegen_compile_return_statement()` helper
+  15. ✅ Added simplified `codegen_compile_prefix()` helper
+  16. ✅ Added export wrappers: CompileExpressionStatement, CompileReturnStatement, CompilePrefix
+- **Lines Added**: +133 lines (from 390 → 523)
+- **Functional Logic**: +52 lines of working code (literals + basic helpers)
 - **Status**: ✅ Compiles successfully, all exports working
 
-**n1/test_codegen_literals.fox** (158 lines, checksum: `c0875b6081d85e3bfefeebb2609b28dcdabb5c21148e01117388818f770bc329`)
+**n1/test_codegen_literals.fox** (254 lines, checksum: `3edd5a9b7440c37f68cd9b8923b4f02cef580c9d3dd8402d5bbd8fcf6677fbd5`)
 - **NEW FILE** - TDD test suite for literal compilation
-- **Test Coverage**: 3 test suites, 9 test cases total
-- **Test Results**: ✅ **9/9 TESTS PASSING** (100%)
+- **Test Coverage**: 6 test suites, 17 test cases total
+- **Test Results**: ✅ **17/17 TESTS PASSING** (100%)
   - Test 1: IntegerLiteral (4 cases) - 42, 0, -123, 9876 ✅
-  - Test 2: StringLiteral (4 cases) - hello, newline, empty, quotes ✅
-  - Test 3: BooleanLiteral (2 cases) - benar→"1", salah→"0" ✅
+  - Test 2: FloatLiteral (3 cases) - 3.14, -0.5, 2.0 ✅
+  - Test 3: CharLiteral (2 cases) - 'A'→"65", '0'→"48" ✅
+  - Test 4: NullLiteral (1 case) - null→"NULL" ✅
+  - Test 5: StringLiteral (4 cases) - hello, newline, empty, quotes ✅
+  - Test 6: BooleanLiteral (2 cases) - benar→"1", salah→"0" ✅
 
 **n1/test_codegen_phase2.fox** (163 lines, checksum: `63710e5d9e07beb01eae70360c950ea706bb30f77c9f1a0a3ddd4f54696e4275`)
 - **NEW FILE** - TDD test suite for Phase 2 helpers
@@ -360,7 +368,26 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
    - Uses `int_to_string()` helper from stdlib_codegen
    - Examples: 42→"42", -123→"-123"
 
-2. **StringLiteral** (`lit.value: string` → C code):
+2. **FloatLiteral** (`lit.value_str: string` → C code):
+   ```fox
+   fungsi codegen_compile_float_literal(lit ast.FloatLiteral) string
+       kembalikan lit.value_str
+   akhir
+   ```
+   - N0 equivalent: `return e.Value`
+   - Preserves formatting as provided by parser
+   - Examples: 3.14→"3.14", -0.5→"-0.5"
+
+3. **CharLiteral** (`lit.value: int` → C code):
+   ```fox
+   fungsi codegen_compile_char_literal(lit ast.CharLiteral) string
+       kembalikan stdlib_codegen.IntToString(lit.value)
+   akhir
+   ```
+   - N0 equivalent: `fmt.Sprintf("%d", e.Value)`
+   - Examples: 'A'→"65", '0'→"48"
+
+4. **StringLiteral** (`lit.value: string` → C code):
    ```fox
    fungsi codegen_compile_string_literal(lit ast.StringLiteral) string
        var escaped = stdlib_codegen.StringEscape(lit.value)
@@ -371,7 +398,7 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
    - Escapes: `\\`, `\"`, `\n`, `\r`, `\t` (in that order!)
    - Examples: "hello"→`mph_string_new(ctx, "hello")`
 
-3. **BooleanLiteral** (`lit.value: bool` → C code):
+5. **BooleanLiteral** (`lit.value: bool` → C code):
    ```fox
    fungsi codegen_compile_boolean_literal(lit ast.BooleanLiteral) string
        jika lit.value
@@ -387,20 +414,23 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
 
 **N0 → N1 Transfer** (Updated):
 - **Semantic Understanding**: 42% (unchanged from Phase 0)
-- **Logic Implementation**: 15% (was 8-12%, now +7% from literals)
-- **Functional Capability**: ~5% (was 0%, can compile 3 literal types but NOT full programs)
-- **Overall**: 20-25% transfer complete (was 15-20%)
+- **Logic Implementation**: 17% (was 8-12%, now +9% from literals)
+- **Functional Capability**: ~7% (was 0%, can compile 6 literal types but NOT full programs)
+- **Overall**: 22-27% transfer complete (was 15-20%)
 
 **Breakdown**:
 - ✅ Architecture: 96% understood, 50% implemented (unchanged)
 - ✅ Type System: 5/12 types (42% coverage, primitives only) (unchanged)
-- ✅ Expressions: 5/20 helper types implemented (25% coverage) ⬆️ **NEW**
+- ✅ Expressions: 8/20 helper types implemented (40% coverage) ⬆️ **NEW**
   - ✅ IntegerLiteral
+  - ✅ FloatLiteral
+  - ✅ CharLiteral
   - ✅ StringLiteral
   - ✅ BooleanLiteral
+  - ✅ NullLiteral
   - ✅ Identifier (simplified)
   - ✅ InfixExpression (string-based, no type checking yet)
-  - ❌ CallExpression, PrefixExpression, MemberExpression, etc (15 remaining)
+  - ❌ CallExpression, PrefixExpression, MemberExpression, etc (12 remaining)
 - ✅ Statements: 1/8 helper types implemented (12.5% coverage) ⬆️ **NEW**
   - ✅ VarStatement (simplified mph_int default)
   - ❌ ReturnStatement, ExpressionStatement, BlockStatement, etc (7 remaining)
@@ -409,15 +439,18 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
 
 **Key Metrics**:
 - N0 compiler.go: 2,809 lines, 60 functions
-- N1 codegen.fox: 491 lines, 27 functions (helpers + exports; compile_program still TODO)
-- Executable logic: ~95 lines (3.3% of N0, was 1.8%)
-- Test coverage: 14/14 tests passing (100%)
+- N1 codegen.fox: 523 lines, 31 functions (helpers + exports; compile_program still TODO)
+- Executable logic: ~104 lines (3.7% of N0, was 1.8%)
+- Test coverage: 27/27 tests passing (100%)
 
 #### What Can N1 Compile Now? (HONEST):
 
 **CAN Compile** ✅:
 - Integer literals: `42`, `0`, `-123`
+- Float literals: `3.14`, `-0.5`
+- Char literals: `'A'`, `'0'`
 - String literals: `"hello"`, `"hello\nworld"`, `""`
+- Null literal: `null`
 - Boolean literals: `benar`, `salah`
 - Identifier references (helper only): `x` → `"x"`
 - Infix expressions (helper only): `1 + 2`, `a dan b`, `a atau b`
@@ -4807,7 +4840,7 @@ dd0045a7191f2fd2a60080c2a1ae37c29519de05bce8c6fefa432df3510cdbcf  test_token_imp
 e4aecded4e23813e7e23ac24e81bfa5e601f6126635832c02a90b6988be6c3b2  n1/lexer.fox (FIXED)
 58ed1ef214638da9319196421ba77ab3360e45b3f87963cfaa104e9f990fc5af  n1/parser.fox (FIXED)
 23ec13f40da748849478241ed0c403432a8c6116bc26f24fb98ced0139b78268  n1/checker.fox (FIXED)
-13881209fae0eb2ea9d6c41ecf15f3449b011aa1325b7cfe2f967a1b858e346e  n1/ast.fox ✅
+3652489695d7456279e801e9fa9ee394497f85bac977f59cc14ba3148d4733f0  n1/ast.fox ✅
 667950ceac2c40ecc77a23a12f8fe7f2eeb05b561570fcfdc80e9a385bbd61d9  n1/token.fox ✅
 0d5bf62e8f9f47b895a047dea81a46035d16d38586c78e3b20c3dffcc8547cd4  n1/types.fox (HAS ERRORS)
 ```
@@ -4977,13 +5010,13 @@ akhir
 
 ---
 
-## 📊 N1 Current Checksums (2025-12-28 15:45 UTC)
+## 📊 N1 Current Checksums (2025-12-29 12:13 UTC)
 
 ### ✅ All Syntax Clean! (Post Bug Fixes)
 ```
 fa69dc64d1233e6750891ac1e308ddd7519a3adb5448121b265edd680d60734f  n1/types.fox (896 lines, 25/25 tests ✅)
 667950ceac2c40ecc77a23a12f8fe7f2eeb05b561570fcfdc80e9a385bbd61d9  n1/token.fox (compiles ✅)
-13881209fae0eb2ea9d6c41ecf15f3449b011aa1325b7cfe2f967a1b858e346e  n1/ast.fox (compiles ✅)
+3652489695d7456279e801e9fa9ee394497f85bac977f59cc14ba3148d4733f0  n1/ast.fox (compiles ✅)
 d61eec2ee45953351998b949ea0d5140390c2a4ebb2e69b554f1bb0ddce5237e  n1/lexer.fox (syntax clean ✅, 24 × lainnya jika → atau_jika)
 e38c32ca123f0f2be92c370d54201c6ba82d30c9080c534326171b4dcae19e19  n1/parser.fox (syntax clean ✅, no timeout!)
 e805251dd22b42e10e2e1d7a6685ef37db7d7105287234d561f4233a5622612e  n1/checker.fox (syntax clean ✅)
