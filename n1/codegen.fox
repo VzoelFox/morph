@@ -4,6 +4,7 @@
 
 # Import dependencies
 ambil "ast"
+ambil "token"
 # ambil "types"      # TODO: Re-enable when implementing type mapping
 # ambil "checker"    # TODO: Re-enable when implementing type checking
 ambil "stdlib_codegen"
@@ -27,6 +28,7 @@ struktur Codegen
     prototypes string
     func_defs string
     entry_body string
+    pass_log string
 
     # State tracking
     temp_index int
@@ -51,6 +53,7 @@ fungsi new_codegen() Codegen
         prototypes: "",
         func_defs: "",
         entry_body: "",
+        pass_log: "",
         temp_index: 0,
         has_main: salah,
         indent_level: 0,
@@ -77,6 +80,7 @@ fungsi codegen_compile(cg Codegen, prog ast.Program) string
     cg.prototypes = ""
     cg.func_defs = ""
     cg.entry_body = ""
+    cg.pass_log = ""
     cg.temp_index = 0
     cg.has_main = salah
 
@@ -94,14 +98,21 @@ fungsi codegen_compile(cg Codegen, prog ast.Program) string
     cg.output = cg.output + "MorphString* mph_string_substring(MorphContext* ctx, MorphString* s, mph_int start, mph_int end);\n"
     cg.output = cg.output + "MorphError* mph_error_new(MorphContext* ctx, MorphString* msg);\n\n"
 
-    # TODO: Multi-pass compilation
+    # Multi-pass compilation
     # Pass 1: Collect globals (scan all var statements at top level)
     # Pass 2: Analyze captures (for closures - Fox N1 might not support yet)
     # Pass 3: Compile struct types (generate C struct definitions)
     # Pass 4: Generate RTTI (runtime type info for structs)
-
     # Pass 5: Compile main program
-    codegen_compile_program(cg, prog, "mph_")
+    codegen_pass_collect_globals(cg, prog)
+    codegen_pass_analyze_captures(cg, prog)
+    codegen_pass_compile_struct_types(cg, prog)
+    codegen_pass_compile_struct_rtti(cg, prog)
+    codegen_pass_compile_module(cg, prog, "mph_")
+
+    cg.output = cg.output + "// Pass Log\n"
+    cg.output = cg.output + cg.pass_log
+    cg.output = cg.output + "\n"
 
     # Pass 6: Assemble final output
     cg.output = cg.output + "// Type Definitions\n"
@@ -134,26 +145,47 @@ fungsi codegen_compile(cg Codegen, prog ast.Program) string
 akhir
 
 # ============================================================================
+# Multi-Pass Helpers
+# ============================================================================
+fungsi codegen_record_pass(cg Codegen, name string) void
+    cg.pass_log = cg.pass_log + "// " + name + "\n"
+akhir
+
+fungsi codegen_pass_collect_globals(cg Codegen, prog ast.Program) void
+    codegen_record_pass(cg, "pass1_collect_globals")
+    jika prog.has_var_statement
+        cg.global_defs = cg.global_defs + codegen_compile_var_statement_from_stmt(prog.var_statement)
+    akhir
+akhir
+
+fungsi codegen_pass_analyze_captures(cg Codegen, prog ast.Program) void
+    codegen_record_pass(cg, "pass2_analyze_captures")
+    # TODO: Analyze closures for captured variables
+akhir
+
+fungsi codegen_pass_compile_struct_types(cg Codegen, prog ast.Program) void
+    codegen_record_pass(cg, "pass3_compile_struct_types")
+    # TODO: Generate struct type definitions
+akhir
+
+fungsi codegen_pass_compile_struct_rtti(cg Codegen, prog ast.Program) void
+    codegen_record_pass(cg, "pass4_compile_struct_rtti")
+    # TODO: Emit runtime type info for structs
+akhir
+
+fungsi codegen_pass_compile_module(cg Codegen, prog ast.Program, prefix string) void
+    codegen_record_pass(cg, "pass5_compile_module")
+    codegen_compile_program(cg, prog, prefix)
+akhir
+
+# ============================================================================
 # Program Compilation (Module-level)
 # ============================================================================
 fungsi codegen_compile_program(cg Codegen, prog ast.Program, prefix string) void
     cg.current_prefix = prefix
 
-    # Iterate through all statements in the program
-    var i = 0
-    selama i < prog.statements_count
-        # TODO: Get statement from program.statements[i]
-        # For now, we're designing the architecture
-        # Actual implementation needs array access support
-
-        # Switch on statement type:
-        # - VarStatement → compile global variable
-        # - FunctionLiteral → compile function definition
-        # - StructStatement → compile struct type
-        # - ExpressionStatement → add to entry_body
-
-        i = i + 1
-    akhir
+    # Iterate through statements in the program (var-only for now)
+    # Var statements are handled during pass1 (globals collection)
 akhir
 
 # ============================================================================
@@ -422,6 +454,89 @@ akhir
 # ============================================================================
 # Statement Compilation (Phase 2 - Simplified)
 # ============================================================================
+
+fungsi codegen_var_type_from_annotation(type_str string) string
+    jika type_str == "int"
+        kembalikan "mph_int"
+    akhir
+    jika type_str == "float"
+        kembalikan "mph_float"
+    akhir
+    jika type_str == "bool"
+        kembalikan "mph_int"
+    akhir
+    jika type_str == "string"
+        kembalikan "MorphString*"
+    akhir
+    kembalikan "mph_int"
+akhir
+
+fungsi codegen_default_value_for_annotation(type_str string) string
+    jika type_str == "float"
+        kembalikan "0.0"
+    akhir
+    jika type_str == "string"
+        kembalikan "NULL"
+    akhir
+    kembalikan "0"
+akhir
+
+fungsi codegen_var_type_from_token(token_type int) string
+    jika token_type == token.TOKEN_STRING
+        kembalikan "MorphString*"
+    akhir
+    jika token_type == token.TOKEN_FLOAT
+        kembalikan "mph_float"
+    akhir
+    jika token_type == token.TOKEN_INT
+        kembalikan "mph_int"
+    akhir
+    jika token_type == token.TOKEN_BENAR
+        kembalikan "mph_int"
+    akhir
+    jika token_type == token.TOKEN_SALAH
+        kembalikan "mph_int"
+    akhir
+    kembalikan "mph_int"
+akhir
+
+fungsi codegen_value_code_from_token(token_type int, literal string) string
+    jika token_type == token.TOKEN_STRING
+        var lit = ast.MakeStringLiteral(literal, 0, 0)
+        kembalikan codegen_compile_string_literal(lit)
+    akhir
+    jika token_type == token.TOKEN_BENAR
+        var lit_true = ast.MakeBooleanLiteral(benar, "benar", 0, 0)
+        kembalikan codegen_compile_boolean_literal(lit_true)
+    akhir
+    jika token_type == token.TOKEN_SALAH
+        var lit_false = ast.MakeBooleanLiteral(salah, "salah", 0, 0)
+        kembalikan codegen_compile_boolean_literal(lit_false)
+    akhir
+    kembalikan literal
+akhir
+
+fungsi codegen_compile_var_statement_typed(name string, value_code string, c_type string) string
+    kembalikan "\t" + c_type + " " + name + " = " + value_code + ";\n"
+akhir
+
+fungsi codegen_compile_var_statement_from_stmt(stmt ast.VarStatement) string
+    var c_type = codegen_var_type_from_annotation(stmt.value_type)
+    var value_code = ""
+
+    jika stmt.has_value
+        jika stmt.value_type != "-"
+            c_type = codegen_var_type_from_annotation(stmt.value_type)
+        lainnya
+            c_type = codegen_var_type_from_token(stmt.value_token_type)
+        akhir
+        value_code = codegen_value_code_from_token(stmt.value_token_type, stmt.value_literal)
+    lainnya
+        value_code = codegen_default_value_for_annotation(stmt.value_type)
+    akhir
+
+    kembalikan codegen_compile_var_statement_typed(stmt.name, value_code, c_type)
+akhir
 
 # VarStatement → C code
 # N0: Complex type inference, GC root registration, tuple unpacking

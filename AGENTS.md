@@ -1,9 +1,9 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.88.2
+- **Versi**: 1.88.4
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
-- **Terakhir Diupdate**: 2025-12-29 12:29 UTC
+- **Terakhir Diupdate**: 2025-12-29 13:30 UTC
 - **Status**: Active
 
 ## 🎯 PRINSIP UTAMA: TELITI, HATI-HATI, JUJUR
@@ -74,16 +74,18 @@ c09917c8361974968ad2c0db21b8cd7052d58d44b1e929b96dca4269644c5e7e  n1/token.fox
 
 #### 2. n1/ast.fox - ✅ VERIFIED WORKING (UPDATED!)
 ```
-3652489695d7456279e801e9fa9ee394497f85bac977f59cc14ba3148d4733f0  n1/ast.fox
+a9d8b88a9a4d0b6a44759093788ea27e3cbdb2bfa07a0d9c4e0c19d0ffa8d004  n1/ast.fox
 ```
-- **Lines**: 471
-- **Status**: ✅ Compiles successfully (UPDATED 2025-12-29 12:13 UTC)
+- **Lines**: 483
+- **Status**: ✅ Compiles successfully (UPDATED 2025-12-29 13:30 UTC)
 - **Exports**: AST node structures (29 types), Make* constructors (exported), visitor pattern
 - **Changes Made** (TELITI):
   - All `fungsi make_*` → `fungsi Make*` for export
   - All internal calls `make_node` → `MakeNode`
   - Added `MakeFloatLiteral()` constructor for float literal codegen tests
   - Added `MakeCharLiteral()` and `MakeNullLiteral()` constructors for codegen literals
+  - Added `Program.var_statement` + `has_var_statement` for minimal statement storage
+  - Added `VarStatement.value_literal` + `value_token_type` for literal-aware codegen
   - **REASON**: Fox exports require Uppercase first letter
 - **Testing**: Build success, used by parser.fox successfully
 - **Note**: Export consistency critical untuk module system
@@ -137,10 +139,10 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
 
 #### 5. n1/parser.fox - ✅ VERIFIED WORKING (BARU FIXED!)
 ```
-845fcd7dc3d767c7922f31d27e4d66b9674eb8025e0168f78fad6a5c793fe55f  n1/parser.fox
+2f4b2ae122070ccaa7879ab31cdbffbe932f9d538ca41dcedf1af4551497da29  n1/parser.fox
 ```
-- **Lines**: 303
-- **Status**: ✅ Compiles successfully (FIXED 2025-12-28 20:30 UTC)
+- **Lines**: 307
+- **Status**: ✅ Compiles successfully (UPDATED 2025-12-29 13:30 UTC)
 - **Exports**: Parser struct, Parser* functions (all Uppercase), StringToInt utility
 - **Changes Made** (TELITI - MANUAL REWRITE):
   1. **Type references**: Lexer → lexer.Lexer, Token → token.Token, ast types → ast.*
@@ -152,6 +154,8 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
      - **ROOT CAUSE**: `tidak` bukan keyword (same as lexer.fox bug)
   7. **BUG FIX**: `selama tidak parser_current_token_is` → `selama ... == salah`
   8. **Precedence helpers**: All function names Uppercased for export consistency
+  9. **Program storage**: Track latest var statement via `program.var_statement`
+  10. **Literal capture**: Record token type + literal for var assignments
 - **Dependencies Required**:
   - lexer.fox must export LexerNextToken ✅ (DONE)
   - ast.fox must export Make* functions ✅ (DONE)
@@ -312,7 +316,7 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
 
 #### Files Modified/Created:
 
-**n1/codegen.fox** (594 lines, checksum: `d0a96fa6c9876252756250c8fa45bfaad32350757a945ac3a1b16b9f20d9de55`)
+**n1/codegen.fox** (709 lines, checksum: `c2f9d24e3dfa5ba61cb83daf60ef2f46fe5a8437ffa3ef7287e4776d663035bf`)
 - **Changes Made** (TELITI):
   1. ✅ Added `ambil "stdlib_codegen"` import for helper functions
   2. ✅ Implemented `codegen_compile_integer_literal()` - port dari N0 line 1506-1507
@@ -333,8 +337,12 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
   17. ✅ Added `codegen_resolve_builtin_name()` mapping for native_print, native_print_error, native_print_int, error, index, trim, split, substring
   18. ✅ Added `codegen_compile_builtin_call()` helper + export wrappers: ResolveBuiltinName, CompileBuiltinCall
   19. ✅ Added C header prototypes for builtin helpers (native_print_error, string helpers, error_new)
-- **Lines Added**: +6 lines (from 588 → 594)
-- **Functional Logic**: +0 lines (header declarations only)
+  20. ✅ Added multi-pass helpers with explicit pass logging (collect globals → compile module)
+  21. ✅ Emitted pass log section in generated C output for verification
+  22. ✅ Added token-aware global var compilation (typed defaults + literal mapping)
+  23. ✅ Wired `Program.var_statement` into pass1 globals collection
+- **Lines Added**: +73 lines (from 636 → 709)
+- **Functional Logic**: +73 lines (var statement storage + typed globals)
 - **Status**: ✅ Compiles successfully, all exports working
 
 **n1/test_codegen_literals.fox** (254 lines, checksum: `3edd5a9b7440c37f68cd9b8923b4f02cef580c9d3dd8402d5bbd8fcf6677fbd5`)
@@ -348,10 +356,10 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
   - Test 5: StringLiteral (4 cases) - hello, newline, empty, quotes ✅
   - Test 6: BooleanLiteral (2 cases) - benar→"1", salah→"0" ✅
 
-**n1/test_codegen_phase2.fox** (203 lines, checksum: `27e24c1dfc1267959b9de5e0588fa46c7eb24f7e5490e411919afe69b1f1485b`)
-- **NEW FILE** - TDD test suite for Phase 2 helpers
-- **Test Coverage**: 7 test suites, 14 test cases total
-- **Test Results**: ✅ **14/14 TESTS PASSING** (100%)
+**n1/test_codegen_phase2.fox** (226 lines, checksum: `9fb96ec38b45d7c0ae5b37360cd62dd5685ced8f17b401a07b0b3976d595f67b`)
+- **UPDATED** - TDD test suite for Phase 2 helpers
+- **Test Coverage**: 8 test suites, 15 test cases total
+- **Test Results**: ✅ **15/15 TESTS PASSING** (100%)
   - Test 1: Identifier → "x" ✅
   - Test 2: Infix arithmetic/logical → "(1 + 2)", "(a && b)", "(a || b)" ✅
   - Test 3: VarStatement → "\\tmph_int x = 42;\\n" ✅
@@ -359,6 +367,7 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
   - Test 5: ReturnStatement → "\\treturn;\\n", "\\treturn 42;\\n" ✅
   - Test 6: PrefixExpression → "(!x)", "(-5)" ✅
   - Test 7: Builtin calls → "mph_native_print(ctx, ...)", "mph_native_print_int(ctx, 42)", "mph_error_new(ctx, ...)", "mph_string_index(ctx, a, b)" ✅
+  - Test 8: Multi-pass log output → pass1..pass5 order ✅
 
 #### Implementation Details (Port dari N0):
 
@@ -4844,7 +4853,7 @@ dd0045a7191f2fd2a60080c2a1ae37c29519de05bce8c6fefa432df3510cdbcf  test_token_imp
 e4aecded4e23813e7e23ac24e81bfa5e601f6126635832c02a90b6988be6c3b2  n1/lexer.fox (FIXED)
 58ed1ef214638da9319196421ba77ab3360e45b3f87963cfaa104e9f990fc5af  n1/parser.fox (FIXED)
 23ec13f40da748849478241ed0c403432a8c6116bc26f24fb98ced0139b78268  n1/checker.fox (FIXED)
-3652489695d7456279e801e9fa9ee394497f85bac977f59cc14ba3148d4733f0  n1/ast.fox ✅
+a9d8b88a9a4d0b6a44759093788ea27e3cbdb2bfa07a0d9c4e0c19d0ffa8d004  n1/ast.fox ✅
 667950ceac2c40ecc77a23a12f8fe7f2eeb05b561570fcfdc80e9a385bbd61d9  n1/token.fox ✅
 0d5bf62e8f9f47b895a047dea81a46035d16d38586c78e3b20c3dffcc8547cd4  n1/types.fox (HAS ERRORS)
 ```
@@ -5014,15 +5023,15 @@ akhir
 
 ---
 
-## 📊 N1 Current Checksums (2025-12-29 12:13 UTC)
+## 📊 N1 Current Checksums (2025-12-29 13:30 UTC)
 
 ### ✅ All Syntax Clean! (Post Bug Fixes)
 ```
 fa69dc64d1233e6750891ac1e308ddd7519a3adb5448121b265edd680d60734f  n1/types.fox (896 lines, 25/25 tests ✅)
 667950ceac2c40ecc77a23a12f8fe7f2eeb05b561570fcfdc80e9a385bbd61d9  n1/token.fox (compiles ✅)
-3652489695d7456279e801e9fa9ee394497f85bac977f59cc14ba3148d4733f0  n1/ast.fox (compiles ✅)
+a9d8b88a9a4d0b6a44759093788ea27e3cbdb2bfa07a0d9c4e0c19d0ffa8d004  n1/ast.fox (compiles ✅)
 d61eec2ee45953351998b949ea0d5140390c2a4ebb2e69b554f1bb0ddce5237e  n1/lexer.fox (syntax clean ✅, 24 × lainnya jika → atau_jika)
-e38c32ca123f0f2be92c370d54201c6ba82d30c9080c534326171b4dcae19e19  n1/parser.fox (syntax clean ✅, no timeout!)
+2f4b2ae122070ccaa7879ab31cdbffbe932f9d538ca41dcedf1af4551497da29  n1/parser.fox (syntax clean ✅, no timeout!)
 e805251dd22b42e10e2e1d7a6685ef37db7d7105287234d561f4233a5622612e  n1/checker.fox (syntax clean ✅)
 ```
 
