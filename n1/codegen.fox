@@ -518,7 +518,7 @@ fungsi codegen_var_type_from_annotation(type_str string) string
         kembalikan "mph_float"
     akhir
     jika type_str == "bool"
-        kembalikan "mph_int"
+        kembalikan "mph_bool"
     akhir
     jika type_str == "string"
         kembalikan "MorphString*"
@@ -547,9 +547,12 @@ fungsi codegen_var_type_from_token(token_type int) string
         kembalikan "mph_int"
     akhir
     jika token_type == token.TOKEN_BENAR
-        kembalikan "mph_int"
+        kembalikan "mph_bool"
     akhir
     jika token_type == token.TOKEN_SALAH
+        kembalikan "mph_bool"
+    akhir
+    jika token_type == token.TOKEN_CHAR
         kembalikan "mph_int"
     akhir
     kembalikan "mph_int"
@@ -559,6 +562,12 @@ fungsi codegen_value_code_from_token(token_type int, literal string) string
     jika token_type == token.TOKEN_STRING
         var lit = ast.MakeStringLiteral(literal, 0, 0)
         kembalikan codegen_compile_string_literal(lit)
+    akhir
+    jika token_type == token.TOKEN_FLOAT
+        kembalikan literal
+    akhir
+    jika token_type == token.TOKEN_INT
+        kembalikan literal
     akhir
     jika token_type == token.TOKEN_BENAR
         var lit_true = ast.MakeBooleanLiteral(benar, "benar", 0, 0)
