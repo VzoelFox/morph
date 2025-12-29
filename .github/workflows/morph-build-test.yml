@@ -33,32 +33,59 @@ jobs:
           exit 1
         fi
 
-    - name: Run Basic Tests
+    - name: Compile N1 Core Files
       run: |
         cd ${{ github.workspace }}
 
-        echo "Running basic tests..."
+        echo "Compiling N1 core modules..."
 
-        # Test 1: Compile a simple fox file
-        if [ -f "n1/types.fox" ]; then
-          echo "Test: Compiling n1/types.fox"
-          timeout 30s ./morph build n1/types.fox || echo "⚠️  types.fox compilation timeout/failed"
-        fi
+        CORE_FILES=(
+          "n1/token.fox"
+          "n1/ast.fox"
+          "n1/types.fox"
+          "n1/lexer.fox"
+          "n1/parser.fox"
+          "n1/checker.fox"
+        )
 
-        # Test 2: Check generated C files
-        echo ""
-        echo "Checking generated C files:"
-        ls -lh *.c 2>/dev/null | head -5 || echo "No C files generated yet"
+        FAILED=0
+        for file in "${CORE_FILES[@]}"; do
+          echo -n "  Compiling $file... "
+          if timeout 60s ./morph build "$file" > /dev/null 2>&1; then
+            echo "✅"
+          else
+            echo "❌ FAILED"
+            ((FAILED++))
+          fi
+        done
 
-        # Test 3: Run compiled tests if available
-        if [ -f "n1/types" ]; then
+        if [ $FAILED -gt 0 ]; then
           echo ""
-          echo "Test: Running n1/types"
-          timeout 10s ./n1/types || echo "⚠️  n1/types execution failed"
+          echo "❌ $FAILED core file(s) failed to compile"
+          exit 1
         fi
 
         echo ""
-        echo "✅ Basic tests completed"
+        echo "✅ All N1 core files compiled successfully ($((${#CORE_FILES[@]} - FAILED))/${#CORE_FILES[@]})"
+
+    - name: Run N1 Tests
+      run: |
+        cd ${{ github.workspace }}
+
+        echo "Running N1 module tests..."
+
+        # Test 1: types.fox has built-in test suite
+        if [ -f "n1/types" ]; then
+          echo "Test: Running types.fox test suite"
+          if timeout 30s ./n1/types; then
+            echo "✅ types.fox tests passed"
+          else
+            echo "⚠️  types.fox tests failed or timeout"
+          fi
+        fi
+
+        echo ""
+        echo "✅ N1 tests completed"
 
     - name: Cleanup Build Artifacts
       if: always()
