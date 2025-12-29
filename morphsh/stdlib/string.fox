@@ -13,9 +13,6 @@ akhir
 
 fungsi StringEquals(a string, b string) bool
     # Compare two strings for equality
-    # Note: Direct comparison a == b may have type issues
-    # Using length comparison as workaround
-
     var lenA = panjang(a)
     var lenB = panjang(b)
 
@@ -23,27 +20,42 @@ fungsi StringEquals(a string, b string) bool
         kembali salah
     akhir
 
-    # If same length, assume equal (temporary workaround)
-    # TODO: Implement character-by-character comparison when string indexing works
+    var i = 0
+    selama i < lenA
+        jika a[i] != b[i]
+            kembali salah
+        akhir
+        i = i + 1
+    akhir
+
     kembali benar
 akhir
 
 fungsi IntToString(n int) string
     # Convert integer to string
-    # Temporary implementation: use built-in string concatenation
-    # TODO: Implement proper conversion when stdlib complete
-
     jika n == 0
         kembali "0"
     akhir
-    jika n == 1
-        kembali "1"
+
+    var negative = salah
+    jika n < 0
+        negative = benar
+        n = 0 - n
     akhir
-    jika n == 2
-        kembali "2"
+
+    var digits = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+    var result = ""
+
+    selama n > 0
+        var digit = n % 10
+        result = digits[digit] + result
+        n = n / 10
     akhir
-    # ... extend as needed
-    kembali "?"
+
+    jika negative
+        kembali "-" + result
+    akhir
+    kembali result
 akhir
 
 fungsi BoolToString(b bool) string

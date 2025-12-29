@@ -1,9 +1,9 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.88.7
+- **Versi**: 1.88.8
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
-- **Terakhir Diupdate**: 2025-12-29 13:52 UTC
+- **Terakhir Diupdate**: 2025-12-29 14:12 UTC
 - **Status**: Active
 
 ## 🎯 PRINSIP UTAMA: TELITI, HATI-HATI, JUJUR
@@ -5058,3 +5058,24 @@ e4aecded4e23813e7e23ac24e81bfa5e601f6126635832c02a90b6988be6c3b2  n1/lexer.fox.b
 ```
 
 **Progress**: 45% → **50%** (N0 fix unlocks future work)
+
+---
+
+## ✅ TODO CLEANUP - MORPHSH STRING + TREE WALKER (2025-12-29 14:12 UTC)
+
+**Focus**: Selesaikan beberapa TODO sekaligus (string stdlib + tree walker env/op handling).
+
+### Perubahan:
+1. **morphsh/stdlib/string.fox**:
+   - Implementasi perbandingan string karakter-per-karakter (string indexing).
+   - Implementasi `IntToString` lengkap (handle negatif + digit assembly).
+2. **morphsh/evaluator/tree_walker_working.fox**:
+   - Tambah tracking key existence untuk int/bool vars.
+   - Implementasi operator aritmatika & perbandingan dengan string compare langsung.
+
+### Checksums (UPDATED):
+```
+c6567fb22f57ad5bbc22a7b0a3762a3c747cc390e391f8c5f4b2a2a98362f317  morphsh/stdlib/string.fox
+daccbbae8f9bcd7326767a7c7dad96da0d3909b061d721ba7b2f2dbd54e896a4  morphsh/evaluator/tree_walker_working.fox
+cb2a490c398b84035344cfcf378345232a38d42e8a8dab17fa8acee3f5281809  AGENTS.md
+```
