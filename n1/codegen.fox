@@ -337,6 +337,23 @@ fungsi codegen_compile_var_statement(name string, value_code string) string
     kembalikan "\tmph_int " + name + " = " + value_code + ";\n"
 akhir
 
+# ExpressionStatement → C code
+# N0: compile expression and append semicolon
+# N1 Simplified: append semicolon to already-compiled expression
+fungsi codegen_compile_expression_statement(value_code string) string
+    kembalikan "\t" + value_code + ";\n"
+akhir
+
+# ReturnStatement → C code
+# N0: handle void vs value returns
+# N1 Simplified: "return;" or "return <value>;"
+fungsi codegen_compile_return_statement(has_value bool, value_code string) string
+    jika has_value
+        kembalikan "\treturn " + value_code + ";\n"
+    akhir
+    kembalikan "\treturn;\n"
+akhir
+
 # ============================================================================
 # Uppercase Export Wrappers (for module imports)
 # ============================================================================
@@ -377,6 +394,14 @@ akhir
 
 fungsi CompileVarStatement(name string, value_code string) string
     kembalikan codegen_compile_var_statement(name, value_code)
+akhir
+
+fungsi CompileExpressionStatement(value_code string) string
+    kembalikan codegen_compile_expression_statement(value_code)
+akhir
+
+fungsi CompileReturnStatement(has_value bool, value_code string) string
+    kembalikan codegen_compile_return_statement(has_value, value_code)
 akhir
 
 # ============================================================================

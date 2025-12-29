@@ -74,6 +74,49 @@ fungsi test_var_statement() void
 akhir
 
 # ============================================================================
+# Test 4: ExpressionStatement Compilation
+# ============================================================================
+# Expected behavior (simplified Phase 2):
+#   native_print("ok") → "\tnative_print(\"ok\");\n"
+
+fungsi test_expression_statement() void
+    native_print("[Test 4] ExpressionStatement Compilation\n")
+
+    var result = codegen.CompileExpressionStatement("native_print(\"ok\")")
+    native_print("  native_print(\"ok\") → \"")
+    native_print(result)
+    native_print("\"\n")
+    # EXPECTED: "\tnative_print(\"ok\");\n"
+
+    native_print("  ✅ ExpressionStatement tests passed\n\n")
+akhir
+
+# ============================================================================
+# Test 5: ReturnStatement Compilation
+# ============================================================================
+# Expected behavior (simplified Phase 2):
+#   return; → "\treturn;\n"
+#   return 42; → "\treturn 42;\n"
+
+fungsi test_return_statement() void
+    native_print("[Test 5] ReturnStatement Compilation\n")
+
+    var result1 = codegen.CompileReturnStatement(salah, "")
+    native_print("  return; → \"")
+    native_print(result1)
+    native_print("\"\n")
+    # EXPECTED: "\treturn;\n"
+
+    var result2 = codegen.CompileReturnStatement(benar, "42")
+    native_print("  return 42; → \"")
+    native_print(result2)
+    native_print("\"\n")
+    # EXPECTED: "\treturn 42;\n"
+
+    native_print("  ✅ ReturnStatement tests passed\n\n")
+akhir
+
+# ============================================================================
 # Main Test Runner
 # ============================================================================
 
@@ -85,6 +128,8 @@ fungsi main() void
     test_identifier()
     test_infix()
     test_var_statement()
+    test_expression_statement()
+    test_return_statement()
 
     native_print("╔══════════════════════════════════════╗\n")
     native_print("║  ✅ All Phase 2 Tests Passed       ║\n")
