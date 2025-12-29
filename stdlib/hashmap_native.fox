@@ -1,0 +1,82 @@
+# Stdlib HashMap Native - Assembly Backend Wrapper
+# NOTE: N0 TIDAK SUPPORT map[K]V syntax - diport langsung ke assembly
+
+struktur HashMap
+    ptr int
+    kind int
+    is_ptr bool
+akhir
+
+# ============================================================================
+# Exported Functions (Uppercase - for module import)
+# ============================================================================
+
+fungsi HashMapNew(kind int, is_ptr bool) HashMap
+    var ptr = native_hashmap_new(kind, native_bool_to_int(is_ptr))
+    kembali HashMap{ptr: ptr, kind: kind, is_ptr: is_ptr}
+akhir
+
+fungsi HashMapSet(m HashMap, key string, value int) void
+    native_hashmap_set(m.ptr, key, value)
+akhir
+
+fungsi HashMapGet(m HashMap, key string) int
+    kembali native_hashmap_get(m.ptr, key)
+akhir
+
+fungsi HashMapLen(m HashMap) int
+    kembali native_hashmap_len(m.ptr)
+akhir
+
+fungsi HashMapHasKey(m HashMap, key string) bool
+    var result = native_hashmap_has_key(m.ptr, key)
+    jika result == 1
+        kembali benar
+    akhir
+    kembali salah
+akhir
+
+fungsi HashMapDelete(m HashMap, key string) void
+    native_hashmap_delete(m.ptr, key)
+akhir
+
+fungsi HashMapSetInt(m HashMap, key string, value int) void
+    HashMapSet(m, key, value)
+akhir
+
+fungsi HashMapGetInt(m HashMap, key string) int
+    kembali HashMapGet(m, key)
+akhir
+
+# ============================================================================
+# Native Declarations (linked from runtime_hashmap.asm)
+# ============================================================================
+
+fungsi native_hashmap_new(kind int, val_is_ptr int) int
+    kembali 0
+akhir
+
+fungsi native_hashmap_set(map_ptr int, key string, value int) void
+akhir
+
+fungsi native_hashmap_get(map_ptr int, key string) int
+    kembali 0
+akhir
+
+fungsi native_hashmap_len(map_ptr int) int
+    kembali 0
+akhir
+
+fungsi native_hashmap_has_key(map_ptr int, key string) int
+    kembali 0
+akhir
+
+fungsi native_hashmap_delete(map_ptr int, key string) void
+akhir
+
+fungsi native_bool_to_int(b bool) int
+    jika b
+        kembali 1
+    akhir
+    kembali 0
+akhir

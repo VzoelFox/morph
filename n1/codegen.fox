@@ -234,6 +234,10 @@ akhir
 # - array → MorphArray*
 # - map → MorphHash*
 
+# 💡 HINT: For map support, use runtime.c mph_map_* functions (VERIFIED WORKING ✅)
+#          runtime.c has: mph_map_new, mph_map_set, mph_map_get, mph_map_delete, mph_map_len
+#          N0 doesn't support map[K]V syntax - use Fox wrapper with int pointers
+#          See: VERIFICATION_SUMMARY.md for production verification results
 fungsi codegen_map_type_to_c(t types.Type) string
     jika t.kind == types.KIND_INT
         kembalikan "mph_int"
