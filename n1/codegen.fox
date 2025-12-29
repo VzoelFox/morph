@@ -4,8 +4,9 @@
 
 # Import dependencies
 ambil "ast"
-ambil "types"
-ambil "checker"
+# ambil "types"      # TODO: Re-enable when implementing type mapping
+# ambil "checker"    # TODO: Re-enable when implementing type checking
+ambil "stdlib_codegen"
 
 # ============================================================================
 # Codegen Structure (N0 Compiler equivalent)
@@ -193,30 +194,31 @@ akhir
 # - array → MorphArray*
 # - map → MorphHash*
 
-fungsi codegen_map_type_to_c(t types.Type) string
-    jika t.kind == types.KIND_INT
-        kembalikan "mph_int"
-    akhir
-
-    jika t.kind == types.KIND_FLOAT
-        kembalikan "mph_float"
-    akhir
-
-    jika t.kind == types.KIND_STRING
-        kembalikan "MorphString*"
-    akhir
-
-    jika t.kind == types.KIND_BOOL
-        kembalikan "mph_int"
-    akhir
-
-    jika t.kind == types.KIND_VOID
-        kembalikan "void"
-    akhir
-
-    # TODO: Handle complex types (struct, array, map, function)
-    kembalikan "void*" # Fallback
-akhir
+# TODO: Re-enable when types module is integrated
+# fungsi codegen_map_type_to_c(t types.Type) string
+#     jika t.kind == types.KIND_INT
+#         kembalikan "mph_int"
+#     akhir
+#
+#     jika t.kind == types.KIND_FLOAT
+#         kembalikan "mph_float"
+#     akhir
+#
+#     jika t.kind == types.KIND_STRING
+#         kembalikan "MorphString*"
+#     akhir
+#
+#     jika t.kind == types.KIND_BOOL
+#         kembalikan "mph_int"
+#     akhir
+#
+#     jika t.kind == types.KIND_VOID
+#         kembalikan "void"
+#     akhir
+#
+#     # TODO: Handle complex types (struct, array, map, function)
+#     kembalikan "void*" # Fallback
+# akhir
 
 # ============================================================================
 # Helper: Generate Temporary Variable
@@ -252,6 +254,44 @@ fungsi codegen_append_indent(buf string, text string, level int) string
 akhir
 
 # ============================================================================
+# Literal Compilation (Phase 1)
+# ============================================================================
+# Port dari N0 compiler.go compileExpression() switch cases
+
+# IntegerLiteral → C code
+# N0: case *parser.IntegerLiteral: return fmt.Sprintf("%d", e.Value), nil
+fungsi codegen_compile_integer_literal(lit ast.IntegerLiteral) string
+    # Convert int value to string using stdlib helper
+    kembalikan stdlib_codegen.IntToString(lit.value)
+akhir
+
+# StringLiteral → C code
+# N0: case *parser.StringLiteral:
+#       escaped := strings.ReplaceAll(e.Value, "\\", "\\\\")
+#       escaped = strings.ReplaceAll(escaped, "\"", "\\\"")
+#       escaped = strings.ReplaceAll(escaped, "\n", "\\n")
+#       escaped = strings.ReplaceAll(escaped, "\r", "\\r")
+#       escaped = strings.ReplaceAll(escaped, "\t", "\\t")
+#       return fmt.Sprintf("mph_string_new(ctx, \"%s\")", escaped), nil
+fungsi codegen_compile_string_literal(lit ast.StringLiteral) string
+    # Escape string value using stdlib helper
+    var escaped = stdlib_codegen.StringEscape(lit.value)
+    # Wrap with mph_string_new() runtime call
+    kembalikan "mph_string_new(ctx, \"" + escaped + "\")"
+akhir
+
+# BooleanLiteral → C code
+# N0: case *parser.BooleanLiteral:
+#       if e.Value { return "1", nil }
+#       return "0", nil
+fungsi codegen_compile_boolean_literal(lit ast.BooleanLiteral) string
+    jika lit.value
+        kembalikan "1"
+    akhir
+    kembalikan "0"
+akhir
+
+# ============================================================================
 # Uppercase Export Wrappers (for module imports)
 # ============================================================================
 fungsi NewCodegen() Codegen
@@ -262,8 +302,22 @@ fungsi CodegenCompile(cg Codegen, prog ast.Program) string
     kembalikan codegen_compile(cg, prog)
 akhir
 
-fungsi CodegenMapTypeToC(t types.Type) string
-    kembalikan codegen_map_type_to_c(t)
+# TODO: Re-enable when types module is integrated
+# fungsi CodegenMapTypeToC(t types.Type) string
+#     kembalikan codegen_map_type_to_c(t)
+# akhir
+
+# Phase 1: Literal compilation exports
+fungsi CompileIntegerLiteral(lit ast.IntegerLiteral) string
+    kembalikan codegen_compile_integer_literal(lit)
+akhir
+
+fungsi CompileStringLiteral(lit ast.StringLiteral) string
+    kembalikan codegen_compile_string_literal(lit)
+akhir
+
+fungsi CompileBooleanLiteral(lit ast.BooleanLiteral) string
+    kembalikan codegen_compile_boolean_literal(lit)
 akhir
 
 # ============================================================================
