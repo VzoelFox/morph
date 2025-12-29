@@ -1,9 +1,9 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.82.0
+- **Versi**: 1.83.0
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
-- **Terakhir Diupdate**: 2025-12-29 04:26 UTC
+- **Terakhir Diupdate**: 2025-12-29 04:40 UTC
 - **Status**: Active
 
 ## 🎯 PRINSIP UTAMA: TELITI, HATI-HATI, JUJUR
@@ -302,7 +302,7 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
 
 ---
 
-### 🚀 N1 CODEGEN - PHASE 1 COMPLETE (2025-12-29 UTC)
+### 🚀 N1 CODEGEN - PHASE 1 COMPLETE + PHASE 2 HELPERS (2025-12-29 UTC)
 
 **MILESTONE**: Literal Compilation Implemented ✅
 
@@ -310,17 +310,19 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
 
 #### Files Modified/Created:
 
-**n1/codegen.fox** (390 lines, checksum: `a3ff44e55ff033bb1681043c863aeb3f858488c1c0b907b68edd000754f24788`)
+**n1/codegen.fox** (449 lines, checksum: `61ebd22771a60a849aac7847632c47ff1aa589c775b43a70d60b5fecc7f06802`)
 - **Changes Made** (TELITI):
   1. ✅ Added `ambil "stdlib_codegen"` import for helper functions
   2. ✅ Implemented `codegen_compile_integer_literal()` - port dari N0 line 1506-1507
   3. ✅ Implemented `codegen_compile_string_literal()` - port dari N0 line 1497-1505
   4. ✅ Implemented `codegen_compile_boolean_literal()` - port dari N0 line 1512-1516
   5. ✅ Added 3 Uppercase export wrappers: CompileIntegerLiteral, CompileStringLiteral, CompileBooleanLiteral
-  6. ⚠️ Temporarily commented out `types` and `checker` imports (will re-enable in Phase 2+)
-  7. ⚠️ Temporarily commented out `codegen_map_type_to_c()` (needs types module)
-- **Lines Added**: +54 lines (from 336 → 390)
-- **Functional Logic**: +37 lines of working code (3 literal functions)
+  6. ✅ Implemented `codegen_compile_identifier()`, `codegen_compile_infix()`, `codegen_compile_var_statement()` helpers
+  7. ✅ Fixed `codegen_next_temp()` to generate unique temp names via `stdlib_codegen.IntToString`
+  8. ⚠️ Temporarily commented out `types` and `checker` imports (will re-enable in Phase 2+)
+  9. ⚠️ Temporarily commented out `codegen_map_type_to_c()` (needs types module)
+- **Lines Added**: +59 lines (from 390 → 449)
+- **Functional Logic**: +43 lines of working code (literals + basic helpers)
 - **Status**: ✅ Compiles successfully, all exports working
 
 **n1/test_codegen_literals.fox** (158 lines, checksum: `c0875b6081d85e3bfefeebb2609b28dcdabb5c21148e01117388818f770bc329`)
@@ -330,6 +332,14 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
   - Test 1: IntegerLiteral (4 cases) - 42, 0, -123, 9876 ✅
   - Test 2: StringLiteral (4 cases) - hello, newline, empty, quotes ✅
   - Test 3: BooleanLiteral (2 cases) - benar→"1", salah→"0" ✅
+
+**n1/test_codegen_phase2.fox** (92 lines, checksum: `a854e482bd2003234820f9f7e1f07f4dc0ee667d3c853d60533319d4eb6d2c00`)
+- **NEW FILE** - TDD test suite for Phase 2 helpers
+- **Test Coverage**: 3 test suites, 5 test cases total
+- **Test Results**: ✅ **5/5 TESTS PASSING** (100%)
+  - Test 1: Identifier → "x" ✅
+  - Test 2: Infix arithmetic/logical → "(1 + 2)", "(a && b)", "(a || b)" ✅
+  - Test 3: VarStatement → "\\tmph_int x = 42;\\n" ✅
 
 #### Implementation Details (Port dari N0):
 
@@ -377,20 +387,24 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
 **Breakdown**:
 - ✅ Architecture: 96% understood, 50% implemented (unchanged)
 - ✅ Type System: 5/12 types (42% coverage, primitives only) (unchanged)
-- ✅ Expressions: 3/20 types implemented (15% coverage) ⬆️ **NEW**
+- ✅ Expressions: 5/20 helper types implemented (25% coverage) ⬆️ **NEW**
   - ✅ IntegerLiteral
   - ✅ StringLiteral
   - ✅ BooleanLiteral
-  - ❌ Identifier, CallExpression, InfixExpression, etc (17 remaining)
-- ❌ Statements: 0/8 types implemented (0% coverage)
+  - ✅ Identifier (simplified)
+  - ✅ InfixExpression (string-based, no type checking yet)
+  - ❌ CallExpression, PrefixExpression, MemberExpression, etc (15 remaining)
+- ✅ Statements: 1/8 helper types implemented (12.5% coverage) ⬆️ **NEW**
+  - ✅ VarStatement (simplified mph_int default)
+  - ❌ ReturnStatement, ExpressionStatement, BlockStatement, etc (7 remaining)
 - ❌ Scope Analysis: 0% (documented in comments)
 - ✅ Helpers: 100% (int_to_string, string_escape working)
 
 **Key Metrics**:
 - N0 compiler.go: 2,809 lines, 60 functions
-- N1 codegen.fox: 390 lines, 14 functions (3 fully working, 11 TODO)
-- Executable logic: ~52 lines (1.8% of N0, was 0.6%)
-- Test coverage: 9/9 tests passing (100%)
+- N1 codegen.fox: 449 lines, 17 functions (6 fully working, 11 TODO)
+- Executable logic: ~95 lines (3.3% of N0, was 1.8%)
+- Test coverage: 14/14 tests passing (100%)
 
 #### What Can N1 Compile Now? (HONEST):
 
@@ -398,28 +412,32 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
 - Integer literals: `42`, `0`, `-123`
 - String literals: `"hello"`, `"hello\nworld"`, `""`
 - Boolean literals: `benar`, `salah`
+- Identifier references (helper only): `x` → `"x"`
+- Infix expressions (helper only): `1 + 2`, `a dan b`, `a atau b`
+- Var statements (helper only): `var x = 42` → C snippet
 
 **CANNOT Compile Yet** ❌:
-- Variable declarations: `var x = 42`
+- Full program compilation (Program.statements iteration not wired)
+- Variable declarations at program level (AST → C integration missing)
+- Binary operations within AST traversal (type-aware compileExpression not implemented)
 - Function calls: `native_print("hello")`
-- Binary operations: `1 + 2`
-- Any complete program
 
 **To Compile "Hello World"** (~510 LOC needed):
-- ❌ VarStatement compilation (~100 LOC)
+- ✅ VarStatement helper (~100 LOC) - still not wired to AST
 - ❌ CallExpression compilation (~150 LOC)
-- ❌ Identifier compilation (~60 LOC)
+- ✅ Identifier helper (~60 LOC) - still not wired to AST
 - ❌ Statement loop in compile_program (~50 LOC)
 - ❌ ExpressionStatement handling (~50 LOC)
-- **Implemented**: ~52 LOC (10% of minimum needed)
+- ❌ Infix expression AST wiring (~120 LOC)
+- **Implemented**: ~95 LOC (18% of minimum needed)
 
 #### Next Steps (Phase 2):
 
 **Target**: Variable declarations + basic expressions
-1. ❌ Implement `codegen_compile_identifier()` (~60 LOC)
-2. ❌ Implement `codegen_compile_var_statement()` (~100 LOC)
-3. ❌ Implement `codegen_compile_infix()` for binary ops (~120 LOC)
-4. ❌ Enable statement iteration in `compile_program()` (~50 LOC)
+1. ❌ Enable statement iteration in `compile_program()` (needs Program statements array)
+2. ❌ Implement ExpressionStatement handling (wire expression helpers into AST traversal)
+3. ❌ Implement CallExpression compilation (~150 LOC)
+4. ❌ Re-enable `types` and `checker` imports + map types to C
 
 **Estimated Phase 2**: ~330 LOC needed → Would bring total to ~382 LOC executable code (~13% of N0)
 
@@ -4977,4 +4995,3 @@ e4aecded4e23813e7e23ac24e81bfa5e601f6126635832c02a90b6988be6c3b2  n1/lexer.fox.b
 ```
 
 **Progress**: 45% → **50%** (N0 fix unlocks future work)
-
