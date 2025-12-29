@@ -292,6 +292,54 @@ fungsi codegen_compile_boolean_literal(lit ast.BooleanLiteral) string
 akhir
 
 # ============================================================================
+# Expression Compilation (Phase 2 - Simplified)
+# ============================================================================
+
+# Identifier → C code
+# N0: Check captured, local, imported, global (complex scope tracking)
+# N1 Simplified: Just return name (no scope tracking yet)
+# TODO Phase 3: Add scope tracking untuk local/global distinction
+fungsi codegen_compile_identifier(ident ast.Identifier) string
+    # Simplified: just return identifier name
+    # In future: check if local vs global, add prefix if needed
+    kembalikan ident.value
+akhir
+
+# InfixExpression → C code
+# N0: Handle string concat, string equality, logical operators, arithmetic
+# N1 Simplified: Basic arithmetic operators only
+# TODO Phase 3: Add string operations, type-aware compilation
+fungsi codegen_compile_infix(left_code string, operator string, right_code string) string
+    # Map Fox logical operators to C
+    var c_operator = operator
+
+    jika operator == "dan"
+        c_operator = "&&"
+    lainnya
+        jika operator == "atau"
+            c_operator = "||"
+        akhir
+    akhir
+
+    # Basic infix: (left op right)
+    kembalikan "(" + left_code + " " + c_operator + " " + right_code + ")"
+akhir
+
+# ============================================================================
+# Statement Compilation (Phase 2 - Simplified)
+# ============================================================================
+
+# VarStatement → C code
+# N0: Complex type inference, GC root registration, tuple unpacking
+# N1 Simplified: var name = value → "mph_int name = value;"
+# TODO Phase 3: Type inference, GC integration
+fungsi codegen_compile_var_statement(name string, value_code string) string
+    # Simplified: default to mph_int type
+    # In future: infer type from value or use explicit type annotation
+    kembalikan "\tmph_int " + name + " = " + value_code + ";\n"
+akhir
+
+# ============================================================================
 # Uppercase Export Wrappers (for module imports)
 # ============================================================================
 fungsi NewCodegen() Codegen
@@ -318,6 +366,19 @@ akhir
 
 fungsi CompileBooleanLiteral(lit ast.BooleanLiteral) string
     kembalikan codegen_compile_boolean_literal(lit)
+akhir
+
+# Phase 2: Expression & statement compilation exports
+fungsi CompileIdentifier(ident ast.Identifier) string
+    kembalikan codegen_compile_identifier(ident)
+akhir
+
+fungsi CompileInfix(left_code string, operator string, right_code string) string
+    kembalikan codegen_compile_infix(left_code, operator, right_code)
+akhir
+
+fungsi CompileVarStatement(name string, value_code string) string
+    kembalikan codegen_compile_var_statement(name, value_code)
 akhir
 
 # ============================================================================

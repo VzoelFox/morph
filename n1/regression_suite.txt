@@ -5,6 +5,9 @@
 # Phase 1: Codegen Literals (CRITICAL - newly implemented)
 n1/test_codegen_literals.fox
 
+# Phase 2: Codegen Expressions & Statements (CRITICAL - newly implemented)
+n1/test_codegen_phase2.fox
+
 # Module System (CRITICAL - core functionality)
 # SKIPPED: n1/test_module_import.fox - N0 codegen bug with struct types (known issue)
 
