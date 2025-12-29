@@ -226,9 +226,7 @@ akhir
 # N0 nextTemp(): generates unique temp names like _tmp_1, _tmp_2, etc.
 fungsi codegen_next_temp(cg Codegen, prefix string) string
     cg.temp_index = cg.temp_index + 1
-    # TODO: Need int_to_string conversion
-    # For now, return placeholder
-    kembalikan "_tmp_1"
+    kembalikan prefix + stdlib_codegen.IntToString(cg.temp_index)
 akhir
 
 # ============================================================================
