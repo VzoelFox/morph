@@ -1,9 +1,9 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.86.0
+- **Versi**: 1.87.0
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
-- **Terakhir Diupdate**: 2025-12-29 11:52 UTC
+- **Terakhir Diupdate**: 2025-12-29 12:05 UTC
 - **Status**: Active
 
 ## 🎯 PRINSIP UTAMA: TELITI, HATI-HATI, JUJUR
@@ -4822,7 +4822,7 @@ dd0045a7191f2fd2a60080c2a1ae37c29519de05bce8c6fefa432df3510cdbcf  test_token_imp
 e4aecded4e23813e7e23ac24e81bfa5e601f6126635832c02a90b6988be6c3b2  n1/lexer.fox (FIXED)
 58ed1ef214638da9319196421ba77ab3360e45b3f87963cfaa104e9f990fc5af  n1/parser.fox (FIXED)
 23ec13f40da748849478241ed0c403432a8c6116bc26f24fb98ced0139b78268  n1/checker.fox (FIXED)
-13881209fae0eb2ea9d6c41ecf15f3449b011aa1325b7cfe2f967a1b858e346e  n1/ast.fox ✅
+3ceb5dba4928ec159c8e9f03761388c132b20b6355171b4d40d36d2ef51cecff  n1/ast.fox ✅
 667950ceac2c40ecc77a23a12f8fe7f2eeb05b561570fcfdc80e9a385bbd61d9  n1/token.fox ✅
 0d5bf62e8f9f47b895a047dea81a46035d16d38586c78e3b20c3dffcc8547cd4  n1/types.fox (HAS ERRORS)
 ```
@@ -4992,13 +4992,13 @@ akhir
 
 ---
 
-## 📊 N1 Current Checksums (2025-12-28 15:45 UTC)
+## 📊 N1 Current Checksums (2025-12-29 12:05 UTC)
 
 ### ✅ All Syntax Clean! (Post Bug Fixes)
 ```
 fa69dc64d1233e6750891ac1e308ddd7519a3adb5448121b265edd680d60734f  n1/types.fox (896 lines, 25/25 tests ✅)
 667950ceac2c40ecc77a23a12f8fe7f2eeb05b561570fcfdc80e9a385bbd61d9  n1/token.fox (compiles ✅)
-13881209fae0eb2ea9d6c41ecf15f3449b011aa1325b7cfe2f967a1b858e346e  n1/ast.fox (compiles ✅)
+3ceb5dba4928ec159c8e9f03761388c132b20b6355171b4d40d36d2ef51cecff  n1/ast.fox (compiles ✅)
 d61eec2ee45953351998b949ea0d5140390c2a4ebb2e69b554f1bb0ddce5237e  n1/lexer.fox (syntax clean ✅, 24 × lainnya jika → atau_jika)
 e38c32ca123f0f2be92c370d54201c6ba82d30c9080c534326171b4dcae19e19  n1/parser.fox (syntax clean ✅, no timeout!)
 e805251dd22b42e10e2e1d7a6685ef37db7d7105287234d561f4233a5622612e  n1/checker.fox (syntax clean ✅)
