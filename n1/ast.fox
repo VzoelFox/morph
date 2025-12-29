@@ -231,6 +231,11 @@ fungsi MakeIntegerLiteral(value int, literal string, line int, column int) Integ
     kembalikan IntegerLiteral{base: base, value: value}
 akhir
 
+fungsi MakeFloatLiteral(value_str string, line int, column int) FloatLiteral
+    var base = MakeNode(NODE_FLOAT_LITERAL, value_str, line, column)
+    kembalikan FloatLiteral{base: base, value_str: value_str}
+akhir
+
 fungsi MakeStringLiteral(value string, line int, column int) StringLiteral
     var base = MakeNode(NODE_STRING_LITERAL, value, line, column)
     kembalikan StringLiteral{base: base, value: value}
