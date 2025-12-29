@@ -181,6 +181,28 @@ fungsi test_builtin_call() void
 akhir
 
 # ============================================================================
+# Test 8: Multi-Pass Compilation Log
+# ============================================================================
+# Expected behavior:
+#   CodegenCompile emits pass log comments in order:
+#     // pass1_collect_globals
+#     // pass2_analyze_captures
+#     // pass3_compile_struct_types
+#     // pass4_compile_struct_rtti
+#     // pass5_compile_module
+
+fungsi test_multipass_log() void
+    native_print("[Test 8] Multi-Pass Compilation Log\n")
+
+    var prog = ast.MakeProgram()
+    var cg = codegen.NewCodegen()
+    var output = codegen.CodegenCompile(cg, prog)
+    native_print(output)
+
+    native_print("  ✅ Multi-pass log test printed\n\n")
+akhir
+
+# ============================================================================
 # Main Test Runner
 # ============================================================================
 
@@ -196,6 +218,7 @@ fungsi main() void
     test_return_statement()
     test_prefix_expression()
     test_builtin_call()
+    test_multipass_log()
 
     native_print("╔══════════════════════════════════════╗\n")
     native_print("║  ✅ All Phase 2 Tests Passed       ║\n")

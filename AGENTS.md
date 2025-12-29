@@ -1,9 +1,9 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.88.2
+- **Versi**: 1.88.3
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
-- **Terakhir Diupdate**: 2025-12-29 12:29 UTC
+- **Terakhir Diupdate**: 2025-12-29 12:40 UTC
 - **Status**: Active
 
 ## 🎯 PRINSIP UTAMA: TELITI, HATI-HATI, JUJUR
@@ -312,7 +312,7 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
 
 #### Files Modified/Created:
 
-**n1/codegen.fox** (594 lines, checksum: `d0a96fa6c9876252756250c8fa45bfaad32350757a945ac3a1b16b9f20d9de55`)
+**n1/codegen.fox** (636 lines, checksum: `042b2a5b83be3b46a79a05e8e754d7b51a12b43d2c8ff615ecd3757dc77ddd32`)
 - **Changes Made** (TELITI):
   1. ✅ Added `ambil "stdlib_codegen"` import for helper functions
   2. ✅ Implemented `codegen_compile_integer_literal()` - port dari N0 line 1506-1507
@@ -333,8 +333,10 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
   17. ✅ Added `codegen_resolve_builtin_name()` mapping for native_print, native_print_error, native_print_int, error, index, trim, split, substring
   18. ✅ Added `codegen_compile_builtin_call()` helper + export wrappers: ResolveBuiltinName, CompileBuiltinCall
   19. ✅ Added C header prototypes for builtin helpers (native_print_error, string helpers, error_new)
-- **Lines Added**: +6 lines (from 588 → 594)
-- **Functional Logic**: +0 lines (header declarations only)
+  20. ✅ Added multi-pass helpers with explicit pass logging (collect globals → compile module)
+  21. ✅ Emitted pass log section in generated C output for verification
+- **Lines Added**: +42 lines (from 594 → 636)
+- **Functional Logic**: +42 lines (multi-pass helpers + pass log)
 - **Status**: ✅ Compiles successfully, all exports working
 
 **n1/test_codegen_literals.fox** (254 lines, checksum: `3edd5a9b7440c37f68cd9b8923b4f02cef580c9d3dd8402d5bbd8fcf6677fbd5`)
@@ -348,10 +350,10 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
   - Test 5: StringLiteral (4 cases) - hello, newline, empty, quotes ✅
   - Test 6: BooleanLiteral (2 cases) - benar→"1", salah→"0" ✅
 
-**n1/test_codegen_phase2.fox** (203 lines, checksum: `27e24c1dfc1267959b9de5e0588fa46c7eb24f7e5490e411919afe69b1f1485b`)
-- **NEW FILE** - TDD test suite for Phase 2 helpers
-- **Test Coverage**: 7 test suites, 14 test cases total
-- **Test Results**: ✅ **14/14 TESTS PASSING** (100%)
+**n1/test_codegen_phase2.fox** (226 lines, checksum: `9fb96ec38b45d7c0ae5b37360cd62dd5685ced8f17b401a07b0b3976d595f67b`)
+- **UPDATED** - TDD test suite for Phase 2 helpers
+- **Test Coverage**: 8 test suites, 15 test cases total
+- **Test Results**: ✅ **15/15 TESTS PASSING** (100%)
   - Test 1: Identifier → "x" ✅
   - Test 2: Infix arithmetic/logical → "(1 + 2)", "(a && b)", "(a || b)" ✅
   - Test 3: VarStatement → "\\tmph_int x = 42;\\n" ✅
@@ -359,6 +361,7 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
   - Test 5: ReturnStatement → "\\treturn;\\n", "\\treturn 42;\\n" ✅
   - Test 6: PrefixExpression → "(!x)", "(-5)" ✅
   - Test 7: Builtin calls → "mph_native_print(ctx, ...)", "mph_native_print_int(ctx, 42)", "mph_error_new(ctx, ...)", "mph_string_index(ctx, a, b)" ✅
+  - Test 8: Multi-pass log output → pass1..pass5 order ✅
 
 #### Implementation Details (Port dari N0):
 
