@@ -1,9 +1,9 @@
 # Agents.md - Source of Truth untuk AI Agent
 
 ## Metadata Dokumen
-- **Versi**: 1.88.5
+- **Versi**: 1.88.6
 - **Tanggal Dibuat**: 2025-12-20 06.10 WIB
-- **Terakhir Diupdate**: 2025-12-29 13:18 UTC
+- **Terakhir Diupdate**: 2025-12-29 13:26 UTC
 - **Status**: Active
 
 ## 🎯 PRINSIP UTAMA: TELITI, HATI-HATI, JUJUR
@@ -316,7 +316,7 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
 
 #### Files Modified/Created:
 
-**n1/codegen.fox** (725 lines, checksum: `064f2db76ed7abc239fbae7c874e7dc79e2ff7a2fc706c52df47ec8dd7296eab`)
+**n1/codegen.fox** (778 lines, checksum: `9ba37f71939bacf4564ad9c8933f7f95e4313cc0ed2ad15a655c280c80e680bf`)
 - **Changes Made** (TELITI):
   1. ✅ Added `ambil "stdlib_codegen"` import for helper functions
   2. ✅ Implemented `codegen_compile_integer_literal()` - port dari N0 line 1506-1507
@@ -328,8 +328,8 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
   8. ✅ Added 6 Uppercase export wrappers: CompileIntegerLiteral, CompileFloatLiteral, CompileCharLiteral, CompileStringLiteral, CompileBooleanLiteral, CompileNullLiteral
   9. ✅ Implemented `codegen_compile_identifier()`, `codegen_compile_infix()`, `codegen_compile_var_statement()` helpers
   10. ✅ Fixed `codegen_next_temp()` to generate unique temp names via `stdlib_codegen.IntToString`
-  11. ⚠️ Temporarily commented out `types` and `checker` imports (will re-enable in Phase 2+)
-  12. ⚠️ Temporarily commented out `codegen_map_type_to_c()` (needs types module)
+  11. ✅ Re-enabled `types` import and implemented `codegen_map_type_to_c()` for core + complex kinds
+  12. ✅ Added CodegenMapTypeToC export wrapper for module access
   13. ✅ Added simplified `codegen_compile_expression_statement()` helper
   14. ✅ Added simplified `codegen_compile_return_statement()` helper
   15. ✅ Added simplified `codegen_compile_prefix()` helper
@@ -343,8 +343,8 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
   23. ✅ Wired `Program.var_statement` into pass1 globals collection
   24. ✅ Split global var declaration vs initialization and emit init in entry_body
   25. ✅ Added var statement helpers for type/value extraction from AST
-- **Lines Added**: +89 lines (from 636 → 725)
-- **Functional Logic**: +89 lines (var statement storage + typed globals + entry init)
+- **Lines Added**: +53 lines (from 725 → 778)
+- **Functional Logic**: +53 lines (type mapping + export wrapper)
 - **Status**: ✅ Compiles successfully, all exports working
 
 **n1/test_codegen_literals.fox** (254 lines, checksum: `3edd5a9b7440c37f68cd9b8923b4f02cef580c9d3dd8402d5bbd8fcf6677fbd5`)
@@ -358,10 +358,10 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
   - Test 5: StringLiteral (4 cases) - hello, newline, empty, quotes ✅
   - Test 6: BooleanLiteral (2 cases) - benar→"1", salah→"0" ✅
 
-**n1/test_codegen_phase2.fox** (226 lines, checksum: `9fb96ec38b45d7c0ae5b37360cd62dd5685ced8f17b401a07b0b3976d595f67b`)
+**n1/test_codegen_phase2.fox** (272 lines, checksum: `cf995853ecea0a02cfbf4b4492afd7d864ef3e5a9f87b53e54ca00f424f80907`)
 - **UPDATED** - TDD test suite for Phase 2 helpers
-- **Test Coverage**: 8 test suites, 15 test cases total
-- **Test Results**: ✅ **15/15 TESTS PASSING** (100%)
+- **Test Coverage**: 9 test suites, 19 test cases total
+- **Test Results**: ✅ **19/19 TESTS PASSING** (100%)
   - Test 1: Identifier → "x" ✅
   - Test 2: Infix arithmetic/logical → "(1 + 2)", "(a && b)", "(a || b)" ✅
   - Test 3: VarStatement → "\\tmph_int x = 42;\\n" ✅
@@ -369,7 +369,8 @@ ca12870640f2e427f8a7da00777c56df1dc56c430dce778c013fda720ac00924  n1/types.fox
   - Test 5: ReturnStatement → "\\treturn;\\n", "\\treturn 42;\\n" ✅
   - Test 6: PrefixExpression → "(!x)", "(-5)" ✅
   - Test 7: Builtin calls → "mph_native_print(ctx, ...)", "mph_native_print_int(ctx, 42)", "mph_error_new(ctx, ...)", "mph_string_index(ctx, a, b)" ✅
-  - Test 8: Multi-pass log output → pass1..pass5 order ✅
+  - Test 8: Type mapping → int/string/struct/channel ✅
+  - Test 9: Multi-pass log output → pass1..pass5 order ✅
 
 #### Implementation Details (Port dari N0):
 

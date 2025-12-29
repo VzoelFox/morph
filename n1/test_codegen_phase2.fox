@@ -3,6 +3,7 @@
 
 ambil "ast"
 ambil "codegen"
+ambil "types"
 
 # ============================================================================
 # Test 1: Identifier Compilation
@@ -181,7 +182,51 @@ fungsi test_builtin_call() void
 akhir
 
 # ============================================================================
-# Test 8: Multi-Pass Compilation Log
+# Test 8: Type Mapping to C
+# Expected behavior (simplified Phase 2):
+#   IntType → "mph_int"
+#   StringType → "MorphString*"
+#   StructType("User") → "mph_User*"
+#   ChannelType → "MorphChannel*"
+
+fungsi test_type_mapping() void
+    native_print("[Test 8] Type Mapping to C\n")
+
+    var int_type = types.IntType()
+    var string_type = types.StringType()
+    var struct_type = types.StructType("User")
+    var channel_type = types.ChannelType()
+
+    var int_code = codegen.CodegenMapTypeToC(int_type)
+    var string_code = codegen.CodegenMapTypeToC(string_type)
+    var struct_code = codegen.CodegenMapTypeToC(struct_type)
+    var channel_code = codegen.CodegenMapTypeToC(channel_type)
+
+    native_print("  int → \"")
+    native_print(int_code)
+    native_print("\"\n")
+    # EXPECTED: "mph_int"
+
+    native_print("  string → \"")
+    native_print(string_code)
+    native_print("\"\n")
+    # EXPECTED: "MorphString*"
+
+    native_print("  struct User → \"")
+    native_print(struct_code)
+    native_print("\"\n")
+    # EXPECTED: "mph_User*"
+
+    native_print("  channel → \"")
+    native_print(channel_code)
+    native_print("\"\n")
+    # EXPECTED: "MorphChannel*"
+
+    native_print("  ✅ Type mapping tests passed\n\n")
+akhir
+
+# ============================================================================
+# Test 9: Multi-Pass Compilation Log
 # ============================================================================
 # Expected behavior:
 #   CodegenCompile emits pass log comments in order:
@@ -192,7 +237,7 @@ akhir
 #     // pass5_compile_module
 
 fungsi test_multipass_log() void
-    native_print("[Test 8] Multi-Pass Compilation Log\n")
+    native_print("[Test 9] Multi-Pass Compilation Log\n")
 
     var prog = ast.MakeProgram()
     var cg = codegen.NewCodegen()
@@ -218,6 +263,7 @@ fungsi main() void
     test_return_statement()
     test_prefix_expression()
     test_builtin_call()
+    test_type_mapping()
     test_multipass_log()
 
     native_print("╔══════════════════════════════════════╗\n")
