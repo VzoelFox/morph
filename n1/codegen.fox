@@ -323,6 +323,19 @@ fungsi codegen_compile_infix(left_code string, operator string, right_code strin
     kembalikan "(" + left_code + " " + c_operator + " " + right_code + ")"
 akhir
 
+# PrefixExpression → C code
+# N0: Map logical negation and unary operators
+# N1 Simplified: handle "tidak" (logical not) and unary operators as-is
+fungsi codegen_compile_prefix(operator string, right_code string) string
+    var c_operator = operator
+
+    jika operator == "tidak"
+        c_operator = "!"
+    akhir
+
+    kembalikan "(" + c_operator + right_code + ")"
+akhir
+
 # ============================================================================
 # Statement Compilation (Phase 2 - Simplified)
 # ============================================================================
@@ -335,6 +348,23 @@ fungsi codegen_compile_var_statement(name string, value_code string) string
     # Simplified: default to mph_int type
     # In future: infer type from value or use explicit type annotation
     kembalikan "\tmph_int " + name + " = " + value_code + ";\n"
+akhir
+
+# ExpressionStatement → C code
+# N0: compile expression and append semicolon
+# N1 Simplified: append semicolon to already-compiled expression
+fungsi codegen_compile_expression_statement(value_code string) string
+    kembalikan "\t" + value_code + ";\n"
+akhir
+
+# ReturnStatement → C code
+# N0: handle void vs value returns
+# N1 Simplified: "return;" or "return <value>;"
+fungsi codegen_compile_return_statement(has_value bool, value_code string) string
+    jika has_value
+        kembalikan "\treturn " + value_code + ";\n"
+    akhir
+    kembalikan "\treturn;\n"
 akhir
 
 # ============================================================================
@@ -375,8 +405,20 @@ fungsi CompileInfix(left_code string, operator string, right_code string) string
     kembalikan codegen_compile_infix(left_code, operator, right_code)
 akhir
 
+fungsi CompilePrefix(operator string, right_code string) string
+    kembalikan codegen_compile_prefix(operator, right_code)
+akhir
+
 fungsi CompileVarStatement(name string, value_code string) string
     kembalikan codegen_compile_var_statement(name, value_code)
+akhir
+
+fungsi CompileExpressionStatement(value_code string) string
+    kembalikan codegen_compile_expression_statement(value_code)
+akhir
+
+fungsi CompileReturnStatement(has_value bool, value_code string) string
+    kembalikan codegen_compile_return_statement(has_value, value_code)
 akhir
 
 # ============================================================================
