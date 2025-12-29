@@ -117,6 +117,31 @@ fungsi test_return_statement() void
 akhir
 
 # ============================================================================
+# Test 6: PrefixExpression Compilation
+# ============================================================================
+# Expected behavior (simplified Phase 2):
+#   tidak x → "(!x)"
+#   -5 → "(-5)"
+
+fungsi test_prefix_expression() void
+    native_print("[Test 6] PrefixExpression Compilation\n")
+
+    var result1 = codegen.CompilePrefix("tidak", "x")
+    native_print("  tidak x → \"")
+    native_print(result1)
+    native_print("\"\n")
+    # EXPECTED: "(!x)"
+
+    var result2 = codegen.CompilePrefix("-", "5")
+    native_print("  -5 → \"")
+    native_print(result2)
+    native_print("\"\n")
+    # EXPECTED: "(-5)"
+
+    native_print("  ✅ PrefixExpression tests passed\n\n")
+akhir
+
+# ============================================================================
 # Main Test Runner
 # ============================================================================
 
@@ -130,6 +155,7 @@ fungsi main() void
     test_var_statement()
     test_expression_statement()
     test_return_statement()
+    test_prefix_expression()
 
     native_print("╔══════════════════════════════════════╗\n")
     native_print("║  ✅ All Phase 2 Tests Passed       ║\n")

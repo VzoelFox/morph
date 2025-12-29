@@ -323,6 +323,19 @@ fungsi codegen_compile_infix(left_code string, operator string, right_code strin
     kembalikan "(" + left_code + " " + c_operator + " " + right_code + ")"
 akhir
 
+# PrefixExpression → C code
+# N0: Map logical negation and unary operators
+# N1 Simplified: handle "tidak" (logical not) and unary operators as-is
+fungsi codegen_compile_prefix(operator string, right_code string) string
+    var c_operator = operator
+
+    jika operator == "tidak"
+        c_operator = "!"
+    akhir
+
+    kembalikan "(" + c_operator + right_code + ")"
+akhir
+
 # ============================================================================
 # Statement Compilation (Phase 2 - Simplified)
 # ============================================================================
@@ -390,6 +403,10 @@ akhir
 
 fungsi CompileInfix(left_code string, operator string, right_code string) string
     kembalikan codegen_compile_infix(left_code, operator, right_code)
+akhir
+
+fungsi CompilePrefix(operator string, right_code string) string
+    kembalikan codegen_compile_prefix(operator, right_code)
 akhir
 
 fungsi CompileVarStatement(name string, value_code string) string
