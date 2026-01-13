@@ -1,0 +1,61 @@
+ambil "corelib/core/graphics.fox"
+ambil "corelib/core/types.fox"
+ambil "corelib/core/builtins.fox"
+ambil "corelib/lib/ui.fox"
+
+; ==============================================================================
+; UI INTERACTIVE DEMO
+; ==============================================================================
+; Demonstrates:
+; 1. Drawing Primitives (Rects)
+; 2. Handling Mouse Events (Click)
+; 3. UI Button Interaction
+; ==============================================================================
+
+const WIN_WIDTH  = 800
+const WIN_HEIGHT = 600
+
+var win_handle = 0
+var btn_1 = 0
+var event_struct = 0
+
+fungsi main()
+  win_handle = __mf_window_create(WIN_WIDTH, WIN_HEIGHT, "Morph UI Demo")
+
+  ; Create Button
+  btn_1 = ui_button_new(50, 50, 200, 50, "Click Me!", 0x00FF0000) ; Red
+
+  ; Alloc Event Struct
+  event_struct = mem_alloc(32)
+
+  selama (1)
+    var type = __mf_window_poll(event_struct)
+
+    jika (type == EVENT_QUIT)
+      keluar
+    tutup_jika
+
+    jika (type == EVENT_CLICK)
+      var mx = peek(event_struct, 16)
+      var my = peek(event_struct, 24)
+
+      jika (ui_button_is_clicked(btn_1, mx, my) == 1)
+        ; Toggle Color
+        var c = peek(btn_1, 40)
+        jika (c == 0x00FF0000)
+          poke(btn_1, 40, 0x0000FF00) ; Green
+        lain
+          poke(btn_1, 40, 0x00FF0000) ; Red
+        tutup_jika
+      tutup_jika
+    tutup_jika
+
+    ; Render
+    __mf_fill_rect(0, 0, WIN_WIDTH, WIN_HEIGHT, COLOR_WHITE) ; Clear
+    ui_button_draw(btn_1)
+
+    __mf_yield()
+  tutup_selama
+
+  kembali 0
+tutup_fungsi

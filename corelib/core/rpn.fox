@@ -1,0 +1,128 @@
+; ==============================================================================
+; RPN (Reverse Polish Notation) INSTRUCTION SET (SSOT)
+; ==============================================================================
+; Dokumen ini mendefinisikan instruksi mesin virtual berbasis stack (Stack VM)
+; yang menjadi target output dari Parser MorphFox.
+;
+; Filosofi: "Linear, Explicit, Readable".
+; Menghindari AST (Abstract Syntax Tree) yang kompleks, kita menggunakan
+; aliran instruksi linear yang mudah diproses mesin dan AI.
+;
+; Kepatuhan: Dokumentasi ini disinkronisasi dengan `rpn.inc` (Windows) dan
+; `rpn_gas.inc` (Linux) untuk menjamin paritas 100%.
+;
+; ------------------------------------------------------------------------------
+; STRUKTUR INSTRUKSI
+; ------------------------------------------------------------------------------
+; Setiap instruksi RPN direpresentasikan sebagai Node dalam array linear.
+;
+; Ukuran: 16 Byte (Alignment 8).
+; [Offset 0x00] Opcode (i64)
+; [Offset 0x08] Operand (i64 / ptr) - Opsional, tergantung Opcode.
+;
+; ------------------------------------------------------------------------------
+; DAFTAR OPCODE (i64)
+; ------------------------------------------------------------------------------
+;
+; [Data & Variabel]
+; -----------------
+; OP_LIT        = 1   ; Push Literal (Operand: Value) -> Stack
+;
+; OP_LOAD       = 2   ; Load Var Global (Operand: Symbol Hash) -> Stack
+;                       Hint: Mengambil nilai dari Symbol Table (Global Memory).
+;
+; OP_STORE      = 3   ; Store Var Global (Operand: Symbol Hash) <- Stack (Pop)
+;                       Hint: Menyimpan Top Stack ke Symbol Table (Global Memory).
+;
+; OP_DUP        = 4   ; Duplicate Top.
+;                       [A] -> [A, A]
+;                       Hint: Berguna untuk operasi berantai.
+;
+; OP_POP        = 5   ; Discard Top.
+;                       [A, B] -> [A]
+;                       Hint: Membersihkan stack setelah evaluasi statement.
+;
+; OP_PICK       = 6   ; Pick item at depth N (Operand: N).
+;                       [A, B, C] (Pick 2) -> [A, B, C, A]
+;                       Hint: Simulasi "Read Register/Local Var". Akses acak (Random Access)
+;                             item di stack tanpa menghapusnya.
+;
+; OP_POKE       = 7   ; Poke item at depth N (Operand: N).
+;                       [A, B, C, NewVal] (Poke 2) -> [NewVal, B, C]
+;                       Hint: Simulasi "Write Register/Local Var". Mengubah nilai (Mutasi)
+;                             yang sudah ada di dalam stack. Top Stack dipop dan ditulis
+;                             ke slot target.
+;
+; [Aritmatika]
+; ------------
+; OP_ADD        = 10  ; Pop A, Pop B -> Push (B + A)
+; OP_SUB        = 11  ; Pop A, Pop B -> Push (B - A)
+; OP_MUL        = 12  ; Pop A, Pop B -> Push (B * A)
+; OP_DIV        = 13  ; Pop A, Pop B -> Push (B / A)
+; OP_MOD        = 14  ; Pop A, Pop B -> Push (B % A)
+;
+; [Perbandingan & Logika]
+; -----------------------
+; OP_EQ         = 20  ; ==
+; OP_NEQ        = 21  ; !=
+; OP_LT         = 22  ; <
+; OP_GT         = 23  ; >
+; OP_LTE        = 24  ; <=
+; OP_GTE        = 25  ; >=
+;
+; [Kontrol Alur / Jumps]
+; ----------------------
+; OP_JMP        = 30  ; Jump Unconditional (Operand: Label ID)
+;
+; OP_JMP_IF     = 31  ; Jump If True (Pop Condition -> Jika True Jump)
+;                       Hint: Digunakan untuk logika 'OR' short-circuit.
+;
+; OP_JMP_FALSE  = 32  ; Jump If False (Pop Condition -> Jika False Jump)
+;                       Hint: Digunakan untuk 'IF', 'WHILE', dan 'AND'.
+;
+; OP_CALL       = 33  ; Call Function (Operand: Label ID)
+;                       Hint: Push Return Address ke CallStack (bukan DataStack).
+;
+; OP_RET        = 34  ; Return from Function.
+;                       Hint: Pop Return Address dari CallStack -> Jump.
+;
+; OP_EXIT       = 35  ; Terminate Process (Operand: Exit Code).
+;
+; OP_LABEL      = 36  ; Penanda Lokasi (No-Op, target jump).
+;                       Operand: ID Label (Unique i64).
+;
+; OP_SWITCH     = 37  ; Start Switch Block.
+;                       Hint: Mempersiapkan jump table atau sequential check.
+;
+; OP_CASE       = 38  ; Case Entry.
+;                       Hint: Penanda awal blok case.
+;
+; OP_CYCLE      = 39  ; Circuit Breaker Check.
+;                       Hint: Mengurangi 'VM Cycle Budget'. Jika 0, Panic.
+;                       Mencegah Infinite Loop yang membekukan sistem.
+;
+; [System Interface]
+; ------------------
+; OP_SYSCALL    = 40  ; Effect Boundary.
+;                       Stack: [..., ArgN, ..., Arg1, IntentID] -> Top
+;                       Hint: Executor Pop ID, lalu Pop Args sesuai ID.
+;                       Menjembatani Userland dengan Kernel/OS.
+;
+; [Concurrency]
+; -------------
+; OP_SPAWN      = 50  ; Spawn New Routine (Operand: Label ID).
+;                       Hint: Membuat MorphRoutine baru yang mengeksekusi Label ID.
+;                       Routine baru ditambahkan ke antrian Scheduler (Ready Queue).
+;
+; OP_YIELD      = 51  ; Yield Execution (Cooperative Multitasking).
+;                       Hint: Memberikan sisa waktu CPU kepada Routine lain di antrian.
+;                       Menyimpan state saat ini dan memicu Context Switch.
+;
+; [Debug & Meta]
+; --------------
+; OP_PRINT      = 90  ; Print Top (Debug).
+; OP_DUMP       = 91  ; Dump Stack Trace (Debug).
+; OP_HINT       = 99  ; Metadata/Komentar (Operand: String Ptr). No-Op.
+;                       Digunakan untuk menjelaskan blok kode kepada AI/Manusia.
+;
+; ==============================================================================

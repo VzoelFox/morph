@@ -1,0 +1,78 @@
+name: MorphFox CI/CD
+
+on:
+  push:
+    branches: [ "main", "master", "jules/**" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  test-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: sudo apt-get update && sudo apt-get install -y build-essential binutils
+
+      - name: Assemble Runtime (Linux x86_64)
+        run: as corelib/platform/x86_64/asm/runtime.s -o runtime.o
+
+      - name: Assemble Hello World (Linux x86_64)
+        run: as corelib/platform/x86_64/asm/hello.s -o hello.o
+
+      - name: Link (Linux x86_64)
+        run: ld runtime.o hello.o -o hello_morph
+
+      - name: Run Test (Deterministik)
+        run: |
+          ./hello_morph > output.txt
+          echo "MorphFox Hidup!" > expected.txt
+          diff output.txt expected.txt && echo "Linux Test Passed"
+
+  test-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup NASM
+        uses: ilammy/setup-nasm@v1
+
+      - name: Setup MSVC Linker
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Assemble Runtime (Windows x86_64)
+        run: nasm -f win64 corelib/platform/x86_64/asm_win/runtime.s -o runtime.obj
+
+      - name: Create Hello World (NASM Version for Windows)
+        # Kita perlu versi NASM dari hello.s karena sintaks AT&T tidak valid di NASM
+        shell: cmd
+        run: |
+          @echo section .data > hello_win.asm
+          @echo msg db 'MorphFox Hidup!', 10 >> hello_win.asm
+          @echo len equ $ - msg >> hello_win.asm
+          @echo section .text >> hello_win.asm
+          @echo global main >> hello_win.asm
+          @echo extern __sys_write >> hello_win.asm
+          @echo main: >> hello_win.asm
+          @echo   sub rsp, 40 >> hello_win.asm
+          @echo   mov rcx, 1 >> hello_win.asm
+          @echo   lea rdx, [rel msg] >> hello_win.asm
+          @echo   mov r8, len >> hello_win.asm
+          @echo   call __sys_write >> hello_win.asm
+          @echo   xor rax, rax >> hello_win.asm
+          @echo   add rsp, 40 >> hello_win.asm
+          @echo   ret >> hello_win.asm
+
+      - name: Assemble Hello World (Windows)
+        run: nasm -f win64 hello_win.asm -o hello.obj
+
+      - name: Link (Windows x86_64)
+        run: link runtime.obj hello.obj /subsystem:console /entry:_start /out:hello_morph.exe kernel32.lib
+
+      - name: Run Test (Deterministik)
+        run: |
+          ./hello_morph.exe > output.txt
+          # Verifikasi konten (Simple check karena PowerShell/CMD handling newline mungkin beda)
+          type output.txt
+          findstr /C:"MorphFox Hidup" output.txt

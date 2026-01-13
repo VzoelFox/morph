@@ -1,0 +1,57 @@
+; ==============================================================================
+; PENGUJIAN KONTRAK: LOGIKA DASAR
+; ==============================================================================
+; Dokumen ini berisi spesifikasi pengujian yang harus diluluskan oleh implementasi
+; MorphFox v0 untuk memastikan kepatuhan terhadap kontrak SSOT.
+;
+; Format: Deskripsi Skenario Pengujian (Tanpa Kode Eksekusi).
+;
+; ------------------------------------------------------------------------------
+; SKENARIO 1: ARITMATIKA DASAR & OVERFLOW
+; ------------------------------------------------------------------------------
+; Tujuan: Memastikan operasi matematika dasar berfungsi dan wrapping terjadi.
+;
+; [Langkah Pengujian]
+; 1. Inisialisasi variabel `A` dengan nilai 10.
+; 2. Inisialisasi variabel `B` dengan nilai 20.
+; 3. Hitung `C = A + B`.
+;    - Harapan: `C` bernilai 30.
+; 4. Hitung `D = A - B`.
+;    - Harapan: `D` bernilai -10 (Representasi negatif two's complement).
+; 5. Uji Overflow:
+;    - Ambil nilai maksimum i64 (MAX_INT).
+;    - Tambahkan 1.
+;    - Harapan: Hasil menjadi nilai minimum i64 (MIN_INT).
+;
+; ------------------------------------------------------------------------------
+; SKENARIO 2: LOGIKA PERCABANGAN (JIKA)
+; ------------------------------------------------------------------------------
+; Tujuan: Memastikan alur program bisa bercabang berdasarkan kondisi.
+;
+; [Langkah Pengujian]
+; 1. Set `x = 5`.
+; 2. Lakukan pengecekan: `Jika (x > 0)`.
+;    - Blok Benar: Cetak "Positif".
+;    - Harapan: Output "Positif" muncul.
+; 3. Set `y = -5`.
+; 4. Lakukan pengecekan: `Jika (y > 0)`.
+;    - Blok Benar: Cetak "Positif".
+;    - Harapan: TIDAK ADA output "Positif".
+;
+; ------------------------------------------------------------------------------
+; SKENARIO 3: PERULANGAN SEDERHANA (SELAMA)
+; ------------------------------------------------------------------------------
+; Tujuan: Memastikan blok kode bisa diulang sampai kondisi salah.
+;
+; [Langkah Pengujian]
+; 1. Set `counter = 3`.
+; 2. Mulai Loop: `Selama (counter > 0)`.
+;    - Di dalam loop:
+;      a. Cetak nilai `counter`.
+;      b. Kurangi `counter` dengan 1 (`counter = counter - 1`).
+; 3. Selesai Loop.
+; 4. Harapan:
+;    - Output tercetak berurutan: "3", "2", "1".
+;    - Loop berhenti ketika `counter` menjadi 0.
+;
+; ==============================================================================

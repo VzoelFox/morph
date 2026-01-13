@@ -1,0 +1,112 @@
+; ==============================================================================
+; MORPHROUTINE RUNTIME ARCHITECTURE (SSOT)
+; ==============================================================================
+; Dokumen ini mendefinisikan struktur data inti untuk eksekusi program MorphFox.
+; Visi: "INTERPRETED FOR HUMAN, READABLE FOR AI"
+;
+; Filosofi Hirarki Eksekusi:
+; 1. Process  : Wadah isolasi sumber daya (OS Process).
+; 2. Unit     : Tugas logis tingkat tinggi (Fungsi/Prosedur). Manusia berpikir di sini.
+; 3. Shard    : Jalur eksekusi paralel/cabang. Memungkinkan AI menelusuri logika flow.
+; 4. Fragment : Blok instruksi atomik (berisi RPN). Mesin bekerja di sini.
+;
+; ==============================================================================
+
+; ------------------------------------------------------------------------------
+; 1. FRAGMENT (Atomic Instruction Block)
+; ------------------------------------------------------------------------------
+; Fragment adalah unit terkecil yang dijadwalkan.
+; Berisi bytecode RPN linear tanpa percabangan kompleks (Basic Block).
+;
+; [Struktur Memori] - Ukuran: 32 Byte
+;
+; [Offset 0x00] ID (i64)
+;   - Identifikasi unik fragment untuk debugging/AI tracing.
+;
+; [Offset 0x08] Code Ptr (ptr)
+;   - Pointer ke array instruksi RPN (Bytecode).
+;
+; [Offset 0x10] Code Size (i64)
+;   - Jumlah byte instruksi dalam fragment ini.
+;
+; [Offset 0x18] Next Fragment Hint (i64/ptr)
+;   - Petunjuk fragment berikutnya (untuk optimasi AI pre-fetch).
+;   - 0 jika akhir dari Shard/Dynamic jump.
+
+; ------------------------------------------------------------------------------
+; 2. SHARD (Execution Path)
+; ------------------------------------------------------------------------------
+; Shard merepresentasikan satu "timeline" eksekusi.
+; Digunakan untuk mengelola percabangan (Branching) atau Async Flow.
+;
+; [Struktur Memori] - Ukuran: 32 Byte
+;
+; [Offset 0x00] Parent Unit Ptr (ptr)
+;   - Pointer ke Unit pemilik shard ini.
+;
+; [Offset 0x08] Entry Fragment Ptr (ptr)
+;   - Fragment pertama yang dieksekusi saat Shard ini aktif.
+;
+; [Offset 0x10] Priority (i64)
+;   - Tingkat prioritas eksekusi (0 = Normal, 1 = High, 2 = Critical).
+;
+; [Offset 0x18] Metadata Ptr (ptr)
+;   - Pointer ke string nama/deskripsi Shard (untuk keterbacaan manusia).
+
+; ------------------------------------------------------------------------------
+; 3. UNIT (Logical Task / Function)
+; ------------------------------------------------------------------------------
+; Unit setara dengan Fungsi atau Objek yang memiliki state.
+;
+; [Struktur Memori] - Ukuran: 48 Byte
+;
+; [Offset 0x00] Name Ptr (ptr)
+;   - Nama Unit (String Struct) untuk debugging/stack trace.
+;
+; [Offset 0x08] Shard List Head (ptr)
+;   - Linked List dari Shard yang dimiliki unit ini.
+;
+; [Offset 0x10] Local Variables Size (i64)
+;   - Ukuran memori yang dibutuhkan untuk variabel lokal (Stack Frame size).
+;
+; [Offset 0x18] Input Signature (i64)
+;   - Deskripsi tipe input (untuk validasi kontrak).
+;
+; [Offset 0x20] Output Signature (i64)
+;   - Deskripsi tipe output.
+
+; ------------------------------------------------------------------------------
+; 4. MORPH ROUTINE (The Green Thread)
+; ------------------------------------------------------------------------------
+; Entitas yang sebenarnya "berjalan" di atas CPU (via Scheduler).
+;
+; [Struktur Memori] - Ukuran: 64 Byte (Cache Line Aligned)
+;
+; [Offset 0x00] Stack Pointer (ptr)
+;   - Menyimpan RSP saat routine ini di-pause (Context Switch).
+;
+; [Offset 0x08] Instruction Pointer (ptr)
+;   - Menyimpan alamat instruksi berikutnya (di dalam Fragment Code).
+;
+; [Offset 0x10] Status (i64)
+;   - 0: READY (Siap jalan)
+;   - 1: RUNNING (Sedang jalan)
+;   - 2: WAITING (Menunggu I/O atau Signal)
+;   - 3: TERMINATED (Selesai)
+;
+; [Offset 0x18] Current Fragment Ptr (ptr)
+;   - Fragment yang sedang dieksekusi.
+;
+; [Offset 0x20] ID (i64)
+;   - Unique Routine ID.
+;
+; [Offset 0x28] Next Routine Ptr (ptr)
+;   - Untuk Linked List di Scheduler Queue.
+;
+; [Offset 0x30] Stack Base (ptr)
+;   - Batas bawah stack (untuk proteksi overflow).
+;
+; [Offset 0x38] Stack Limit (ptr)
+;   - Batas atas stack.
+
+; ==============================================================================

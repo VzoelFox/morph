@@ -1,0 +1,45 @@
+; ==============================================================================
+; GRAPHICS CORE (SSOT)
+; ==============================================================================
+; Defines structures and contracts for the Morph Graphics Stack.
+; Target: Native Windowing (Win32/X11) and Pixel Rendering.
+;
+; INTENTS (Syscall Extension)
+; ------------------------------------------------------------------------------
+; 20: WINDOW_CREATE (width, height, title_ptr) -> handle
+; 21: DRAW_PIXEL    (handle, x, y, color) -> void
+; 22: EVENT_POLL    (handle) -> event_id
+;
+; STRUCT: EVENT (32 Bytes)
+; ------------------------------------------------------------------------------
+; [0x00] Type (i64)
+; [0x08] Key Code (i64)
+; [0x10] Mouse X (i64)
+; [0x18] Mouse Y (i64)
+;
+; CONSTANTS
+; ------------------------------------------------------------------------------
+; Colors (0x00RRGGBB)
+.equ COLOR_BLACK, 0x00000000
+.equ COLOR_WHITE, 0x00FFFFFF
+.equ COLOR_RED,   0x00FF0000
+.equ COLOR_GREEN, 0x0000FF00
+.equ COLOR_BLUE,  0x000000FF
+
+; Events
+.equ EVENT_NONE,  0
+.equ EVENT_QUIT,  1
+.equ EVENT_KEY,   2
+.equ EVENT_MOUSE, 3
+.equ EVENT_CLICK, 4
+
+; ------------------------------------------------------------------------------
+; CONTRACTS (Platform Builtins)
+; ------------------------------------------------------------------------------
+; func __mf_window_create(width: i64, height: i64, title: ptr) -> handle (i64)
+; func __mf_draw_pixel(handle: i64, x: i64, y: i64, color: i64) -> void
+; func __mf_window_poll(event_ptr: ptr) -> event_type (i64)
+; func __mf_draw_char(x: i64, y: i64, char: i64, color: i64) -> void
+; func __mf_draw_string(x: i64, y: i64, str_ptr: ptr, color: i64) -> void
+; func __mf_fill_rect(x: i64, y: i64, w: i64, h: i64, color: i64) -> void
+; func __mf_draw_rect(x: i64, y: i64, w: i64, h: i64, color: i64) -> void

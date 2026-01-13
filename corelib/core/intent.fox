@@ -1,0 +1,88 @@
+; ==============================================================================
+; INTENT AST (SSOT)
+; ==============================================================================
+; Dokumen ini mendefinisikan struktur data "Intent" (Abstract Syntax Tree).
+; Intent adalah representasi struktural dari kode sumber sebelum dikompilasi
+; menjadi instruksi mesin (MorphRoutine).
+;
+; Visi: "INTERPRETED FOR HUMAN, READABLE FOR AI"
+; IntentAST dirancang agar AI dapat memahami "Niat" programmer (Logika, Scope,
+; Hubungan antar data) tanpa kebisingan detail implementasi stack/register.
+;
+; HIERARKI MAPPING:
+; ------------------------------------------------------------------------------
+; 1. Unit     -> Global Scope / Module
+;    Representasi file atau modul utuh. Berisi definisi fungsi (Shard) dan
+;    variabel global.
+;
+; 2. Shard    -> Local Scope / Block
+;    Representasi tubuh fungsi, blok 'jika', atau blok 'selama'.
+;    Memiliki daftar instruksi/ekspresi (Fragment) yang berurutan.
+;
+; 3. Fragment -> Expression / Statement
+;    Unit terkecil logika. Bisa berupa operasi matematika, pemanggilan fungsi,
+;    atau assignment variabel.
+;
+; ==============================================================================
+
+; ------------------------------------------------------------------------------
+; TIPE NODE (Enum i64)
+; ------------------------------------------------------------------------------
+; 0x1000 - UNIT Types
+; 0x2000 - SHARD Types
+; 0x3000 - FRAGMENT Types
+
+; Unit
+.equ INTENT_UNIT_MODULE,    0x1001
+
+; Shard
+.equ INTENT_SHARD_FUNC,     0x2001 ; Definisi Fungsi
+.equ INTENT_SHARD_BLOCK,    0x2002 ; Blok Kode generik (misal body if)
+
+; Fragment (Expressions)
+.equ INTENT_FRAG_LITERAL,   0x3001 ; Literal (123, "abc")
+.equ INTENT_FRAG_BINARY,    0x3002 ; Binary Op (a + b)
+.equ INTENT_FRAG_UNARY,     0x3003 ; Unary Op (-a, !b)
+.equ INTENT_FRAG_CALL,      0x3004 ; Function Call
+.equ INTENT_FRAG_VAR,       0x3005 ; Variable Access
+.equ INTENT_FRAG_ASSIGN,    0x3006 ; Variable Assignment (a = b)
+
+; ------------------------------------------------------------------------------
+; STRUKTUR DASAR NODE (Header)
+; ------------------------------------------------------------------------------
+; Semua node IntentAST memiliki header yang sama.
+;
+; [Offset 0x00] Type (i64)
+;   - Jenis Intent (lihat Enum di atas).
+;
+; [Offset 0x08] Next Sibling Ptr (ptr)
+;   - Pointer ke node berikutnya dalam list (misal statement berikutnya).
+;   - 0 jika ini node terakhir.
+;
+; [Offset 0x10] First Child Ptr (ptr)
+;   - Pointer ke anak pertama (misal argumen fungsi, atau isi blok).
+;
+; [Offset 0x18] Hint Ptr (ptr)
+;   - Pointer ke struktur Metadata/Hint untuk AI.
+;   - Berisi info: Line, Column, Original Source Code Snippet.
+;
+; [Offset 0x20] Data A (i64/ptr)
+;   - Payload generik A (tergantung tipe).
+;   - LITERAL: Value
+;   - BINARY: Operator ID
+;   - VAR: String Ptr (Nama Var)
+;
+; [Offset 0x28] Data B (i64/ptr)
+;   - Payload generik B.
+
+; ------------------------------------------------------------------------------
+; STRUKTUR HINT (AI Context)
+; ------------------------------------------------------------------------------
+; Disimpan terpisah agar struktur utama AST tetap ringan (32-48 bytes).
+;
+; [Offset 0x00] Line (i64)
+; [Offset 0x08] Column (i64)
+; [Offset 0x10] Source Snippet Ptr (ptr) - String asli dari kode sumber.
+; [Offset 0x18] AI Annotation Ptr (ptr) - Ruang untuk AI menyisipkan catatan saat analisis.
+
+; ==============================================================================

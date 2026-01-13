@@ -1,63 +1,16 @@
-# Comprehensive Gitignore (Whitelist Strategy)
-
-# 1. Ignore Everything by Default
-*
-
-# 2. Whitelist Directories (Recursive)
-!*/
-!cmd/**
-!docs/**
-!examples/**
-!morphsh/**
-!pkg/**
-!stdlib/**
-!n1/**
-!.morph.vz/checksums/**
-!.vzoel.jules/**
-
-# 3. Whitelist Root Files
-!AGENTS.md
-!DESIGN.md
-!README.md
-!ROADMAP.md
-!MEMORY_*.md
-!N0_*.md
-!N1_*.md
-!checksum_gen.go
-!go.mod
-!go.sum
-!.gitignore
-
-# 4. Whitelist Github Workflows (if any)
-!.github/**
-
-# 5. Explicitly Ignore Artifacts (Even inside whitelisted directories)
-morph
-*.exe
+# Ignore build artifacts
 *.o
-*.a
+*.obj
+*.exe
+*.dll
 *.so
 *.dylib
-*.test
-out.c
-*_out.c
-
-# Ignore Generated C/H files in examples/ and root but keep .fox files
-examples/*.c
-examples/*.h
-examples/function_type_test
-examples/stress_test
-
-# Ignore compiled binaries in n1/ but keep source files (.fox, .c)
-n1/checker_core
-n1/checker_v2
-n1/checker_integrated
-n1/regression_simple
-n1/std_array
-n1/std_map
-n1/std_string
-n1/symtab_id
-n1/test_*
-n1/transpiler_asm_simple
-!n1/*.fox
-!n1/*.c
+*.a
+*.lib
+*.log
+*.out
+test_morph
+hello_morph
+hello_win.asm
+output.txt
+expected.txt

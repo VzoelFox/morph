@@ -1,0 +1,21 @@
+utama {
+    # Blue
+    var c_blue = "\033[34m"
+    sistem 1, 1, c_blue.buffer, c_blue.panjang
+
+    var msg1 = "This is Blue\n"
+    sistem 1, 1, msg1.buffer, msg1.panjang
+
+    # Cyan
+    var c_cyan = "\033[36m"
+    sistem 1, 1, c_cyan.buffer, c_cyan.panjang
+
+    var msg2 = "This is Cyan\n"
+    sistem 1, 1, msg2.buffer, msg2.panjang
+
+    # Reset
+    var c_reset = "\033[0m"
+    sistem 1, 1, c_reset.buffer, c_reset.panjang
+
+    0
+}

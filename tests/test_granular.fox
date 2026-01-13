@@ -1,0 +1,16 @@
+; TEST: Granular Import
+; Only import 'math_abs' from std.fox. 'math_max' should not be available.
+
+ambil "corelib/lib/std.fox" : math_abs
+
+fungsi main()
+  var val = -42
+  var abs_val = math_abs(val)
+
+  __mf_print_int(abs_val) ; Expect 42
+
+  ; The following line should fail compilation if granular import works strictly
+  ; var max_val = math_max(10, 20)
+
+  kembali 0
+tutup_fungsi

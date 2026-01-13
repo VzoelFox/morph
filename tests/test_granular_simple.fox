@@ -1,0 +1,4 @@
+Ambil 123
+fungsi main()
+  var x = 10
+tutup_fungsi

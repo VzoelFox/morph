@@ -1,0 +1,99 @@
+ambil "corelib/core/graphics.fox"
+ambil "corelib/core/dom.fox"
+ambil "corelib/lib/html_parser.fox"
+ambil "corelib/lib/layout.fox"
+ambil "corelib/core/builtins.fox"
+
+; ==============================================================================
+; MORPHWEB DEMO (Advanced Layout)
+; ==============================================================================
+; Demonstrates:
+; 1. Inline CSS Parsing (style="...")
+; 2. Padding & Manual Sizing
+; 3. Inline Elements Flow (<span>)
+; ==============================================================================
+
+const WIN_WIDTH  = 800
+const WIN_HEIGHT = 600
+const BG_COLOR   = 0xFFFFFF ; White
+const TEXT_COLOR = 0x000000 ; Black
+
+var win_handle = 0
+var dom_root = 0
+
+fungsi main()
+  ; 1. Create Window
+  win_handle = __mf_window_create(WIN_WIDTH, WIN_HEIGHT, "MorphWeb v0.3 - CSS Layout")
+
+  jika (win_handle < 0)
+    __mf_print_str("Failed to create window")
+    kembali 1
+  tutup_jika
+
+  ; 2. Parse HTML with CSS
+  ; Complex layout:
+  ; - Container div with padding 20 and forced width 400.
+  ; - Header h1 (Block).
+  ; - Paragraph p (Block).
+  ; - Two spans (Inline) flowing horizontally.
+
+  var html_source = "<div style=\"padding:20; width:400; height:300\"><h1>Header</h1><p>Paragraph Block</p><span style=\"display:2\">Inline 1 </span><span style=\"display:2\">Inline 2</span></div>"
+
+  dom_root = html_parse(html_source)
+
+  ; 3. Compute Layout
+  layout_compute(dom_root, 10, 10, WIN_WIDTH - 20)
+
+  ; 4. Event Loop
+  selama (1)
+    var event = __mf_window_poll(0) ; Pass 0 (NULL)
+
+    jika (event == 1) ; EVENT_QUIT
+      keluar
+    tutup_jika
+
+    ; 5. Render
+    render_node_advanced(dom_root)
+
+    __mf_yield()
+  tutup_selama
+
+  kembali 0
+tutup_fungsi
+
+fungsi render_node_advanced(node)
+  jika (node == 0)
+    kembali 0
+  tutup_jika
+
+  var type = peek(node, 0)
+  var box = peek(node, 56)
+
+  jika (box != 0)
+    var x = peek(box, 0)
+    var y = peek(box, 8)
+
+    jika (type == DOM_NODE_ELEMENT)
+      ; Debug: Draw Box Border? (Not implemented in graphics yet)
+      ; For now just recurse
+
+      var child = peek(node, 16)
+      selama (child != 0)
+        render_node_advanced(child)
+        child = peek(child, 24)
+      tutup_selama
+
+    lain
+      jika (type == DOM_NODE_TEXT)
+        var str_struct = peek(node, 40)
+        var str_ptr = peek(str_struct, 8)
+
+        ; Check parent style for color?
+        ; For V0.3 we just use Black.
+        __mf_draw_string(x, y, str_ptr, TEXT_COLOR)
+      tutup_jika
+    tutup_jika
+  tutup_jika
+
+  kembali 0
+tutup_fungsi

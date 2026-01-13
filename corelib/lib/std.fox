@@ -1,0 +1,40 @@
+ambil "corelib/core/types.fox"
+ambil "corelib/core/builtins.fox"
+
+; ==============================================================================
+; STANDARD LIBRARY (STD)
+; ==============================================================================
+; Wrapper functions for common operations.
+; ==============================================================================
+
+; Math
+fungsi math_abs(n)
+  jika (n < 0)
+    kembali 0 - n
+  tutup_jika
+  kembali n
+tutup_fungsi
+
+fungsi math_max(a, b)
+  jika (a > b)
+    kembali a
+  tutup_jika
+  kembali b
+tutup_fungsi
+
+; Memory
+fungsi std_memcpy(dest, src, len)
+  var i = 0
+  selama (i < len)
+    var b = load_byte(src + i)
+    poke_byte(dest + i, b)
+    i = i + 1
+  tutup_selama
+tutup_fungsi
+
+; IO
+fungsi print_line(ptr)
+  __mf_print_asciz(ptr)
+  ; Newline
+  ; TODO: Platform specific newline or just print char 10
+tutup_fungsi

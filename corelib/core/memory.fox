@@ -1,0 +1,200 @@
+; ==============================================================================
+; MANAJEMEN MEMORI (SSOT) - Updated v1.2
+; ==============================================================================
+; Dokumen ini mendefinisikan struktur data dan kontrak untuk Morph Allocator
+; dengan Memory Safety Guarantees yang telah ditingkatkan.
+;
+; MEMORY SAFETY GUARANTEES (v1.2)
+; ------------------------------------------------------------------------------
+; Sejak v1.2, MorphFox menerapkan defensive programming untuk mencegah:
+; - NULL pointer dereference (Exit Code 110)
+; - Out-of-bounds memory access (Exit Code 111)
+; - Division by zero (Exit Code 104)
+; - Stack overflow pada parser (Exit Code 112, max depth 256)
+; - Buffer overflow pada networking (Exit Codes 115-117)
+; - Invalid fragment execution (Exit Codes 105-109)
+;
+; Semua error codes didokumentasikan di halaman_17.md (Memory Safety Update).
+;
+; KONSTANTA DASAR
+; ------------------------------------------------------------------------------
+; PAGE_SIZE = 4096 (4KB)
+; HEADER_SIZE = 48 bytes (Expanded for Page Size tracking)
+;
+; STRUKTUR DATA: PAGE HEADER
+; ------------------------------------------------------------------------------
+; Setiap halaman memori 4KB yang diminta dari OS akan memiliki header di
+; 48 byte pertama.
+;
+; [Offset 0x00] Next Page Ptr (64-bit)
+;   - Pointer ke halaman berikutnya dalam Linked List.
+;
+; [Offset 0x08] Prev Page Ptr (64-bit)
+;   - Pointer ke halaman sebelumnya.
+;
+; [Offset 0x10] Last Access Time (64-bit)
+;   - Timestamp akses terakhir (Unix Timestamp).
+;
+; [Offset 0x18] Page Size (64-bit)
+;   - Ukuran total alokasi halaman (untuk munmap yang aman pada Big Alloc).
+;
+; [Offset 0x20] Magic Number (64-bit)
+;   - Validasi integritas: "VZOELFOX" (0x584F464C454F5A56).
+;
+; [Offset 0x28] Padding (16 bytes)
+;   - Reserved (Zero).
+;
+; KONTRAK FUNGSI (ASSEMBLY)
+; ------------------------------------------------------------------------------
+;
+; func mem_alloc(size: i64) -> ptr
+; - Input:  Register argumen pertama (RDI di Linux, RCX di Windows).
+; - Output: Register return (RAX). Pointer ke memori USER (setelah header).
+; - Logic:
+;   1. Round up size ke kelipatan aligment.
+;   2. Jika size > (PAGE_SIZE - HEADER_SIZE), minta Multi-Page (Big Allocation).
+;   3. Jika tidak, cari di halaman aktif.
+;   4. Jika halaman aktif penuh, minta halaman baru via OS_ALLOC_PAGE.
+;
+; func mem_free(ptr: ptr, size: i64) -> void
+; - Input:  Argumen 1 (Ptr), Argumen 2 (Size).
+; - Logic:
+;   1. Validasi pointer (cek Magic number di header halaman).
+;   2. Tandai blok sebagai bebas.
+;   3. (Opsional) Gabungkan dengan blok bebas tetangga.
+
+; ==============================================================================
+; MEMORY ARENA (SSOT)
+; ==============================================================================
+; Arena Allocator (Bump Pointer) dengan kemampuan Batch Reset.
+;
+; STRUKTUR DATA: ARENA HEADER
+; ------------------------------------------------------------------------------
+; Header ini disimpan di AWAL blok memori yang dialokasikan via mem_alloc.
+; Pointer yang dikembalikan oleh arena_create menunjuk ke struktur ini.
+;
+; [Offset 0x00] Start Ptr (64-bit)
+;   - Pointer ke awal area USER (biasanya: arena_ptr + 32).
+;
+; [Offset 0x08] Current Ptr (64-bit)
+;   - Posisi bump pointer saat ini.
+;
+; [Offset 0x10] End Ptr (64-bit)
+;   - Batas akhir memori yang valid (arena_ptr + alloc_size).
+;
+; [Offset 0x18] ID (64-bit)
+;   - Identitas numerik arena (opsional, untuk debug).
+;
+; Total Ukuran Header: 32 Byte.
+;
+; KONTRAK FUNGSI
+; ------------------------------------------------------------------------------
+;
+; func arena_create(size: i64) -> ptr
+; - Input:  Total ukuran yang diminta (dalam byte).
+; - Output: Pointer ke Arena struct, atau 0 (NULL) jika gagal.
+; - Logic:
+;   1. Panggil mem_alloc(size).
+;   2. Inisialisasi Header di 32 byte pertama.
+;   3. Start = Base + 32. Current = Start. End = Base + Size.
+;
+; func arena_alloc(arena: ptr, size: i64) -> ptr
+; - Input:  Pointer Arena, Ukuran alokasi.
+; - Output: Pointer ke blok baru, atau 0 (NULL) jika OOM.
+; - Logic:
+;   1. Cek (Current + Size) <= End.
+;   2. Jika muat: Return Current, lalu Current += Size.
+;   3. Jika tidak: Return NULL.
+;
+; func arena_reset(arena: ptr) -> void
+; - Input:  Pointer Arena.
+; - Logic:  Set Current = Start.
+;
+; func arena_get_usage(arena: ptr) -> i64
+; - Logic: Return (Current - Start).
+;
+; func arena_get_capacity(arena: ptr) -> i64
+; - Logic: Return (End - Start).
+
+; ==============================================================================
+; MEMORY POOL (SSOT)
+; ==============================================================================
+; Fixed-Size Block Allocator dengan Free List (LIFO Reuse).
+; Cocok untuk objek yang ukurannya sama dan sering dialokasikan/dealokasikan.
+;
+; STRUKTUR DATA: POOL HEADER
+; ------------------------------------------------------------------------------
+; Header disimpan di AWAL blok memori.
+; Ukuran Header: 48 Bytes (Aligned 16-byte).
+;
+; [Offset 0x00] Start Ptr (64-bit)
+;   - Pointer ke awal area USER (biasanya: pool_ptr + 48).
+;
+; [Offset 0x08] Current Ptr (64-bit)
+;   - Posisi bump pointer saat ini (untuk alokasi baru yang belum pernah dipakai).
+;
+; [Offset 0x10] End Ptr (64-bit)
+;   - Batas akhir memori valid.
+;
+; [Offset 0x18] Object Size (64-bit)
+;   - Ukuran setiap blok (WAJIB >= 8 byte untuk menyimpan pointer next).
+;
+; [Offset 0x20] Free List Head (64-bit)
+;   - Pointer ke blok bebas terakhir yang dikembalikan (LIFO).
+;   - 0 (NULL) jika kosong.
+;
+; [Offset 0x28] Padding (16 bytes)
+;   - Reserved untuk alignment 16-byte.
+;
+; KONTRAK FUNGSI
+; ------------------------------------------------------------------------------
+;
+; func pool_create(obj_size: i64, capacity: i64) -> ptr
+; - Input:  Ukuran objek (min 8), Kapasitas (jumlah objek).
+; - Output: Pointer ke Pool struct, atau 0 jika gagal.
+; - Logic:
+;   1. Validasi obj_size >= 8.
+;   2. Total Size = (obj_size * capacity) + 48.
+;   3. Call mem_alloc(Total Size).
+;   4. Init Header.
+;
+; func pool_alloc(pool: ptr) -> ptr
+; - Input:  Pointer Pool.
+; - Output: Pointer ke objek, atau 0 jika OOM.
+; - Logic:
+;   1. Cek FreeList. Jika !NULL:
+;      - Ambil blok dari FreeList.
+;      - Update FreeList = *blok (Next ptr disimpan di 8 byte pertama blok).
+;      - Return blok.
+;   2. Jika FreeList NULL:
+;      - Cek Bump Pointer (Current + ObjSize <= End).
+;      - Jika muat: Return Current, update Current.
+;      - Jika tidak: Return 0 (OOM).
+;
+; func pool_free(pool: ptr, obj_ptr: ptr) -> void
+; - Input:  Pointer Pool, Pointer Objek.
+; - Logic:
+;   1. Simpan FreeList Head lama ke dalam *obj_ptr.
+;   2. Update FreeList Head = obj_ptr.
+
+; ==============================================================================
+; SNAPSHOT FILE FORMAT (SSOT)
+; ==============================================================================
+; File Binary Dump (*.bin) yang menyimpan state memori.
+;
+; FILE HEADER (64 Bytes)
+; ------------------------------------------------------------------------------
+; [0x00] Magic: "MORPHSNP" (0x504E534850524F4D) - Little Endian
+; [0x08] Version: 1
+; [0x10] Timestamp: Unix Epoch
+; [0x18] Page Count: Jumlah halaman yang disimpan
+; [0x20] Reserved (Zero padding hingga 64 bytes)
+;
+; PAGE DATA BLOCK (Berulang)
+; ------------------------------------------------------------------------------
+; 1. [Page Header Copy] (48 Bytes)
+;    - Salinan persis dari header halaman di memori.
+;    - Field 'Next' dan 'Prev' mungkin tidak valid saat restore, perlu relinking.
+;
+; 2. [Page Content] (Variable Size)
+;    - Data mentah halaman sebesar 'Page Size' (yang ada di header).

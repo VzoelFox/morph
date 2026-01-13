@@ -1,0 +1,31 @@
+; corelib/platform/x86_64/asm/syscalls_nasm.inc (NASM)
+; System Call Intent Constants
+
+%define SYS_INTENT_WRITE 1
+%define SYS_INTENT_READ 2
+%define SYS_INTENT_OPEN 3
+%define SYS_INTENT_CLOSE 4
+%define SYS_INTENT_TIME 5
+%define SYS_INTENT_EXIT 6
+
+; Network Intents
+%define SYS_INTENT_SOCKET 10
+%define SYS_INTENT_CONNECT 11
+%define SYS_INTENT_SEND 12
+%define SYS_INTENT_RECV 13
+%define SYS_INTENT_BIND 14
+%define SYS_INTENT_LISTEN 15
+%define SYS_INTENT_ACCEPT 16
+%define SYS_INTENT_MMAP 9
+
+; Crypto Intents
+%define SYS_INTENT_SHA256_INIT 30
+%define SYS_INTENT_SHA256_UPDATE 31
+%define SYS_INTENT_SHA256_FINAL 32
+%define SYS_INTENT_CHACHA_BLOCK 33
+%define SYS_INTENT_CHACHA_STREAM 34
+
+; Graphics Intents
+%define SYS_INTENT_WINDOW_CREATE 20
+%define SYS_INTENT_DRAW_PIXEL 21
+%define SYS_INTENT_EVENT_POLL 22

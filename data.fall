@@ -1,0 +1,4 @@
+app_name: MorphApp
+version: 1.0.0
+database: production_db
+secret: vzoelfox_key

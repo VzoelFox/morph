@@ -1,0 +1,42 @@
+ambil "corelib/core/types.fox"
+
+; ==============================================================================
+; BUILTINS (SSOT)
+; ==============================================================================
+; Functions defined in Assembly (builtins.s).
+; Compiler maps calls to these functions directly.
+
+; Debug
+fungsi __mf_print_int(val: i64) -> void
+fungsi __mf_print_int_raw(val: i64) -> void
+fungsi __mf_print_str(ptr: ptr, len: i64) -> void
+fungsi __mf_print_asciz(ptr: ptr) -> void
+
+; Math (Safe)
+fungsi __mf_add_checked(a: i64, b: i64) -> i64 ; (val, err in RDX)
+fungsi __mf_sub_checked(a: i64, b: i64) -> i64
+fungsi __mf_mul_checked(a: i64, b: i64) -> i64
+fungsi __mf_div_checked(a: i64, b: i64) -> i64
+
+; Math (Complex)
+fungsi __mf_abs(val: i64) -> i64
+fungsi __mf_sqrt(val: i64) -> i64
+fungsi __mf_pow(base: i64, exp: i64) -> i64
+
+; Memory Operations
+fungsi __mf_memcpy(dest: ptr, src: ptr, size: i64) -> ptr
+fungsi __mf_mem_alloc(size: i64) -> ptr
+fungsi __mf_mem_free(ptr: ptr, size: i64) -> void
+fungsi __mf_load_i64(addr: ptr) -> i64
+fungsi __mf_poke_i64(addr: ptr, value: i64) -> void
+fungsi __mf_load_byte(addr: ptr) -> i64
+fungsi __mf_poke_byte(addr: ptr, value: i64) -> void
+
+; Crypto (SHA-256)
+fungsi __mf_sha256_init(ctx: ptr) -> void
+fungsi __mf_sha256_update(ctx: ptr, data: ptr, len: i64) -> void
+fungsi __mf_sha256_final(ctx: ptr, digest: ptr) -> void
+
+; Crypto (ChaCha20)
+fungsi __mf_chacha20_block(key: ptr, nonce: ptr, counter: i64, out: ptr) -> void
+fungsi __mf_chacha20_xor_stream(key: ptr, nonce: ptr, counter: i64, input: ptr, output: ptr, len: i64) -> void

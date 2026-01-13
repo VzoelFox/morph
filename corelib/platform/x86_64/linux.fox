@@ -1,0 +1,84 @@
+; ==============================================================================
+; PEMETAAN PLATFORM: x86_64 / Linux
+; ==============================================================================
+; Dokumen ini memetakan kontrak abstrak (SSOT) dari `core/prelude.fox`
+; ke dalam instruksi dan aturan konkret arsitektur x86_64 dengan kernel Linux.
+;
+; ------------------------------------------------------------------------------
+; ATURAN DASAR (CONVENTION)
+; ------------------------------------------------------------------------------
+; Mengikuti System V AMD64 ABI untuk System Calls.
+;
+; [Register Syscall]
+; - Nomor Syscall : Masuk ke register RAX
+; - Return Value  : Keluar di register RAX
+;   * Implementasi "Result Style":
+;     - 0 s/d (Max Int): Sukses
+;     - -1 s/d -4095   : Error (mirip errno negatif)
+;
+; [Register Argumen]
+; - Argumen 1: RDI
+; - Argumen 2: RSI
+; - Argumen 3: RDX
+; - Argumen 4: R10
+; - Argumen 5: R8
+; - Argumen 6: R9
+;
+; [Instruksi Pemicu]
+; - `syscall`
+;
+; ------------------------------------------------------------------------------
+; IMPLEMENTASI KONTRAK
+; ------------------------------------------------------------------------------
+;
+; [1] KONTROL PROSES: KELUAR (EXIT)
+; ---------------------------------
+; SSOT: Input(Kode Status) -> Stop.
+;
+; Implementasi x86_64/Linux:
+; - Syscall ID (RAX) : 60 (sys_exit)
+; - Argumen 1 (RDI)  : Kode Status (Integer)
+; - Aksi             : syscall
+;
+;
+; [2] I/O DASAR: TULIS (WRITE)
+; ----------------------------
+; SSOT: Input(Handle, Buffer Ptr, Len) -> Result<usize, Error>.
+;
+; Implementasi x86_64/Linux:
+; - Syscall ID (RAX) : 1 (sys_write)
+; - Argumen 1 (RDI)  : File Descriptor (Handle)
+; - Argumen 2 (RSI)  : Buffer Pointer
+; - Argumen 3 (RDX)  : Count / Length (Non-negatif)
+; - Aksi             : syscall
+; - Hasil (RAX)      : Jumlah byte tertulis (>=0) atau kode error (<0).
+;
+;
+; [3] MANAJEMEN MEMORI: ALOKASI (MAP)
+; -----------------------------------
+; SSOT: Input(Size) -> Result<Pointer, Error>.
+;       (Rounding handled by OS/Kernel logic usually, or manually if needed).
+;
+; Implementasi x86_64/Linux:
+; - Syscall ID (RAX) : 9 (sys_mmap)
+; - Argumen 1 (RDI)  : 0 (Addr hint - biarkan OS memilih)
+; - Argumen 2 (RSI)  : Size (Ukuran yang diminta)
+; - Argumen 3 (RDX)  : 3 (PROT_READ | PROT_WRITE) -> Akses Baca/Tulis
+; - Argumen 4 (R10)  : 34 (MAP_PRIVATE | MAP_ANONYMOUS) -> Memori privat, bukan file
+; - Argumen 5 (R8)   : -1 (File Descriptor - diabaikan karena MAP_ANONYMOUS)
+; - Argumen 6 (R9)   : 0 (Offset)
+; - Aksi             : syscall
+; - Hasil (RAX)      : Pointer ke memori baru (>=0) atau kode error (<0).
+;
+; [4] MANAJEMEN MEMORI: DEALOKASI (UNMAP)
+; ---------------------------------------
+; SSOT: Input(Pointer, Size) -> Result<Void, Error>.
+;
+; Implementasi x86_64/Linux:
+; - Syscall ID (RAX) : 11 (sys_munmap)
+; - Argumen 1 (RDI)  : Pointer (Alamat awal blok)
+; - Argumen 2 (RSI)  : Size (Ukuran blok)
+; - Aksi             : syscall
+; - Hasil (RAX)      : 0 (Sukses) atau <0 (Error).
+;
+; ==============================================================================

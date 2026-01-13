@@ -1,0 +1,263 @@
+ambil "corelib/core/types.fox"
+ambil "corelib/core/dom.fox"
+ambil "corelib/core/builtins.fox"
+ambil "corelib/lib/css_parser.fox"
+
+; ==============================================================================
+; HTML PARSER (LIB)
+; ==============================================================================
+; Simple Recursive Descent Parser for a subset of HTML.
+; Input: Null-terminated String (e.g., "<div>Text</div>").
+; Output: Ptr to DOM_NODE_ELEMENT (Root).
+;
+; LIMITATIONS:
+; - Simplified attribute parsing (only style="..." supported)
+; - Tags must be balanced
+; - No self-closing tags (e.g., <img/>)
+; - No DOCTYPE, comments, or CDATA
+;
+; ROBUSTNESS IMPROVEMENTS:
+; - Null terminator checking to prevent buffer overflow
+; - Maximum depth limit to prevent stack overflow
+; - Bounds checking on all character reads
+; - Tag name validation for closing tags
+;
+; USAGE:
+; root = html_parse(string_ptr)
+; ==============================================================================
+
+; Maximum parsing depth to prevent stack overflow
+var MAX_PARSE_DEPTH = 100
+
+fungsi html_parse(input_ptr)
+  ; 1. Create Root (Fragment/Document)
+  ; Currently we just parse the first tag found.
+
+  var current_idx = 0
+
+  ; Skip whitespace with bounds check
+  var c = peek_char(input_ptr, current_idx)
+  selama (c == 32 && c != 0)  ; Space and not null terminator
+    current_idx = current_idx + 1
+    c = peek_char(input_ptr, current_idx)
+  tutup_selama
+
+  ; Check if start with '<'
+  jika (c == 60 && c != 0)  ; '<' and not null
+    kembali parse_element_safe(input_ptr, current_idx, 0)
+  tutup_jika
+
+  ; Else return null or text node?
+  kembali 0
+tutup_fungsi
+
+; ------------------------------------------------------------------------------
+; Internal: Parse Element (Safe version with depth limit)
+; Returns: Node Ptr (or 0 on error)
+; ------------------------------------------------------------------------------
+fungsi parse_element_safe(input, idx, depth)
+  ; Check depth limit to prevent stack overflow
+  jika (depth >= MAX_PARSE_DEPTH)
+    kembali 0  ; Error: too deep
+  tutup_jika
+
+  kembali parse_element_impl(input, idx, depth)
+tutup_fungsi
+
+; ------------------------------------------------------------------------------
+; Internal: Parse Element Implementation
+; Returns: Node Ptr
+; ------------------------------------------------------------------------------
+fungsi parse_element_impl(input, idx, depth)
+  ; Expect '<' at idx
+  idx = idx + 1 ; Skip '<'
+
+  ; 1. Parse Tag Name with null terminator check
+  var tag_start = idx
+  var c = peek_char(input, idx)
+
+  ; SAFETY: Check for null terminator and valid tag characters
+  selama (c != 62 && c != 0 && c != 32)  ; Until '>', null, or space
+    idx = idx + 1
+    c = peek_char(input, idx)
+  tutup_selama
+
+  ; Check if we hit null terminator (malformed HTML)
+  jika (c == 0)
+    kembali 0  ; Error: unexpected end of input
+  tutup_jika
+
+  var tag_len = idx - tag_start
+  var tag_str = string_slice(input, tag_start, tag_len)
+
+  ; Check for attributes (space found during tag parse)
+  var style_ptr = 0
+
+  jika (c == 32) ; Space found - has attributes
+    ; Parse Attributes (Simplified: only style="..." supported)
+    ; Find 'style="' or skip to '>'
+    c = peek_char(input, idx)
+
+    ; SAFETY: Bounds check while searching for quote or >
+    selama (c != 34 && c != 62 && c != 0) ; Quote, >, or null
+      idx = idx + 1
+      c = peek_char(input, idx)
+    tutup_selama
+
+    jika (c == 34) ; Quote found - assume style attribute
+      var style_start = idx + 1
+      idx = idx + 1
+      c = peek_char(input, idx)
+
+      ; SAFETY: Search for closing quote with null check
+      selama (c != 34 && c != 0) ; Closing quote or null
+        idx = idx + 1
+        c = peek_char(input, idx)
+      tutup_selama
+
+      jika (c == 34) ; Valid closing quote found
+        var style_len = idx - style_start
+        ; Parse CSS
+        style_ptr = css_parse_inline(input + style_start, style_len)
+        idx = idx + 1 ; Skip closing quote
+      tutup_jika
+    tutup_jika
+
+    ; Skip to end of tag with safety
+    c = peek_char(input, idx)
+    selama (c != 62 && c != 0) ; '>' or null
+      idx = idx + 1
+      c = peek_char(input, idx)
+    tutup_selama
+  tutup_jika
+
+  ; Safety check before skipping '>'
+  jika (peek_char(input, idx) == 62)
+    idx = idx + 1 ; Skip '>'
+  lain
+    kembali 0  ; Error: malformed tag
+  tutup_jika
+
+  ; 2. Create Node
+  var node = mem_alloc(64) ; DOM Node Size
+  poke(node, 0, DOM_NODE_ELEMENT)
+  poke(node, 32, tag_str) ; Offset 0x20 is Tag Name
+  poke(node, 48, style_ptr) ; Offset 0x30 is Style Ptr
+
+  ; 3. Parse Children
+  ; CRITICAL FIX: Proper loop termination with safety checks
+  var max_iterations = 10000  ; Prevent infinite loops
+  var iteration = 0
+
+  selama (iteration < max_iterations)
+    iteration = iteration + 1
+    c = peek_char(input, idx)
+
+    ; SAFETY: Check for null terminator
+    jika (c == 0)
+      kembali node  ; End of input - return what we have
+    tutup_jika
+
+    ; Check for end tag '</'
+    jika (c == 60)  ; '<'
+      var next_c = peek_char(input, idx + 1)
+
+      jika (next_c == 47) ; '/' - closing tag
+        ; ROBUSTNESS: Verify tag name matches
+        var close_tag_start = idx + 2
+        var close_tag_idx = close_tag_start
+        var match = 1  ; Assume match
+
+        ; Compare tag names character by character
+        var tag_idx = tag_start
+        selama (tag_idx < tag_start + tag_len)
+          jika (peek_char(input, close_tag_idx) != peek_char(input, tag_idx))
+            match = 0  ; Mismatch found
+            keluar
+          tutup_jika
+          tag_idx = tag_idx + 1
+          close_tag_idx = close_tag_idx + 1
+        tutup_selama
+
+        ; Verify closing '>' after tag name
+        jika (match == 1 && peek_char(input, close_tag_idx) == 62)
+          ; Valid closing tag - we're done
+          kembali node
+        tutup_jika
+
+        ; Malformed closing tag - treat as text or error
+        kembali node
+      tutup_jika
+
+      ; Start Tag -> Child Element (recursion with depth limit)
+      var child = parse_element_safe(input, idx, depth + 1)
+
+      jika (child != 0)
+        append_child(node, child)
+      tutup_jika
+
+      ; LIMITATION: Can't track idx through recursion without return value
+      ; For safety, break after first child to prevent infinite loop
+      ; TODO: Implement proper parser state struct
+      keluar
+    lain
+      ; Text Content with safety
+      var text_start = idx
+      c = peek_char(input, idx)
+
+      selama (c != 60 && c != 0)  ; Until '<' or null
+        idx = idx + 1
+        c = peek_char(input, idx)
+      tutup_selama
+
+      var text_len = idx - text_start
+      jika (text_len > 0)
+        var text_node = mem_alloc(64)
+
+        ; Check allocation success
+        jika (text_node != 0)
+          poke(text_node, 0, DOM_NODE_TEXT)
+          poke(text_node, 40, string_slice(input, text_start, text_len))
+          append_child(node, text_node)
+        tutup_jika
+      tutup_jika
+
+      ; If we hit '<', continue to parse next child/closing tag
+      ; If we hit null, loop will exit
+    tutup_jika
+  tutup_selama
+
+  ; If we hit max_iterations, return what we have (safety fallback)
+  kembali node
+tutup_fungsi
+
+; ------------------------------------------------------------------------------
+; Helpers
+; ------------------------------------------------------------------------------
+fungsi peek_char(ptr, offset)
+  var p = ptr + offset
+  kembali load_byte(p)
+tutup_fungsi
+
+fungsi string_slice(ptr, start, len)
+  var s = mem_alloc(16) ; String Struct
+  poke(s, 0, len)
+  poke(s, 8, ptr + start)
+  kembali s
+tutup_fungsi
+
+fungsi append_child(parent, child)
+  poke(child, 8, parent) ; Set Parent
+
+  var first = peek(parent, 16) ; Offset 0x10 First Child
+  jika (first == 0)
+    poke(parent, 16, child)
+  lain
+    ; Find last
+    var curr = first
+    selama (peek(curr, 24) != 0) ; Offset 0x18 Next Sibling
+      curr = peek(curr, 24)
+    tutup_selama
+    poke(curr, 24, child)
+  tutup_jika
+tutup_fungsi

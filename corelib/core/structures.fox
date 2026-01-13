@@ -1,0 +1,127 @@
+; ==============================================================================
+; STRUKTUR DATA TINGKAT LANJUT (SSOT)
+; ==============================================================================
+; Dokumen ini mendefinisikan struktur data kompleks yang dibangun di atas
+; tipe dasar (i64, ptr).
+;
+; ------------------------------------------------------------------------------
+; 1. STRING (Slice)
+; ------------------------------------------------------------------------------
+; String dalam MorphFox adalah "Fat Pointer" atau Slice. Tidak Null-Terminated.
+; Bersifat immutable secara default.
+;
+; Hint Desain (Why Slice?):
+; Berbeda dengan C (null-terminated), Slice memungkinkan operasi substring (view)
+; dengan kompleksitas O(1) dan mencegah buffer overflow secara eksplisit
+; karena panjang diketahui.
+;
+; [Struktur Memori]
+; Ukuran Total: 16 Byte (Alignment 8).
+;
+; [Offset 0x00] Length (i64)
+;   - Jumlah byte dalam string.
+;   Hint: Digunakan sebagai batas loop (bound) saat iterasi atau copy.
+;
+; [Offset 0x08] Data Ptr (ptr)
+;   - Pointer ke buffer karakter (UTF-8).
+;   Hint: Menunjuk ke raw bytes di Heap/Arena.
+;
+; [Operasi Wajib]
+; - hash_string(ptr, len) -> i64
+;   Menggunakan algoritma FNV-1a (64-bit).
+;   Prime: 1099511628211, Offset: 14695981039346656037.
+;   Hint: Distribusi bit yang baik untuk Hash Map.
+;
+; - string_equals(ptr1, len1, ptr2, len2) -> bool
+;   Membandingkan dua string secara byte-per-byte.
+;   Optimasi: Cek panjang dulu, jika beda langsung return False.
+;
+; ------------------------------------------------------------------------------
+; 2. SYMBOL NODE (Linked List)
+; ------------------------------------------------------------------------------
+; Node untuk Hash Map (Symbol Table) dengan resolusi tabrakan Chaining.
+; Disimpan di Memory Pool.
+;
+; Hint Struktur:
+; Menggunakan 'Separate Chaining'. Jika dua string memiliki hash index yang sama,
+; mereka akan membentuk Linked List.
+;
+; [Struktur Memori]
+; Ukuran Total: 32 Byte (Alignment 16).
+;
+; [Offset 0x00] Next Ptr (ptr)
+;   - Pointer ke node berikutnya dalam bucket yang sama (atau 0).
+;   Hint: Navigasi Linked List saat terjadi tabrakan hash.
+;
+; [Offset 0x08] Hash (i64)
+;   - Nilai hash dari Key.
+;   Hint: Disimpan (Cached) agar tidak perlu re-hash saat resize tabel.
+;         Mempercepat perbandingan (bandingkan Hash dulu sebelum String).
+;
+; [Offset 0x10] Key String Ptr (ptr)
+;   - Pointer ke struct String.
+;   Hint: Key asli disimpan di Memory Arena (stabil), Node di Pool (daur ulang).
+;
+; [Offset 0x18] Value / Type Info (i64)
+;   - Payload data.
+;   Hint: Bisa berupa ID Token, Alamat Variabel, atau Metadata Tipe.
+;
+; ==============================================================================
+; COMPILER CONTEXT STRUCTURES (SSOT)
+; ==============================================================================
+; Struktur data yang digunakan saat fase kompilasi (Userland).
+;
+; STRUKTUR DATA: SWITCH CONTEXT
+; ------------------------------------------------------------------------------
+; Disimpan dalam Stack Compiler saat parsing nested switch.
+; Ukuran: 32 Bytes.
+;
+; [Offset 0x00] Cases Vector Ptr (ptr)
+;   - Pointer ke MorphVector yang berisi pasangan (Value, LabelID).
+;   Hint: Mengumpulkan semua case untuk optimasi Jump Table di akhir blok.
+;
+; [Offset 0x08] Default Label ID (i64)
+;   - Label untuk blok default. -1 jika belum ada.
+;   Hint: Target jump jika tidak ada case yang cocok.
+;
+; [Offset 0x10] End Label ID (i64)
+;   - Label untuk keluar dari switch (break).
+;   Hint: Target jump untuk instruksi 'break'.
+;
+; [Offset 0x18] Type (i64)
+;   - Tipe data switch (Integer=1, String=3).
+;   Hint: Menentukan metode perbandingan (cmp integer vs strcmp).
+
+; STRUKTUR DATA: LOOP CONTEXT
+; ------------------------------------------------------------------------------
+; Disimpan dalam Stack Compiler saat parsing loop (while/for).
+; Ukuran: 16 Bytes.
+;
+; [Offset 0x00] Start Label ID (i64)
+;   - Target 'continue'.
+;   Hint: Melompat kembali ke evaluasi kondisi loop.
+;
+; [Offset 0x08] End Label ID (i64)
+;   - Target 'break'.
+;   Hint: Melompat keluar dari blok loop.
+;
+; ==============================================================================
+; RUNTIME STRUCTURES (SSOT)
+; ==============================================================================
+;
+; STRUKTUR DATA: MORPH SCHEDULER
+; ------------------------------------------------------------------------------
+; Mengelola antrian (Queue) routine yang siap dijalankan.
+; Ukuran: 32 Bytes.
+;
+; [Offset 0x00] Head Routine Ptr (ptr)
+;   - Pointer ke routine pertama di antrian (untuk dijalankan berikutnya).
+;
+; [Offset 0x08] Tail Routine Ptr (ptr)
+;   - Pointer ke routine terakhir di antrian (untuk penambahan routine baru).
+;
+; [Offset 0x10] Current Routine Ptr (ptr)
+;   - Pointer ke routine yang sedang aktif (Running).
+;
+; [Offset 0x18] Routine Count (i64)
+;   - Jumlah total routine aktif.

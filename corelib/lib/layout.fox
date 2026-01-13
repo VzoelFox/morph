@@ -1,0 +1,144 @@
+ambil "corelib/core/dom.fox"
+ambil "corelib/core/builtins.fox"
+ambil "corelib/core/types.fox"
+
+; ==============================================================================
+; LAYOUT ENGINE (LIB)
+; ==============================================================================
+; Computes the layout (X, Y, Width, Height) for a DOM Tree.
+; Implements a simplified "Flow Layout" (Block & Inline).
+;
+; USAGE:
+; layout_compute(root_node, x, y, available_width)
+; ==============================================================================
+
+const CHAR_WIDTH = 8
+const LINE_HEIGHT = 10
+const BLOCK_SPACING = 5
+
+fungsi layout_compute(node, x, y, width)
+  jika (node == 0)
+    kembali 0
+  tutup_jika
+
+  ; 1. Get/Create Layout Box
+  var box = peek(node, 56) ; Offset 0x38 (Decimal 56)
+  jika (box == 0)
+    box = mem_alloc(32) ; 32 bytes LayoutBox
+    poke(node, 56, box)
+  tutup_jika
+
+  ; Set Input Constraints (Defaults)
+  poke(box, 0, x)      ; X
+  poke(box, 8, y)      ; Y
+  poke(box, 16, width) ; Width (Default block width)
+
+  ; Check for Style Overrides
+  var style = peek(node, 48) ; Offset 0x30 Style Ptr
+  var padding = 0
+  var margin = 0
+  var display = DISPLAY_BLOCK
+
+  jika (style != 0)
+    var style_w = peek(style, STYLE_OFFSET_WIDTH)
+    var style_h = peek(style, STYLE_OFFSET_HEIGHT)
+
+    jika (style_w != -1)
+      poke(box, 16, style_w)
+      width = style_w ; Update constraint for children
+    tutup_jika
+
+    padding = peek(style, STYLE_OFFSET_PADDING)
+    margin = peek(style, STYLE_OFFSET_MARGIN)
+    display = peek(style, STYLE_OFFSET_DISPLAY)
+  tutup_jika
+
+  var type = peek(node, 0)
+
+  jika (type == DOM_NODE_ELEMENT)
+    ; BLOCK/FLOW LAYOUT
+
+    var current_x = x + padding
+    var current_y = y + padding
+    var child = peek(node, 16) ; First Child
+    var max_row_h = 0
+
+    selama (child != 0)
+      ; Check child display mode
+      var child_style = peek(child, 48)
+      var child_display = DISPLAY_BLOCK
+      jika (child_style != 0)
+        child_display = peek(child_style, STYLE_OFFSET_DISPLAY)
+      tutup_jika
+
+      ; Inline Layout Logic (Simplistic)
+      ; If child is inline OR text, it flows horizontally.
+      var child_type = peek(child, 0)
+
+      jika (child_display == DISPLAY_INLINE || child_type == DOM_NODE_TEXT)
+        ; INLINE FLOW
+        layout_compute(child, current_x, current_y, width - (current_x - x))
+
+        var child_box = peek(child, 56)
+        var child_w = peek(child_box, 16)
+        var child_h = peek(child_box, 24)
+
+        current_x = current_x + child_w + BLOCK_SPACING
+        jika (child_h > max_row_h)
+          max_row_h = child_h
+        tutup_jika
+
+      lain
+        ; BLOCK FLOW
+        ; Flush previous row if any (move Y down)
+        jika (max_row_h > 0)
+          current_y = current_y + max_row_h + BLOCK_SPACING
+          current_x = x + padding
+          max_row_h = 0
+        tutup_jika
+
+        layout_compute(child, current_x, current_y, width - (padding * 2))
+
+        var child_box = peek(child, 56)
+        var child_h = peek(child_box, 24)
+
+        current_y = current_y + child_h + BLOCK_SPACING
+      tutup_jika
+
+      child = peek(child, 24) ; Next Sibling
+    tutup_selama
+
+    ; Flush last row height
+    current_y = current_y + max_row_h
+
+    ; Calculate My Height (Auto Height)
+    var my_height = (current_y - y) + padding
+
+    ; Override if explicit height set
+    jika (style != 0)
+      var explicit_h = peek(style, STYLE_OFFSET_HEIGHT)
+      jika (explicit_h != -1)
+        my_height = explicit_h
+      tutup_jika
+    tutup_jika
+
+    poke(box, 24, my_height)
+
+  lain
+    jika (type == DOM_NODE_TEXT)
+      ; TEXT LAYOUT
+      ; Width = Length * CharWidth
+      ; Height = LineHeight (Single line for V0)
+
+      var str_struct = peek(node, 40) ; Offset 0x28 (Decimal 40)
+      var len = peek(str_struct, 0)   ; String Length
+
+      var text_w = len * CHAR_WIDTH
+      poke(box, 16, text_w) ; Override width with actual text width
+      poke(box, 24, LINE_HEIGHT)
+
+    tutup_jika
+  tutup_jika
+
+  kembali 0
+tutup_fungsi

@@ -1,0 +1,54 @@
+; ==============================================================================
+; STRUKTUR TOKEN (SSOT)
+; ==============================================================================
+; Dokumen ini mendefinisikan struktur Token yang dihasilkan oleh Lexer.
+;
+; KONSTANTA TIPE TOKEN (Enum i64)
+; ------------------------------------------------------------------------------
+; TOKEN_EOF         = 0
+; Hint: End of File. Penanda akhir stream token.
+;
+; TOKEN_INTEGER     = 1
+; Hint: Literal Angka. Payload 'Value' berisi nilai numerik mentah (i64).
+;
+; TOKEN_IDENTIFIER  = 2
+; Hint: Nama Variabel/Fungsi. Payload 'Value' berisi Pointer ke String Struct.
+;
+; TOKEN_OPERATOR    = 3
+; Hint: Simbol operasi (+, -, *, dll). Payload 'Value' berisi kode ASCII/Packed.
+;
+; TOKEN_KEYWORD     = 4
+; Hint: Kata kunci (jika, selama). Dibedakan dari Identifier oleh Lexer.
+;
+; TOKEN_STRING      = 5
+; Hint: Literal Teks ("..."). Payload 'Value' berisi Pointer ke String Struct.
+;
+; TOKEN_DELIMITER   = 6
+; Hint: Pemisah struktural ((, ), ,). Payload 'Value' berisi kode ASCII.
+;
+; TOKEN_MARKER      = 7
+; Hint: Penanda blok khusus (###). Digunakan untuk segmentasi kode.
+;
+; STRUKTUR TOKEN
+; ------------------------------------------------------------------------------
+; Ukuran Total: 32 Byte (Alignment 8).
+; Disimpan di Memory Arena (karena umur hidupnya sepanjang parsing).
+;
+; [Offset 0x00] Type (i64)
+;   - Jenis token (lihat konstanta di atas).
+;   Hint: Menentukan cara menginterpretasikan field 'Value'.
+;
+; [Offset 0x08] Value (i64 / ptr)
+;   - Payload data polimorfik.
+;   Hint: Bisa berupa Immediate Integer (untuk Angka/Operator)
+;         atau Pointer (untuk String/Identifier).
+;
+; [Offset 0x10] Line (i64)
+;   - Nomor baris sumber.
+;   Hint: Metadata penting untuk pesan error yang "Manusiawi".
+;
+; [Offset 0x18] Column (i64)
+;   - Nomor kolom sumber.
+;   Hint: Metadata presisi lokasi error.
+;
+; ==============================================================================

@@ -1,0 +1,17 @@
+ambil "corelib/core/types.fox"
+
+###
+Ini adalah blok komentar
+yang harus diabaikan oleh parser.
+###
+
+Ambil 123 ; Import ID 123
+
+fungsi main()
+  var x = 10
+  ###
+  Komentar di dalam blok
+  ###
+  var y = 20
+  kembali x + y
+tutup_fungsi

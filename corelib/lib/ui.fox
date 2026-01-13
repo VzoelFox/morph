@@ -1,0 +1,65 @@
+ambil "corelib/core/graphics.fox"
+ambil "corelib/core/types.fox"
+ambil "corelib/core/builtins.fox"
+
+; ==============================================================================
+; UI LIBRARY
+; ==============================================================================
+; Basic UI components.
+;
+; BUTTON STRUCT (48 Bytes)
+; [0x00] X (i64)
+; [0x08] Y (i64)
+; [0x10] Width (i64)
+; [0x18] Height (i64)
+; [0x20] Label Ptr (String)
+; [0x28] Color (i64)
+; ==============================================================================
+
+fungsi ui_button_new(x, y, w, h, label, color)
+  var btn = mem_alloc(48)
+  poke(btn, 0, x)
+  poke(btn, 8, y)
+  poke(btn, 16, w)
+  poke(btn, 24, h)
+  poke(btn, 32, label)
+  poke(btn, 40, color)
+  kembali btn
+tutup_fungsi
+
+fungsi ui_button_draw(btn)
+  var x = peek(btn, 0)
+  var y = peek(btn, 8)
+  var w = peek(btn, 16)
+  var h = peek(btn, 24)
+  var label = peek(btn, 32)
+  var color = peek(btn, 40)
+
+  ; Fill Background
+  __mf_fill_rect(x, y, w, h, color)
+
+  ; Draw Border (Black)
+  __mf_draw_rect(x, y, w, h, COLOR_BLACK)
+
+  ; Draw Label (Centered-ish)
+  ; Simple centering: X + 10, Y + (H/2) - 4
+  var text_x = x + 10
+  var text_y = y + (h / 2) - 4
+
+  ; Text Color: White if bg is dark?
+  ; Assuming Black Text for now.
+  __mf_draw_string(text_x, text_y, label, COLOR_BLACK)
+tutup_fungsi
+
+fungsi ui_button_is_clicked(btn, mx, my)
+  var x = peek(btn, 0)
+  var y = peek(btn, 8)
+  var w = peek(btn, 16)
+  var h = peek(btn, 24)
+
+  jika (mx >= x && mx <= (x + w) && my >= y && my <= (y + h))
+    kembali 1
+  tutup_jika
+
+  kembali 0
+tutup_fungsi

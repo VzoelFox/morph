@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MorphFox WASM Hybrid Demo</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        #log { background: #333; color: #0f0; padding: 10px; font-family: monospace; white-space: pre-wrap; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <div id="log">Logs:<br></div>
+
+    <script src="js/compiler.js"></script>
+    <script src="js/loader.js"></script>
+    <script>
+        // Override console.log
+        const oldLog = console.log;
+        const logDiv = document.getElementById('log');
+        console.log = (...args) => {
+            oldLog(...args);
+            logDiv.innerText += args.join(' ') + '\n';
+        };
+
+        const loader = new window.MorphLoader();
+
+        // Mock Source Code (Hybrid Test)
+        // This source code is tokenized by WASM, then "compiled" by JS to create the DOM.
+        const sourceCode = `
+            __mf_dom_create("h1")
+            __mf_dom_set_text("Hello Hybrid World")
+            __mf_dom_append(1)
+        `;
+
+        loader.load('morph.wasm', sourceCode)
+            .then(() => console.log("Execution Complete."))
+            .catch(err => console.error(err));
+    </script>
+</body>
+</html>

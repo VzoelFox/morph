@@ -1,0 +1,70 @@
+; ==============================================================================
+; SYSTEM CALL INTENTS (SSOT)
+; ==============================================================================
+; Dokumen ini mendefinisikan "Intent ID" yang digunakan oleh OP_SYSCALL.
+; Nilai ini bersifat Universal (Platform Agnostic).
+;
+; Filosofi: "Effect Boundary".
+; OP_SYSCALL adalah satu-satunya titik di mana Executor diizinkan berinteraksi
+; dengan dunia luar (OS). Ini menjamin determinisme logika di Userland.
+;
+; Executor bertanggung jawab menerjemahkan Intent ini ke Syscall OS konkret
+; (misal: `sys_write` di Linux atau `WriteFile` di Windows).
+;
+; ------------------------------------------------------------------------------
+; INTENT ID (i64)
+; ------------------------------------------------------------------------------
+;
+; 1: WRITE (fd, ptr, len) -> count
+;    Hint: Output universal. Digunakan untuk Console (stdout/stderr) atau File.
+;          Membutuhkan handle/fd yang valid.
+;
+; 2: READ  (fd, ptr, len) -> count
+;    Hint: Input universal. Mengisi buffer yang dialokasikan caller.
+;          Return value adalah jumlah byte yang benar-benar dibaca.
+;
+; 3: OPEN  (path_ptr, flags) -> fd
+;    Hint: Membuka resource sistem. Flags harus dipetakan oleh Executor
+;          agar sesuai dengan OS host (O_RDONLY vs GENERIC_READ).
+;
+; 4: CLOSE (fd) -> status
+;    Hint: Manajemen resource. Penting untuk mencegah kebocoran handle OS.
+;
+; 5: TIME  () -> timestamp_unix
+;    Hint: Sumber kebenaran waktu (Timestamp).
+;          Digunakan untuk monitoring, logging, atau logika berbasis durasi.
+;
+; 6: EXIT  (code) -> void (No return)
+;    Hint: Terminasi bersih. Memberikan exit code kembali ke Parent Shell/OS.
+;          Wajib dipanggil di akhir program main.
+;
+; ------------------------------------------------------------------------------
+; KONVENSI STACK (CALLING CONVENTION)
+; ------------------------------------------------------------------------------
+;
+; Layout Stack saat OP_SYSCALL dieksekusi:
+; [Top/Low Addr] -> [Arg N] -> ... -> [Arg 1] -> [IntentID] -> [Bottom/High Addr]
+;
+; Hint Desain (Why Reverse?):
+; Argumen dipush dengan urutan terbalik (N..1) agar saat Executor melakukan
+; `POP` berurutan, ia mendapatkan (IntentID, Arg1, Arg2, ... ArgN) secara natural.
+; Ini menyederhanakan implementasi Assembly Executor.
+;
+; Contoh: WRITE(1, "Halo", 4)
+; ---------------------------
+; [1] PUSH 1        ; Arg 1 (FD)
+; [2] PUSH Ptr      ; Arg 2 (Buffer)
+; [3] PUSH 4        ; Arg 3 (Len)
+; [4] PUSH 1        ; IntentID (WRITE)
+; [5] OP_SYSCALL    ; Trigger
+;
+; Alur Eksekusi:
+; 1. Executor POP -> IntentID (1 = WRITE).
+; 2. Executor Dispatch ke handler `sys_write`.
+; 3. Handler POP -> Arg1 (FD).
+; 4. Handler POP -> Arg2 (Buffer).
+; 5. Handler POP -> Arg3 (Len).
+; 6. Execute Native Syscall.
+; 7. Push Result (Count).
+;
+; ==============================================================================

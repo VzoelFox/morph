@@ -1,0 +1,46 @@
+; ==============================================================================
+; DEFINISI TIPE DATA (SSOT)
+; ==============================================================================
+; Dokumen ini mendefinisikan tipe data dasar yang didukung oleh MorphFox v0.
+;
+; Filosofi: Kesederhanaan dan Portabilitas.
+; Kita mulai dengan satu tipe integer untuk memudahkan bootstrapping.
+;
+; ------------------------------------------------------------------------------
+; 1. INTEGER (i64)
+; ------------------------------------------------------------------------------
+; Tipe bilangan bulat utama dalam sistem.
+;
+; [Spesifikasi]
+; - Nama      : i64
+; - Ukuran    : 64-bit (8 byte).
+; - Sifat     : Signed (Bertanda).
+; - Representasi: Two's Complement.
+; - Default   : Semua literal angka dalam kode dianggap sebagai i64.
+;
+; [Perilaku Overflow]
+; - Aturan    : Wrap Around (Modulus 2^64).
+; - Deskripsi : Jika hasil operasi melebihi batas maksimum (atau minimum), nilai
+;               akan "membungkus" kembali dari ujung lainnya tanpa error/panic.
+;               Contoh: MAX_INT + 1 = MIN_INT.
+;
+; ------------------------------------------------------------------------------
+; 2. POINTER (ptr)
+; ------------------------------------------------------------------------------
+; Penunjuk lokasi memori mentah.
+;
+; [Spesifikasi]
+; - Nama      : ptr
+; - Ukuran    : Word-sized (Sesuai arsitektur target, misal 64-bit di x86_64).
+; - Sifat     : Opaque (Buram/Tidak transparan).
+;
+; [Batasan v0]
+; - Aritmatika: TIDAK DIPERBOLEHKAN secara langsung menggunakan operator aritmatika
+;               biasa (+, -) pada pointer di level bahasa.
+; - Manipulasi: Hanya boleh dilakukan melalui fungsi builtin khusus (jika ada).
+; - Penggunaan:
+;   1. Sebagai penunjuk buffer untuk operasi I/O.
+;   2. Hasil dari alokasi memori (Map).
+;   3. Input untuk dealokasi memori (Unmap).
+;
+; ==============================================================================

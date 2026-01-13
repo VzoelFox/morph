@@ -1,0 +1,97 @@
+ambil "corelib/core/graphics.fox"
+ambil "corelib/core/dom.fox"
+ambil "corelib/lib/html_parser.fox"
+ambil "corelib/lib/layout.fox"
+ambil "corelib/core/builtins.fox"
+
+; ==============================================================================
+; MORPHWEB DEMO (Level 2 Layout)
+; ==============================================================================
+; Demonstrates:
+; 1. HTML Parsing
+; 2. Layout Engine (Box Model Calculation)
+; 3. Render Tree (Positioned via Layout Box)
+; ==============================================================================
+
+const WIN_WIDTH  = 800
+const WIN_HEIGHT = 600
+const BG_COLOR   = 0xFFFFFF ; White
+const TEXT_COLOR = 0x000000 ; Black
+
+var win_handle = 0
+var dom_root = 0
+
+fungsi main()
+  ; 1. Create Window
+  win_handle = __mf_window_create(WIN_WIDTH, WIN_HEIGHT, "MorphWeb v0.2 - Layout Engine")
+
+  jika (win_handle < 0)
+    __mf_print_str("Failed to create window")
+    kembali 1
+  tutup_jika
+
+  ; 2. Parse HTML
+  var html_source = "<div><h1>MorphWeb</h1><p>Layout Engine Active</p></div>"
+  dom_root = html_parse(html_source)
+
+  ; 3. Compute Layout (Level 2)
+  ; Calculate X, Y, W, H for all nodes based on constraints.
+  ; Start at (10, 10) with full width.
+  layout_compute(dom_root, 10, 10, WIN_WIDTH - 20)
+
+  ; 4. Event Loop
+  selama (1)
+    var event = __mf_window_poll(0) ; Pass 0 (NULL) as we don't need mouse data here
+
+    jika (event == 1) ; EVENT_QUIT
+      keluar
+    tutup_jika
+
+    ; 5. Render DOM using Computed Layout
+    render_node(dom_root)
+
+    ; Yield
+    __mf_yield()
+  tutup_selama
+
+  kembali 0
+tutup_fungsi
+
+; ------------------------------------------------------------------------------
+; Renderer (Uses Layout Box)
+; ------------------------------------------------------------------------------
+fungsi render_node(node)
+  jika (node == 0)
+    kembali 0
+  tutup_jika
+
+  var type = peek(node, 0)
+
+  ; Retrieve Layout Box
+  var box = peek(node, 56) ; Offset 0x38 (Decimal 56)
+
+  jika (box != 0)
+    var x = peek(box, 0)
+    var y = peek(box, 8)
+
+    jika (type == DOM_NODE_ELEMENT)
+      ; Element Node: Just recurse children
+      var child = peek(node, 16)
+      selama (child != 0)
+        render_node(child)
+        child = peek(child, 24)
+      tutup_selama
+
+    lain
+      jika (type == DOM_NODE_TEXT)
+        ; Text Node: Render at computed X, Y
+        var str_struct = peek(node, 40)
+        var str_ptr = peek(str_struct, 8)
+
+        __mf_draw_string(x, y, str_ptr, TEXT_COLOR)
+      tutup_jika
+    tutup_jika
+  tutup_jika
+
+  kembali 0
+tutup_fungsi

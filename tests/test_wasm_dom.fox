@@ -1,0 +1,51 @@
+; ==============================================================================
+; WASM DOM DEMO
+; ==============================================================================
+; A simple interactive UI running in the Browser via WebAssembly.
+;
+; Features:
+; 1. Creates a Title (H1).
+; 2. Creates a Button.
+; 3. Handles Click Event (Changes Text).
+; ==============================================================================
+
+ambil "corelib/platform/wasm/dom_intents.fox"
+
+const ID_BODY = 1
+
+fungsi main()
+  ; 1. Create Title
+  var h1 = __mf_dom_create("h1")
+  __mf_dom_set_text(h1, "Hello from Morph WASM!")
+  __mf_dom_append(ID_BODY, h1)
+
+  ; 2. Create Container
+  var div = __mf_dom_create("div")
+  __mf_dom_set_attr(div, "style", "padding: 20px; background: #f0f0f0; border-radius: 8px;")
+  __mf_dom_append(ID_BODY, div)
+
+  ; 3. Create Button
+  var btn = __mf_dom_create("button")
+  __mf_dom_set_text(btn, "Click Me")
+  __mf_dom_set_attr(btn, "style", "padding: 10px 20px; font-size: 16px; cursor: pointer;")
+  __mf_dom_append(div, btn)
+
+  ; 4. Create Output Text
+  var p = __mf_dom_create("p")
+  __mf_dom_set_text(p, "Waiting for interaction...")
+  __mf_dom_append(div, p)
+
+  ; Interactive Loop (Simulation)
+  ; In a real scenario, we would register an event listener (Intent 104).
+  ; For this MVP, we just run once to prove DOM manipulation works.
+
+  ; Let's change text after a "delay" simulation (just logic)
+  var count = 0
+  selama (count < 5)
+    count = count + 1
+  tutup_selama
+
+  __mf_dom_set_text(p, "Morph WASM Initialized successfully.")
+
+  kembali 0
+tutup_fungsi

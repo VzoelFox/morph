@@ -1,0 +1,50 @@
+; ==============================================================================
+; NETWORK CORE (SSOT)
+; ==============================================================================
+; Defines structures and contracts for the Morph Networking Stack.
+; Supports: TCP/IP, UDP (for DNS), and Socket abstractions.
+;
+; CONSTANTS
+; ------------------------------------------------------------------------------
+; Address Families
+.equ AF_UNIX,       1
+.equ AF_INET,       2
+.equ AF_INET6,      10
+
+; Socket Types
+.equ SOCK_STREAM,   1   ; TCP
+.equ SOCK_DGRAM,    2   ; UDP
+
+; Protocols
+.equ IPPROTO_TCP,   6
+.equ IPPROTO_UDP,   17
+
+; ------------------------------------------------------------------------------
+; STRUCTURE: SOCKADDR_IN (16 Bytes)
+; ------------------------------------------------------------------------------
+; Standard IPv4 Socket Address structure.
+; [0x00] Family (i16)   - AF_INET (2)
+; [0x02] Port   (u16)   - Network Byte Order (Big Endian)
+; [0x04] Addr   (u32)   - IPv4 Address (Big Endian)
+; [0x08] Zero   (8 bytes) - Padding
+;
+; ------------------------------------------------------------------------------
+; STRUCTURE: DNS PACKET HEADER (12 Bytes)
+; ------------------------------------------------------------------------------
+; [0x00] ID (u16)       - Transaction ID
+; [0x02] Flags (u16)    - QR, Opcode, AA, TC, RD, RA, Z, RCODE
+; [0x04] QDCOUNT (u16)  - Number of Questions
+; [0x06] ANCOUNT (u16)  - Number of Answers
+; [0x08] NSCOUNT (u16)  - Number of Authority Records
+; [0x0A] ARCOUNT (u16)  - Number of Additional Records
+;
+; ------------------------------------------------------------------------------
+; CONTRACTS (Platform Builtins)
+; ------------------------------------------------------------------------------
+;
+; func __mf_net_socket(domain: i64, type: i64, proto: i64) -> fd (i64)
+; func __mf_net_connect(fd: i64, addr_ptr: ptr, addr_len: i64) -> status (i64)
+; func __mf_net_send(fd: i64, buf: ptr, len: i64) -> sent (i64)
+; func __mf_net_recv(fd: i64, buf: ptr, len: i64) -> received (i64)
+; func __mf_net_close(fd: i64) -> void
+; func __mf_dns_resolve(hostname: ptr, hostname_len: i64) -> ipv4 (u32)

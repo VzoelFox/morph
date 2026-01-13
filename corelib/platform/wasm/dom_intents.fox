@@ -1,0 +1,41 @@
+; ==============================================================================
+; DOM INTENTS (SSOT)
+; ==============================================================================
+; Defines intent IDs for Browser DOM manipulation.
+; These intents are specific to the WASM platform and extend the core syscalls.
+;
+; Range: 100 - 199
+;
+; INTENT ID (i64)
+; ------------------------------------------------------------------------------
+; 100: DOM_CREATE_ELEMENT (tag_name_ptr) -> handle_id
+;      Creates a new DOM element (e.g., "div", "button").
+;      Returns a handle ID (integer) representing the element in the host map.
+;
+; 101: DOM_APPEND_CHILD (parent_id, child_id) -> void
+;      Appends a child element to a parent element.
+;      Use handle_id 0 to represent the document.body.
+;
+; 102: DOM_SET_ATTRIBUTE (element_id, key_ptr, value_ptr) -> void
+;      Sets an attribute on an element (e.g., class="btn", id="main").
+;
+; 103: DOM_SET_TEXT (element_id, text_ptr) -> void
+;      Sets the innerText of an element.
+;
+; 104: DOM_ADD_EVENT_LISTENER (element_id, event_type_ptr, callback_label_id) -> void
+;      Registers an event listener.
+;      When triggered, the host will queue the event for the Executor to poll.
+;
+; 105: DOM_GET_ELEMENT_BY_ID (id_str_ptr) -> handle_id
+;      Retrieves an existing element from the DOM.
+;
+; ------------------------------------------------------------------------------
+; CONTRACTS
+; ------------------------------------------------------------------------------
+; These map to the JavaScript imports provided by the loader.
+;
+; func __mf_dom_create(tag: ptr) -> id (i64)
+; func __mf_dom_append(parent: i64, child: i64) -> void
+; func __mf_dom_set_attr(el: i64, key: ptr, val: ptr) -> void
+; func __mf_dom_set_text(el: i64, text: ptr) -> void
+; func __mf_dom_get_by_id(id_str: ptr) -> id (i64)

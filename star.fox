@@ -1,0 +1,38 @@
+utama {
+    print_line("[Star] Membaca data.fall...")
+
+    # 1. Alloc Buffer (4096)
+    # Args: 0, 4096, 3 (RW), 34 (MapPrivate|Anon), -1, 0
+    var buffer = sistem 9, 0, 4096, 3, 34, -1, 0
+
+    # 2. Filename
+    var fname = "data.fall"
+
+    # 3. Open
+    # fname.buffer works thanks to compiler upgrade
+    var fd = sistem 2, fname.buffer, 0, 0
+
+    jika (fd < 0) {
+        var err = "[Star] Gagal membuka file.\n"
+        sistem 1, 1, err.buffer, err.panjang
+        kembali 0
+    }
+
+    # 4. Read
+    var len = sistem 0, fd, buffer, 4096
+
+    # 5. Close
+    sistem 3, fd
+
+    # 6. Print Content
+    sistem 1, 1, buffer, len
+    sistem 1, 1, "\n", 1
+
+    print_line("[Star] Selesai.")
+    0
+}
+
+fungsi print_line(s: String) {
+    sistem 1, 1, s.buffer, s.panjang
+    sistem 1, 1, "\n", 1
+}

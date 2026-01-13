@@ -1,0 +1,78 @@
+; ==============================================================================
+; MORPH DOM (SSOT)
+; ==============================================================================
+; Document Object Model (DOM) native implementation structure.
+; Designed for high-performance layout engine and rendering.
+;
+; NODE TYPES (i64)
+; ------------------------------------------------------------------------------
+.equ DOM_NODE_DOCUMENT, 1
+.equ DOM_NODE_ELEMENT,  2
+.equ DOM_NODE_TEXT,     3
+.equ DOM_NODE_COMMENT,  8
+
+; STRUKTUR MEMORI: DOM NODE (64 Bytes Aligned)
+; ------------------------------------------------------------------------------
+; Base class untuk semua node.
+;
+; [Offset 0x00] Type (i64)
+;   - Tipe node (lihat enum di atas).
+;
+; [Offset 0x08] Parent Ptr (ptr)
+;   - Pointer ke node induk (Container).
+;
+; [Offset 0x10] First Child Ptr (ptr)
+;   - Pointer ke anak pertama (Linked List Head).
+;
+; [Offset 0x18] Next Sibling Ptr (ptr)
+;   - Pointer ke saudara berikutnya (Linked List Next).
+;
+; [Offset 0x20] Tag Name Ptr (ptr)
+;   - Pointer ke String Struct (misal: "div", "p", "body").
+;   - Untuk TEXT_NODE, ini bisa NULL atau "#text".
+;
+; [Offset 0x28] Attributes / Value Ptr (ptr)
+;   - Untuk ELEMENT: Pointer ke Attribute Map (HashMap / Vector).
+;   - Untuk TEXT: Pointer ke String Content.
+;
+; [Offset 0x30] Style / Computed Style Ptr (ptr)
+;   - Pointer ke struktur Style (CSS Properties).
+;
+; [Offset 0x38] Layout Box Ptr (ptr)
+;   - Pointer ke hasil perhitungan Layout (X, Y, W, H, Padding, Margin).
+;
+; ------------------------------------------------------------------------------
+; STRUKTUR: LAYOUT BOX (32 Bytes)
+; ------------------------------------------------------------------------------
+; Hasil perhitungan Layout Engine.
+;
+; [Offset 0x00] X (i64) - Posisi absolut layar
+; [Offset 0x08] Y (i64)
+; [Offset 0x10] Width (i64)
+; [Offset 0x18] Height (i64)
+;
+; ------------------------------------------------------------------------------
+; STRUKTUR: STYLE ATTRIBUTE (Simplified)
+; ------------------------------------------------------------------------------
+; Representasi in-memory dari CSS "display: block; color: red;"
+;
+; [Offset 0x00] Display Type (i64) -> 0=None, 1=Block, 2=Inline, 3=Flex
+; [Offset 0x08] Background Color (i64) -> ARGB
+; [Offset 0x10] Color (i64) -> ARGB
+; [Offset 0x18] Width (i64) -> -1 if auto
+; [Offset 0x20] Height (i64) -> -1 if auto
+; [Offset 0x28] Padding (i64) -> Uniform padding for now
+; [Offset 0x30] Margin (i64) -> Uniform margin for now
+
+.equ STYLE_OFFSET_DISPLAY, 0
+.equ STYLE_OFFSET_BG_COLOR, 8
+.equ STYLE_OFFSET_COLOR, 16
+.equ STYLE_OFFSET_WIDTH, 24
+.equ STYLE_OFFSET_HEIGHT, 32
+.equ STYLE_OFFSET_PADDING, 40
+.equ STYLE_OFFSET_MARGIN, 48
+
+.equ DISPLAY_NONE, 0
+.equ DISPLAY_BLOCK, 1
+.equ DISPLAY_INLINE, 2
+.equ DISPLAY_FLEX, 3

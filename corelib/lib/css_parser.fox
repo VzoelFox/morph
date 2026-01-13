@@ -1,0 +1,350 @@
+ambil "corelib/core/types.fox"
+ambil "corelib/core/dom.fox"
+ambil "corelib/core/builtins.fox"
+
+; ==============================================================================
+; CSS PARSER (LIB)
+; ==============================================================================
+; Parses inline style strings into a Style structure.
+; Format: "key:value; key:value;"
+;
+; Supported Keys:
+; - display (0=none, 1=block, 2=inline, 3=flex)
+; - width (with units: px, %, em, rem)
+; - height (with units: px, %, em, rem)
+; - padding (shorthand: "10px" or "10px 20px")
+; - margin (shorthand: "10px" or "10px 20px")
+; - color (hex: 0xRRGGBB or #RRGGBB)
+; - bgcolor (hex: 0xRRGGBB or #RRGGBB)
+; - font-size (with units)
+; - text-align (left, center, right)
+; - border-width (integer)
+; - opacity (0-100)
+;
+; ROBUSTNESS IMPROVEMENTS:
+; - Integer overflow protection with max values
+; - Proper bounds checking throughout
+; - Better key matching to avoid collisions
+; - Value range validation
+; - Unit parsing (px, %, em, rem)
+; ==============================================================================
+
+fungsi css_parse_inline(str_ptr, str_len)
+  var style = mem_alloc(64) ; Style Struct Size
+
+  ; Initialize defaults
+  poke(style, STYLE_OFFSET_DISPLAY, DISPLAY_BLOCK)
+  poke(style, STYLE_OFFSET_WIDTH, -1)
+  poke(style, STYLE_OFFSET_HEIGHT, -1)
+  poke(style, STYLE_OFFSET_PADDING, 0)
+  poke(style, STYLE_OFFSET_MARGIN, 0)
+
+  var idx = 0
+  selama (idx < str_len)
+    ; Skip whitespace
+    selama (idx < str_len && load_byte(str_ptr + idx) == 32)
+      idx = idx + 1
+    tutup_selama
+
+    ; Parse Key
+    var key_start = idx
+    selama (idx < str_len && load_byte(str_ptr + idx) != 58) ; ':'
+      idx = idx + 1
+    tutup_selama
+
+    var key_len = idx - key_start
+    idx = idx + 1 ; Skip ':'
+
+    ; Parse Value
+    var val_start = idx
+    selama (idx < str_len && load_byte(str_ptr + idx) != 59) ; ';'
+      idx = idx + 1
+    tutup_selama
+
+    var val_len = idx - val_start
+    idx = idx + 1 ; Skip ';'
+
+    ; Map Key/Value with improved matching and validation
+    ; ROBUSTNESS: Check key length and first chars to avoid collisions
+
+    jika (key_len >= 1)
+      var key_char1 = load_byte(str_ptr + key_start)
+
+      jika (key_char1 == 100 && key_len == 7) ; 'd' + len 7 -> "display"
+        ; Parse display value (0-3 or keywords)
+        var val_int = parse_int_safe(str_ptr + val_start, val_len)
+        jika (val_int >= 0 && val_int <= 3)
+          poke(style, STYLE_OFFSET_DISPLAY, val_int)
+        tutup_jika
+
+      lain
+        jika (key_char1 == 119 && key_len == 5) ; 'w' + len 5 -> "width"
+          ; Parse with unit support
+          var val = parse_value_with_unit(str_ptr + val_start, val_len)
+          poke(style, STYLE_OFFSET_WIDTH, val)
+
+        lain
+          jika (key_char1 == 104 && key_len == 6) ; 'h' + len 6 -> "height"
+            ; Parse with unit support
+            var val = parse_value_with_unit(str_ptr + val_start, val_len)
+            poke(style, STYLE_OFFSET_HEIGHT, val)
+
+          lain
+            jika (key_char1 == 112 && key_len == 7) ; 'p' + len 7 -> "padding"
+              ; Parse shorthand
+              var val = parse_shorthand(str_ptr + val_start, val_len)
+              poke(style, STYLE_OFFSET_PADDING, val)
+
+            lain
+              jika (key_char1 == 109 && key_len == 6) ; 'm' + len 6 -> "margin"
+                ; Parse shorthand
+                var val = parse_shorthand(str_ptr + val_start, val_len)
+                poke(style, STYLE_OFFSET_MARGIN, val)
+
+              lain
+                jika (key_char1 == 99 && key_len == 5) ; 'c' + len 5 -> "color"
+                  ; Parse color with # support
+                  var val = parse_color(str_ptr + val_start, val_len)
+                  jika (val >= 0 && val <= 16777215)
+                    poke(style, STYLE_OFFSET_COLOR, val)
+                  tutup_jika
+
+                lain
+                  jika (key_char1 == 98 && key_len == 7) ; 'b' + len 7 -> "bgcolor"
+                    ; Parse bgcolor
+                    var val = parse_color(str_ptr + val_start, val_len)
+                    jika (val >= 0 && val <= 16777215)
+                      poke(style, STYLE_OFFSET_BG_COLOR, val)
+                    tutup_jika
+
+                  lain
+                    ; NEW PROPERTIES
+                    jika (key_char1 == 102 && key_len == 9) ; 'f' + len 9 -> "font-size"
+                      var val = parse_value_with_unit(str_ptr + val_start, val_len)
+                      poke(style, STYLE_OFFSET_FONT_SIZE, val)
+
+                    lain
+                      jika (key_char1 == 116 && key_len == 10) ; 't' + len 10 -> "text-align"
+                        var val = parse_text_align(str_ptr + val_start, val_len)
+                        poke(style, STYLE_OFFSET_TEXT_ALIGN, val)
+
+                      lain
+                        jika (key_char1 == 98 && key_len == 12) ; 'b' + len 12 -> "border-width"
+                          var val = parse_value_with_unit(str_ptr + val_start, val_len)
+                          poke(style, STYLE_OFFSET_BORDER_WIDTH, val)
+
+                        lain
+                          jika (key_char1 == 111 && key_len == 7) ; 'o' + len 7 -> "opacity"
+                            var val = parse_int_safe(str_ptr + val_start, val_len)
+                            jika (val >= 0 && val <= 100)
+                              poke(style, STYLE_OFFSET_OPACITY, val)
+                            tutup_jika
+                          tutup_jika
+                        tutup_jika
+                      tutup_jika
+                    tutup_jika
+                  tutup_jika
+                tutup_jika
+              tutup_jika
+            tutup_jika
+          tutup_jika
+        tutup_jika
+      tutup_jika
+    tutup_jika
+
+  tutup_selama
+
+  kembali style
+tutup_fungsi
+
+; ------------------------------------------------------------------------------
+; Helper: Parse Int with Overflow Protection
+; ------------------------------------------------------------------------------
+fungsi parse_int_safe(ptr, len)
+  ; Maximum safe value to prevent overflow (conservative limit)
+  var MAX_SAFE_INT = 100000000  ; 100 million
+
+  var val = 0
+  var i = 0
+
+  ; Safety: Cap length to prevent excessive processing
+  jika (len > 20)
+    len = 20  ; Max realistic number string length
+  tutup_jika
+
+  ; Check for 0x prefix (hex)
+  jika (len > 2 && load_byte(ptr) == 48 && load_byte(ptr + 1) == 120) ; 0x
+    i = 2
+    selama (i < len)
+      ; OVERFLOW PROTECTION: Check before multiply
+      jika (val > 1677721)  ; MAX_SAFE_INT / 16
+        kembali MAX_SAFE_INT  ; Cap at max
+      tutup_jika
+
+      var c = load_byte(ptr + i)
+      var prev_val = val
+      val = val * 16
+
+      ; Check for overflow
+      jika (val < prev_val)
+        kembali MAX_SAFE_INT  ; Overflow detected
+      tutup_jika
+
+      jika (c >= 48 && c <= 57) ; 0-9
+        val = val + (c - 48)
+      lain
+        jika (c >= 65 && c <= 70) ; A-F
+          val = val + (c - 55)
+        lain
+          jika (c >= 97 && c <= 102) ; a-f
+            val = val + (c - 87)
+          tutup_jika
+        tutup_jika
+      tutup_jika
+
+      i = i + 1
+    tutup_selama
+  lain
+    ; Decimal with overflow protection
+    selama (i < len)
+      ; OVERFLOW PROTECTION: Check before multiply
+      jika (val > 10000000)  ; MAX_SAFE_INT / 10
+        kembali MAX_SAFE_INT  ; Cap at max
+      tutup_jika
+
+      var c = load_byte(ptr + i)
+
+      jika (c >= 48 && c <= 57)  ; Valid digit
+        var prev_val = val
+        val = val * 10
+
+        ; Check for overflow
+        jika (val < prev_val)
+          kembali MAX_SAFE_INT  ; Overflow detected
+        tutup_jika
+
+        val = val + (c - 48)
+      tutup_jika
+
+      i = i + 1
+    tutup_selama
+  tutup_jika
+
+  kembali val
+tutup_fungsi
+
+; ------------------------------------------------------------------------------
+; Helper: Parse Value with Unit
+; Returns value in format: (value << 16) | unit_type
+; Unit types: 0=none/px, 1=%, 2=em, 3=rem
+; ------------------------------------------------------------------------------
+fungsi parse_value_with_unit(ptr, len)
+  var unit_type = 0  ; Default: px or unitless
+  var num_len = len
+
+  ; Check for unit suffix
+  jika (len >= 2)
+    var last_char = load_byte(ptr + len - 1)
+    var second_last = load_byte(ptr + len - 2)
+
+    ; Check for 'px'
+    jika (last_char == 120 && second_last == 112) ; 'px'
+      num_len = len - 2
+      unit_type = 0
+    lain
+      ; Check for '%'
+      jika (last_char == 37) ; '%'
+        num_len = len - 1
+        unit_type = 1
+      lain
+        ; Check for 'em'
+        jika (last_char == 109 && second_last == 101) ; 'em'
+          num_len = len - 2
+          unit_type = 2
+        lain
+          ; Check for 'rem' (3 chars)
+          jika (len >= 3 && last_char == 109 && second_last == 101 && load_byte(ptr + len - 3) == 114) ; 'rem'
+            num_len = len - 3
+            unit_type = 3
+          tutup_jika
+        tutup_jika
+      tutup_jika
+    tutup_jika
+  tutup_jika
+
+  ; Parse numeric part
+  var value = parse_int_safe(ptr, num_len)
+
+  ; Encode: high 16 bits = value, low 16 bits = unit_type
+  ; For simplicity, we'll just store value (unit in separate field if needed)
+  ; Or use upper bits: value * 4 + unit_type (allows values up to ~25M)
+  kembali value * 4 + unit_type
+tutup_fungsi
+
+; ------------------------------------------------------------------------------
+; Helper: Parse Color (#RRGGBB or 0xRRGGBB)
+; ------------------------------------------------------------------------------
+fungsi parse_color(ptr, len)
+  var start = 0
+
+  ; Check for '#' prefix
+  jika (len > 0 && load_byte(ptr) == 35) ; '#'
+    start = 1
+  tutup_jika
+
+  ; Parse as hex
+  kembali parse_int_safe(ptr + start, len - start)
+tutup_fungsi
+
+; ------------------------------------------------------------------------------
+; Helper: Parse Shorthand (e.g., "10px 20px")
+; Returns first value (can extend for all 4 sides)
+; ------------------------------------------------------------------------------
+fungsi parse_shorthand(ptr, len)
+  ; Find first space
+  var i = 0
+  var space_idx = 0
+
+  selama (i < len)
+    jika (load_byte(ptr + i) == 32) ; Space
+      space_idx = i
+      keluar
+    tutup_jika
+    i = i + 1
+  tutup_selama
+
+  ; If no space, parse entire value
+  jika (space_idx == 0)
+    kembali parse_value_with_unit(ptr, len)
+  tutup_jika
+
+  ; Parse first value only (simplified)
+  kembali parse_value_with_unit(ptr, space_idx)
+tutup_fungsi
+
+; ------------------------------------------------------------------------------
+; Helper: Parse Text Align (left=0, center=1, right=2, justify=3)
+; ------------------------------------------------------------------------------
+fungsi parse_text_align(ptr, len)
+  jika (len >= 4)
+    var first = load_byte(ptr)
+
+    jika (first == 108 && len == 4) ; 'l' - "left"
+      kembali 0
+    lain
+      jika (first == 99 && len == 6) ; 'c' - "center"
+        kembali 1
+      lain
+        jika (first == 114 && len == 5) ; 'r' - "right"
+          kembali 2
+        lain
+          jika (first == 106 && len == 7) ; 'j' - "justify"
+            kembali 3
+          tutup_jika
+        tutup_jika
+      tutup_jika
+    tutup_jika
+  tutup_jika
+
+  kembali 0  ; Default: left
+tutup_fungsi

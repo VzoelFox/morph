@@ -1,0 +1,73 @@
+; ==============================================================================
+; PEMETAAN PLATFORM: x86_64 / Windows
+; ==============================================================================
+; Dokumen ini memetakan kontrak abstrak (SSOT) dari `core/prelude.fox`
+; ke dalam instruksi dan aturan konkret arsitektur x86_64 dengan OS Windows.
+;
+; ------------------------------------------------------------------------------
+; ATURAN DASAR (MICROSOFT x64 CALLING CONVENTION)
+; ------------------------------------------------------------------------------
+; Windows menggunakan konvensi pemanggilan yang berbeda dari Linux (System V).
+;
+; [Register Argumen]
+; - Argumen 1: RCX
+; - Argumen 2: RDX
+; - Argumen 3: R8
+; - Argumen 4: R9
+; - Argumen >4: Didorong ke Stack (Right-to-Left)
+;
+; [Aturan Stack - Shadow Space]
+; - Caller WAJIB mengalokasikan ruang 32 bytes (4 x 8 bytes) di stack sebelum
+;   memanggil fungsi (instruksi CALL), tepat di atas return address.
+; - Callee (fungsi yang dipanggil) boleh menggunakan ruang ini untuk menyimpan
+;   register argumen (RCX, RDX, dll) jika perlu.
+; - Stack harus 16-byte aligned sebelum instruksi CALL.
+;
+; [Register Volatile & Non-Volatile]
+; - Volatile (Boleh rusak): RAX, RCX, RDX, R8, R9, R10, R11
+; - Non-Volatile (Wajib dijaga): RBX, RBP, RDI, RSI, RSP, R12-R15
+;
+; ------------------------------------------------------------------------------
+; STRATEGI IMPLEMENTASI (KERNEL32.DLL)
+; ------------------------------------------------------------------------------
+; MorphFox di Windows tidak menggunakan syscall langsung (nomor syscall tidak stabil).
+; Kita memanggil API publik dari `kernel32.dll`.
+;
+; [1] KONTROL PROSES: KELUAR (EXIT)
+; ---------------------------------
+; SSOT: Input(Kode Status) -> Stop.
+; API Windows: `void ExitProcess(UINT uExitCode);`
+; - Arg 1 (RCX): uExitCode (Integer)
+;
+; [2] I/O DASAR: TULIS (WRITE)
+; ----------------------------
+; SSOT: Input(Handle, Buffer Ptr, Len) -> Result.
+; API Windows: `BOOL WriteFile(HANDLE hFile, LPCVOID lpBuffer, DWORD nBytesToWrite, LPDWORD lpBytesWritten, LPOVERLAPPED lpOverlapped);`
+; - Arg 1 (RCX): hFile (Handle)
+;   * Catatan: Handle StdOut harus didapat via `GetStdHandle(-11)` terlebih dahulu
+;     saat inisialisasi runtime, karena 1 bukan handle valid di Windows.
+; - Arg 2 (RDX): lpBuffer (Pointer)
+; - Arg 3 (R8) : nBytesToWrite (Size)
+; - Arg 4 (R9) : lpBytesWritten (Pointer ke variabel untuk simpan hasil - Wajib ada)
+; - Arg 5 (Stack): lpOverlapped (NULL/0)
+;
+; [3] MANAJEMEN MEMORI: ALOKASI (MAP)
+; -----------------------------------
+; SSOT: Input(Size) -> Result.
+; API Windows: `LPVOID VirtualAlloc(LPVOID lpAddress, SIZE_T dwSize, DWORD flAllocationType, DWORD flProtect);`
+; - Arg 1 (RCX): lpAddress (NULL/0 - Biar OS pilih)
+; - Arg 2 (RDX): dwSize (Size)
+; - Arg 3 (R8) : flAllocationType (MEM_COMMIT | MEM_RESERVE = 0x1000 | 0x2000 = 0x3000)
+; - Arg 4 (R9) : flProtect (PAGE_READWRITE = 0x04)
+;
+; [4] MANAJEMEN MEMORI: DEALOKASI (UNMAP)
+; ---------------------------------------
+; SSOT: Input(Pointer, Size) -> Result.
+; API Windows: `BOOL VirtualFree(LPVOID lpAddress, SIZE_T dwSize, DWORD dwFreeType);`
+; - Arg 1 (RCX): lpAddress (Pointer)
+; - Arg 2 (RDX): dwSize (0 jika MEM_RELEASE)
+; - Arg 3 (R8) : dwFreeType (MEM_RELEASE = 0x8000)
+;   * Catatan: VirtualFree dengan MEM_RELEASE membebaskan seluruh blok alokasi awal.
+;     Partial unmap tidak didukung semudah munmap di Linux.
+;
+; ==============================================================================

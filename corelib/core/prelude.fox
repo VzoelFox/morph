@@ -1,0 +1,80 @@
+; ==============================================================================
+; ABI (Application Binary Interface) - Single Source of Truth
+; ==============================================================================
+; Dokumen ini mendefinisikan KONTRAK MURNI untuk antarmuka sistem MorphFox.
+; Ini bukan kode yang bisa dieksekusi, melainkan spesifikasi yang WAJIB
+; dipenuhi oleh setiap lapisan platform (x86_64, arm64, wasm32, dll).
+;
+; Filosofi: "Mencari Kekayaan Sendiri" - Kita mendefinisikan aturan main kita sendiri.
+;
+; ------------------------------------------------------------------------------
+; REFERENSI DEFINISI INTI
+; ------------------------------------------------------------------------------
+; ABI ini mencakup dan bergantung pada definisi berikut:
+; 1. Tipe Data (Integer & Pointer) -> Lihat `corelib/core/types.fox`
+; 2. Operasi Bawaan (Builtins)     -> Lihat `corelib/core/builtins.fox`
+;
+; ------------------------------------------------------------------------------
+; 1. MANAJEMEN MEMORI (INTI)
+; ------------------------------------------------------------------------------
+; Setiap platform harus menyediakan mekanisme untuk meminta halaman memori mentah
+; dari sistem operasi host atau lingkungan runtime.
+;
+; [Kontrak: ALOKASI MEMORI]
+; - Tujuan: Meminta blok memori baru.
+; - Input: Ukuran (i64).
+;   * Constraint: WAJIB Non-negatif (> 0). Jika negatif, operasi gagal/panic.
+;   * Rounding  : Platform WAJIB membulatkan ukuran ke atas ke kelipatan
+;                 Page Size terdekat (misal 4KB).
+; - Output: Result<Pointer, Error>.
+;   * v0 Implementasi: Return Pointer. Jika gagal/error, return nilai negatif/null
+;     sesuai konvensi platform (misal -1 atau 0).
+; - Deskripsi: Platform melakukan syscall (seperti mmap) untuk mendapatkan area
+;   RW (Read-Write).
+;
+; [Kontrak: DEALOKASI MEMORI]
+; - Tujuan: Mengembalikan blok memori ke sistem.
+; - Input:
+;   1. Pointer ke awal blok.
+;   2. Ukuran blok (i64, Non-negatif).
+; - Output: Result<Void, Error>.
+; - Deskripsi: Platform memberitahu OS bahwa memori ini tidak lagi digunakan.
+;
+; ------------------------------------------------------------------------------
+; 2. INPUT / OUTPUT DASAR (INTI)
+; ------------------------------------------------------------------------------
+; Di tahap awal, kita hanya membutuhkan kemampuan untuk menulis byte stream
+; ke output standar untuk keperluan debugging dan komunikasi dasar.
+;
+; [Kontrak: TULIS (WRITE)]
+; - Tujuan: Mengirim data mentah ke file descriptor atau stream.
+; - Input:
+;   1. Handle/Descriptor (i64).
+;   2. Pointer ke buffer data.
+;   3. Panjang data (i64).
+;      * Constraint: WAJIB Non-negatif.
+; - Output: Result<usize, Error>.
+;   * Konsep: Mengembalikan tuple (Sukses?, Nilai/Error).
+;   * v0 Implementasi: Menggunakan i64.
+;     - Nilai >= 0 : Sukses (Jumlah byte tertulis).
+;     - Nilai < 0  : Gagal (Kode Error).
+; - Deskripsi: Abstraksi langsung ke syscall 'write' pada POSIX.
+;
+; ------------------------------------------------------------------------------
+; 3. KONTROL PROSES (INTI)
+; ------------------------------------------------------------------------------
+; Program harus bisa mengakhiri dirinya sendiri dengan status yang jelas.
+;
+; [Kontrak: KELUAR (EXIT)]
+; - Tujuan: Menghentikan eksekusi program segera.
+; - Input: Kode status (i64).
+;   - 0: Berhasil/Normal.
+;   - !0: Terjadi Kesalahan.
+; - Output: Tidak ada (program berhenti).
+; - Deskripsi: Memanggil syscall 'exit' untuk mengembalikan kendali ke OS.
+;
+; ==============================================================================
+; Catatan Implementasi:
+; File implementasi platform (misal: platform/x86_64/linux.fox) akan menerjemahkan
+; kontrak deskriptif di atas menjadi instruksi assembly atau bytecode yang spesifik.
+; ==============================================================================
